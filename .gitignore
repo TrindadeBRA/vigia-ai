@@ -1,0 +1,8 @@
+.pio
+.vscode
+.idea
+*.bin
+*.elf
+.DS_Store
+.env
+.env.*

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "author": "TrindadeBRA",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ili9341",
+      "id": "lcd1",
+      "top": -48,
+      "left": 230.4,
+      "rotate": 90,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    ["esp:TX", "$serialMonitor:RX", "", []],
+    ["esp:RX", "$serialMonitor:TX", "", []],
+    ["esp:3V3", "lcd1:VCC", "red", ["h-19.2", "v-57.6"]],
+    ["esp:GND.2", "lcd1:GND", "black", ["h-9.6", "v19.2"]],
+    ["esp:3V3", "lcd1:LED", "white", ["h-28.8", "v76.8"]],
+    ["esp:23", "lcd1:MOSI", "green", ["h19.2", "v0"]],
+    ["esp:19", "lcd1:MISO", "blue", ["h28.8", "v0"]],
+    ["esp:18", "lcd1:SCK", "gold", ["h38.4", "v0"]],
+    ["esp:15", "lcd1:CS", "orange", ["h48", "v0"]],
+    ["esp:2", "lcd1:D/C", "purple", ["h57.6", "v0"]],
+    ["esp:4", "lcd1:RST", "gray", ["h67.2", "v0"]]
+  ],
+  "dependencies": {}
+}
