@@ -11,12 +11,26 @@
       "attrs": {}
     },
     {
-      "type": "wokwi-ili9341",
+      "type": "board-ili9341-cap-touch",
       "id": "lcd1",
       "top": -48,
       "left": 230.4,
       "rotate": 90,
       "attrs": {}
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btnPrev",
+      "top": 201.4,
+      "left": -96,
+      "attrs": { "color": "blue", "label": "Prev", "bounce": "0" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btnNext",
+      "top": 201.4,
+      "left": -9.6,
+      "attrs": { "color": "green", "label": "Prox", "bounce": "0" }
     }
   ],
   "connections": [
@@ -30,7 +44,13 @@
     ["esp:18", "lcd1:SCK", "gold", ["h38.4", "v0"]],
     ["esp:15", "lcd1:CS", "orange", ["h48", "v0"]],
     ["esp:2", "lcd1:D/C", "purple", ["h57.6", "v0"]],
-    ["esp:4", "lcd1:RST", "gray", ["h67.2", "v0"]]
+    ["esp:4", "lcd1:RST", "gray", ["h67.2", "v0"]],
+    ["esp:21", "lcd1:SDA", "green", ["h-19.2", "v-38.4"]],
+    ["esp:22", "lcd1:SCL", "blue", ["h-28.8", "v-48"]],
+    ["esp:13", "btnPrev:2.l", "violet", ["h-19.2", "v19.2"]],
+    ["esp:GND.1", "btnPrev:1.r", "black", []],
+    ["esp:5", "btnNext:2.l", "green", ["h-9.6", "v28.8"]],
+    ["esp:GND.1", "btnNext:1.r", "black", []]
   ],
   "dependencies": {}
 }

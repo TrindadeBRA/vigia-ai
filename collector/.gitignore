@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.claude
+.env.cursor
+.env.*.local
+!.env.example
+!.env.claude.example
+!.env.cursor.example
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+*.log
+.DS_Store

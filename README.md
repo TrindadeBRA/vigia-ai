@@ -1,0 +1,121 @@
+# control-ia
+
+Painel de mesa: **ESP32 + TFT 3,5" com touch** mostra os **limites de uso** das assinaturas **Claude** e **Cursor**, em **várias telas** (início, detalhe Claude, detalhe Cursor, info).
+
+A placa não guarda senha nem token. Um **coletor Python no Mac** lê o login que você já tem no Claude Code / Cursor (ou um `.env` interno), chama as APIs autenticadas e publica um JSON na rede local. A ESP32 só faz GET e desenha barras.
+
+Documentação completa para humanos e para agentes de IA: pasta **[`docs/`](docs/README.md)** — comece por [`docs/CONTEXTO_IA.md`](docs/CONTEXTO_IA.md) e [`docs/PLANO.md`](docs/PLANO.md).
+
+## Como funciona
+
+```
+Mac (collector/server.py :8787)
+    lê OAuth Claude + JWT Cursor
+    GET/POST nas APIs das assinaturas
+    GET /usage  →  JSON (percentuais, reset)
+
+ESP32 + ILI9488 + touch
+    Wi-Fi  →  GET /usage  →  abas Inicio / Claude / Cursor / Info
+```
+
+No simulador **Wokwi** a tela usa dados **mock** (sem Wi-Fi), para validar o layout.
+
+## O que você precisa
+
+1. ESP32 Dev Module + TFT SPI 3,5" (ILI9488 na maioria das 3,5")
+2. Mac na **mesma Wi-Fi**, com Claude Code e Cursor já logados (ou tokens no `.env`)
+3. [PlatformIO Core](https://platformio.org/) (`brew install platformio`)
+4. Python 3 (já vem no macOS)
+5. Extensão Wokwi no Cursor/VS Code — só se for simular
+
+## Subir o coletor (Mac)
+
+```bash
+cd collector
+cp .env.example .env    # opcional
+python3 server.py
+```
+
+Confira:
+
+```bash
+curl -s http://127.0.0.1:8787/usage | python3 -m json.tool
+```
+
+Anote o IP do Mac na LAN (`ipconfig getifaddr en0`). A ESP32 **não** pode usar `127.0.0.1`.
+
+Libere a porta **8787** no firewall para a rede local. Detalhes: [`docs/COLETOR.md`](docs/COLETOR.md).
+
+Tokens (não vão para a placa):
+
+| Serviço | Padrão |
+| --- | --- |
+| Claude | `~/.claude/.credentials.json` |
+| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` |
+
+Override no `collector/.env`: `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`.
+
+## Firmware na placa
+
+```bash
+cp src/secrets.h.example src/secrets.h
+```
+
+Edite SSID, senha e `USAGE_URL` (`http://SEU_IP:8787/usage`). `src/secrets.h` está no `.gitignore`.
+
+```bash
+pio run -e esp32dev -t upload
+pio device monitor -b 115200
+```
+
+Pinos da TFT, **touch** e ILI9486 vs 9488: [`docs/HARDWARE.md`](docs/HARDWARE.md) e [`docs/TOUCH.md`](docs/TOUCH.md).
+
+Ligue o XPT2046: `T_CS` no GPIO **21**, `T_IRQ` no **22**, CLK/MOSI/MISO iguais aos da tela. Na aba **Info**, use **Calibrar touch**.
+
+## Simular (Wokwi)
+
+```bash
+pio run -e wokwi
+```
+
+`Cmd+Shift+P` → **Wokwi: Start Simulator**. Tela 240×320 (ILI9341); a 3,5" física é 480×320.
+
+O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, no serial, `n` `p` `0` `1` `2` `3`.
+
+## Ambientes PlatformIO
+
+| Ambiente | Uso | Driver | Rede |
+| --- | --- | --- | --- |
+| `esp32dev` | Placa real 3,5" | ILI9488 320×480 | Wi-Fi + coletor |
+| `wokwi` | Simulador | ILI9341 240×320 | Dados mock |
+
+`pio run` gera os dois. TFT_eSPI só via `build_flags` (`USER_SETUP_LOADED=1`).
+
+## Arquivos
+
+| Caminho | Função |
+| --- | --- |
+| `collector/server.py` | HTTP das cotas |
+| `src/main.cpp` | Wi-Fi, JSON, loop |
+| `src/ui.cpp` | Quatro views e abas |
+| `src/input.cpp` | Touch, botões, serial |
+| `src/secrets.h.example` | Wi-Fi e URL |
+| `docs/` | Plano, APIs, touch, contexto de IA |
+| `diagram.json` | Circuito Wokwi (+ botões) |
+
+## Tela (touch)
+
+- **Inicio:** dois cards; toque abre o detalhe
+- **Claude:** sessão 5h e semana (% usado / restante)
+- **Cursor:** ciclo do plano e dólares, se a API mandar
+- **Info:** rede, atualizar agora, calibrar touch
+- Deslize horizontal troca a aba; verde &lt; 70%, laranja &lt; 90%, vermelho no resto
+- Falha de um serviço aparece só naquele card
+
+Contrato do JSON: [`docs/CONTRATO_JSON.md`](docs/CONTRATO_JSON.md).
+
+## APIs
+
+São as **mesmas da assinatura** (OAuth / JWT local), não a API paga por token. Não são estáveis como produto oficial; o coletor isola a quebra. Ver [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md) e [`docs/APIS_CURSOR.md`](docs/APIS_CURSOR.md).
+
+Cache do coletor: 5 minutos (o endpoint Claude rate-limita se martelar).
