@@ -32,6 +32,6 @@ Python ≥ 3.11, Node 20+, PlatformIO Core.
 | --- | --- |
 | `firmware/` | ESP32 + Wokwi |
 | `backend/` | FastAPI, Swagger `/docs` |
-| `frontend/` | Vite + React (`/` painel, `/display` mostrador) |
+| `frontend/` | Vite + React (`/display` mostrador, `/display/config` contas) |
 
 Leia `AGENTS.md` e `docs/CONTEXTO_IA.md` antes de gerar código com um agente.

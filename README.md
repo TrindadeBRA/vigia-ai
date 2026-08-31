@@ -18,8 +18,8 @@ Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek)
         │                    GET /usage   (consulta na hora)
         │                    GET /docs    (Swagger)
         ├──────────────────► ESP32 / Wokwi   (escuta o stream)
-        └──────────────────► React            /  painel
-                                              /display  réplica da placa
+        └──────────────────► React            /display          réplica da placa
+                                              /display/config   contas e placa
 ```
 
 1. Tokens ficam no Mac (`Keychain`, `~/.codex/auth.json`, `state.vscdb`, ou `backend/data/config.json` gitignored).
@@ -39,7 +39,7 @@ Precisa de **Python ≥ 3.11**, **Node 20+** e, para firmware, [PlatformIO Core]
 
 | O quê | URL |
 | --- | --- |
-| Painel (contas, mock, `secrets.h`) | http://127.0.0.1:5173/ |
+| Painel (contas, mock, `secrets.h`) | http://127.0.0.1:5173/display/config |
 | Mostrador web | http://127.0.0.1:5173/display |
 | Swagger | http://127.0.0.1:8787/docs |
 | Contrato JSON | `GET http://127.0.0.1:8787/usage` |
@@ -57,11 +57,11 @@ Docker (backend serve o `frontend/dist` em `:8787`):
 
 | Comando | Faz |
 | --- | --- |
-| `./dev up` | Backend + Vite |
+| `./dev up` | Backend + Vite; rebuilda `frontend/dist` (coletor em `:8787`) |
 | `./dev down` | Encerra o que ficou em `:8787` / `:5173` |
 | `./dev test` | pytest + `tsc` |
 | `./dev lint` | ruff |
-| `./dev wokwi` | Coletor + gateway Wokwi + firmware simulado |
+| `./dev wokwi` | Coletor + gateway Wokwi + firmware simulado; rebuilda o dist |
 | `./dev firmware flash` | Grava a ESP32 |
 
 ## Provedores

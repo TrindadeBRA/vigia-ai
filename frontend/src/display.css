@@ -342,3 +342,201 @@
   @media (min-width: 861px) {
     .scrim { display: none; }
   }
+
+  a.side-item { text-decoration: none; }
+  .side-inline-link, .empty-link {
+    color: var(--accent); font-weight: 650; text-decoration: none;
+  }
+  .side-inline-link:hover, .empty-link:hover { text-decoration: underline; }
+
+  /* ---------- config page ---------- */
+  .cfg-page { width: 100%; max-width: none; display: flex; flex-direction: column; gap: 14px; }
+  .cfg-head { width: 100%; }
+  .cfg-head h1 { font-size: 21px; font-weight: 750; margin: 0; letter-spacing: -.2px; }
+  .cfg-lead { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin: 8px 0 4px; max-width: 62ch; }
+  .cfg-section-head { margin: 8px 0 0; width: 100%; }
+  .cfg-section-head h2 { font-size: 16px; font-weight: 700; margin: 0 0 4px; }
+  .cfg-section-head p { margin: 0; color: var(--text-dim); font-size: 13.5px; line-height: 1.55; max-width: 72ch; }
+  .cfg-grid {
+    display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px; width: 100%;
+  }
+  .cfg-grid > * { flex: 1 1 360px; min-width: 0; }
+  .cfg-grid > form { display: flex; }
+  .cfg-grid > form > .cfg-card { flex: 1; width: 100%; }
+
+  .cfg-card {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 16px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; width: 100%;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 12px 26px -20px var(--shadow);
+  }
+  .flat .cfg-card { box-shadow: none; }
+  .cfg-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .cfg-card-copy { min-width: 0; flex: 1; }
+  .cfg-card-action { flex: none; }
+  .cfg-card-title { font-size: 15.5px; font-weight: 700; margin: 0; }
+  .cfg-card-lead { margin: 4px 0 0; color: var(--text-dim); font-size: 13.5px; line-height: 1.55; }
+
+  .cfg-provider { gap: 12px; }
+  .cfg-provider-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .cfg-provider-id { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+  .cfg-provider-meta { min-width: 0; }
+  .cfg-provider-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cfg-provider-title { margin: 0; font-size: 15.5px; font-weight: 700; }
+  .cfg-provider-hint { margin: 3px 0 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.45; }
+
+  .cfg-pill {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    font-size: 11.5px; font-weight: 650; white-space: nowrap;
+    padding: 3px 8px; border-radius: 999px; background: var(--chip);
+  }
+  .cfg-pill.ok { color: var(--good); }
+  .cfg-pill.warn { color: var(--warn); }
+  .cfg-pill.missing { color: var(--bad); }
+  .cfg-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .cfg-switch {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
+    cursor: pointer; user-select: none; flex: none;
+  }
+  .cfg-switch-label {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .45px; text-transform: uppercase; color: var(--text-muted);
+  }
+  .cfg-switch-ctl { display: flex; align-items: center; gap: 6px; }
+  .cfg-switch input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none; width: 36px; height: 20px; margin: 0;
+    border-radius: 999px; background: var(--track); border: 1px solid var(--card-border);
+    position: relative; cursor: pointer; flex: none;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+  .cfg-switch input[type="checkbox"]::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--text); transition: transform .15s ease;
+  }
+  .cfg-switch input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+  .cfg-switch input[type="checkbox"]:checked::after { transform: translateX(16px); background: var(--accent-ink); }
+  .cfg-switch input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cfg-switch.is-busy { opacity: .7; cursor: wait; }
+
+  .cfg-fold { border-top: 1px solid var(--card-border); padding-top: 10px; }
+  .cfg-fold > summary {
+    cursor: pointer; font-size: 12.5px; font-weight: 650; color: var(--text-dim);
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  .cfg-fold > summary::-webkit-details-marker { display: none; }
+  .cfg-fold > summary::before {
+    content: ""; width: 6px; height: 6px; flex: none;
+    border-right: 1.8px solid currentColor; border-bottom: 1.8px solid currentColor;
+    transform: rotate(-45deg); transition: transform .15s ease;
+  }
+  .cfg-fold[open] > summary::before { transform: rotate(45deg); }
+  .cfg-fold[open] > summary { color: var(--text); }
+  .cfg-fold-body { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+  .cfg-url-row { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+  .cfg-url { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+  .cfg-url code { color: var(--accent); font-size: 12.5px; word-break: break-all; }
+
+  .cfg-field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+  .cfg-field-label {
+    color: var(--text-muted); font-size: 11.5px; font-weight: 650;
+    letter-spacing: .4px; text-transform: uppercase;
+  }
+  .cfg-field-hint { color: var(--text-muted); font-size: 12px; line-height: 1.45; }
+  .cfg-input {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--card-border); border-radius: 10px;
+    padding: 10px 12px; font: inherit; font-size: 14px;
+  }
+  .cfg-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .cfg-input:disabled { opacity: .55; cursor: not-allowed; }
+
+  .cfg-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .cfg-grid-2 { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 560px) { .cfg-grid-2 { grid-template-columns: 1fr 1fr; } }
+
+  .cfg-check {
+    display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text);
+    cursor: pointer; user-select: none;
+  }
+  .cfg-check input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .cfg-check.is-busy { opacity: .7; cursor: wait; }
+
+  .cfg-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700;
+    border-radius: 10px; padding: 10px 14px; white-space: nowrap;
+    transition: transform .12s ease, opacity .12s ease, background-color .12s ease;
+  }
+  .cfg-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .cfg-btn-block { width: 100%; }
+  .cfg-btn-primary {
+    background: var(--accent); color: var(--accent-ink);
+    box-shadow: 0 12px 22px -12px var(--glow);
+  }
+  .cfg-btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+  .cfg-btn-secondary {
+    background: transparent; color: var(--text); border: 1px solid var(--card-border);
+  }
+  .cfg-btn-secondary:hover:not(:disabled) { background: var(--chip); }
+  .cfg-btn-ghost {
+    background: transparent; color: var(--text-dim); border: 1px solid var(--card-border);
+  }
+  .cfg-btn-ghost:hover:not(:disabled) { background: var(--chip); color: var(--text); }
+  .flat .cfg-btn-primary { box-shadow: none; }
+
+  .cfg-spinner {
+    width: 14px; height: 14px; border-radius: 50%; flex: none;
+    border: 2px solid currentColor; border-right-color: transparent;
+    animation: cfgSpin .6s linear infinite;
+  }
+  @keyframes cfgSpin { to { transform: rotate(360deg); } }
+
+  .cfg-status { min-height: 1.2em; margin: 0; font-size: 12.5px; color: var(--text-muted); }
+  .cfg-status.ok { color: var(--good); }
+  .cfg-status.err { color: var(--bad); }
+  .cfg-warn { margin: 0; color: var(--warn); font-size: 12.5px; line-height: 1.5; }
+  .cfg-docs { margin: 4px 0 0; font-size: 12.5px; }
+  .cfg-docs a { color: var(--accent); }
+
+  .cfg-hint { margin: 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
+  .cfg-advanced { color: var(--text-dim); font-size: 12.5px; }
+  .cfg-advanced summary { cursor: pointer; font-weight: 650; }
+  .cfg-pre {
+    margin: 8px 0 0; overflow-x: auto; background: var(--bg); border-radius: 10px;
+    padding: 10px 12px; font-size: 11.5px; color: var(--text-dim); line-height: 1.45;
+  }
+
+  .cfg-extra { display: flex; flex-direction: column; gap: 8px; }
+  .cfg-extra-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .cfg-extra-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 8px 10px;
+  }
+  .cfg-extra-meta { min-width: 0; }
+  .cfg-extra-name { margin: 0; font-size: 13.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cfg-extra-suffix { margin: 2px 0 0; font-size: 11.5px; color: var(--text-muted); }
+
+  .cfg-usage-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cfg-usage-cell {
+    flex: 1 1 140px; border-radius: 12px; padding: 10px 12px; border: 1px solid var(--card-border); background: var(--bg);
+  }
+  .cfg-usage-cell.ok { border-color: color-mix(in srgb, var(--good) 40%, var(--card-border)); }
+  .cfg-usage-cell.bad { border-color: color-mix(in srgb, var(--bad) 40%, var(--card-border)); }
+  .cfg-usage-cell.muted { opacity: .7; }
+  .cfg-usage-name { margin: 0; font-size: 13px; font-weight: 650; }
+  .cfg-usage-val { margin: 4px 0 0; font-size: 12px; color: var(--text-dim); }
+  .cfg-usage-cell.ok .cfg-usage-val { color: var(--good); }
+  .cfg-usage-cell.bad .cfg-usage-val { color: var(--bad); }
+
+  .cfg-skel-page { width: 100%; max-width: none; display: flex; flex-direction: column; gap: 14px; }
+  .cfg-skel {
+    width: 100%; min-width: 0; box-sizing: border-box;
+    border-radius: 16px; border: 1px solid var(--card-border);
+    background: linear-gradient(90deg, var(--card) 0%, var(--chip) 50%, var(--card) 100%);
+    background-size: 200% 100%; animation: cfgShimmer 1.2s ease infinite;
+  }
+  .cfg-skel-lead { height: 44px; }
+  .cfg-skel-banner { height: 92px; }
+  .cfg-skel-card { height: 172px; }
+  .cfg-grid > .cfg-skel { flex: 1 1 360px; }
+  @keyframes cfgShimmer { to { background-position: -200% 0; } }

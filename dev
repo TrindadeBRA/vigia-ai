@@ -65,9 +65,8 @@ ensure_node() {
 }
 
 ensure_frontend_dist() {
-  if [ -f "$ROOT_DIR/frontend/dist/index.html" ]; then
-    return 0
-  fi
+  # Sempre rebuilda: :8787 serve frontend/dist, e pular o build deixava o
+  # mostrador da LAN / Wokwi com UI velha depois de mudar o React.
   ensure_node
   echo "== build frontend (painel na :${BACKEND_PORT} pra LAN / QR da placa) =="
   (cd "$ROOT_DIR/frontend" && npm run build)
@@ -212,7 +211,7 @@ cmd_up() {
       echo "docker não encontrado." >&2
       exit 1
     fi
-    echo "painel: http://127.0.0.1:${BACKEND_PORT}/"
+    echo "painel: http://127.0.0.1:${BACKEND_PORT}/display/config"
     exec docker compose -f "$ROOT_DIR/compose.yaml" up --build
   fi
   require_port_free "$BACKEND_PORT" "backend"
@@ -221,7 +220,7 @@ cmd_up() {
   run_backend
   run_frontend
   echo ""
-  echo "painel     http://127.0.0.1:${FRONTEND_PORT}/"
+  echo "painel     http://127.0.0.1:${FRONTEND_PORT}/display/config"
   echo "mostrador  http://127.0.0.1:${FRONTEND_PORT}/display"
   echo "swagger    http://127.0.0.1:${BACKEND_PORT}/docs"
   echo "Ctrl+C encerra."
@@ -249,6 +248,7 @@ cmd_sim() {
   run_pio run -e wokwi
   if curl -sf -o /dev/null "http://127.0.0.1:${BACKEND_PORT}/health"; then
     echo "== backend ja esta em :${BACKEND_PORT} (reusa o ./dev up) =="
+    ensure_frontend_dist
   else
     require_port_free "$BACKEND_PORT" "backend"
     run_backend

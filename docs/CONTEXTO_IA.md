@@ -21,7 +21,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 ## O que é este projeto
 
-**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **GPT** (ChatGPT / Codex), **Cursor**, **OpenRouter** e **DeepSeek**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. Firmware e `/display` escutam `GET /events` (SSE). `GET /usage` é o mesmo JSON, na hora. O frontend React é o painel (`/`) e o mostrador (`/display`).
+**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **GPT** (ChatGPT / Codex), **Cursor**, **OpenRouter** e **DeepSeek**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. Firmware e `/display` escutam `GET /events` (SSE). `GET /usage` é o mesmo JSON, na hora. O frontend React é o mostrador (`/display`) e as configurações (`/display/config`). `/` redireciona para as configs.
 
 Idioma da UI e da documentação: **português (Brasil)**. Código (identificadores) em inglês.
 
@@ -44,8 +44,8 @@ backend/app/main.py           FastAPI, Swagger /docs
 backend/app/schemas.py        contrato OpenAPI
 backend/app/providers/        claude, gpt, cursor, openrouter, deepseek
 backend/app/local/            Keychain, credentials, state.vscdb, auth.json (Codex)
-frontend/src/pages/Panel.tsx   configuração
-frontend/src/pages/Display.tsx mostrador (SSE GET /events)
+frontend/src/pages/Display.tsx         mostrador (SSE GET /events)
+frontend/src/pages/config/ConfigPage.tsx  contas, placa, rede
 firmware/src/                  sketch ESP32 (`core/` `net/` `input/` `ui/`)
 firmware/platformio.ini
 ./dev                          único script
@@ -53,7 +53,7 @@ firmware/platformio.ini
 
 ## Como validar
 
-- `./dev up` — painel em http://127.0.0.1:5173/ ; Swagger em http://127.0.0.1:8787/docs
+- `./dev up` — mostrador em http://127.0.0.1:5173/display ; configs em http://127.0.0.1:5173/display/config ; Swagger em http://127.0.0.1:8787/docs
 - `./dev test`
 - `./dev wokwi` e Wokwi: Start Simulator
 - Hardware: `firmware/src/secrets.h` + `./dev firmware flash`

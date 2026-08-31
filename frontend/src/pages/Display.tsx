@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode, type SVGProps } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { CreditsAccount, CursorAccount, ClaudeAccount, GptAccount, UsagePayload } from "../api/types";
+import { CheckIcon, ClockIcon, CloseIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs, prefersReducedMotion } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
+import type { ConfigOutlet } from "./config/ConfigPage";
 import "../display.css";
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang };
@@ -37,59 +40,6 @@ function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
     }
   }, [prefs]);
   return [prefs, (fn) => setPrefs(fn)];
-}
-
-function Svg({ d, size, viewBox, stroke, fill, className, children, ...rest }: SVGProps<SVGSVGElement> & { d?: string; size?: number }) {
-  return (
-    <svg width={size || 16} height={size || 16} viewBox={viewBox || "0 0 24 24"} className={className} fill={fill || "none"} xmlns="http://www.w3.org/2000/svg" aria-hidden="true" {...rest}>
-      {children || (d ? <path d={d} stroke={stroke || "currentColor"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /> : null)}
-    </svg>
-  );
-}
-function CheckIcon(props: { size?: number; stroke?: string }) {
-  return <Svg {...props} d="M5 13l4 4L19 7" />;
-}
-function CloseIcon(props: { size?: number }) {
-  return <Svg {...props} d="M6 6l12 12M18 6L6 18" />;
-}
-function MenuIcon(props: { size?: number }) {
-  return (
-    <Svg {...props}>
-      <line x1={4} y1={7} x2={20} y2={7} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      <line x1={4} y1={12} x2={20} y2={12} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      <line x1={4} y1={17} x2={20} y2={17} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-function SettingsIcon(props: { size?: number }) {
-  return (
-    <Svg {...props}>
-      <line x1={4} y1={6} x2={20} y2={6} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      <circle cx={9} cy={6} r={2} fill="var(--bg)" stroke="currentColor" strokeWidth={2} />
-      <line x1={4} y1={12} x2={20} y2={12} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      <circle cx={15} cy={12} r={2} fill="var(--bg)" stroke="currentColor" strokeWidth={2} />
-      <line x1={4} y1={18} x2={20} y2={18} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-      <circle cx={11} cy={18} r={2} fill="var(--bg)" stroke="currentColor" strokeWidth={2} />
-    </Svg>
-  );
-}
-function GridIcon(props: { size?: number }) {
-  return (
-    <Svg {...props}>
-      <rect x={4} y={4} width={7} height={7} rx={1.6} stroke="currentColor" strokeWidth={2} />
-      <rect x={13} y={4} width={7} height={7} rx={1.6} stroke="currentColor" strokeWidth={2} />
-      <rect x={4} y={13} width={7} height={7} rx={1.6} stroke="currentColor" strokeWidth={2} />
-      <rect x={13} y={13} width={7} height={7} rx={1.6} stroke="currentColor" strokeWidth={2} />
-    </Svg>
-  );
-}
-function ClockIcon(props: { size?: number }) {
-  return (
-    <Svg {...props}>
-      <circle cx={12} cy={12} r={8.5} stroke="currentColor" strokeWidth={2} />
-      <path d="M12 7.5V12l3.2 2" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
 }
 
 function Eye({ size }: { size: number }) {
@@ -318,12 +268,13 @@ function Sidebar(props: {
   onClose: () => void;
   onNow: () => void;
   nowActive: boolean;
+  configActive: boolean;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, t } = props;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, t } = props;
   return (
     <nav className={`sidebar${open ? " open" : ""}`}>
-      <button className={`side-item${section === "overview" && !nowActive ? " active" : ""}`} onClick={() => { onOverview(); onClose(); }}>
+      <button className={`side-item${section === "overview" && !nowActive && !configActive ? " active" : ""}`} onClick={() => { onOverview(); onClose(); }}>
         <GridIcon size={16} /> {t.overview}
       </button>
       <button className={`side-item${nowActive ? " active" : ""}`} onClick={() => { onNow(); onClose(); }}>
@@ -331,10 +282,15 @@ function Sidebar(props: {
       </button>
       <div className="side-section-title">{t.accounts}</div>
       {providers.length === 0 ? (
-        <div className="side-empty">{t.noProviders}</div>
+        <div className="side-empty">
+          {t.noProviders}{" "}
+          <NavLink to="/display/config" className="side-inline-link" onClick={onClose}>
+            {t.configCta}
+          </NavLink>
+        </div>
       ) : (
         providers.map((p) => (
-          <button key={p.id} className={`side-item${section === "account" && selectedId === p.id ? " active" : ""}`} onClick={() => { onSelect(p.id); onClose(); }}>
+          <button key={p.id} className={`side-item${section === "account" && selectedId === p.id && !configActive ? " active" : ""}`} onClick={() => { onSelect(p.id); onClose(); }}>
             <div className="icon-chip side-account-icon">
               <img src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
             </div>
@@ -346,6 +302,10 @@ function Sidebar(props: {
           </button>
         ))
       )}
+      <div className="side-section-title">{t.setup}</div>
+      <NavLink to="/display/config" className={({ isActive }) => `side-item${isActive ? " active" : ""}`} onClick={onClose}>
+        <SlidersIcon size={16} /> {t.config}
+      </NavLink>
     </nav>
   );
 }
@@ -365,7 +325,12 @@ function Overview({ providers, updatedAt, now, t, pal, onOpen }: { providers: Pr
         </div>
       </div>
       {providers.length === 0 ? (
-        <div className="empty-note">{t.noProviders}</div>
+        <div className="empty-note">
+          {t.noProviders}{" "}
+          <Link to="/display/config" className="empty-link">
+            {t.configCta}
+          </Link>
+        </div>
       ) : (
         <div className="overview-grid">
           {providers.map((p) => (
@@ -629,7 +594,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
   );
 }
 
-function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed, onClose }: { prefs: Prefs; setPrefs: (fn: (p: Prefs) => Prefs) => void; t: T; onRefresh: () => void; data: UsagePayload; refreshing: boolean; fetchFailed: boolean; onClose: () => void }) {
+function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed, onClose }: { prefs: Prefs; setPrefs: (fn: (p: Prefs) => Prefs) => void; t: T; onRefresh: () => void; data: UsagePayload | null; refreshing: boolean; fetchFailed: boolean; onClose: () => void }) {
   const accents = ACCENTS[prefs.theme];
   return (
     <>
@@ -641,7 +606,7 @@ function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetch
             <CloseIcon size={18} />
           </button>
         </div>
-        <Kv k={t.updated} v={fmtWhen(data.updated_at)} />
+        <Kv k={t.updated} v={data ? fmtWhen(data.updated_at) : "—"} />
         <div className="section-title">{t.themeSection}</div>
         <div className="segmented">
           {(["dark", "light", "contrast"] as ThemeName[]).map((k) => (
@@ -676,6 +641,8 @@ function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetch
 }
 
 export default function Display() {
+  const navigate = useNavigate();
+  const isConfig = Boolean(useMatch("/display/config"));
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -698,6 +665,7 @@ export default function Display() {
   const flat = prefs.theme === "contrast";
   const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
   const t = STR[prefs.lang];
+  const outlet: ConfigOutlet = { lang: prefs.lang };
   const shellClass = `shell${flat ? " flat" : ""}`;
   const pollS = pollMs / 1000;
   const showCheck = Boolean(okFlashAt && now - okFlashAt < FETCH_OK_FLASH_MS);
@@ -774,23 +742,13 @@ export default function Display() {
     if (!providers.some((p) => p.id === selectedId)) setSection("overview");
   }, [data, section, selectedId, t]);
 
-  if (!data) {
-    return (
-      <div className={shellClass}>
-        <div className="topbar">
-          <div className="eye" style={{ width: 28, height: 28 }}>
-            <div className="pupil" />
-          </div>
-          <div className="brand">VIGIA<span className="ai"> AI</span></div>
-        </div>
-        <div className="content-area">
-          <div className="empty-note">{fetchFailed ? t.fetchFail : "…"}</div>
-        </div>
-      </div>
-    );
+  function goOverview() {
+    navigate("/display");
+    setSection("overview");
+    setNowOpen(false);
   }
 
-  if (nowOpen) {
+  if (nowOpen && data) {
     return (
       <div className={shellClass}>
         <NowView data={data} prefs={prefs} t={t} pal={pal} nowMs={now} driftMs={driftMs} secs={secsLeft} pollS={pollS} showCheck={showCheck} onClose={() => setNowOpen(false)} />
@@ -798,10 +756,10 @@ export default function Display() {
     );
   }
 
-  const providers = buildProviders(data, t, now);
+  const providers = data ? buildProviders(data, t, now) : [];
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null = null;
-  if (section === "account") {
+  if (data && section === "account") {
     meta = providers.find((p) => p.id === selectedId) || null;
     if (meta) {
       const idx = meta.id.indexOf(":");
@@ -815,12 +773,12 @@ export default function Display() {
     <div className={shellClass}>
       <div className="topbar">
         <button className="icon-btn menu-btn" onClick={() => setSidebarOpen(true)}><MenuIcon size={19} /></button>
-        <button className="brand-btn" onClick={() => setSection("overview")}>
+        <button className="brand-btn" onClick={goOverview}>
           <Eye size={28} />
           <div className="brand">VIGIA<span className="ai"> AI</span></div>
         </button>
         <div className="spacer" />
-        <button className="clock-btn num" onClick={() => setNowOpen(true)} title={t.now}>
+        <button className="clock-btn num" onClick={() => { if (data) setNowOpen(true); }} title={t.now}>
           <span className="clock-dot" />
           {fmtClock(now + driftMs)}
         </button>
@@ -838,14 +796,34 @@ export default function Display() {
           open={sidebarOpen}
           t={t}
           nowActive={nowOpen}
-          onOverview={() => setSection("overview")}
-          onSelect={(id) => { setSection("account"); setSelectedId(id); }}
-          onNow={() => setNowOpen(true)}
+          configActive={isConfig}
+          onOverview={goOverview}
+          onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); setNowOpen(false); }}
+          onNow={() => { if (data) setNowOpen(true); }}
           onClose={() => setSidebarOpen(false)}
         />
         <main className="content-area">
-          {section === "overview" ? <Overview providers={providers} updatedAt={data.updated_at} now={now} t={t} pal={pal} onOpen={(id) => { setSection("account"); setSelectedId(id); }} /> : null}
-          {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
+          {isConfig ? (
+            <Outlet context={outlet} />
+          ) : !data ? (
+            fetchFailed ? (
+              <div className="empty-note">{t.fetchFail}</div>
+            ) : (
+              <div className="cfg-skel-page view-fade" aria-hidden>
+                <div className="cfg-skel cfg-skel-lead" />
+                <div className="cfg-grid">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} className="cfg-skel cfg-skel-card" />
+                  ))}
+                </div>
+              </div>
+            )
+          ) : (
+            <>
+              {section === "overview" ? <Overview providers={providers} updatedAt={data.updated_at} now={now} t={t} pal={pal} onOpen={(id) => { setSection("account"); setSelectedId(id); }} /> : null}
+              {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
+            </>
+          )}
         </main>
       </div>
       {settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}

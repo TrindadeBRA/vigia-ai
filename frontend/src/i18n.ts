@@ -59,13 +59,16 @@ type Strings = {
   fetchFail: string;
   now: string;
   closeSettings: string;
+  config: string;
+  setup: string;
+  configCta: string;
 };
 
 export const STR: Record<Lang, Strings> = {
   pt: {
     overview: "Visão geral",
     accounts: "Contas",
-    settings: "Configurações",
+    settings: "Aparência",
     session5h: "Sessão 5h",
     resetIn: "Reset em",
     week: "Semana",
@@ -106,7 +109,7 @@ export const STR: Record<Lang, Strings> = {
     refreshSection: "Dados de uso",
     refreshNow: "Atualizar consumo",
     noData: "sem dados",
-    noProviders: "Nenhum provedor configurado. Preencha no painel do coletor.",
+    noProviders: "Nenhuma conta visível.",
     allOk: "Tudo certo",
     errorsCount: (n) => (n === 1 ? "1 provedor com erro" : `${n} provedores com erro`),
     agoNow: "agora mesmo",
@@ -115,11 +118,14 @@ export const STR: Record<Lang, Strings> = {
     fetchFail: "Não foi possível falar com o coletor.",
     now: "Agora",
     closeSettings: "Fechar",
+    config: "Configurações",
+    setup: "Ajustes",
+    configCta: "Configurar contas",
   },
   en: {
     overview: "Overview",
     accounts: "Accounts",
-    settings: "Settings",
+    settings: "Appearance",
     session5h: "5h session",
     resetIn: "Resets in",
     week: "Week",
@@ -160,7 +166,7 @@ export const STR: Record<Lang, Strings> = {
     refreshSection: "Usage data",
     refreshNow: "Fetch usage now",
     noData: "no data",
-    noProviders: "No provider configured. Fill one in on the collector panel.",
+    noProviders: "No accounts visible.",
     allOk: "All good",
     errorsCount: (n) => (n === 1 ? "1 provider failing" : `${n} providers failing`),
     agoNow: "just now",
@@ -169,11 +175,14 @@ export const STR: Record<Lang, Strings> = {
     fetchFail: "Could not reach the collector.",
     now: "Now",
     closeSettings: "Close",
+    config: "Settings",
+    setup: "Setup",
+    configCta: "Set up accounts",
   },
   es: {
     overview: "Resumen",
     accounts: "Cuentas",
-    settings: "Configuración",
+    settings: "Apariencia",
     session5h: "Sesión 5h",
     resetIn: "Reset en",
     week: "Semana",
@@ -214,7 +223,7 @@ export const STR: Record<Lang, Strings> = {
     refreshSection: "Datos de uso",
     refreshNow: "Actualizar consumo",
     noData: "sin datos",
-    noProviders: "Ningún proveedor configurado. Complétalo en el panel del colector.",
+    noProviders: "Ninguna cuenta visible.",
     allOk: "Todo bien",
     errorsCount: (n) => (n === 1 ? "1 proveedor con error" : `${n} proveedores con error`),
     agoNow: "recién",
@@ -223,6 +232,9 @@ export const STR: Record<Lang, Strings> = {
     fetchFail: "No se pudo contactar al colector.",
     now: "Ahora",
     closeSettings: "Cerrar",
+    config: "Configuración",
+    setup: "Ajustes",
+    configCta: "Configurar cuentas",
   },
 };
 

@@ -10,7 +10,7 @@ O protótipo usava `http.server`. O coletor oficial é **FastAPI + Uvicorn**: Op
 
 ## Um app React, duas rotas
 
-Painel (`/`) e mostrador (`/display`) são Vite + React + TypeScript. Em desenvolvimento o Vite roda em `:5173` e faz proxy da API. Em produção o backend serve o `frontend/dist`. `/display` lê **somente** `GET /events` / `GET /usage` — zero tokens no browser.
+Painel (`/display/config`) e mostrador (`/display`) são Vite + React + TypeScript. Em desenvolvimento o Vite roda em `:5173` e faz proxy da API. Em produção o backend serve o `frontend/dist`. `/display` lê **somente** `GET /events` / `GET /usage` — zero tokens no browser. `/` redireciona para as configs.
 
 ## Docker opcional
 

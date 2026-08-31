@@ -35,19 +35,33 @@ export function openUsageEvents(onPayload: (data: UsagePayload) => void, onFail:
   };
 }
 
+type MutateResult = { ok: boolean; error?: string; restart_needed_for_port?: boolean };
+
+function errorFromBody(data: { detail?: unknown; error?: string }, status: number): string {
+  if (typeof data.error === "string" && data.error) return data.error;
+  if (typeof data.detail === "string" && data.detail) return data.detail;
+  return `HTTP ${status}`;
+}
+
+async function readMutate(res: Response): Promise<MutateResult> {
+  const data = (await res.json().catch(() => ({}))) as MutateResult & { detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data, res.status) };
+  return data;
+}
+
 export async function fetchConfig(): Promise<ConfigPublic> {
   const res = await fetch("/api/config", { cache: "no-store" });
   if (!res.ok) throw new Error(`config HTTP ${res.status}`);
   return res.json() as Promise<ConfigPublic>;
 }
 
-export async function patchConfig(body: Record<string, unknown>): Promise<{ ok: boolean; error?: string; restart_needed_for_port?: boolean }> {
+export async function patchConfig(body: Record<string, unknown>): Promise<MutateResult> {
   const res = await fetch("/api/config", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return res.json() as Promise<{ ok: boolean; error?: string; restart_needed_for_port?: boolean }>;
+  return readMutate(res);
 }
 
 export async function addAccount(provider: string, label: string, secret: string) {
@@ -56,15 +70,15 @@ export async function addAccount(provider: string, label: string, secret: string
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider, label, token: secret, key: secret }),
   });
-  return res.json() as Promise<{ ok: boolean; error?: string }>;
+  return readMutate(res);
 }
 
 export async function deleteAccount(provider: string, id: string) {
   const res = await fetch(`/api/config/account/${provider}/${id}`, { method: "DELETE" });
-  return res.json() as Promise<{ ok: boolean; error?: string }>;
+  return readMutate(res);
 }
 
 export async function clearSecret(name: string) {
   const res = await fetch(`/api/config/secret/${name}`, { method: "DELETE" });
-  return res.json() as Promise<{ ok: boolean; error?: string }>;
+  return readMutate(res);
 }

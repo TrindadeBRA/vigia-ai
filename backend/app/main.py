@@ -113,6 +113,8 @@ def create_app() -> FastAPI:
         @app.get("/", include_in_schema=False)
         @app.get("/display", include_in_schema=False)
         @app.get("/display/", include_in_schema=False)
+        @app.get("/display/config", include_in_schema=False)
+        @app.get("/display/config/", include_in_schema=False)
         def spa() -> FileResponse:
             return FileResponse(dist / "index.html")
 
@@ -137,7 +139,7 @@ def main() -> None:
     hosts = ["127.0.0.1", *lan_ipv4()]
     for item in hosts:
         label = "  (LAN — use este em outro aparelho)" if item != "127.0.0.1" else ""
-        print(f"painel     http://{item}:{port}/{label}")
+        print(f"painel     http://{item}:{port}/display/config{label}")
         print(f"mostrador  http://{item}:{port}/display{label}")
         print(f"usage      http://{item}:{port}/usage{label}")
         print(f"events     http://{item}:{port}/events{label}")
