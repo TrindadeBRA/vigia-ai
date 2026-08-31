@@ -1,6 +1,6 @@
-#include "ui_format.h"
+#include "ui/widgets.h"
 
-#include "i18n.h"
+#include "ui/i18n.h"
 
 #include <cstdlib>
 #include <pgmspace.h>

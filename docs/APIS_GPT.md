@@ -59,7 +59,7 @@ Aliases (`five_hour`, `weekly`, …) também são lidos se a API mudar o envelop
 
 ## O que a tela mostra
 
-- **Sessão** ← janela curta (`primary_window` ~5 h)
+- **Sessão** ← janela curta (`primary_window` ~5 h). No plano **free**, essa janela costuma não existir: o mostrador web troca o `--` por um cronômetro até o reset da cota longa
 - **Semana** ← janela longa (`secondary_window`, ou a janela mensal se for a única)
 - **plano** ← `plan_type` (`plus`, `pro`, `free`, …)
 

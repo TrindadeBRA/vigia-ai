@@ -1,6 +1,6 @@
-#include "i18n.h"
+#include "ui/i18n.h"
 
-#include "ui.h"
+#include "ui/ui.h"
 
 static const UiStrings kPt = {
     "Sessao 5h",

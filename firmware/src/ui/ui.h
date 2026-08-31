@@ -1,6 +1,6 @@
 #pragma once
 
-#include "app_state.h"
+#include "core/state.h"
 
 // Paleta ativa (tema Escuro / Claro / Contraste). Valores iniciais = Escuro.
 extern uint16_t COL_BG;

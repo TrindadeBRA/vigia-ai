@@ -49,6 +49,7 @@ Toque “fantasma” ou invertido = calibração ruim ou `T_CS` errado.
 
 ## Arquivos
 
-- `src/ui.cpp` — desenho e hit-test
-- `src/input.cpp` — XPT2046 / botões / serial
-- `src/app_state.h` — `View` e snapshot
+- `src/ui/nav.cpp` — navegação e hit-test
+- `src/ui/views/` — uma tela por arquivo (Início, detalhe, Sistema, Relógio)
+- `src/input/` — XPT2046 / FT6206 / botões / serial
+- `src/core/state.h` — `View` e snapshot

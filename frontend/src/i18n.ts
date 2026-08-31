@@ -11,6 +11,7 @@ type Strings = {
   accounts: string;
   settings: string;
   session5h: string;
+  resetIn: string;
   week: string;
   weekLimit: string;
   cursorModels: string;
@@ -66,6 +67,7 @@ export const STR: Record<Lang, Strings> = {
     accounts: "Contas",
     settings: "Configurações",
     session5h: "Sessão 5h",
+    resetIn: "Reset em",
     week: "Semana",
     weekLimit: "Limite semanal",
     cursorModels: "Modelos Cursor",
@@ -119,6 +121,7 @@ export const STR: Record<Lang, Strings> = {
     accounts: "Accounts",
     settings: "Settings",
     session5h: "5h session",
+    resetIn: "Resets in",
     week: "Week",
     weekLimit: "Weekly limit",
     cursorModels: "Cursor models",
@@ -172,6 +175,7 @@ export const STR: Record<Lang, Strings> = {
     accounts: "Cuentas",
     settings: "Configuración",
     session5h: "Sesión 5h",
+    resetIn: "Reset en",
     week: "Semana",
     weekLimit: "Límite semanal",
     cursorModels: "Modelos Cursor",

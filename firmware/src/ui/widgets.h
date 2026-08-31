@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ui.h"
+#include "ui/ui.h"
 
 // Widgets/helpers puros da UI: formatação de texto e primitivas de desenho
-// reaproveitadas pelas views (ui_views.cpp). Sem estado global próprio.
+// reaproveitadas pelas views. Sem estado global próprio.
 
 uint16_t barColor(float pct);
 String fmtWhen(const String& raw);
@@ -34,5 +34,5 @@ void drawBrand(int x, int y, uint8_t font);
 
 // Icone da marca: olho com esclera branca fixa (nao muda com o tema) e pupila
 // na cor de acento, desviada do centro por (gazeX, gazeY) em px — usado pra
-// animar o olhar (ver uiTickEye em ui.cpp). Centro (cx, cy), raio r.
+// animar o olhar (ver uiTickEye). Centro (cx, cy), raio r.
 void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY);

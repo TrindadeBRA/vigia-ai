@@ -2,9 +2,10 @@
 #include <TFT_eSPI.h>
 #include <WiFi.h>
 
-#include "input.h"
-#include "ui.h"
-#include "usage_client.h"
+// Árvore: core/ (estado) · net/ (Wi-Fi/SSE/JSON) · input/ (toque/serial) · ui/ (tema, nav, views/).
+#include "input/input.h"
+#include "net/usage_client.h"
+#include "ui/ui.h"
 
 #ifndef USAGE_POLL_MS
 #define USAGE_POLL_MS 300000

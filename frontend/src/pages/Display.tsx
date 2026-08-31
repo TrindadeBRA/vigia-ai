@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type SVGProps } from "react";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { CreditsAccount, CursorAccount, ClaudeAccount, GptAccount, UsagePayload } from "../api/types";
-import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs, prefersReducedMotion } from "../format";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs, prefersReducedMotion } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import "../display.css";
@@ -136,6 +136,11 @@ function Badge({ secs, total, showCheck, pal }: { secs: number; total: number; s
   );
 }
 
+function barFillStyle(pct: number, pal: Pal) {
+  const v = clamp(pct, 0, 100);
+  return { width: `${v}%`, minWidth: v > 0 ? 7 : 0, background: barColor(pct, pal), boxShadow: barGlow(pct, pal) };
+}
+
 function MetricRow({ label, pct, sub, pal }: Metric & { pal: Pal }) {
   if (pct == null) {
     return (
@@ -154,7 +159,7 @@ function MetricRow({ label, pct, sub, pal }: Metric & { pal: Pal }) {
         <span className="val num">{fmtPct(pct)}</span>
       </div>
       <div className="bar-track">
-        <div className="bar-fill" style={{ width: `${clamp(pct, 0, 100)}%`, background: barColor(pct, pal), boxShadow: barGlow(pct, pal) }} />
+        <div className="bar-fill" style={barFillStyle(pct, pal)} />
       </div>
       {sub ? <div className="metric-sub">{sub}</div> : null}
     </div>
@@ -169,7 +174,19 @@ function Icon({ id }: { id: string }) {
   );
 }
 
-function buildProviders(data: UsagePayload, t: T): ProviderMeta[] {
+function gptSessionMetric(g: GptAccount, t: T, nowMs: number): Metric {
+  if (g.session_percent != null) {
+    return {
+      label: t.session5h,
+      pct: g.session_percent,
+      sub: t.remainingPrefix + fmtRemain(g.session_percent) + (g.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.session_resets_at)}` : ""),
+    };
+  }
+  const until = g.session_resets_at || g.weekly_resets_at;
+  return { label: t.resetIn, pct: null, sub: fmtCountdown(until, nowMs) };
+}
+
+function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderMeta[] {
   const list: ProviderMeta[] = [];
   for (const c of data.claude || []) {
     list.push({
@@ -202,11 +219,7 @@ function buildProviders(data: UsagePayload, t: T): ProviderMeta[] {
       title: g.plan ? `GPT ${g.plan}` : "GPT",
       label: g.label || "",
       metrics: [
-        {
-          label: t.session5h,
-          pct: g.session_percent,
-          sub: g.session_percent != null ? t.remainingPrefix + fmtRemain(g.session_percent) + (g.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.session_resets_at)}` : "") : null,
-        },
+        gptSessionMetric(g, t, nowMs),
         {
           label: t.weekLimit,
           pct: g.weekly_percent,
@@ -387,7 +400,7 @@ function NowRow({ p, pal }: { p: ProviderMeta; pal: Pal }) {
               </div>
               {m.pct != null ? (
                 <div className="bar-track">
-                  <div className="bar-fill" style={{ width: `${clamp(m.pct, 0, 100)}%`, background: barColor(m.pct, pal), boxShadow: barGlow(m.pct, pal) }} />
+                  <div className="bar-fill" style={barFillStyle(m.pct, pal)} />
                 </div>
               ) : (
                 <div className="now-metric-plain num">{m.sub || "--"}</div>
@@ -406,7 +419,7 @@ function NowView({ data, prefs, t, pal, nowMs, driftMs, secs, pollS, showCheck, 
   const timeStr = `${pad2(clockNow.getHours())}:${pad2(clockNow.getMinutes())}:${pad2(clockNow.getSeconds())}`;
   const weekday = WEEKDAYS[prefs.lang][clockNow.getDay()];
   const dateStr = `${weekday}  ${pad2(clockNow.getDate())}/${pad2(clockNow.getMonth() + 1)}/${clockNow.getFullYear()}`;
-  const providers = buildProviders(data, t);
+  const providers = buildProviders(data, t, nowMs);
   return (
     <div className="now-view" onClick={onClose}>
       <div className="now-badge">
@@ -422,29 +435,68 @@ function NowView({ data, prefs, t, pal, nowMs, driftMs, secs, pollS, showCheck, 
   );
 }
 
-function DetailBar({ label, pct, sub, pal }: { label: string; pct: number | null | undefined; sub?: string | null; pal: Pal }) {
-  if (pct == null) {
-    return (
-      <div className="detail-bar">
-        <div className="detail-bar-top">
-          <span className="label">{label}</span>
-        </div>
-        <div className="detail-plain-val num">{sub || "--"}</div>
-      </div>
-    );
-  }
+function joinParts(...parts: Array<string | null | undefined>): string | null {
+  const out = parts.filter((p): p is string => Boolean(p && p.trim()));
+  return out.length ? out.join("  ·  ") : null;
+}
+
+function remainLine(t: T, pct: number | null | undefined, resetsAt?: string | null): string | null {
+  if (pct == null) return null;
+  return joinParts(`${t.left} ${fmtRemain(pct)}`, resetsAt ? `${t.resetPrefix}${fmtWhen(resetsAt)}` : null);
+}
+
+function MetaChips({ items }: { items: { k: string; v: ReactNode }[] }) {
+  const shown = items.filter((i) => i.v !== null && i.v !== undefined && i.v !== "");
+  if (!shown.length) return null;
   return (
-    <div className="detail-bar">
-      <div className="detail-bar-top">
-        <span className="label">{label}</span>
-        <span className="val num">{fmtPct(pct)}</span>
-      </div>
-      <div className="bar-track">
-        <div className="bar-fill" style={{ width: `${clamp(pct, 0, 100)}%`, background: barColor(pct, pal), boxShadow: barGlow(pct, pal) }} />
-      </div>
-      {sub ? <div className="metric-sub">{sub}</div> : null}
+    <div className="account-meta">
+      {shown.map((i) => (
+        <div className="meta-chip" key={i.k}>
+          <span className="k">{i.k}</span>
+          <span className="v num">{i.v}</span>
+        </div>
+      ))}
     </div>
   );
+}
+
+function MetricCard({
+  label,
+  pct,
+  value,
+  sub,
+  pal,
+  children,
+}: {
+  label: string;
+  pct: number | null | undefined;
+  value?: string | null;
+  sub?: string | null;
+  pal: Pal;
+  children?: ReactNode;
+}) {
+  const display = value ?? (pct != null ? fmtPct(pct) : null);
+  return (
+    <div className="metric-card">
+      <div className="detail-bar-top">
+        <span className="label">{label}</span>
+        {display ? <span className="val num">{display}</span> : null}
+      </div>
+      {pct != null ? (
+        <div className="bar-track">
+          <div className="bar-fill" style={barFillStyle(pct, pal)} />
+        </div>
+      ) : !display && sub ? (
+        <div className="detail-plain-val num">{sub}</div>
+      ) : null}
+      {sub && (pct != null || display) ? <div className="metric-sub">{sub}</div> : null}
+      {children}
+    </div>
+  );
+}
+
+function MetricsGrid({ children }: { children: ReactNode }) {
+  return <div className="account-metrics">{children}</div>;
 }
 
 function Kv({ k, v }: { k: string; v: ReactNode }) {
@@ -461,78 +513,82 @@ function ClaudeBody({ data, account, t, pal }: { data: UsagePayload; account: Cl
   const c = account;
   return (
     <>
-      <Kv k={t.updated} v={fmtWhen(data.updated_at)} />
-      <DetailBar label={t.window5h} pct={c.session_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(c.session_percent) + (c.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(c.session_resets_at)}` : "")} />
-      <Kv k={t.used} v={fmtPct(c.session_percent)} />
-      <Kv k={t.left} v={fmtRemain(c.session_percent)} />
-      <Kv k={t.reset} v={fmtWhen(c.session_resets_at)} />
-      <DetailBar label={t.weekLimit} pct={c.weekly_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(c.weekly_percent) + (c.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(c.weekly_resets_at)}` : "")} />
-      <Kv k={t.used} v={fmtPct(c.weekly_percent)} />
-      <Kv k={t.left} v={fmtRemain(c.weekly_percent)} />
-      <Kv k={t.reset} v={fmtWhen(c.weekly_resets_at)} />
-      {c.sonnet_percent != null ? <DetailBar label={t.sonnetWeek} pct={c.sonnet_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(c.sonnet_percent) + (c.sonnet_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(c.sonnet_resets_at)}` : "")} /> : null}
-      {c.sonnet_percent != null ? <Kv k={t.reset} v={fmtWhen(c.sonnet_resets_at)} /> : null}
-      {c.opus_percent != null ? <DetailBar label={t.opusWeek} pct={c.opus_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(c.opus_percent) + (c.opus_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(c.opus_resets_at)}` : "")} /> : null}
-      {c.opus_percent != null ? <Kv k={t.reset} v={fmtWhen(c.opus_resets_at)} /> : null}
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.window5h} pct={c.session_percent} pal={pal} sub={remainLine(t, c.session_percent, c.session_resets_at)} />
+        <MetricCard label={t.weekLimit} pct={c.weekly_percent} pal={pal} sub={remainLine(t, c.weekly_percent, c.weekly_resets_at)} />
+        {c.sonnet_percent != null ? <MetricCard label={t.sonnetWeek} pct={c.sonnet_percent} pal={pal} sub={remainLine(t, c.sonnet_percent, c.sonnet_resets_at)} /> : null}
+        {c.opus_percent != null ? <MetricCard label={t.opusWeek} pct={c.opus_percent} pal={pal} sub={remainLine(t, c.opus_percent, c.opus_resets_at)} /> : null}
+      </MetricsGrid>
     </>
   );
 }
 
-function GptBody({ data, account, t, pal }: { data: UsagePayload; account: GptAccount; t: T; pal: Pal }) {
+function GptBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: GptAccount; t: T; pal: Pal; nowMs: number }) {
   const g = account;
+  const resetAt = g.session_resets_at || g.weekly_resets_at;
   return (
     <>
-      <Kv k={t.plan} v={g.plan} />
-      <Kv k={t.updated} v={fmtWhen(data.updated_at)} />
-      <DetailBar label={t.window5h} pct={g.session_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(g.session_percent) + (g.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.session_resets_at)}` : "")} />
-      <Kv k={t.used} v={fmtPct(g.session_percent)} />
-      <Kv k={t.left} v={fmtRemain(g.session_percent)} />
-      <Kv k={t.reset} v={fmtWhen(g.session_resets_at)} />
-      <DetailBar label={t.weekLimit} pct={g.weekly_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(g.weekly_percent) + (g.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.weekly_resets_at)}` : "")} />
-      <Kv k={t.used} v={fmtPct(g.weekly_percent)} />
-      <Kv k={t.left} v={fmtRemain(g.weekly_percent)} />
-      <Kv k={t.reset} v={fmtWhen(g.weekly_resets_at)} />
+      <MetaChips items={[{ k: t.plan, v: g.plan }, { k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        {g.session_percent != null ? (
+          <MetricCard label={t.window5h} pct={g.session_percent} pal={pal} sub={remainLine(t, g.session_percent, g.session_resets_at)} />
+        ) : (
+          <MetricCard label={t.resetIn} pct={null} pal={pal} sub={fmtCountdown(resetAt, nowMs)} />
+        )}
+        <MetricCard label={t.weekLimit} pct={g.weekly_percent} pal={pal} sub={remainLine(t, g.weekly_percent, g.weekly_resets_at)} />
+      </MetricsGrid>
     </>
   );
 }
 
 function CursorBody({ data, account, t, pal }: { data: UsagePayload; account: CursorAccount; t: T; pal: Pal }) {
   const c = account;
+  const ondemandPct = c.used_cents != null && c.limit_cents != null && c.limit_cents > 0 ? clamp((c.used_cents / c.limit_cents) * 100, 0, 100) : null;
+  const hasLegacy = c.requests_used != null && (c.requests_limit || 0) > 0;
   return (
     <>
-      <Kv k={t.plan} v={c.plan} />
-      <Kv k={t.cycle} v={fmtWhen(c.cycle_end)} />
-      <Kv k={t.updated} v={fmtWhen(data.updated_at)} />
-      <DetailBar label={t.cursorModels} pct={c.percent} pal={pal} sub={t.remainingPrefix + fmtRemain(c.percent)} />
-      <Kv k={t.used} v={fmtPct(c.percent)} />
-      <Kv k={t.left} v={fmtRemain(c.percent)} />
-      <DetailBar label={t.otherModels} pct={c.other_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(c.other_percent)} />
-      <Kv k={t.used} v={fmtPct(c.other_percent)} />
-      <Kv k={t.left} v={fmtRemain(c.other_percent)} />
-      <div className="note">{t.ondemand}</div>
-      <Kv k={t.used} v={c.used_cents != null ? fmtUsd(c.used_cents) : ""} />
-      <Kv k={t.cap} v={c.limit_cents != null ? fmtUsd(c.limit_cents) : ""} />
-      <Kv k={t.left} v={c.remaining_cents != null ? fmtUsd(c.remaining_cents) : ""} />
-      <Kv k={t.bonus} v={(c.bonus_cents || 0) > 0 ? fmtUsd(c.bonus_cents) : ""} />
-      {c.requests_used != null && (c.requests_limit || 0) > 0 ? <div className="note">{t.requestsLegacy}</div> : null}
-      {c.requests_used != null && (c.requests_limit || 0) > 0 ? <Kv k={t.usedCount} v={String(c.requests_used)} /> : null}
-      {c.requests_used != null && (c.requests_limit || 0) > 0 ? <Kv k={t.limit} v={String(c.requests_limit)} /> : null}
+      <MetaChips items={[{ k: t.plan, v: c.plan }, { k: t.cycle, v: fmtWhen(c.cycle_end) }, { k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.cursorModels} pct={c.percent} pal={pal} sub={remainLine(t, c.percent)} />
+        <MetricCard label={t.otherModels} pct={c.other_percent} pal={pal} sub={remainLine(t, c.other_percent)} />
+        <MetricCard
+          label={t.ondemand}
+          pct={ondemandPct}
+          value={c.used_cents != null ? fmtUsd(c.used_cents) : null}
+          pal={pal}
+          sub={joinParts(
+            c.limit_cents != null ? `${t.cap} ${fmtUsd(c.limit_cents)}` : null,
+            c.remaining_cents != null ? `${t.left} ${fmtUsd(c.remaining_cents)}` : null,
+            (c.bonus_cents || 0) > 0 ? `${t.bonus} ${fmtUsd(c.bonus_cents)}` : null,
+          )}
+        />
+      </MetricsGrid>
+      {hasLegacy ? (
+        <div className="account-extra metric-card">
+          <div className="note">{t.requestsLegacy}</div>
+          <Kv k={t.usedCount} v={String(c.requests_used)} />
+          <Kv k={t.limit} v={String(c.requests_limit)} />
+        </div>
+      ) : null}
     </>
   );
 }
 
 function OpenRouterBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
   const o = account;
-  const remain = o.remaining_cents != null ? t.remainMoney + fmtUsd(o.remaining_cents) : t.noCredits;
+  const sub = joinParts(
+    o.used_cents != null ? `${t.used} ${fmtUsd(o.used_cents)}` : null,
+    o.remaining_cents != null ? `${t.left} ${fmtUsd(o.remaining_cents)}` : null,
+    o.limit_cents != null ? `${t.cap} ${fmtUsd(o.limit_cents)}` : null,
+  ) || (o.remaining_cents != null ? t.remainMoney + fmtUsd(o.remaining_cents) : t.noCredits);
   return (
     <>
-      <div className="note">{t.allKeysNote}</div>
-      <Kv k={t.updated} v={fmtWhen(data.updated_at)} />
-      <DetailBar label={t.credits} pct={null} pal={pal} sub={remain} />
-      <Kv k={t.used} v={o.used_cents != null ? fmtUsd(o.used_cents) : ""} />
-      <Kv k={t.left} v={o.remaining_cents != null ? fmtUsd(o.remaining_cents) : ""} />
-      <Kv k={t.cap} v={o.limit_cents != null ? fmtUsd(o.limit_cents) : ""} />
-      <Kv k={t.percent} v={fmtPct(o.percent)} />
+      <div className="account-note">{t.allKeysNote}</div>
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.credits} pct={o.percent} pal={pal} sub={sub} />
+      </MetricsGrid>
     </>
   );
 }
@@ -542,17 +598,19 @@ function DeepSeekBody({ data, account, t, pal }: { data: UsagePayload; account: 
   const remain = d.remaining_cents != null ? t.remainMoney + fmtUsd(d.remaining_cents) : t.noCredits;
   return (
     <>
-      <Kv k={t.updated} v={fmtWhen(data.updated_at)} />
-      <DetailBar label={t.credits} pct={d.percent} pal={pal} sub={remain} />
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.credits} pct={d.percent} pal={pal} sub={remain} />
+      </MetricsGrid>
     </>
   );
 }
 
-function AccountPage({ meta, account, data, t, pal }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null; data: UsagePayload; t: T; pal: Pal }) {
+function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   let body: ReactNode = null;
   if (meta.ok && account) {
     if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} />;
-    else if (meta.provider === "gpt") body = <GptBody data={data} account={account as GptAccount} t={t} pal={pal} />;
+    else if (meta.provider === "gpt") body = <GptBody data={data} account={account as GptAccount} t={t} pal={pal} nowMs={nowMs} />;
     else if (meta.provider === "cursor") body = <CursorBody data={data} account={account as CursorAccount} t={t} pal={pal} />;
     else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
@@ -566,7 +624,7 @@ function AccountPage({ meta, account, data, t, pal }: { meta: ProviderMeta; acco
           {meta.label ? <div className="card-label">{meta.label}</div> : null}
         </div>
       </div>
-      <div className="account-card">{!meta.ok ? <div className="error-text">{meta.error || t.noData}</div> : body}</div>
+      <div className="account-content">{!meta.ok ? <div className="metric-card"><div className="error-text">{meta.error || t.noData}</div></div> : body}</div>
     </div>
   );
 }
@@ -740,7 +798,7 @@ export default function Display() {
     );
   }
 
-  const providers = buildProviders(data, t);
+  const providers = buildProviders(data, t, now);
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null = null;
   if (section === "account") {
@@ -787,7 +845,7 @@ export default function Display() {
         />
         <main className="content-area">
           {section === "overview" ? <Overview providers={providers} updatedAt={data.updated_at} now={now} t={t} pal={pal} onOpen={(id) => { setSection("account"); setSelectedId(id); }} /> : null}
-          {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} /> : null}
+          {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
         </main>
       </div>
       {settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}

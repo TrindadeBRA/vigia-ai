@@ -1,10 +1,11 @@
 #pragma once
 
-#include "ui.h"
+#include "ui/ui.h"
+#include "ui/widgets.h"
 
-// Estado e funções internas da UI, compartilhados só entre ui.cpp (controlador
-// de navegação/toque) e ui_views.cpp (pintura de cada view). Não faz parte da
-// API pública de ui.h — main.cpp e input.cpp não incluem este header.
+// Estado e funções internas da UI, compartilhados entre o controlador
+// (nav.cpp), o layout/header e as views. Não faz parte da API pública de
+// ui.h — main.cpp e input/ não incluem este header.
 
 extern int g_headerH;
 extern int g_contentX;
@@ -32,9 +33,9 @@ extern int g_headerClockY1;
 extern int g_eyeCx;
 extern int g_eyeCy;
 extern int g_eyeR;
-// Desvio atual da pupila (px a partir do centro), animado por uiTickEye() em
-// ui.cpp — drawHeader() reaproveita pra não "teleportar" o olhar de volta ao
-// centro a cada redesenho periódico do header (contador, refresh etc).
+// Desvio atual da pupila (px a partir do centro), animado por uiTickEye() —
+// drawHeader() reaproveita pra não "teleportar" o olhar de volta ao centro
+// a cada redesenho periódico do header (contador, refresh etc).
 extern int g_eyeGazeX;
 extern int g_eyeGazeY;
 // Retangulos de toque dos cards da Início, preenchidos por paintHomeList()/
@@ -120,6 +121,7 @@ int deepseekWorstIdx();
 int countdownSeconds();
 bool showFetchOkCheck();
 int headerDisplayKey(int secs, bool showCheck);
+void drawCountdownBadgeAt(int cx, int cy, int secs);
 
 void layoutContent();
 void drawHeader();
@@ -135,3 +137,39 @@ void paintNowClock();
 // Move o paginador de contas da view de detalhe atual (dir -1/+1); sem
 // efeito se a view atual nao tiver mais de uma conta.
 void uiAccountStep(int dir);
+
+// Rótulos e títulos compartilhados entre Início, Agora e telas de detalhe.
+String withResta(float pct, const String& whenRaw);
+String gptPlanTitle(const GptAccount& g);
+String cursorPlanTitle(const CursorAccount& c);
+String accountSuffixText(const String& label, int count);
+void drawTitleWithLabel(int x, int y, int maxW, const String& name, const String& suffix);
+int stackedTitleHeight(bool hasLabel);
+void drawStackedTitle(int x, int y, int maxW, const String& name, const String& suffix);
+String cursorOndemand(const CursorAccount& c);
+String openrouterRemain(const OpenRouterAccount& o);
+String openrouterBalance(const OpenRouterAccount& o);
+String deepseekRemain(const DeepSeekAccount& d);
+String deepseekBalance(const DeepSeekAccount& d);
+const char* emptyProvidersMsg();
+
+// Chrome das telas de detalhe / Sistema (card com scroll).
+extern int dX;
+extern int dW;
+extern int dClipTop;
+extern int dClipH;
+extern int dCursor;
+int dScreenY();
+bool dVisible(int h);
+void dAdvance(int h);
+void dKv(const char* k, const String& v);
+void dNote(const String& s);
+void dPanelQr(const String& url);
+void dBar(const char* title, float pct, const String& sub);
+void dGap();
+void dSection(const char* title);
+void beginScrollCard(const char* title, const String& suffix, const uint16_t* icon,
+                     int pagerCount = 0, int pagerIdx = 0);
+bool paintDetailChrome(const char* title, const String& suffix, const uint16_t* icon, bool ok,
+                       const String& err, int pagerCount = 0, int pagerIdx = 0);
+void paintDetailFinish();

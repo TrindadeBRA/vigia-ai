@@ -14,4 +14,3 @@ void usageClientLogSnapshot(const char* why);
 // mexer em id/label/contagem — usado tanto pelo fetch real (Wi-Fi/HTTP fora
 // do ar) quanto por main.cpp enquanto aguarda a Wi-Fi conectar.
 void markAllAccountsFailed(const char* msg);
-
