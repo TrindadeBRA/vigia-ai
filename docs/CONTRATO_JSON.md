@@ -1,6 +1,6 @@
 # Contrato JSON — `GET /usage`
 
-O firmware **depende** deste formato. Mudança = atualizar este doc **e** o parser em `src/usage_client.cpp`.
+O firmware **depende** deste formato. Mudança = atualizar este doc, os modelos em `backend/app/schemas.py` **e** o parser em `firmware/src/usage_client.cpp`.
 
 `Content-Type: application/json; charset=utf-8`
 

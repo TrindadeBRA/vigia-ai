@@ -12,5 +12,11 @@ compile_commands.json
 .env
 !.env.example
 
-src/secrets.h
+firmware/src/secrets.h
 .tools/
+backend/.venv
+backend/data/*.json
+backend/data/*.json.tmp
+frontend/node_modules
+frontend/dist
+*.egg-info/

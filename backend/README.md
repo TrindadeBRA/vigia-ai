@@ -1,0 +1,7 @@
+# Backend (coletor)
+
+FastAPI. Suba com `./dev up` na raiz do repositório.
+
+- Swagger: http://127.0.0.1:8787/docs
+- Contrato da placa: `GET /usage`
+- Config: `GET /api/config` (nunca devolve tokens)

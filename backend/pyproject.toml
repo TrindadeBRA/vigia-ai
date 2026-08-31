@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vigia-ai"
+version = "1.0.0"
+description = "Coletor local de cotas Claude/Cursor/OpenRouter/DeepSeek para o painel ESP32 Vigia AI"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Vigia AI" }]
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "httpx>=0.27",
+  "ruff>=0.8",
+]
+
+[project.scripts]
+vigia = "app.main:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

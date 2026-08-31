@@ -1,0 +1,203 @@
+#!/usr/bin/env bash
+# Único script de desenvolvimento do Vigia AI.
+# Substitui dev.sh, dev-collector.sh, dev-wokwi.sh e collector/start.sh.
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MONITOR_BAUD=115200
+WOKWIGW_BIN="$ROOT_DIR/.tools/wokwigw"
+WOKWIGW_URL="https://github.com/wokwi/wokwigw/releases/latest/download/wokwigw-darwin-arm64"
+
+usage() {
+  cat <<EOF
+uso: ./dev <comando>
+
+  ./dev                 esta ajuda
+  ./dev up              backend FastAPI + frontend Vite
+  ./dev up --docker     Compose na raiz
+  ./dev sim             up + wokwigw + pio run -e wokwi
+  ./dev firmware build  compila a placa (esp32dev)
+  ./dev firmware wokwi  compila o simulador
+  ./dev firmware flash  grava na ESP32
+  ./dev firmware monitor
+  ./dev test            pytest + tsc
+  ./dev lint            ruff
+
+Ctrl+C encerra os processos que este script subiu.
+EOF
+}
+
+find_pio() {
+  if command -v pio >/dev/null 2>&1; then
+    command -v pio
+    return 0
+  fi
+  local bundled="$HOME/.platformio/penv/bin/pio"
+  if [ -x "$bundled" ]; then
+    printf '%s\n' "$bundled"
+    return 0
+  fi
+  echo "erro: pio não encontrado. https://docs.platformio.org/" >&2
+  exit 1
+}
+
+run_pio() {
+  local pio
+  pio="$(find_pio)"
+  (cd "$ROOT_DIR/firmware" && "$pio" "$@")
+}
+
+ensure_python() {
+  if [ ! -d "$ROOT_DIR/backend/.venv" ]; then
+    python3 -m venv "$ROOT_DIR/backend/.venv"
+    "$ROOT_DIR/backend/.venv/bin/pip" install -q -e "$ROOT_DIR/backend[dev]"
+  fi
+}
+
+ensure_node() {
+  if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
+    (cd "$ROOT_DIR/frontend" && npm install)
+  fi
+}
+
+ensure_wokwigw() {
+  if [ -x "$WOKWIGW_BIN" ]; then
+    return 0
+  fi
+  mkdir -p "$ROOT_DIR/.tools"
+  echo "== baixando wokwigw para .tools/ =="
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL -o "$WOKWIGW_BIN" "$WOKWIGW_URL" || {
+      echo "falha no download automático. baixe em https://github.com/wokwi/wokwigw/releases/latest" >&2
+      echo "e salve o binário em $WOKWIGW_BIN" >&2
+      exit 1
+    }
+  else
+    echo "curl não encontrado; baixe wokwigw em https://github.com/wokwi/wokwigw/releases/latest" >&2
+    exit 1
+  fi
+  chmod +x "$WOKWIGW_BIN"
+}
+
+warn_secrets() {
+  local secrets="$ROOT_DIR/firmware/src/secrets.h"
+  if [ ! -f "$secrets" ]; then
+    echo "aviso: firmware/src/secrets.h não existe — cp firmware/src/secrets.h.example firmware/src/secrets.h" >&2
+    echo ""
+  fi
+}
+
+PIDS=()
+cleanup() {
+  trap - INT TERM EXIT
+  echo ""
+  echo "encerrando..."
+  for pid in "${PIDS[@]:-}"; do
+    kill -TERM "$pid" 2>/dev/null || true
+  done
+  sleep 1
+  for pid in "${PIDS[@]:-}"; do
+    kill -0 "$pid" 2>/dev/null && kill -KILL "$pid" 2>/dev/null || true
+  done
+  wait 2>/dev/null || true
+}
+
+run_backend() {
+  ensure_python
+  echo "== backend FastAPI :8787 (Swagger em /docs) =="
+  (
+    cd "$ROOT_DIR/backend"
+    exec .venv/bin/python -m app.main
+  ) &
+  PIDS+=("$!")
+}
+
+run_frontend() {
+  ensure_node
+  echo "== frontend Vite :5173 (proxy para o backend) =="
+  (
+    cd "$ROOT_DIR/frontend"
+    exec npm run dev -- --host 127.0.0.1
+  ) &
+  PIDS+=("$!")
+}
+
+cmd_up() {
+  if [ "${1:-}" = "--docker" ]; then
+    if ! command -v docker >/dev/null 2>&1; then
+      echo "docker não encontrado." >&2
+      exit 1
+    fi
+    echo "painel: http://127.0.0.1:8787/"
+    exec docker compose -f "$ROOT_DIR/compose.yaml" up --build
+  fi
+  trap cleanup INT TERM EXIT
+  run_backend
+  sleep 1
+  run_frontend
+  echo ""
+  echo "painel     http://127.0.0.1:5173/     (dev)  ou  http://127.0.0.1:8787/ se o dist existir"
+  echo "mostrador  http://127.0.0.1:5173/display"
+  echo "swagger    http://127.0.0.1:8787/docs"
+  echo "Ctrl+C encerra."
+  wait
+}
+
+cmd_sim() {
+  trap cleanup INT TERM EXIT
+  ensure_wokwigw
+  echo "== compilando firmware wokwi =="
+  run_pio run -e wokwi
+  run_backend
+  sleep 1
+  echo "== gateway wokwigw :9011 =="
+  "$WOKWIGW_BIN" &
+  PIDS+=("$!")
+  echo ""
+  echo "agora: Cmd+Shift+P → Wokwi: Start Simulator"
+  echo "Ctrl+C encerra backend + gateway."
+  wait
+}
+
+cmd_test() {
+  ensure_python
+  (cd "$ROOT_DIR/backend" && .venv/bin/pytest -q)
+  ensure_node
+  (cd "$ROOT_DIR/frontend" && npx tsc --noEmit)
+}
+
+cmd_lint() {
+  ensure_python
+  (cd "$ROOT_DIR/backend" && .venv/bin/ruff check app tests)
+}
+
+if [ $# -lt 1 ]; then
+  usage
+  exit 0
+fi
+
+case "$1" in
+  -h|--help|help) usage ;;
+  up) shift; cmd_up "$@" ;;
+  sim) cmd_sim ;;
+  test) cmd_test ;;
+  lint) cmd_lint ;;
+  firmware)
+    shift
+    case "${1:-}" in
+      build) warn_secrets; run_pio run -e esp32dev ;;
+      wokwi) run_pio run -e wokwi ;;
+      flash|upload) warn_secrets; run_pio run -e esp32dev -t upload ;;
+      monitor) run_pio device monitor -b "$MONITOR_BAUD" ;;
+      *)
+        echo "uso: ./dev firmware {build|wokwi|flash|monitor}" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  *)
+    echo "comando desconhecido: $1" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

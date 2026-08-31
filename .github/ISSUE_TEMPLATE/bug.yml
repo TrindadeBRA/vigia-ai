@@ -1,0 +1,19 @@
+---
+name: Bug
+description: Algo quebrou na placa, no coletor ou no mostrador
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Onde
+      options: [firmware, backend, frontend, docs]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: O que aconteceu
+    validations:
+      required: true

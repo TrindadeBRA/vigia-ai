@@ -20,7 +20,7 @@ Sem cache no coletor, o intervalo de poll da placa (`USAGE_POLL_MS`) é também 
 
 ## Fluxo (Wokwi)
 
-O simulador roda a **mesma** lógica de rede do hardware (`WOKWI_SIM`, não `MOCK_USAGE` — esse define existe no código mas não é usado por nenhum env hoje). Para o ESP32 simulado alcançar o coletor no Mac:
+O simulador roda a **mesma** lógica de rede do hardware (`WOKWI_SIM`). Para o ESP32 simulado alcançar o coletor:
 
 1. `wokwi.toml` aponta `[net] gateway = "ws://localhost:9011"` — sem isso o simulador usaria a rede simulada padrão da Wokwi (sem saída pra LAN local).
 2. `.tools/wokwigw` (binário do [Wokwi IoT Gateway](https://github.com/wokwi/wokwigw)) precisa estar rodando, escutando em `ws://localhost:9011`.

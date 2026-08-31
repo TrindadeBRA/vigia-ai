@@ -1,0 +1,17 @@
+services:
+  vigia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vigia
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      COLLECTOR_IN_DOCKER: "1"
+      COLLECTOR_DATA: /app/data
+      VIGIA_FRONTEND_DIST: /frontend/dist
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped

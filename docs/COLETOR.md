@@ -1,6 +1,9 @@
-# Coletor (Mac)
+# Coletor (histórico)
 
-## O que é
+> **Atual:** [BACKEND.md](BACKEND.md) — FastAPI em `backend/`, suba com `./dev up`.
+> Este arquivo descreve o protótipo em `collector/server.py` (stdlib), já removido.
+
+## O que era
 
 Script `collector/server.py` (Python 3, só biblioteca padrão). Sobe HTTP em `0.0.0.0:8787`.
 
