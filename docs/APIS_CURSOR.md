@@ -31,11 +31,12 @@ Connect-Protocol-Version: 1
 {}
 ```
 
-Campos úteis (nomes podem mudar):
+Campos úteis (nomes podem mudar; ver `parse_cursor_dashboard` em `collector/server.py`):
 
-- `planUsage.totalPercentUsed` / `autoPercentUsed`
-- `planUsage.totalSpend`, `includedSpend`, `limit` (centavos)
-- `billingCycleStart`, `billingCycleEnd`
+- `planUsage.autoPercentUsed` (ou `totalPercentUsed`) → "Cursor Models" no dashboard, vira `percent` no `/usage`
+- `planUsage.apiPercentUsed` → "Other Models" no dashboard, vira `other_percent` no `/usage`
+- `spendLimitUsage.individualLimit` / `individualRemaining` (centavos, USD) → `limit_cents` / `used_cents`
+- `billingCycleEnd` (ou `planUsage.endDate`) → `cycle_end`
 
 ## Fallback
 
