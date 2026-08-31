@@ -18,7 +18,7 @@ SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken';
 
 Outras chaves úteis: `cursorAuth/cachedEmail`, `cursorAuth/stripeMembershipType`.
 
-Override: `CURSOR_ACCESS_TOKEN` no `.env`.
+Override: `CURSOR_ACCESS_TOKEN` no painel (`http://127.0.0.1:8787/`). Sem token gravado, o coletor lê o `state.vscdb` do app.
 
 ## Endpoint principal (Pro / Ultra / Team)
 

@@ -60,7 +60,6 @@ static const UiStrings kPt = {
     "Consumo em tempo real das IAs",
     "sem dados",
     "Toque os cantos",
-    "% usado da cota",
 };
 
 static const UiStrings kEn = {
@@ -121,7 +120,6 @@ static const UiStrings kEn = {
     "Real-time AI usage",
     "no data",
     "Tap the corners",
-    "% of quota used",
 };
 
 static const UiStrings kEs = {
@@ -182,7 +180,6 @@ static const UiStrings kEs = {
     "Consumo de IAs en tiempo real",
     "sin datos",
     "Toca las esquinas",
-    "% usado de la cuota",
 };
 
 const UiStrings& uiTr() {

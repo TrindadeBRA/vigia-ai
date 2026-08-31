@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
-"""Atualiza CLAUDE_OAUTH_TOKEN em collector/.env a partir do Claude Code (Keychain no macOS). Não imprime o token."""
+"""Grava CLAUDE_OAUTH_TOKEN em data/config.json a partir do Claude Code. Não imprime o token."""
 
 from __future__ import annotations
 
 import os
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 from claude_oauth import load_claude_oauth
-from http_util import upsert_dotenv
-
-HERE = Path(__file__).resolve().parent
-OUT = HERE / ".env"
+from store import CONFIG_PATH, update
 
 
 def main() -> int:
     os.environ.pop("CLAUDE_OAUTH_TOKEN", None)
+    os.environ.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
     token, exp, err = load_claude_oauth()
     if not token:
         print(err or "sem OAuth Claude")
@@ -25,9 +22,9 @@ def main() -> int:
         print("3) rode este script de novo")
         print("Nao use ANTHROPIC_API_KEY / sk-ant-...")
         return 1
-    upsert_dotenv(OUT, {"CLAUDE_OAUTH_TOKEN": token})
+    update({"CLAUDE_OAUTH_TOKEN": token})
     print("fonte: Keychain ou credentials.json")
-    print(f"gravado CLAUDE_OAUTH_TOKEN em {OUT} ({len(token)} chars, nao exibido)")
+    print(f"gravado CLAUDE_OAUTH_TOKEN em {CONFIG_PATH} ({len(token)} chars, nao exibido)")
     if isinstance(exp, (int, float)) and exp > 0:
         ms = exp / 1000.0 if exp > 1e11 else float(exp)
         dt = datetime.fromtimestamp(ms, tz=timezone.utc)

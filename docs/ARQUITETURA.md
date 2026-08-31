@@ -4,14 +4,14 @@
 
 | Peça | Onde roda | Função |
 | --- | --- | --- |
-| Coletor | Mac (Python 3, stdlib) | Lê tokens, chama Anthropic/Cursor a cada request, HTTP JSON |
+| Coletor | Mac (Python 3, stdlib) ou Docker | Tokens, APIs, JSON `/usage` + painel `/` |
 | Firmware | ESP32 | Wi-Fi, GET, desenho TFT |
 | Wokwi | Simulador | Mesmo sketch, Wi-Fi simulada real (`WOKWI_SIM`) até o coletor no Mac |
 | wokwigw | Gateway local (Mac) | Ponte entre a rede Wi-Fi simulada do Wokwi e a LAN real, porta 9011 |
 
 ## Fluxo (hardware)
 
-1. Usuário inicia `python3 collector/server.py` no Mac (mesma LAN da ESP32).
+1. Usuário inicia `./dev-collector.sh` no Mac (mesma LAN da ESP32) e, se quiser, abre o painel em `http://IP:8787/`.
 2. Coletor busca as duas APIs a cada `GET /usage` — sem cache (dado sempre em tempo real; ver aviso de rate limit em [COLETOR.md](COLETOR.md#sem-cache--cuidado-com-rate-limit)).
 3. ESP32 conecta no Wi-Fi, faz GET em `USAGE_URL`, parseia JSON, redesenha.
 4. Poll a cada `USAGE_POLL_MS` (padrão 60 s). Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
@@ -30,7 +30,7 @@ O simulador roda a **mesma** lógica de rede do hardware (`WOKWI_SIM`, não `MOC
 
 ## Confiança e rede
 
-- Tokens **só no Mac** (arquivos oficiais do app ou `collector/.env`).
+- Tokens **só no Mac** (arquivos oficiais do app ou `collector/data/config.json`).
 - JSON na LAN contém percentuais e datas, **não** o Bearer.
 - Bind padrão `0.0.0.0:8787` para a ESP32 alcançar. Não expor a porta na internet (sem túnel, sem port forward).
 - Coletor não autenticado na LAN de casa: aceitável para v1. Quem estiver no Wi-Fi vê as cotas.

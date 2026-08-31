@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Coletor de cotas Claude + Cursor. Serve GET /usage para a ESP32."""
+"""Coletor de cotas. Serve GET /usage (ESP32) e o painel web de configuração."""
 
 from __future__ import annotations
 
@@ -9,12 +9,18 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
+from docker_ctl import docker_down, docker_up
 from formatting import utc_now
-from http_util import load_dotenv
+from store import apply as apply_store
+from panel import WEB_DIR, clear_secret, config_payload, reload_env, save_config
 from providers.claude import _claude_fail, fetch_claude
 from providers.cursor import _cursor_fail, fetch_cursor
 from providers.openrouter import _openrouter_fail, fetch_openrouter
+
+LISTEN_HOST = "0.0.0.0"
+LISTEN_PORT = 8787
 
 
 def _repo_root() -> Path:
@@ -55,6 +61,7 @@ def mock_payload() -> dict[str, Any]:
 
 
 def build_payload() -> dict[str, Any]:
+    reload_env()
     if os.environ.get("COLLECTOR_MOCK", "").strip() in ("1", "true", "yes"):
         return mock_payload()
     claude: dict[str, Any]
@@ -101,31 +108,109 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args: Any) -> None:
         print(f"[{utc_now()}] {self.address_string()} {fmt % args}")
 
-    def _send(self, code: int, obj: Any) -> None:
+    def _cors(self) -> None:
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Connection", "close")
+        self.send_header("Cache-Control", "no-store")
+
+    def _send_json(self, code: int, obj: Any) -> None:
         raw = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Connection", "close")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Cache-Control", "no-store")
+        self._cors()
         self.end_headers()
         self.wfile.write(raw)
 
+    def _send_html(self) -> None:
+        path = WEB_DIR / "index.html"
+        raw = path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self._cors()
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def _read_json(self) -> dict[str, Any]:
+        n = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(n) if n else b"{}"
+        try:
+            obj = json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError:
+            return {}
+        return obj if isinstance(obj, dict) else {}
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
+    def do_POST(self) -> None:  # noqa: N802
+        path = urlparse(self.path).path
+        if path == "/api/config":
+            body = self._read_json()
+            result = save_config(body)
+            if result.get("ok") and "PORT" in body:
+                try:
+                    result["restart_needed_for_port"] = int(str(body["PORT"])) != LISTEN_PORT
+                except (TypeError, ValueError):
+                    pass
+            self._send_json(200 if result.get("ok") else 400, result)
+            return
+        if path == "/api/docker":
+            body = self._read_json()
+            action = str((body or {}).get("action") or "")
+            if action == "up":
+                result = docker_up()
+            elif action == "down":
+                result = docker_down()
+            else:
+                result = {"ok": False, "error": "action deve ser up ou down"}
+            self._send_json(200 if result.get("ok") else 400, result)
+            return
+        if path == "/api/config/clear":
+            name = str((self._read_json() or {}).get("name") or "")
+            result = clear_secret(name)
+            self._send_json(200 if result.get("ok") else 400, result)
+            return
+        self._send_json(404, {"ok": False, "error": "not found"})
+
     def do_GET(self) -> None:  # noqa: N802
-        path = self.path.split("?", 1)[0]
-        if path in ("/health", "/"):
-            self._send(200, {"ok": True})
+        path = urlparse(self.path).path
+        if path == "/favicon.ico":
+            self.send_response(204)
+            self._cors()
+            self.end_headers()
+            return
+        if path in ("/", "/index.html", "/panel"):
+            self._send_html()
+            return
+        if path == "/health":
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "panel": "/",
+                    "usage": "/usage",
+                    "listen": {"host": LISTEN_HOST, "port": LISTEN_PORT},
+                },
+            )
+            return
+        if path == "/api/config":
+            self._send_json(200, config_payload(LISTEN_HOST, LISTEN_PORT))
             return
         if path == "/usage":
             payload = build_payload()
-            for name in ("claude", "cursor"):
+            for name in ("claude", "cursor", "openrouter"):
                 block = payload.get(name) or {}
                 if isinstance(block, dict) and not block.get("ok"):
                     print(f"[{utc_now()}] ERRO {name}: {block.get('error')}")
-            self._send(200, payload)
+            self._send_json(200, payload)
             return
-        self._send(404, {"ok": False, "error": "not found"})
+        self._send_json(404, {"ok": False, "error": "not found"})
 
 
 class CollectorServer(ThreadingHTTPServer):
@@ -141,18 +226,22 @@ class CollectorServer(ThreadingHTTPServer):
 
 
 def main() -> None:
-    here = Path(__file__).resolve().parent
-    load_dotenv(here / ".env")
-    host = os.environ.get("HOST", "0.0.0.0")
-    port = int(os.environ.get("PORT") or 8787)
-    print(f"coletor em http://{host}:{port}/usage")
+    global LISTEN_HOST, LISTEN_PORT
+    apply_store(override=False)
+    LISTEN_HOST = os.environ.get("HOST", "0.0.0.0")
+    LISTEN_PORT = int(os.environ.get("PORT") or 8787)
+    print(f"painel  http://127.0.0.1:{LISTEN_PORT}/")
+    print(f"usage   http://127.0.0.1:{LISTEN_PORT}/usage")
     print(f"repo {_repo_root()}")
     CollectorServer.allow_reuse_address = True
     try:
-        httpd = CollectorServer((host, port), Handler)
+        httpd = CollectorServer((LISTEN_HOST, LISTEN_PORT), Handler)
     except OSError as exc:
         if getattr(exc, "errno", None) == 48:
-            print(f"porta {port} ocupada. Feche o outro python3 server.py ou: lsof -nP -iTCP:{port}")
+            print(
+                f"porta {LISTEN_PORT} ocupada. Feche o outro python3 server.py ou: "
+                f"lsof -nP -iTCP:{LISTEN_PORT}"
+            )
             raise SystemExit(1) from exc
         raise
     try:

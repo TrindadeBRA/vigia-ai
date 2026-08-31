@@ -36,6 +36,14 @@ Um CS extra (GPIO 21) evita biblioteca à parte. Calibração na NVS, não no sk
 
 A placa real é XPT2046 (SPI, `T_CS` 21). O Wokwi não tem XPT2046; usa `board-ili9341-cap-touch` (FT6206 I2C) só para clicar no simulador. O caminho de código é `WOKWI_SIM` (`src/input.cpp`), não `MOCK_USAGE` — os dados continuam vindo do coletor de verdade.
 
+## Painel web no mesmo processo (config)
+
+`GET /` é o painel (portas, IPs LAN, tokens). `GET /usage` não muda. Sem Node: HTML estático + `http.server`. Segredos não voltam no `GET /api/config` (só sufixo e origem).
+
+## Docker opcional
+
+`./dev-collector.sh docker`. O container não lê Keychain nem o Cursor do host — tokens pelo painel em `data/config.json` (volume). No Mac da mesa, Python local continua o caminho mais simples.
+
 ## Sem autenticação no coletor (v1)
 
 Rede doméstica. Quem pedir rede hostil pode acrescentar um token estático no header depois, no coletor **e** no firmware.

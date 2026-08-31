@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vigia AI — coletor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["ui-sans-serif", "system-ui", "sans-serif"] },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="min-h-full bg-slate-950 text-slate-100 antialiased">
+  <main class="mx-auto max-w-3xl px-4 py-10 pb-20">
+    <p class="text-xs font-semibold uppercase tracking-wider text-sky-400">Vigia AI</p>
+    <h1 class="mt-1 text-2xl font-semibold tracking-tight">Painel do coletor</h1>
+    <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
+      Este programa roda no <strong class="font-medium text-slate-200">Mac</strong>, fala com Claude, Cursor e OpenRouter,
+      e publica um JSON na sua Wi-Fi. A <strong class="font-medium text-slate-200">placa ESP32</strong> só baixa esse JSON
+      (porcentagens e datas). Tokens nunca vão para a tela.
+    </p>
+
+    <ol class="mt-8 grid gap-3 sm:grid-cols-3">
+      <li class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-xs font-semibold text-sky-400">1</p>
+        <p class="mt-1 text-sm font-medium">Contas</p>
+        <p class="mt-1 text-xs leading-relaxed text-slate-400">Claude e Cursor: deixe vazio se os apps já estão logados. OpenRouter: cole a key.</p>
+      </li>
+      <li class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-xs font-semibold text-sky-400">2</p>
+        <p class="mt-1 text-sm font-medium">Copie a URL</p>
+        <p class="mt-1 text-xs leading-relaxed text-slate-400">É o endereço da LAN que a placa usa (não use 127.0.0.1 na ESP32).</p>
+      </li>
+      <li class="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <p class="text-xs font-semibold text-sky-400">3</p>
+        <p class="mt-1 text-sm font-medium">Cole no firmware</p>
+        <p class="mt-1 text-xs leading-relaxed text-slate-400">Em <code class="text-slate-300">src/secrets.h</code>, no <code class="text-slate-300">USAGE_URL</code>, e grave a placa.</p>
+      </li>
+    </ol>
+
+    <div class="mt-8 grid gap-4 lg:grid-cols-2">
+      <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <h2 class="text-base font-semibold">URL que a placa usa</h2>
+        <p class="mt-2 text-sm leading-relaxed text-slate-400">
+          A ESP32 está na mesma Wi-Fi e, a cada minuto, pede as cotas neste endereço.
+          Cole em <code class="text-slate-300">src/secrets.h</code> no campo <code class="text-slate-300">USAGE_URL</code>.
+        </p>
+        <p class="mt-3 text-xs font-medium uppercase tracking-wide text-slate-500">Para a placa (IP da Wi-Fi)</p>
+        <p id="url-board" class="mt-1 break-all rounded-lg bg-slate-950 px-3 py-3 font-mono text-sm text-sky-300">…</p>
+        <p id="board-warn" class="mt-2 hidden text-xs text-amber-400"></p>
+        <p class="mt-3 text-xs font-medium uppercase tracking-wide text-slate-500">Só neste Mac (navegador)</p>
+        <p id="url-local" class="mt-1 break-all font-mono text-xs text-slate-500">…</p>
+        <p class="mt-2 text-xs leading-relaxed text-slate-500">
+          <code class="text-slate-400">0.0.0.0</code> não se cola na placa — significa “aceitar a rede toda”.
+          <code class="text-slate-400">127.0.0.1</code> é localhost: a placa <strong class="font-medium text-slate-400">não</strong> alcança.
+        </p>
+        <pre id="secrets-line" class="mt-3 overflow-x-auto rounded-lg bg-slate-950 px-3 py-3 text-xs text-slate-300"></pre>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button type="button" id="copy-usage" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500">Copiar URL da placa</button>
+          <button type="button" id="copy-define" class="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">Copiar linha do secrets.h</button>
+        </div>
+        <p id="copy-msg" class="mt-2 min-h-[1.25rem] text-xs text-slate-500"></p>
+      </section>
+
+      <section class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <h2 class="text-base font-semibold">Docker</h2>
+          <span id="docker-badge" class="rounded-full border border-slate-700 px-2.5 py-0.5 text-xs text-slate-400">…</span>
+        </div>
+        <p class="mt-2 text-sm leading-relaxed text-slate-400">
+          Opcional. Sobe o coletor num container. No Mac da mesa o <strong class="font-medium text-slate-300">Python local</strong>
+          é melhor: lê o login do Claude Code e do Cursor. No Docker você cola os tokens neste painel.
+        </p>
+        <p id="docker-hint" class="mt-3 text-sm text-slate-300"></p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button type="button" id="docker-up" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-40">Iniciar Docker</button>
+          <button type="button" id="docker-down" class="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40">Parar Docker</button>
+        </div>
+        <p id="docker-msg" class="mt-2 min-h-[1.25rem] text-xs text-slate-500"></p>
+      </section>
+    </div>
+
+    <section class="mt-6">
+      <h2 class="text-base font-semibold">Contas das IAs</h2>
+      <p class="mt-1 text-sm text-slate-400">O coletor tenta o login que já existe no computador. Só cole token se o status pedir.</p>
+      <div class="mt-4 grid gap-4">
+        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-semibold">Claude</h3>
+            <span id="claude-badge" class="rounded-full px-2.5 py-0.5 text-xs"></span>
+          </div>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Mostra a cota da <strong class="font-medium text-slate-300">assinatura</strong> (sessão 5 h e semana), a mesma do Claude Code. <strong class="font-medium text-slate-300">Não</strong> use a key <code class="text-slate-300">sk-ant-…</code> — isso é a API paga por token, outra fatura.</p>
+          <p id="claude-status" class="mt-2 text-sm text-slate-300"></p>
+          <details class="mt-3">
+            <summary class="cursor-pointer text-sm text-sky-400 hover:text-sky-300">Colar token (só Docker / outro PC)</summary>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">Não cole <code class="text-slate-400">claude setup-token</code> (dá 403 sem escopo user:profile). No Mac, apague o token e use o Claude Code logado.</p>
+            <input id="claude" type="password" autocomplete="off" placeholder="CLAUDE_OAUTH_TOKEN" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+            <div class="mt-2 flex flex-wrap gap-2">
+              <button type="button" id="save-claude" class="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-500">Salvar</button>
+              <button type="button" id="clear-claude" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Apagar token e usar o app local</button>
+            </div>
+          </details>
+        </article>
+
+        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-semibold">Cursor</h3>
+            <span id="cursor-badge" class="rounded-full px-2.5 py-0.5 text-xs"></span>
+          </div>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Mostra o % do plano (Cursor Models / Other Models). Não existe API key oficial disso: o coletor lê o login que o app Cursor já salvou neste Mac.</p>
+          <p id="cursor-status" class="mt-2 text-sm text-slate-300"></p>
+          <details class="mt-3">
+            <summary class="cursor-pointer text-sm text-sky-400 hover:text-sky-300">Colar token (só se o app não estiver neste PC)</summary>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">Com o Cursor aberto e logado, deixe vazio. Token é o JWT de sessão, não uma key de API do Cursor.</p>
+            <input id="cursor" type="password" autocomplete="off" placeholder="CURSOR_ACCESS_TOKEN" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+            <div class="mt-2 flex flex-wrap gap-2">
+              <button type="button" id="save-cursor" class="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-500">Salvar</button>
+              <button type="button" id="clear-cursor" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Apagar token e usar o app local</button>
+            </div>
+          </details>
+        </article>
+
+        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-semibold">OpenRouter</h3>
+            <span id="or-badge" class="rounded-full px-2.5 py-0.5 text-xs"></span>
+          </div>
+          <p class="mt-2 text-sm leading-relaxed text-slate-400">Mostra créditos da <strong class="font-medium text-slate-300">conta inteira</strong>. Aqui sim é uma API key normal. Crie em <a class="text-sky-400 underline" href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">openrouter.ai/settings/keys</a> e cole abaixo.</p>
+          <p id="or-status" class="mt-2 text-sm text-slate-300"></p>
+          <input id="or" type="password" autocomplete="off" placeholder="sk-or-…" class="mt-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button type="button" id="save-or" class="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-500">Salvar key</button>
+            <button type="button" id="clear-or" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Apagar key</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <h2 class="text-base font-semibold">Conferir se está funcionando</h2>
+      <p class="mt-1 text-sm text-slate-400">Dispara as três APIs agora. O Claude pode limitar se você testar muitas vezes seguidas.</p>
+      <button type="button" id="test" class="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Buscar cotas agora</button>
+      <div id="test-out" class="mt-4 grid gap-2 sm:grid-cols-3"></div>
+    </section>
+
+    <details class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+      <summary class="cursor-pointer text-sm font-medium text-slate-300">Avançado — porta, rede e mock</summary>
+      <p class="mt-3 text-sm text-slate-400"><code class="text-slate-300">HOST 0.0.0.0</code> deixa a ESP32 na Wi-Fi alcançar este Mac. <code class="text-slate-300">127.0.0.1</code> só funciona neste computador. Mudar a porta só vale depois de reiniciar o coletor.</p>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <label class="text-xs text-slate-500">Porta
+          <input id="port" type="number" min="1" max="65535" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+        </label>
+        <label class="text-xs text-slate-500">Bind HOST
+          <input id="host" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+        </label>
+      </div>
+      <label class="mt-3 flex items-center gap-2 text-sm text-slate-300">
+        <input id="mock" type="checkbox" class="rounded border-slate-600" />
+        Modo mock — JSON falso, não chama as APIs (útil sem login)
+      </label>
+      <button type="button" id="save-server" class="mt-3 rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Salvar</button>
+      <p id="server-msg" class="mt-2 min-h-[1.25rem] text-xs text-slate-500"></p>
+    </details>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let usageLan = "";
+    let secretsH = "";
+
+    function setBadge(id, ok, text) {
+      const el = $(id);
+      el.className =
+        "rounded-full px-2.5 py-0.5 text-xs border " +
+        (ok
+          ? "border-emerald-800 bg-emerald-950 text-emerald-300"
+          : "border-rose-800 bg-rose-950 text-rose-300");
+      el.textContent = text;
+    }
+
+    function fillProv(prefix, p) {
+      setBadge(prefix + "-badge", p.configured, p.configured ? "pronto" : "falta");
+      const extra = p.suffix ? ` (termina em …${p.suffix})` : "";
+      $(prefix + "-status").textContent = p.label + extra;
+    }
+
+    function fillDocker(d) {
+      const dk = d.docker || {};
+      const badge = $("docker-badge");
+      if (!dk.installed) {
+        badge.textContent = "Docker não instalado";
+      } else if (!dk.daemon) {
+        badge.textContent = "Docker fechado";
+      } else if (dk.in_docker) {
+        badge.textContent = "neste container";
+      } else if (dk.compose_up) {
+        badge.textContent = "container no ar";
+      } else {
+        badge.textContent = "container parado";
+      }
+      $("docker-hint").textContent = dk.hint || "";
+      $("docker-up").disabled = !dk.installed || !dk.daemon || !!dk.in_docker;
+      $("docker-down").disabled = !dk.installed || !dk.daemon || (!dk.compose_up && !dk.in_docker);
+    }
+
+    async function load() {
+      const r = await fetch("/api/config");
+      const d = await r.json();
+      usageLan = d.urls.usage_lan;
+      secretsH = d.urls.secrets_h;
+      $("url-board").textContent = usageLan;
+      $("url-local").textContent = d.urls.usage_local || "";
+      $("secrets-line").textContent = secretsH;
+      const warn = $("board-warn");
+      if (d.urls.board_ok) {
+        warn.classList.add("hidden");
+        warn.textContent = "";
+      } else {
+        warn.classList.remove("hidden");
+        warn.textContent = "Não achamos um IP da Wi-Fi. 127.0.0.1 não funciona na placa — confira a rede deste Mac.";
+      }
+      $("port").value = d.port_file || d.listen.port;
+      $("host").value = d.fields.HOST || "0.0.0.0";
+      $("mock").checked = !!d.mock;
+      fillProv("claude", d.providers.claude);
+      fillProv("cursor", d.providers.cursor);
+      fillProv("or", d.providers.openrouter);
+      fillDocker(d);
+    }
+
+    async function postConfig(body) {
+      const r = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return r.json();
+    }
+    async function postClear(name) {
+      const r = await fetch("/api/config/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      return r.json();
+    }
+    async function copyText(text, msg) {
+      await navigator.clipboard.writeText(text);
+      $("copy-msg").textContent = msg;
+    }
+
+    $("copy-usage").onclick = () => copyText(usageLan, "Copiado. Cole em USAGE_URL no secrets.h (o IP da Wi-Fi).");
+    $("copy-define").onclick = () => copyText(secretsH, "Copiado. Cole no secrets.h");
+
+    async function dockerAction(action) {
+      const msg = $("docker-msg");
+      msg.textContent = action === "up" ? "Subindo container…" : "Parando…";
+      $("docker-up").disabled = true;
+      $("docker-down").disabled = true;
+      const r = await fetch("/api/docker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const out = await r.json();
+      msg.textContent = out.ok ? (out.hint || "Pronto.") : (out.error || "Falha");
+      await load();
+    }
+    $("docker-up").onclick = () => dockerAction("up");
+    $("docker-down").onclick = () => dockerAction("down");
+
+    $("save-server").onclick = async () => {
+      const out = await postConfig({
+        HOST: $("host").value,
+        PORT: $("port").value,
+        COLLECTOR_MOCK: $("mock").checked ? "1" : "",
+      });
+      $("server-msg").textContent = out.ok
+        ? (out.restart_needed_for_port ? "Salvo. Reinicie o coletor se mudou a porta." : "Salvo.")
+        : (out.error || "Falha");
+      await load();
+    };
+    $("save-claude").onclick = async () => {
+      const v = $("claude").value.trim();
+      if (!v) return;
+      await postConfig({ CLAUDE_OAUTH_TOKEN: v });
+      $("claude").value = "";
+      await load();
+    };
+    $("clear-claude").onclick = async () => { await postClear("CLAUDE_OAUTH_TOKEN"); await load(); };
+    $("save-cursor").onclick = async () => {
+      const v = $("cursor").value.trim();
+      if (!v) return;
+      await postConfig({ CURSOR_ACCESS_TOKEN: v });
+      $("cursor").value = "";
+      await load();
+    };
+    $("clear-cursor").onclick = async () => { await postClear("CURSOR_ACCESS_TOKEN"); await load(); };
+    $("save-or").onclick = async () => {
+      const v = $("or").value.trim();
+      if (!v) return;
+      await postConfig({ OPENROUTER_API_KEY: v });
+      $("or").value = "";
+      await load();
+    };
+    $("clear-or").onclick = async () => { await postClear("OPENROUTER_API_KEY"); await load(); };
+
+    $("test").onclick = async () => {
+      const box = $("test-out");
+      box.innerHTML = `<p class="text-sm text-slate-500">Consultando…</p>`;
+      const r = await fetch("/usage");
+      const d = await r.json();
+      const card = (name, title) => {
+        const b = d[name] || {};
+        const ok = !!b.ok;
+        const detail = ok
+          ? (name === "claude"
+              ? `sessão ${b.session_percent ?? "—"}% · semana ${b.weekly_percent ?? "—"}%`
+              : name === "cursor"
+                ? `modelos ${b.percent ?? "—"}% · outros ${b.other_percent ?? "—"}%`
+                : `${b.percent ?? "—"}% da conta`)
+          : (b.error || "falhou");
+        return `<div class="rounded-xl border ${ok ? "border-emerald-900 bg-emerald-950/40" : "border-rose-900 bg-rose-950/40"} p-3">
+          <p class="text-sm font-medium">${title}</p>
+          <p class="mt-1 text-xs ${ok ? "text-emerald-200" : "text-rose-200"}">${detail}</p>
+        </div>`;
+      };
+      box.innerHTML = card("claude", "Claude") + card("cursor", "Cursor") + card("openrouter", "OpenRouter");
+    };
+
+    load().catch((e) => { $("docker-hint").textContent = String(e); });
+  </script>
+</body>
+</html>

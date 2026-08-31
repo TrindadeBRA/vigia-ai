@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from claude_oauth import load_claude_oauth
+from claude_oauth import claude_token_candidates, load_claude_oauth
 from formatting import as_percent, iso_or_none, pick
 from http_util import http_json
 
@@ -80,23 +80,50 @@ def _claude_fail(msg: str) -> dict[str, Any]:
     }
 
 
+SCOPE_HINT = (
+    "token sem escopo user:profile (típico de claude setup-token / oat). "
+    "Apague CLAUDE_OAUTH_TOKEN no painel e use o Claude Code logado neste Mac (`claude` / /login)."
+)
+
+
+def _is_scope_error(msg: str) -> bool:
+    low = msg.lower()
+    return "user:profile" in low or "oauth_scope_insufficient" in low
+
+
 def fetch_claude() -> dict[str, Any]:
-    token, exp_ms, err = claude_token_and_expiry()
-    if err:
-        return _claude_fail(err)
-    if exp_ms and exp_ms < int(time.time() * 1000):
-        return _claude_fail("OAuth expirado; abra o Claude Code neste Mac")
-    if not token:
-        return _claude_fail("sem token Claude")
-    data = http_json(
-        CLAUDE_USAGE_URL,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "anthropic-beta": CLAUDE_BETA,
-            "Accept": "application/json",
-            "User-Agent": CLAUDE_USER_AGENT,
-        },
-    )
-    if not isinstance(data, dict):
-        return _claude_fail("resposta Claude inesperada")
-    return parse_claude_payload(data)
+    cands = claude_token_candidates()
+    if not cands:
+        _token, _exp, err = claude_token_and_expiry()
+        return _claude_fail(err or "sem token Claude")
+    last_err = "sem token Claude"
+    now_ms = int(time.time() * 1000)
+    for source, token, exp_ms in cands:
+        if exp_ms and exp_ms < now_ms:
+            last_err = "OAuth expirado; abra o Claude Code neste Mac"
+            continue
+        try:
+            data = http_json(
+                CLAUDE_USAGE_URL,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "anthropic-beta": CLAUDE_BETA,
+                    "Accept": "application/json",
+                    "User-Agent": CLAUDE_USER_AGENT,
+                },
+            )
+        except RuntimeError as exc:
+            msg = str(exc)
+            if _is_scope_error(msg):
+                last_err = SCOPE_HINT
+                continue
+            last_err = msg
+            continue
+        if not isinstance(data, dict):
+            last_err = "resposta Claude inesperada"
+            continue
+        parsed = parse_claude_payload(data)
+        if parsed.get("ok"):
+            return parsed
+        last_err = str(parsed.get("error") or "resposta Claude sem janelas de cota")
+    return _claude_fail(last_err)

@@ -1,10 +1,8 @@
 .env
-.env.local
-.env.claude
-.env.cursor
-.env.openrouter
-.env.*.local
-!.env.example
+.env.*
+.docker-last.log
+data/config.json
+data/*.json.tmp
 
 __pycache__/
 *.py[cod]

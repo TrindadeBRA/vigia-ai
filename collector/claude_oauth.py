@@ -100,29 +100,49 @@ def from_macos_keychain() -> tuple[str | None, int | None, str | None]:
     return None, None, last_err
 
 
-def load_claude_oauth() -> tuple[str | None, int | None, str | None]:
-    env_tok = os.environ.get("CLAUDE_OAUTH_TOKEN", "").strip()
-    if env_tok:
-        return env_tok, None, None
+def env_claude_token() -> str:
+    return (
+        os.environ.get("CLAUDE_OAUTH_TOKEN", "").strip()
+        or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
+    )
 
-    path = Path(
+
+def credentials_path() -> Path:
+    return Path(
         os.environ.get("CLAUDE_CREDENTIALS_PATH")
         or Path.home() / ".claude" / ".credentials.json"
     ).expanduser()
-    token, exp, err = from_credentials_file(path)
-    if token:
-        return token, exp, None
 
-    kc_token, kc_exp, kc_err = from_macos_keychain()
-    if kc_token:
-        return kc_token, kc_exp, None
 
-    bits = []
-    if not path.is_file():
-        bits.append(f"sem {path} (no macOS o Claude Code 2.x usa o Keychain)")
-    elif err:
-        bits.append(err)
-    if kc_err:
-        bits.append(kc_err)
-    bits.append("rode `claude` e, se o Mac pedir, permita acesso ao Keychain")
-    return None, None, "; ".join(bits)
+def load_claude_oauth() -> tuple[str | None, int | None, str | None]:
+    """Primeiro token disponível (Keychain/arquivo, depois o gravado no coletor)."""
+    cands = claude_token_candidates()
+    if not cands:
+        path = credentials_path()
+        bits = []
+        if not path.is_file():
+            bits.append(f"sem {path} (no macOS o Claude Code 2.x usa o Keychain)")
+        bits.append("rode `claude` e, se o Mac pedir, permita acesso ao Keychain")
+        return None, None, "; ".join(bits)
+    _src, token, exp = cands[0]
+    return token, exp, None
+
+
+def claude_token_candidates() -> list[tuple[str, str, int | None]]:
+    """Keychain e credentials.json primeiro — setup-token não tem user:profile."""
+    found: list[tuple[str, str, int | None]] = []
+    seen: set[str] = set()
+
+    def add(source: str, token: str | None, exp: int | None) -> None:
+        if not token or token in seen:
+            return
+        seen.add(token)
+        found.append((source, token, exp))
+
+    kc_token, kc_exp, _kc_err = from_macos_keychain()
+    add("keychain", kc_token, kc_exp)
+    path = credentials_path()
+    file_tok, file_exp, _err = from_credentials_file(path)
+    add("credentials", file_tok, file_exp)
+    add("env", env_claude_token() or None, None)
+    return found

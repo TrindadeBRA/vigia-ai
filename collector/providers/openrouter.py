@@ -18,7 +18,7 @@ OPENROUTER_CREDITS_URL = "https://openrouter.ai/api/v1/credits"
 def openrouter_token() -> tuple[str | None, str | None]:
     token = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not token:
-        return None, "sem OPENROUTER_API_KEY (collector/.env)"
+        return None, "sem OPENROUTER_API_KEY (grave no painel)"
     return token, None
 
 

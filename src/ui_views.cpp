@@ -1047,11 +1047,7 @@ void paintNow() {
   tft.drawString(dateBuf, W / 2, dateY, 2);
 
   const UiStrings& t = uiTr();
-  const int hintY = dateY + 18;
-  tft.setTextColor(COL_TEXT_MUTED, COL_BG);
-  tft.drawString(t.quotaUsedHint, W / 2, hintY, 1);
-
-  const int bodyTop = hintY + 14;
+  const int bodyTop = dateY + 22;
   const int bodyH = H - bodyTop - 8;
   const int gap = 4;
   const int pad = 8;

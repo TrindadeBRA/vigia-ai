@@ -11,12 +11,22 @@ Cada `GET /usage` busca as duas APIs na hora — **sem cache**. Ver aviso de rat
 ## Subir
 
 ```bash
-cd collector
-cp .env.example .env    # HOST/PORT + tokens (gitignored)
-python3 gerar_env_claude.py    # grava CLAUDE_OAUTH_TOKEN no .env; ver TODO_CLAUDE.md
-python3 gerar_env_cursor.py    # grava CURSOR_ACCESS_TOKEN no .env; ver TODO_CURSOR.md
-python3 server.py
+./dev-collector.sh                 # Python local (lê Claude/Cursor deste Mac)
+# ./dev-collector.sh docker        # opcional: Docker; tokens pelo painel
 ```
+
+Ou:
+
+```bash
+cd collector
+./start.sh
+```
+
+Abra **http://127.0.0.1:8787/** — painel para portas, URL da ESP32 e tokens. `GET /usage` continua sendo o contrato da placa.
+
+Tokens ficam em `collector/data/config.json` (gitignored). No Docker o mesmo arquivo é o volume `./data`. No Mac logado, Claude e Cursor podem ficar sem token gravado. OpenRouter: cole a key no painel.
+
+Headless / Docker: o container **não** lê o Keychain. Cole o OAuth do Claude Code (não `setup-token`) e o JWT do Cursor no painel, ou rode sem Docker.
 
 Teste:
 
@@ -40,10 +50,11 @@ Firewall: permitir Python na porta **8787** para a rede local.
 
 | Arquivo | Uso |
 | --- | --- |
-| `.env.example` | Modelo versionado (sem segredos) |
-| `.env` | Cópia local gitignored: `HOST`, `PORT`, `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`, `OPENROUTER_API_KEY` — [TODO_CLAUDE.md](../collector/TODO_CLAUDE.md) / [TODO_CURSOR.md](../collector/TODO_CURSOR.md) |
+| `data/config.json` | Gitignored; gravado pelo painel; volume `./data` no Docker |
+| Painel `http://IP:8787/` | HOST, PORT, tokens; mostra URL LAN para `USAGE_URL` |
+| `./start.sh` / `./dev-collector.sh` | Sobe o coletor; `docker` usa `compose.yaml` |
 
-`COLLECTOR_MOCK=1`: JSON falso (útil sem login).
+No painel, **Modo mock** grava JSON falso (útil sem login).
 
 ## Pré-requisitos de conta
 

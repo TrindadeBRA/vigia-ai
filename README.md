@@ -2,7 +2,7 @@
 
 Painel de mesa: **ESP32 + TFT 3,5" com touch** mostra os **limites de uso** das assinaturas **Claude** e **Cursor**, em **várias telas** (início, detalhe Claude, detalhe Cursor, info).
 
-A placa não guarda senha nem token. Um **coletor Python no Mac** lê o login que você já tem no Claude Code / Cursor (ou um `.env` interno), chama as APIs autenticadas e publica um JSON na rede local. A ESP32 só faz GET e desenha barras.
+A placa não guarda senha nem token. Um **coletor Python no Mac** lê o login que você já tem no Claude Code / Cursor (ou o que gravar no painel), chama as APIs autenticadas e publica um JSON na rede local. A ESP32 só faz GET e desenha barras.
 
 Documentação completa para humanos e para agentes de IA: pasta **[`docs/`](docs/README.md)** — comece por [`docs/CONTEXTO_IA.md`](docs/CONTEXTO_IA.md) e [`docs/PLANO.md`](docs/PLANO.md).
 
@@ -23,7 +23,7 @@ No simulador **Wokwi** a placa fala com o **mesmo coletor** do Mac, via Wi-Fi si
 ## O que você precisa
 
 1. ESP32 Dev Module + TFT SPI 3,5" (ILI9488 na maioria das 3,5")
-2. Mac na **mesma Wi-Fi**, com Claude Code e Cursor já logados (ou tokens no `.env`)
+2. Mac na **mesma Wi-Fi**, com Claude Code e Cursor já logados (ou tokens no painel do coletor)
 3. [PlatformIO Core](https://platformio.org/) (`brew install platformio`)
 4. Python 3 (já vem no macOS)
 5. Extensão Wokwi no Cursor/VS Code — só se for simular
@@ -31,10 +31,10 @@ No simulador **Wokwi** a placa fala com o **mesmo coletor** do Mac, via Wi-Fi si
 ## Subir o coletor (Mac)
 
 ```bash
-cd collector
-cp .env.example .env    # opcional
-python3 server.py
+./dev-collector.sh
 ```
+
+Abra [http://127.0.0.1:8787/](http://127.0.0.1:8787/) para ver a porta, a URL da ESP32 e colar tokens se precisar. Docker: `./dev-collector.sh docker`.
 
 Confira:
 
@@ -53,7 +53,7 @@ Tokens (não vão para a placa):
 | Claude | `~/.claude/.credentials.json` |
 | Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` |
 
-Override no `collector/.env`: `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`, `OPENROUTER_API_KEY`.
+Override no painel (`collector/data/config.json`): `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`, `OPENROUTER_API_KEY`.
 
 ## Firmware na placa
 

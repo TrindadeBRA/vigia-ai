@@ -1,52 +1,17 @@
 # TODO — env Cursor
 
-Não existe API key oficial de “% do Pro”. O coletor usa o **JWT que o Cursor já salvou** neste Mac.
+Não existe API key oficial de “% do Pro”. O coletor lê o JWT que o Cursor já salvou neste computador.
 
-## Checklist
+## Caminho fácil (Mac)
 
-- [ ] Cursor instalado e **logado** neste Mac (mesma conta da assinatura)
-- [ ] Abrir o Cursor pelo menos uma vez depois do login
-- [ ] Na pasta `collector/`: `python3 gerar_env_cursor.py`
-- [ ] Conferir que `CURSOR_ACCESS_TOKEN` entrou em `collector/.env` (gitignored)
-- [ ] Subir o coletor e testar só o Cursor:
+1. Cursor instalado e logado.
+2. `./dev-collector.sh` — deixe `CURSOR_ACCESS_TOKEN` vazio no painel.
+3. Confira `cursor.ok` em `/usage`.
 
-```bash
-cd collector
-python3 server.py
-# outro terminal:
-curl -s http://127.0.0.1:8787/usage | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['cursor'])"
-```
+## Headless / Docker
 
-- [ ] `cursor.ok` = `true`. Se `false`, ler `error` (abra o Cursor logado e gere de novo)
+Cole o token no painel (o container não vê o `state.vscdb` do host, a menos que você monte o arquivo).
 
-## O que o script faz
+## Script opcional
 
-Lê `cursorAuth/accessToken` em `state.vscdb` e grava no `.env`:
-
-```
-CURSOR_ACCESS_TOKEN=...
-CURSOR_STATE_DB=...
-```
-
-As outras chaves do `.env` ficam. **Não imprime o token.**
-
-macOS (caminho padrão):
-
-`~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`
-
-## Se o script falhar
-
-1. Faça logout/login no Cursor e feche o app.
-2. Preenchimento manual: copie `.env.example` → `.env` e preencha `CURSOR_ACCESS_TOKEN`.
-3. Extração manual (não cole o resultado no chat):
-
-```bash
-sqlite3 "$HOME/Library/Application Support/Cursor/User/globalStorage/state.vscdb" \
-  "SELECT length(value) FROM ItemTable WHERE key = 'cursorAuth/accessToken'"
-```
-
-(o `length` só confirma que a chave existe)
-
-## Renovar
-
-O JWT muda quando a sessão do Cursor renova. Abra o Cursor e rode `python3 gerar_env_cursor.py` de novo.
+`python3 gerar_env_cursor.py` grava o JWT em `data/config.json`. No Mac com o app aberto isso **não** é necessário.
