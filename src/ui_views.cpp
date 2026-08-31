@@ -324,12 +324,27 @@ static String deepseekRemain() {
   return String(uiTr().noCredits);
 }
 
+// So o valor, sem o prefixo "restam" — usado no card da Início, onde o
+// espaço ao lado do rótulo "Créditos" é estreito demais pra frase inteira.
+static String deepseekBalance() {
+  return g_snap.deepseek.remainingCents >= 0
+             ? fmtUsdSite(g_snap.deepseek.remainingCents)
+             : String(uiTr().noCredits);
+}
+
 static void paintHomeMetric(int x, int y, int w, const char* label, float pct, const String& sub,
                             uint8_t font, int labelH, int barH) {
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT_DIM, COL_CARD);
   tft.drawString(label, x, y, font);
   tft.setTextDatum(TR_DATUM);
+  if (pct < 0) {
+    // Sem percentual conhecido (ex.: DeepSeek so devolve saldo, sem teto pra
+    // comparar) -- mostra o valor (sub) no lugar do "--", sem barra vazia.
+    tft.setTextColor(COL_TEXT, COL_CARD);
+    tft.drawString(sub, x + w, y, font);
+    return;
+  }
   tft.setTextColor(COL_TEXT, COL_CARD);
   tft.drawString(fmtPct(pct), x + w, y, font);
   drawBar(x, y + labelH, w, barH, pct);
@@ -481,7 +496,7 @@ static void paintHomeList() {
   }
 
   String oSub = showSub ? (openrouterRemain() + "  " + openrouterTotals()) : openrouterRemain();
-  String dSub = deepseekRemain();
+  String dSub = deepseekBalance();
 
   int slot = 0;
   auto nextTop = [&]() { return bodyTop + slot * (cardH + gap); };
@@ -672,7 +687,7 @@ static void paintHomeGrid() {
   if (showSub) {
     oSub += "  " + openrouterTotals();
   }
-  String dSub = deepseekRemain();
+  String dSub = deepseekBalance();
 
   int slot = 0;
   if (showClaude) {
@@ -783,18 +798,27 @@ static void dBar(const char* title, float pct, const String& sub) {
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(COL_TEXT_DIM, COL_CARD);
     tft.drawString(title, dX, y, 2);
-    tft.setTextDatum(TR_DATUM);
-    tft.setTextColor(COL_TEXT, COL_CARD);
-    tft.drawString(fmtPct(pct), dX + dW, y, 2);
-    drawBar(dX, y + 18, dW, 10, pct);
-    if (sub.length()) {
+    if (pct < 0) {
+      // Sem percentual conhecido (ex.: DeepSeek so devolve saldo, sem teto
+      // historico pra comparar — ver docs/APIS_DEEPSEEK.md). Em vez de "--"
+      // com barra vazia, mostra o valor (sub) em destaque no lugar delas.
       tft.setTextDatum(TL_DATUM);
-      tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-      String s = sub;
-      if ((int)s.length() > 34) {
-        s = s.substring(0, 34);
+      tft.setTextColor(COL_TEXT, COL_CARD);
+      tft.drawString(sub, dX, y + 20, 2);
+    } else {
+      tft.setTextDatum(TR_DATUM);
+      tft.setTextColor(COL_TEXT, COL_CARD);
+      tft.drawString(fmtPct(pct), dX + dW, y, 2);
+      drawBar(dX, y + 18, dW, 10, pct);
+      if (sub.length()) {
+        tft.setTextDatum(TL_DATUM);
+        tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+        String s = sub;
+        if ((int)s.length() > 34) {
+          s = s.substring(0, 34);
+        }
+        tft.drawString(s, dX, y + 32, 2);
       }
-      tft.drawString(s, dX, y + 32, 2);
     }
   }
   dAdvance(h);
@@ -970,11 +994,10 @@ void paintDeepSeek() {
   }
   dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
   dGap();
+  // Sem used/cap/percent aqui: a API so devolve saldo atual (sem teto
+  // historico), entao esses campos sempre viriam vazios/"--" — dBar ja
+  // mostra o saldo no lugar da barra quando pct < 0 (ver docs/APIS_DEEPSEEK.md).
   dBar(t.credits, g_snap.deepseek.percent, deepseekRemain());
-  dKv(t.used, g_snap.deepseek.usedCents >= 0 ? fmtUsdSite(g_snap.deepseek.usedCents) : "");
-  dKv(t.left, g_snap.deepseek.remainingCents >= 0 ? fmtUsdSite(g_snap.deepseek.remainingCents) : "");
-  dKv(t.cap, g_snap.deepseek.limitCents >= 0 ? fmtUsdSite(g_snap.deepseek.limitCents) : "");
-  dKv(t.percent, fmtPct(g_snap.deepseek.percent));
   paintDetailFinish();
 }
 
@@ -1138,14 +1161,13 @@ static void paintNowMetric(int x, int y, int w, const char* label, float pct, co
   tft.drawString(label, x, y, font);
   tft.setTextDatum(TR_DATUM);
   tft.setTextColor(COL_TEXT, COL_CARD);
-  String right;
   if (pct < 0) {
-    right = "--";
-  } else if (w < 110) {
-    right = fmtPct(pct);
-  } else {
-    right = fmtPct(pct) + " " + t.used;
+    // Sem percentual conhecido (ex.: DeepSeek so devolve saldo, sem teto pra
+    // comparar) -- mostra o valor (sub) no lugar do "--", sem barra vazia.
+    tft.drawString(sub, x + w, y, font);
+    return;
   }
+  String right = w < 110 ? fmtPct(pct) : fmtPct(pct) + " " + t.used;
   tft.drawString(right, x + w, y, font);
   drawBar(x, y + labelH, w, barH, pct);
   if (!sub.length()) {
@@ -1233,10 +1255,13 @@ void paintNow() {
       drawErrorWrapped(mx0, errY, mwAll, err, COL_CARD, 1, errMaxH);
       return;
     }
-    paintNowMetric(mx0, my, mw, label1, pct1, compact ? String() : sub1, metricFont, labelH, barH);
+    // Sub some no modo compacto — exceto quando pct < 0 (ex.: DeepSeek), caso
+    // em que o sub é o próprio valor exibido, não uma descrição secundária.
+    paintNowMetric(mx0, my, mw, label1, pct1, (compact && pct1 >= 0) ? String() : sub1, metricFont,
+                   labelH, barH);
     if (has2) {
-      paintNowMetric(mx0 + mw + gapM, my, mw, label2, pct2, compact ? String() : sub2, metricFont,
-                     labelH, barH);
+      paintNowMetric(mx0 + mw + gapM, my, mw, label2, pct2,
+                     (compact && pct2 >= 0) ? String() : sub2, metricFont, labelH, barH);
     }
   };
 
@@ -1245,7 +1270,7 @@ void paintNow() {
   String us1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(g_snap.cursor.percent));
   String us2 = compact ? String() : cursorOndemand();
   String os1 = compact ? String() : openrouterRemain();
-  String ds1 = compact ? String() : deepseekRemain();
+  String ds1 = deepseekBalance();
 
   int slot = 0;
   if (showClaude) {

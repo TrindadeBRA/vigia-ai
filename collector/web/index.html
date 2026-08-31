@@ -94,8 +94,9 @@
             <div id="claude-fields" class="mt-2 flex flex-wrap gap-2" style="display:none">
               <input id="claude" type="password" autocomplete="off" placeholder="CLAUDE_OAUTH_TOKEN" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
               <button type="button" id="save-claude" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
-              <button type="button" id="clear-claude" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar token</button>
+              <button type="button" id="clear-claude" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">Apagar token</button>
             </div>
+            <p id="claude-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
           </div>
         </article>
 
@@ -132,8 +133,9 @@ rm -f "$tmp"
             <div id="cursor-fields" class="mt-2 flex flex-wrap gap-2" style="display:none">
               <input id="cursor" type="password" autocomplete="off" placeholder="CURSOR_ACCESS_TOKEN" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
               <button type="button" id="save-cursor" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
-              <button type="button" id="clear-cursor" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar token</button>
+              <button type="button" id="clear-cursor" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">Apagar token</button>
             </div>
+            <p id="cursor-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
           </div>
         </article>
 
@@ -154,8 +156,9 @@ rm -f "$tmp"
           <div id="or-fields" class="mt-3 flex flex-wrap gap-2" style="display:none">
             <input id="or" type="password" autocomplete="off" placeholder="sk-or-…" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
             <button type="button" id="save-or" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
-            <button type="button" id="clear-or" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar key</button>
+            <button type="button" id="clear-or" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">Apagar key</button>
           </div>
+          <p id="or-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
         </article>
 
         <article class="rounded-2xl border border-edge bg-panel p-5">
@@ -175,8 +178,9 @@ rm -f "$tmp"
           <div id="deepseek-fields" class="mt-3 flex flex-wrap gap-2" style="display:none">
             <input id="deepseek" type="password" autocomplete="off" placeholder="sk-…" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
             <button type="button" id="save-deepseek" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
-            <button type="button" id="clear-deepseek" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar key</button>
+            <button type="button" id="clear-deepseek" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">Apagar key</button>
           </div>
+          <p id="deepseek-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
         </article>
       </div>
     </section>
@@ -259,11 +263,28 @@ rm -f "$tmp"
       $(prefix + "-dot").className = "h-2 w-2 rounded-full " + DOT[state];
       $(prefix + "-badge").className = "text-xs font-medium " + BADGE[state];
       $(prefix + "-badge").textContent = BADGE_TEXT[state];
+
+      // "configured" reflete QUALQUER fonte ativa (local ou colada) — não dá
+      // pra usar isso pra travar o campo, senão nunca dá pra colar/trocar um
+      // token enquanto Keychain/Cursor local já resolve. O que importa aqui é
+      // "mode": "local" = uma credencial do Mac está mandando (colar não tem
+      // efeito, então trava o campo); "paste" = já existe algo colado — mostra
+      // mascarado e libera apagar; "need_*" = nada colado ainda, campo livre.
+      const hasPaste = p.mode === "paste";
+      const editable = p.mode !== "local";
       const input = $(prefix);
       const saveBtn = $("save-" + prefix);
-      input.disabled = p.configured;
-      saveBtn.disabled = p.configured;
-      input.value = p.configured ? MASKED_VALUE : "";
+      const clearBtn = $("clear-" + prefix);
+      input.disabled = !editable;
+      saveBtn.disabled = !editable;
+      clearBtn.disabled = !hasPaste;
+      input.value = hasPaste ? MASKED_VALUE : "";
+      if (!input.dataset.placeholderOriginal) {
+        input.dataset.placeholderOriginal = input.placeholder;
+      }
+      input.placeholder = editable
+        ? input.dataset.placeholderOriginal
+        : "gerenciado pelo app local — veja abaixo";
 
       $(prefix + "-fields-skel").style.display = "none";
       $(prefix + "-fields").style.display = "flex";
@@ -363,38 +384,32 @@ rm -f "$tmp"
         : (out.error || "Falha");
       await load();
     };
-    $("save-claude").onclick = async () => {
-      const v = $("claude").value.trim();
-      if (!v) return;
-      await postConfig({ CLAUDE_OAUTH_TOKEN: v });
-      $("claude").value = "";
-      await load();
-    };
-    $("clear-claude").onclick = async () => { await postClear("CLAUDE_OAUTH_TOKEN"); await load(); };
-    $("save-cursor").onclick = async () => {
-      const v = $("cursor").value.trim();
-      if (!v) return;
-      await postConfig({ CURSOR_ACCESS_TOKEN: v });
-      $("cursor").value = "";
-      await load();
-    };
-    $("clear-cursor").onclick = async () => { await postClear("CURSOR_ACCESS_TOKEN"); await load(); };
-    $("save-or").onclick = async () => {
-      const v = $("or").value.trim();
-      if (!v) return;
-      await postConfig({ OPENROUTER_API_KEY: v });
-      $("or").value = "";
-      await load();
-    };
-    $("clear-or").onclick = async () => { await postClear("OPENROUTER_API_KEY"); await load(); };
-    $("save-deepseek").onclick = async () => {
-      const v = $("deepseek").value.trim();
-      if (!v) return;
-      await postConfig({ DEEPSEEK_API_KEY: v });
-      $("deepseek").value = "";
-      await load();
-    };
-    $("clear-deepseek").onclick = async () => { await postClear("DEEPSEEK_API_KEY"); await load(); };
+    function bindProviderActions(prefix, envKey, noun) {
+      const msg = $(prefix + "-msg");
+      const field = $(prefix);
+      field.addEventListener("focus", () => {
+        if (field.value === MASKED_VALUE) field.value = "";
+      });
+      $("save-" + prefix).onclick = async () => {
+        const v = field.value.trim();
+        if (!v || v === MASKED_VALUE) return;
+        const out = await postConfig({ [envKey]: v });
+        field.value = "";
+        msg.textContent = out.ok ? (noun === "token" ? "Token salvo." : "Key salva.") : (out.error || "Falha ao salvar.");
+        await load();
+      };
+      $("clear-" + prefix).onclick = async () => {
+        const out = await postClear(envKey);
+        msg.textContent = out.ok
+          ? (noun === "token" ? "Token apagado." : "Key apagada.")
+          : (out.error || "Falha ao apagar.");
+        await load();
+      };
+    }
+    bindProviderActions("claude", "CLAUDE_OAUTH_TOKEN", "token");
+    bindProviderActions("cursor", "CURSOR_ACCESS_TOKEN", "token");
+    bindProviderActions("or", "OPENROUTER_API_KEY", "key");
+    bindProviderActions("deepseek", "DEEPSEEK_API_KEY", "key");
 
     $("copy-cursor-cmd").onclick = async () => {
       const btn = $("copy-cursor-cmd");
