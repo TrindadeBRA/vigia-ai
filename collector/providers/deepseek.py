@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from http_util import http_json
-from store import get_accounts
+from store import env_flag, get_accounts
 
 _DS_KEY_RE = re.compile(r"sk-[A-Za-z0-9]+")
 _INVISIBLE = ("﻿", "​", "‌", "‍", "\xa0")
@@ -108,11 +108,12 @@ def fetch_deepseek_accounts() -> list[dict[str, Any]]:
     conta "local" — toda conta DeepSeek é uma key colada no painel.
     """
     accounts = get_accounts("DEEPSEEK_ACCOUNTS")
-    if not accounts:
+    if not accounts and not env_flag("DEEPSEEK_HIDDEN"):
         # Migração transparente da DEEPSEEK_API_KEY única do formato antigo.
         legacy = os.environ.get("DEEPSEEK_API_KEY", "").strip()
         if legacy:
-            accounts = [{"id": "legacy", "label": "", "key": legacy}]
+            label = os.environ.get("DEEPSEEK_LEGACY_LABEL", "").strip()
+            accounts = [{"id": "legacy", "label": label, "key": legacy}]
     out: list[dict[str, Any]] = []
     for acc in accounts:
         key = str(acc.get("key") or "").strip()

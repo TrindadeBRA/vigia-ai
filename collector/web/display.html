@@ -557,7 +557,7 @@ function buildProviders(data, t) {
     });
   }
   for (const d of data.deepseek || []) {
-    const sub = d.remaining_cents != null ? fmtUsd(d.remaining_cents) : t.noCredits;
+    const sub = d.remaining_cents != null ? (t.remainMoney + fmtUsd(d.remaining_cents)) : t.noCredits;
     list.push({
       id: "deepseek:" + d.id, provider: "deepseek", ok: d.ok, error: d.error,
       title: "DeepSeek", label: d.label || "",

@@ -185,11 +185,13 @@ Uma conta só entra no array se estiver visível — o firmware **não desenha o
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
    painel (`collector/data/config.json`). OpenRouter e DeepSeek somem ao
    apagar a última key.
-2. **Oculta no painel** — só a conta **local** de Claude/Cursor (Keychain/`state.vscdb`)
-   pode ser ocultada: o interruptor **Mostrar na placa** grava `CLAUDE_HIDDEN` /
-   `CURSOR_HIDDEN` em `config.json` e essa conta some do array (sem chamar a API).
-   O login local continua; só o card some na ESP32. Contas extras coladas não têm
-   esse interruptor — remover a conta no painel é o equivalente a "ocultar".
+2. **Oculta no painel** — a conta **local** de Claude/Cursor (Keychain/`state.vscdb`) e
+   a **primeira key** de OpenRouter/DeepSeek (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`)
+   têm um interruptor **Mostrar na placa** que grava `CLAUDE_HIDDEN` / `CURSOR_HIDDEN` /
+   `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` em `config.json` — a conta some do array
+   (sem chamar a API), mas continua salva/logada; só o card some na ESP32. Contas
+   extras coladas (`*_ACCOUNTS`) não têm esse interruptor — remover a conta no
+   painel é o equivalente a "ocultar".
 
 Isso é diferente de `ok=false`: uma conta presente no array que falha
 (rede fora do ar, token expirado, rate limit) continua com o card visível,

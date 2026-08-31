@@ -334,8 +334,18 @@ def config_payload(listen_host: str, listen_port: int) -> dict[str, Any]:
                 "local_label": os.environ.get("CURSOR_LOCAL_LABEL", ""),
                 "accounts": _accounts_public("CURSOR_ACCOUNTS", "token"),
             },
-            "openrouter": {**_openrouter_card(), "accounts": _accounts_public("OPENROUTER_ACCOUNTS", "key")},
-            "deepseek": {**_deepseek_card(), "accounts": _accounts_public("DEEPSEEK_ACCOUNTS", "key")},
+            "openrouter": {
+                **_openrouter_card(),
+                "hidden": env_flag("OPENROUTER_HIDDEN"),
+                "primary_label": os.environ.get("OPENROUTER_LEGACY_LABEL", ""),
+                "accounts": _accounts_public("OPENROUTER_ACCOUNTS", "key"),
+            },
+            "deepseek": {
+                **_deepseek_card(),
+                "hidden": env_flag("DEEPSEEK_HIDDEN"),
+                "primary_label": os.environ.get("DEEPSEEK_LEGACY_LABEL", ""),
+                "accounts": _accounts_public("DEEPSEEK_ACCOUNTS", "key"),
+            },
         },
         "docker": docker_status(),
         "fields": {

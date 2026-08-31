@@ -21,10 +21,13 @@ KEYS = (
     "OPENROUTER_API_KEY",
     "DEEPSEEK_API_KEY",
     "COLLECTOR_MOCK",
-    # Claude/Cursor pegam login local sozinhos; estes flags só escondem o card
-    # na ESP32 (configured=false no /usage). Ausente = visível.
+    # Só escondem o card na ESP32 (a conta continua salva/logada) — Claude/
+    # Cursor escondem a conta local; OpenRouter/DeepSeek escondem a primeira
+    # key (OPENROUTER_API_KEY/DEEPSEEK_API_KEY). Ausente = visível.
     "CLAUDE_HIDDEN",
     "CURSOR_HIDDEN",
+    "OPENROUTER_HIDDEN",
+    "DEEPSEEK_HIDDEN",
     # Apelido opcional da conta local (Keychain/state.vscdb). "" = sem apelido.
     "CLAUDE_LOCAL_LABEL",
     "CURSOR_LOCAL_LABEL",
@@ -42,7 +45,9 @@ KEYS = (
     "DEEPSEEK_ACCOUNTS",
 )
 
-FLAG_KEYS = frozenset({"COLLECTOR_MOCK", "CLAUDE_HIDDEN", "CURSOR_HIDDEN"})
+FLAG_KEYS = frozenset(
+    {"COLLECTOR_MOCK", "CLAUDE_HIDDEN", "CURSOR_HIDDEN", "OPENROUTER_HIDDEN", "DEEPSEEK_HIDDEN"}
+)
 ACCOUNTS_KEYS = frozenset(
     {"CLAUDE_ACCOUNTS", "CURSOR_ACCOUNTS", "OPENROUTER_ACCOUNTS", "DEEPSEEK_ACCOUNTS"}
 )

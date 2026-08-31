@@ -8,7 +8,7 @@ from typing import Any
 
 from formatting import ratio_percent
 from http_util import http_json
-from store import get_accounts
+from store import env_flag, get_accounts
 
 # Key real: sk-or-v1- + hex. Paste do painel às vezes vem "Nome — sk-or-v1-..."
 # (travessão U+2014). Header HTTP não aceita isso.
@@ -109,11 +109,12 @@ def fetch_openrouter_accounts() -> list[dict[str, Any]]:
     conta "local" — toda conta OpenRouter é uma key colada no painel.
     """
     accounts = get_accounts("OPENROUTER_ACCOUNTS")
-    if not accounts:
+    if not accounts and not env_flag("OPENROUTER_HIDDEN"):
         # Migração transparente da OPENROUTER_API_KEY única do formato antigo.
         legacy = os.environ.get("OPENROUTER_API_KEY", "").strip()
         if legacy:
-            accounts = [{"id": "legacy", "label": "", "key": legacy}]
+            label = os.environ.get("OPENROUTER_LEGACY_LABEL", "").strip()
+            accounts = [{"id": "legacy", "label": label, "key": legacy}]
     out: list[dict[str, Any]] = []
     for acc in accounts:
         key = str(acc.get("key") or "").strip()

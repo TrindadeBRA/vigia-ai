@@ -223,6 +223,21 @@ rm -f "$tmp"
             <span id="or-badge" class="text-xs font-medium"></span>
           </div>
           <p class="mt-1 text-xs text-ink3">Créditos da conta. Crie a key em <a class="text-accent underline" href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">openrouter.ai/settings/keys</a>.</p>
+          <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-ink2">
+            <input id="or-on-board" type="checkbox" class="rounded border-edge accent-accent" />
+            Mostrar na placa
+          </label>
+          <p class="mt-1 text-xs text-ink3">A key continua salva; desmarque só para tirar o card da ESP32.</p>
+          <label class="mt-2 block text-xs text-ink3">Apelido desta key (opcional)</label>
+          <div id="or-local-skel" class="mt-1 flex flex-wrap gap-2">
+            <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+          </div>
+          <div id="or-local-fields" class="mt-1 flex flex-wrap gap-2" style="display:none">
+            <input id="or-local-label" type="text" autocomplete="off" placeholder="ex.: Projeto X" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink" />
+            <button type="button" id="save-or-local-label" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90">Salvar</button>
+          </div>
+          <p id="or-local-label-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
           <div id="or-fields-skel" class="mt-3 flex flex-wrap gap-2">
             <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
             <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
@@ -265,6 +280,21 @@ rm -f "$tmp"
             <span id="deepseek-badge" class="text-xs font-medium"></span>
           </div>
           <p class="mt-1 text-xs text-ink3">Saldo da conta. Crie a key em <a class="text-accent underline" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com/api_keys</a>.</p>
+          <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-ink2">
+            <input id="deepseek-on-board" type="checkbox" class="rounded border-edge accent-accent" />
+            Mostrar na placa
+          </label>
+          <p class="mt-1 text-xs text-ink3">A key continua salva; desmarque só para tirar o card da ESP32.</p>
+          <label class="mt-2 block text-xs text-ink3">Apelido desta key (opcional)</label>
+          <div id="deepseek-local-skel" class="mt-1 flex flex-wrap gap-2">
+            <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+          </div>
+          <div id="deepseek-local-fields" class="mt-1 flex flex-wrap gap-2" style="display:none">
+            <input id="deepseek-local-label" type="text" autocomplete="off" placeholder="ex.: Projeto X" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink" />
+            <button type="button" id="save-deepseek-local-label" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90">Salvar</button>
+          </div>
+          <p id="deepseek-local-label-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
           <div id="deepseek-fields-skel" class="mt-3 flex flex-wrap gap-2">
             <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
             <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
@@ -438,7 +468,14 @@ rm -f "$tmp"
       const msg = $(prefix + "-local-label-msg");
       $("save-" + prefix + "-local-label").onclick = async () => {
         const out = await postConfig({ [envKey]: input.value.trim() });
-        msg.textContent = out.ok ? "Apelido salvo." : (out.error || "Falha ao salvar.");
+        // out.ok=true mesmo quando nada muda (chave não reconhecida pelo
+        // coletor rodando, ex.: versão antiga) — só confirmar "salvo" se essa
+        // chave realmente apareceu em out.changed.
+        msg.textContent = out.ok
+          ? (out.changed && out.changed.includes(envKey)
+              ? "Apelido salvo."
+              : "Nada mudou — reinicie o coletor (código pode estar desatualizado).")
+          : (out.error || "Falha ao salvar.");
         await load();
       };
       input.addEventListener("keydown", (e) => {
@@ -514,11 +551,19 @@ rm -f "$tmp"
       fillProv("deepseek", d.providers.deepseek);
       $("claude-on-board").checked = !d.providers.claude.hidden;
       $("cursor-on-board").checked = !d.providers.cursor.hidden;
+      $("or-on-board").checked = !d.providers.openrouter.hidden;
+      $("deepseek-on-board").checked = !d.providers.deepseek.hidden;
       if (document.activeElement !== $("claude-local-label")) {
         $("claude-local-label").value = d.providers.claude.local_label || "";
       }
       if (document.activeElement !== $("cursor-local-label")) {
         $("cursor-local-label").value = d.providers.cursor.local_label || "";
+      }
+      if (document.activeElement !== $("or-local-label")) {
+        $("or-local-label").value = d.providers.openrouter.primary_label || "";
+      }
+      if (document.activeElement !== $("deepseek-local-label")) {
+        $("deepseek-local-label").value = d.providers.deepseek.primary_label || "";
       }
       renderAccounts("claude", "claude", d.providers.claude.accounts);
       renderAccounts("cursor", "cursor", d.providers.cursor.accounts);
@@ -526,6 +571,8 @@ rm -f "$tmp"
       renderAccounts("deepseek", "deepseek", d.providers.deepseek.accounts);
       reveal("claude-local");
       reveal("cursor-local");
+      reveal("or-local");
+      reveal("deepseek-local");
       reveal("claude-accounts");
       reveal("cursor-accounts");
       reveal("or-accounts");
@@ -622,21 +669,25 @@ rm -f "$tmp"
     bindProviderActions("or", "OPENROUTER_API_KEY", "key");
     bindProviderActions("deepseek", "DEEPSEEK_API_KEY", "key");
 
-    function bindOnBoard(prefix, flagKey) {
+    function bindOnBoard(prefix, flagKey, continuesMsg) {
       $(prefix + "-on-board").onchange = async () => {
         const hidden = !$(prefix + "-on-board").checked;
         const out = await postConfig({ [flagKey]: hidden ? "1" : "" });
         const msg = $(prefix + "-msg");
         msg.textContent = out.ok
-          ? (hidden ? "Oculto na placa. O login local continua." : "Voltou a aparecer na placa.")
+          ? (hidden ? `Oculto na placa. ${continuesMsg}` : "Voltou a aparecer na placa.")
           : (out.error || "Falha ao salvar.");
         await load();
       };
     }
-    bindOnBoard("claude", "CLAUDE_HIDDEN");
-    bindOnBoard("cursor", "CURSOR_HIDDEN");
+    bindOnBoard("claude", "CLAUDE_HIDDEN", "O login local continua.");
+    bindOnBoard("cursor", "CURSOR_HIDDEN", "O login local continua.");
+    bindOnBoard("or", "OPENROUTER_HIDDEN", "A key continua salva.");
+    bindOnBoard("deepseek", "DEEPSEEK_HIDDEN", "A key continua salva.");
     bindLocalLabel("claude", "CLAUDE_LOCAL_LABEL");
     bindLocalLabel("cursor", "CURSOR_LOCAL_LABEL");
+    bindLocalLabel("or", "OPENROUTER_LEGACY_LABEL");
+    bindLocalLabel("deepseek", "DEEPSEEK_LEGACY_LABEL");
     bindAddAccount("claude", "claude");
     bindAddAccount("cursor", "cursor");
     bindAddAccount("or", "openrouter");
