@@ -36,7 +36,7 @@ Detalhes e views: [TOUCH.md](TOUCH.md).
 ## Resolução
 
 - Hardware: paisagem `setRotation(1)` → **480×320**
-- Wokwi: ILI9341 → **320×240** (não existe ILI9488 no simulador)
+- Wokwi: ILI9341 → **320×240** (`setRotation(1)` + peça `rotate: 90`). O conector da peça fica à esquerda do vidro — não é área de pixels. Não existe ILI9488 no simulador.
 
 O layout usa `tft.width()` / `tft.height()`.
 

@@ -29,6 +29,10 @@
 #define USAGE_POLL_MS 300000
 #endif
 
+#ifndef TFT_ROTATION
+#define TFT_ROTATION 1
+#endif
+
 TFT_eSPI tft = TFT_eSPI();
 UsageSnapshot g_snap;
 bool g_requestRefresh = false;
@@ -240,8 +244,10 @@ void setup() {
   delay(200);
 
   tft.init();
-  tft.setRotation(1);
+  tft.setRotation(TFT_ROTATION);
+  tft.resetViewport();
   tft.fillScreen(COL_BG);
+  Serial.printf("tft %dx%d rot=%d\n", tft.width(), tft.height(), (int)TFT_ROTATION);
   uiInit();
 
 #ifdef MOCK_USAGE

@@ -13,44 +13,47 @@
     {
       "type": "board-ili9341-cap-touch",
       "id": "lcd1",
-      "top": -48,
-      "left": 230.4,
-      "rotate": 90,
+      "top": -28.8,
+      "left": 297.6,
+      "rotate": 270,
       "attrs": {}
     },
     {
       "type": "wokwi-pushbutton",
       "id": "btnPrev",
-      "top": 201.4,
+      "top": 326.2,
       "left": -96,
       "attrs": { "color": "blue", "label": "Prev", "bounce": "0" }
     },
     {
       "type": "wokwi-pushbutton",
       "id": "btnNext",
-      "top": 201.4,
-      "left": -9.6,
+      "top": 326.2,
+      "left": 0,
       "attrs": { "color": "green", "label": "Prox", "bounce": "0" }
     }
   ],
   "connections": [
     ["esp:TX", "$serialMonitor:RX", "", []],
     ["esp:RX", "$serialMonitor:TX", "", []],
-    ["esp:3V3", "lcd1:VCC", "red", ["h-19.2", "v-57.6"]],
-    ["esp:GND.2", "lcd1:GND", "black", ["h-9.6", "v19.2"]],
-    ["esp:3V3", "lcd1:LED", "white", ["h-28.8", "v76.8"]],
-    ["esp:23", "lcd1:MOSI", "green", ["h19.2", "v0"]],
-    ["esp:19", "lcd1:MISO", "blue", ["h28.8", "v0"]],
-    ["esp:18", "lcd1:SCK", "gold", ["h38.4", "v0"]],
-    ["esp:15", "lcd1:CS", "orange", ["h48", "v0"]],
-    ["esp:2", "lcd1:D/C", "purple", ["h57.6", "v0"]],
-    ["esp:4", "lcd1:RST", "gray", ["h67.2", "v0"]],
-    ["esp:21", "lcd1:SDA", "green", ["h-19.2", "v-38.4"]],
-    ["esp:22", "lcd1:SCL", "blue", ["h-28.8", "v-48"]],
-    ["esp:13", "btnPrev:2.l", "violet", ["h-19.2", "v19.2"]],
-    ["esp:GND.1", "btnPrev:1.r", "black", []],
-    ["esp:5", "btnNext:2.l", "green", ["h-9.6", "v28.8"]],
-    ["esp:GND.1", "btnNext:1.r", "black", []]
+
+    ["esp:3V3", "lcd1:VCC", "red", ["h-48", "v-76.8", "*", "h48", "v-86.4"]],
+    ["esp:3V3", "lcd1:LED", "white", ["h-38.4", "v-67.2", "*", "h38.4", "v-76.8"]],
+
+    ["esp:GND.2", "lcd1:GND", "black", ["h19.2", "v278.4", "*", "h19.2", "v278.4"]],
+    ["esp:23", "lcd1:MOSI", "green", ["h28.8", "v192", "*", "h28.8", "v192"]],
+    ["esp:22", "lcd1:SCL", "blue", ["h38.4", "v201.6", "*", "h38.4", "v201.6"]],
+    ["esp:21", "lcd1:SDA", "green", ["h48", "v211.2", "*", "h48", "v211.2"]],
+    ["esp:19", "lcd1:MISO", "blue", ["h57.6", "v220.8", "*", "h57.6", "v220.8"]],
+    ["esp:18", "lcd1:SCK", "gold", ["h67.2", "v230.4", "*", "h67.2", "v230.4"]],
+    ["esp:15", "lcd1:CS", "orange", ["h76.8", "v240", "*", "h76.8", "v240"]],
+    ["esp:2", "lcd1:D/C", "purple", ["h86.4", "v249.6", "*", "h86.4", "v249.6"]],
+    ["esp:4", "lcd1:RST", "gray", ["h96", "v259.2", "*", "h96", "v259.2"]],
+
+    ["esp:13", "btnPrev:2.l", "violet", ["h-19.2", "v105.6"]],
+    ["esp:5", "btnNext:2.l", "green", ["h9.6", "v115.2"]],
+    ["esp:GND.1", "btnPrev:1.r", "black", ["h-9.6", "v96"]],
+    ["btnPrev:1.l", "btnNext:1.r", "black", ["h0"]]
   ],
   "dependencies": {}
 }

@@ -23,6 +23,10 @@ static bool g_ftOk = false;
 #define TOUCH_Z_MIN 80
 #endif
 
+#ifndef TFT_ROTATION
+#define TFT_ROTATION 1
+#endif
+
 static bool g_wasDown = false;
 static bool g_didTap = false;
 static uint16_t g_startX = 0;
@@ -180,10 +184,16 @@ static void pollCapTouch() {
   }
   uint16_t px = (uint16_t)(((xh & 0x0F) << 8) | xl);
   uint16_t py = (uint16_t)(((yh & 0x0F) << 8) | yl);
-  // FT6206 sempre fala em retrato 240×320. setRotation(1) é 320×240.
-  // Clique em Claude (menu) vinha como 14,126 = canto esquerdo, não a aba.
-  int32_t nx = (int32_t)py;
-  int32_t ny = 239 - (int32_t)px;
+  // FT6206 fala em retrato nativo 240×320. Mapeia para a paisagem do TFT.
+  int32_t nx;
+  int32_t ny;
+#if TFT_ROTATION == 3
+  nx = (int32_t)tft.width() - 1 - (int32_t)py;
+  ny = (int32_t)px;
+#else
+  nx = (int32_t)py;
+  ny = (int32_t)tft.height() - 1 - (int32_t)px;
+#endif
   if (nx < 0) {
     nx = 0;
   }
