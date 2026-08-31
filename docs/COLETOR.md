@@ -4,7 +4,9 @@
 
 Script `collector/server.py` (Python 3, só biblioteca padrão). Sobe HTTP em `0.0.0.0:8787`.
 
-`server.py` cuida só do HTTP e do cache; a busca/parse de cada assinatura fica em `collector/providers/claude.py` e `collector/providers/cursor.py`. Datas (BRT) e percentuais/centavos compartilhados estão em `collector/formatting.py`; a leitura do `state.vscdb` do Cursor está em `collector/cursor_state.py` (usada também por `gerar_env_cursor.py`, para não duplicar essa lógica).
+`server.py` cuida só do HTTP; a busca/parse de cada assinatura fica em `collector/providers/claude.py` e `collector/providers/cursor.py`. Datas (BRT) e percentuais/centavos compartilhados estão em `collector/formatting.py`; a leitura do `state.vscdb` do Cursor está em `collector/cursor_state.py` (usada também por `gerar_env_cursor.py`, para não duplicar essa lógica).
+
+Cada `GET /usage` busca as duas APIs na hora — **sem cache**. Ver aviso de rate limit abaixo.
 
 ## Subir
 
@@ -38,7 +40,7 @@ Firewall: permitir Python na porta **8787** para a rede local.
 
 | Arquivo | Uso |
 | --- | --- |
-| `.env` | `HOST`, `PORT`, cache |
+| `.env` | `HOST`, `PORT` |
 | `.env.claude` | `CLAUDE_OAUTH_TOKEN` (gitignored) — [TODO_CLAUDE.md](../collector/TODO_CLAUDE.md) |
 | `.env.cursor` | `CURSOR_ACCESS_TOKEN` (gitignored) — [TODO_CURSOR.md](../collector/TODO_CURSOR.md) |
 
@@ -49,6 +51,6 @@ Firewall: permitir Python na porta **8787** para a rede local.
 - Claude: ter usado **Claude Code** (ou app que grave OAuth nesse JSON) neste Mac.
 - Cursor: ter aberto o **Cursor** logado neste Mac pelo menos uma vez.
 
-## Cache
+## Sem cache — cuidado com rate limit
 
-Primeiro GET a `/usage` busca as duas APIs. Pedidos seguintes dentro do TTL devolvem a mesma resposta. Forçar refresh: reiniciar o processo (v1 não tem `?refresh=1`).
+Todo `GET /usage` chama as duas APIs na hora (a pedido do usuário; v1 tinha cache de 5 min pra não martelar o endpoint do Claude). Cada GET no coletor = uma chamada real em `/api/oauth/usage`. Como a placa faz poll a cada `USAGE_POLL_MS` (padrão 15 s, ver [FIRMWARE.md](FIRMWARE.md)), isso significa uma chamada ao Claude a cada 15 s enquanto a placa estiver ligada — se aparecer `error` tipo `HTTP 429` no card do Claude, é rate limit; aumente `USAGE_POLL_MS` em `platformio.ini` pra aliviar.

@@ -1,4 +1,4 @@
-# control-ia
+# Vigia AI
 
 Painel de mesa: **ESP32 + TFT 3,5" com touch** mostra os **limites de uso** das assinaturas **Claude** e **Cursor**, em **várias telas** (início, detalhe Claude, detalhe Cursor, info).
 
@@ -103,7 +103,7 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, n
 
 | Caminho | Função |
 | --- | --- |
-| `collector/server.py` | Servidor HTTP das cotas (cache, wiring) |
+| `collector/server.py` | Servidor HTTP das cotas (sem cache, sempre em tempo real) |
 | `collector/providers/` | Busca + parse por provedor (`claude.py`, `cursor.py`) |
 | `collector/formatting.py` | Datas (BRT) e percentuais/centavos |
 | `collector/cursor_state.py` | Leitura do `state.vscdb` do Cursor |
@@ -133,4 +133,4 @@ Contrato do JSON: [`docs/CONTRATO_JSON.md`](docs/CONTRATO_JSON.md).
 
 São as **mesmas da assinatura** (OAuth / JWT local), não a API paga por token. Não são estáveis como produto oficial; o coletor isola a quebra. Ver [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md) e [`docs/APIS_CURSOR.md`](docs/APIS_CURSOR.md).
 
-Cache do coletor: 5 minutos (o endpoint Claude rate-limita se martelar).
+Coletor sem cache: cada `GET /usage` busca dado em tempo real. O endpoint do Claude rate-limita se martelado — reduza o poll (`USAGE_POLL_MS`) se aparecer `HTTP 429` no card do Claude. Detalhes: [`docs/COLETOR.md`](docs/COLETOR.md#sem-cache--cuidado-com-rate-limit).

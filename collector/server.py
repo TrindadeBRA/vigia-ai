@@ -6,8 +6,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-import threading
-import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -16,9 +14,6 @@ from formatting import utc_now
 from http_util import load_dotenv
 from providers.claude import _claude_fail, fetch_claude
 from providers.cursor import _cursor_fail, fetch_cursor
-
-_cache_lock = threading.Lock()
-_cache: dict[str, Any] = {"ts": 0.0, "payload": None}
 
 
 def _repo_root() -> Path:
@@ -66,18 +61,6 @@ def build_payload() -> dict[str, Any]:
     return {"updated_at": utc_now(), "claude": claude, "cursor": cursor}
 
 
-def cached_payload() -> dict[str, Any]:
-    ttl = float(os.environ.get("CACHE_TTL_SECONDS") or 300)
-    now = time.time()
-    with _cache_lock:
-        if _cache["payload"] is not None and now - _cache["ts"] < ttl:
-            return _cache["payload"]
-        payload = build_payload()
-        _cache["ts"] = now
-        _cache["payload"] = payload
-        return payload
-
-
 class Handler(BaseHTTPRequestHandler):
     # HTTP/1.0 + Connection: close — o HTTPClient da ESP32 (Wokwi) abre TCP e
     # às vezes reseta keep-alive 1.1 antes de ler o body.
@@ -116,7 +99,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"ok": True})
             return
         if path == "/usage":
-            self._send(200, cached_payload())
+            self._send(200, build_payload())
             return
         self._send(404, {"ok": False, "error": "not found"})
 

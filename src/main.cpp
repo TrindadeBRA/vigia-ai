@@ -65,20 +65,20 @@ void setup() {
   applyMock();
   inputBegin();
   uiPaint();
-  Serial.println("=== CONTROL-IA Wokwi (MOCK_USAGE) ===");
+  Serial.println("=== VIGIA AI Wokwi (MOCK_USAGE) ===");
   Serial.println("Nao conecta no coletor. 'mock' no topo e esperado.");
   Serial.println("Dados reais: pio run -e esp32dev -t upload + python3 collector/server.py");
   usageClientLogSnapshot("mock");
 #else
 #ifdef WOKWI_SIM
-  Serial.println("=== CONTROL-IA Wokwi (coletor real) ===");
+  Serial.println("=== VIGIA AI Wokwi (coletor real) ===");
   Serial.println("Wi-Fi Wokwi-GUEST -> http://host.wokwi.internal:8787/usage");
 #else
-  Serial.println("=== CONTROL-IA hardware ===");
+  Serial.println("=== VIGIA AI hardware ===");
 #endif
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(COL_ACCENT, COL_BG);
-  tft.drawString("CONTROL-IA", tft.width() / 2, tft.height() / 2, 4);
+  tft.drawString("VIGIA AI", tft.width() / 2, tft.height() / 2, 4);
   inputBegin();
   g_lastFetchMs = 0;
   usageClientEnsureWifi();

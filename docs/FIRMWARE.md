@@ -72,4 +72,4 @@ No Wokwi: sem painel resistivo — botões GPIO 5 (próxima) e 13 (anterior), ou
 
 `USAGE_POLL_MS` (padrão 15000 nos dois envs). Primeira busca logo após o Wi-Fi associar (`src/usage_client.cpp`). O header mostra um selo amarelo com a contagem regressiva até o próximo poll, e um check verde por ~1,5 s quando um refresh dá certo (`src/ui_views.cpp`).
 
-Poll curto não significa dado mais fresco: o coletor cacheia por `CACHE_TTL_SECONDS` (padrão 300 s, ver [COLETOR.md](COLETOR.md)), então a placa só está checando com mais frequência se o cache já virou.
+O coletor não cacheia mais: cada poll da placa dispara uma chamada real às APIs de Claude e Cursor. Ver aviso de rate limit em [COLETOR.md](COLETOR.md#sem-cache--cuidado-com-rate-limit) antes de baixar `USAGE_POLL_MS`.

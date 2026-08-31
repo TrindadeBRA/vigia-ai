@@ -73,10 +73,10 @@ void drawHeader() {
 
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT, COL_BG);
-  tft.drawString("CONTROL", 8, 8, 2);
-  int wControl = tft.textWidth("CONTROL", 2);
+  tft.drawString("VIGIA", 8, 8, 2);
+  int wVigia = tft.textWidth("VIGIA", 2);
   tft.setTextColor(COL_ACCENT, COL_BG);
-  tft.drawString("-IA", 8 + wControl, 8, 2);
+  tft.drawString(" AI", 8 + wVigia, 8, 2);
 
   int secs = countdownSeconds();
   bool showCheck = showFetchOkCheck();
@@ -208,10 +208,34 @@ void paintHome() {
        u2, twoCursor ? g_snap.cursor.otherPercent : -1, twoCursor);
 }
 
+// Deslocamentos de uma métrica (rótulo -> barra -> linha de resumo). Uma
+// função só, usada tanto pra desenhar (paintMetric) quanto pra medir a altura
+// total do bloco (metricBlockHeight) — evita que os dois se desalinhem.
+struct MetricLayout {
+  int toBar;
+  int barH;
+  int toSub;
+  int subH;
+};
+
+static MetricLayout metricLayout(bool compact) {
+  if (compact) {
+    return {16, 10, 5, 16};
+  }
+  return {26, 14, 5, 16};
+}
+
+static int metricBlockHeight(bool compact) {
+  MetricLayout lay = metricLayout(compact);
+  return lay.toBar + lay.barH + lay.toSub + lay.subH;
+}
+
 // Uma métrica dentro de um painel: rótulo + número em destaque à direita,
 // barra em pílula, e uma linha discreta com o que resta / data de reset.
 static void paintMetric(int x, int w, const char* title, int y, float used, const String& resetLabel,
                          uint16_t bg, bool compact) {
+  MetricLayout lay = metricLayout(compact);
+
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT_DIM, bg);
   tft.drawString(title, x, y, 2);
@@ -219,17 +243,56 @@ static void paintMetric(int x, int w, const char* title, int y, float used, cons
   tft.setTextColor(COL_TEXT, bg);
   tft.drawString(fmtPct(used), x + w, y - (compact ? 2 : 6), compact ? 2 : 4);
 
-  const int barY = y + (compact ? 16 : 26);
-  const int barH = compact ? 10 : 14;
-  drawBar(x, barY, w, barH, used);
+  const int barY = y + lay.toBar;
+  drawBar(x, barY, w, lay.barH, used);
 
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT_MUTED, bg);
   String sub = "resta " + fmtRemain(used);
   if (resetLabel.length()) {
-    sub += "   " + resetLabel;
+    sub += "  |  " + resetLabel;
   }
-  tft.drawString(sub, x, barY + barH + 5, 2);
+  tft.drawString(sub, x, barY + lay.barH + lay.toSub, 2);
+}
+
+// Traço fino separando as duas métricas do mesmo painel — mesma cor da borda
+// do card, só pra marcar a divisão sem competir com o conteúdo.
+static void drawMetricDivider(int x, int y, int w) {
+  tft.drawFastHLine(x, y, w, COL_CARD_BORDER);
+}
+
+// Título do painel (Claude/Cursor) com um traço de destaque embaixo, no
+// mesmo estilo da aba ativa da navegação. Devolve o Y onde o conteúdo abaixo
+// pode começar.
+static int paintPanelTitle(int x, int y, const char* title, bool compact) {
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.drawString(title, x, y, compact ? 2 : 4);
+  const int lineY = y + (compact ? 16 : 30);
+  tft.fillRoundRect(x, lineY, 22, 3, 1, COL_ACCENT);
+  return lineY + (compact ? 8 : 12);
+}
+
+// Posiciona as duas métricas de um painel dentro do espaço vertical
+// disponível (contentTop..bottom), com um divisor entre elas. Quando sobra
+// espaço (placa física, cards maiores), centraliza o bloco em vez de deixar
+// tudo colado no topo ou espremido embaixo — era isso que fazia a segunda
+// métrica quase encostar na primeira nos telões menores (Wokwi).
+static void paintTwoMetrics(int padX, int innerW, int contentTop, int bottom, bool compact,
+                             const char* title1, float pct1, const String& reset1, const char* title2,
+                             float pct2, const String& reset2) {
+  const int blockH = metricBlockHeight(compact);
+  const int dividerGap = compact ? 12 : 20;
+  const int contentH = blockH * 2 + dividerGap;
+  const int available = bottom - contentTop;
+  const int extra = available > contentH ? (available - contentH) : 0;
+  const int slotY1 = contentTop + extra / 2;
+  const int dividerY = slotY1 + blockH + dividerGap / 2;
+  const int slotY2 = slotY1 + blockH + dividerGap;
+
+  paintMetric(padX, innerW, title1, slotY1, pct1, reset1, COL_CARD, compact);
+  drawMetricDivider(padX, dividerY, innerW);
+  paintMetric(padX, innerW, title2, slotY2, pct2, reset2, COL_CARD, compact);
 }
 
 void paintClaude() {
@@ -242,27 +305,19 @@ void paintClaude() {
 
   const int padX = 20;
   const int innerW = W - 16 - padX * 2;
-  const bool compact = cardH < 160;
+  const bool compact = cardH < 170;
 
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.drawString("Claude", padX, top + 8, compact ? 2 : 4);
+  const int contentTop = paintPanelTitle(padX, top + 8, "Claude", compact);
 
   if (!g_snap.claude.ok) {
-    drawError(padX, top + (compact ? 28 : 48), g_snap.claude.error, COL_CARD);
+    drawError(padX, contentTop + 6, g_snap.claude.error, COL_CARD);
     return;
   }
 
-  const int titleH = compact ? 20 : 34;
-  const int slotY1 = top + 8 + titleH + 6;
-  const int slotH = (cardH - (8 + titleH + 6) - 10) / 2;
-
   String r1 = g_snap.claude.sessionResets.length() ? fmtWhen(g_snap.claude.sessionResets) : "";
   String r2 = g_snap.claude.weeklyResets.length() ? fmtWhen(g_snap.claude.weeklyResets) : "";
-  paintMetric(padX, innerW, "Janela de 5 horas", slotY1, g_snap.claude.sessionPercent, r1, COL_CARD,
-              compact);
-  paintMetric(padX, innerW, "Limite semanal", slotY1 + slotH + 6, g_snap.claude.weeklyPercent, r2,
-              COL_CARD, compact);
+  paintTwoMetrics(padX, innerW, contentTop, bottom, compact, "Janela de 5 horas",
+                  g_snap.claude.sessionPercent, r1, "Limite semanal", g_snap.claude.weeklyPercent, r2);
 }
 
 void paintCursor() {
@@ -275,31 +330,24 @@ void paintCursor() {
 
   const int padX = 20;
   const int innerW = W - 16 - padX * 2;
-  const bool compact = cardH < 160;
+  const bool compact = cardH < 170;
 
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.drawString("Cursor", padX, top + 8, compact ? 2 : 4);
+  const int contentTop = paintPanelTitle(padX, top + 8, "Cursor", compact);
 
   if (!g_snap.cursor.ok) {
-    drawError(padX, top + (compact ? 28 : 48), g_snap.cursor.error, COL_CARD);
+    drawError(padX, contentTop + 6, g_snap.cursor.error, COL_CARD);
     return;
   }
 
-  const int titleH = compact ? 20 : 34;
-  const int slotY1 = top + 8 + titleH + 6;
-  const int slotH = (cardH - (8 + titleH + 6) - 10) / 2;
-
   String reset = g_snap.cursor.cycleEnd.length() ? ("reset " + fmtWhen(g_snap.cursor.cycleEnd)) : "";
-  paintMetric(padX, innerW, "Modelos Cursor", slotY1, g_snap.cursor.percent, reset, COL_CARD, compact);
-
   String ondemand;
   if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents >= 0) {
     ondemand = "On-demand " + fmtUsdSite(g_snap.cursor.usedCents) + " / " +
                fmtUsdSite(g_snap.cursor.limitCents);
   }
   float p2 = g_snap.cursor.otherPercent >= 0 ? g_snap.cursor.otherPercent : -1;
-  paintMetric(padX, innerW, "Outros modelos", slotY1 + slotH + 6, p2, ondemand, COL_CARD, compact);
+  paintTwoMetrics(padX, innerW, contentTop, bottom, compact, "Modelos Cursor", g_snap.cursor.percent,
+                  reset, "Outros modelos", p2, ondemand);
 }
 
 void paintStatus() {
