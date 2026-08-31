@@ -10,6 +10,7 @@ int g_openrouterIdx = 0;
 int g_deepseekIdx = 0;
 int g_opencodeGoIdx = 0;
 int g_opencodeZenIdx = 0;
+int g_falIdx = 0;
 
 static bool viewProviderVisible(View v)
 {
@@ -29,6 +30,8 @@ static bool viewProviderVisible(View v)
     return g_snap.opencode_goCount > 0;
   case VIEW_OPENCODE_ZEN:
     return g_snap.opencode_zenCount > 0;
+  case VIEW_FAL:
+    return g_snap.falCount > 0;
   default:
     return true;
   }
@@ -80,6 +83,10 @@ void uiSetView(View v)
   {
     g_opencodeZenIdx = opencodeZenWorstIdx();
   }
+  else if (v == VIEW_FAL)
+  {
+    g_falIdx = falWorstIdx();
+  }
   g_view = v;
   g_detailScroll = 0;
   g_lastHeaderKey = -1000000;
@@ -90,7 +97,8 @@ static bool viewHasScroll()
 {
   return g_view == VIEW_HOME || g_view == VIEW_CLAUDE || g_view == VIEW_GPT ||
          g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK ||
-         g_view == VIEW_OPENCODE_GO || g_view == VIEW_OPENCODE_ZEN || g_view == VIEW_STATUS;
+         g_view == VIEW_OPENCODE_GO || g_view == VIEW_OPENCODE_ZEN || g_view == VIEW_FAL ||
+         g_view == VIEW_STATUS;
 }
 
 bool uiCanScroll() { return viewHasScroll() && g_detailCanScroll; }
@@ -170,6 +178,9 @@ void uiRefreshData()
     break;
   case VIEW_OPENCODE_ZEN:
     paintOpenCodeZen();
+    break;
+  case VIEW_FAL:
+    paintFal();
     break;
   case VIEW_STATUS:
     paintStatus();

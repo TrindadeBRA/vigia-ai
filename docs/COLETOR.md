@@ -27,7 +27,7 @@ cd collector
 
 Abra **http://127.0.0.1:8787/** — painel para portas, URL da ESP32 e status do login. `GET /usage` continua sendo o contrato da placa.
 
-No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter, DeepSeek, OpenCode Go e OpenCode Zen: cole a key de cada um no painel (`data/config.json`, gitignored). Claude e Cursor aparecem na placa automaticamente se o app local estiver logado; no painel, desmarque **Mostrar na placa** para ocultar o card na ESP32 sem apagar o login.
+No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen e fal.ai: cole a key de cada um no painel (`data/config.json`, gitignored). Claude e Cursor aparecem na placa automaticamente se o app local estiver logado; no painel, desmarque **Mostrar na placa** para ocultar o card na ESP32 sem apagar o login.
 
 O container **não** lê o Keychain do macOS. Prefira Python local neste Mac; no Docker, monte arquivos do host (abaixo) ou cole token só como plano B (`claude setup-token` **não** serve).
 
@@ -72,7 +72,7 @@ No painel, **Modo mock** grava JSON falso (útil sem login).
 
 ## Múltiplas contas por provedor
 
-Cada provedor aceita mais de uma conta — ex.: Claude pessoal + Claude da empresa — cada uma com um apelido opcional, na seção **Contas adicionais** de cada card no painel `/`. Claude e Cursor sempre têm a conta **local** (Keychain/`state.vscdb`, com apelido opcional próprio) mais quantas contas extras coladas você quiser; OpenRouter, DeepSeek, OpenCode Go e OpenCode Zen são só uma lista de keys coladas (sem conta "local"). Guardado em `CLAUDE_ACCOUNTS`/`CURSOR_ACCOUNTS`/`OPENROUTER_ACCOUNTS`/`DEEPSEEK_ACCOUNTS`/`OPENCODE_GO_ACCOUNTS`/`OPENCODE_ZEN_ACCOUNTS` (`data/config.json`, JSON com `id`/`label`/token ou key por conta — gitignored, igual ao resto).
+Cada provedor aceita mais de uma conta — ex.: Claude pessoal + Claude da empresa — cada uma com um apelido opcional, na seção **Contas adicionais** de cada card no painel `/`. Claude e Cursor sempre têm a conta **local** (Keychain/`state.vscdb`, com apelido opcional próprio) mais quantas contas extras coladas você quiser; OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen e fal.ai são só uma lista de keys coladas (sem conta "local"). Guardado em `CLAUDE_ACCOUNTS`/`CURSOR_ACCOUNTS`/`OPENROUTER_ACCOUNTS`/`DEEPSEEK_ACCOUNTS`/`OPENCODE_GO_ACCOUNTS`/`OPENCODE_ZEN_ACCOUNTS`/`FAL_ACCOUNTS` (`data/config.json`, JSON com `id`/`label`/token ou key por conta — gitignored, igual ao resto).
 
 `GET /usage` reflete isso: cada provedor vira uma **lista** de contas (ver `docs/CONTRATO_JSON.md`), uma chamada real por conta. O `/display` mostra um card por conta; o firmware físico (tela pequena) continua com um card por *tipo* de provedor na Início, mostrando a que mais precisa de atenção — o detalhe ganha um paginador **‹ i/N ›** pra ver as outras (`docs/TOUCH.md`).
 

@@ -8,6 +8,7 @@ from app.formatting import utc_now
 from app.providers.claude import claude_fail, fetch_claude_accounts
 from app.providers.cursor import cursor_fail, fetch_cursor_accounts
 from app.providers.deepseek import deepseek_fail, fetch_deepseek_accounts
+from app.providers.fal import fal_fail, fetch_fal_accounts
 from app.providers.gpt import fetch_gpt_accounts, gpt_fail
 from app.providers.opencode_go import fetch_opencode_go_accounts, opencode_go_fail
 from app.providers.opencode_zen import fetch_opencode_zen_accounts, opencode_zen_fail
@@ -116,6 +117,18 @@ def mock_payload() -> dict[str, Any]:
                 "remaining_cents": 1500,
             }
         ],
+        "fal": [
+            {
+                "id": "legacy",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "percent": None,
+                "limit_cents": None,
+                "used_cents": None,
+                "remaining_cents": 2450,
+            }
+        ],
     }
 
 
@@ -137,6 +150,8 @@ def build_payload() -> dict[str, Any]:
             payload["opencode_go"] = []
         if provider_cfg(cfg, "opencode_zen").get("hidden"):
             payload["opencode_zen"] = []
+        if provider_cfg(cfg, "fal").get("hidden"):
+            payload["fal"] = []
         return payload
     try:
         claude = fetch_claude_accounts(cfg)
@@ -166,6 +181,10 @@ def build_payload() -> dict[str, Any]:
         opencode_zen = fetch_opencode_zen_accounts(cfg)
     except Exception as exc:  # noqa: BLE001
         opencode_zen = [{"id": "legacy", "label": "", **opencode_zen_fail(str(exc))}]
+    try:
+        fal = fetch_fal_accounts(cfg)
+    except Exception as exc:  # noqa: BLE001
+        fal = [{"id": "legacy", "label": "", **fal_fail(str(exc))}]
     return {
         "updated_at": utc_now(),
         "claude": claude,
@@ -175,4 +194,5 @@ def build_payload() -> dict[str, Any]:
         "deepseek": deepseek,
         "opencode_go": opencode_go,
         "opencode_zen": opencode_zen,
+        "fal": fal,
     }

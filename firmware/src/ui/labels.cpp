@@ -200,6 +200,22 @@ String opencodeZenBalance(const OpenCodeZenAccount &z)
   return z.remainingCents >= 0 ? fmtUsdSite(z.remainingCents) : String(uiTr().noCredits);
 }
 
+// fal.ai e saldo de creditos (nao assinatura) — o destaque e o saldo restante.
+String falRemain(const FalAccount &f)
+{
+  if (f.remainingCents >= 0)
+  {
+    return String(uiTr().remainMoney) + fmtUsdSite(f.remainingCents);
+  }
+  return String(uiTr().noCredits);
+}
+
+// So o valor, sem o prefixo "restam" — usado no card da Início.
+String falBalance(const FalAccount &f)
+{
+  return f.remainingCents >= 0 ? fmtUsdSite(f.remainingCents) : String(uiTr().noCredits);
+}
+
 const char *emptyProvidersMsg()
 {
   if (!g_hasFetchedOk)

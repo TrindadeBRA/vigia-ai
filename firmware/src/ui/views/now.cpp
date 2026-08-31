@@ -4,6 +4,7 @@
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
+#include "assets/icons/icon_fal.h"
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode_go.h"
 #include "assets/icons/icon_opencode_zen.h"
@@ -126,8 +127,9 @@ void paintNow()
   const bool showDeepSeek = g_snap.deepseekCount > 0;
   const bool showOpenCodeGo = g_snap.opencode_goCount > 0;
   const bool showOpenCodeZen = g_snap.opencode_zenCount > 0;
+  const bool showFal = g_snap.falCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen;
+                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen + (int)showFal;
   if (n == 0)
   {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
@@ -192,6 +194,7 @@ void paintNow()
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
   const OpenCodeGoAccount &ocgAcct = g_snap.opencode_go[showOpenCodeGo ? opencodeGoWorstIdx() : 0];
   const OpenCodeZenAccount &oczAcct = g_snap.opencode_zen[showOpenCodeZen ? opencodeZenWorstIdx() : 0];
+  const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
 
   String cs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.sessionPercent));
   String cs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.weeklyPercent));
@@ -204,6 +207,7 @@ void paintNow()
   String os1 = openrouterBalance(orAcct);
   String ds1 = deepseekBalance(dsAcct);
   String ocz1 = opencodeZenBalance(oczAcct);
+  String fal1 = falBalance(falAcct);
 
   int slot = 0;
   if (showClaude)
@@ -264,5 +268,11 @@ void paintNow()
     String suffix = accountSuffixText(oczAcct.label, g_snap.opencode_zenCount);
     row(slot++, "OpenCode Zen", suffix, ICON_OPENCODE_ZEN, oczAcct.ok, oczAcct.error, t.credits,
         -1, ocz1, false, "", -1, "");
+  }
+  if (showFal)
+  {
+    String suffix = accountSuffixText(falAcct.label, g_snap.falCount);
+    row(slot++, "fal.ai", suffix, ICON_FAL, falAcct.ok, falAcct.error, t.credits,
+        -1, fal1, false, "", -1, "");
   }
 }

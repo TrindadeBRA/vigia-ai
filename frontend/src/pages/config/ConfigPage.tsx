@@ -169,6 +169,18 @@ export default function ConfigPage() {
           usesLocalApp={false}
           {...common}
         />
+        <ProviderCard
+          title="fal.ai"
+          blurb={c.falBlurb}
+          providerId="fal"
+          p={cfg.providers.fal}
+          pasteKey="fal_paste"
+          hiddenKey="fal_hidden"
+          labelKey="fal_primary_label"
+          placeholder={c.falKeyPh}
+          usesLocalApp={false}
+          {...common}
+        />
       </div>
 
       <div className="cfg-section-head">

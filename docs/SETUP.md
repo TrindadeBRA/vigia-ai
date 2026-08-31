@@ -148,8 +148,9 @@ Várias contas por serviço. O coletor consulta as APIs a cada 60 s (`USAGE_INTE
 | Cursor | `state.vscdb` (macOS / Linux / Windows) | JWT colado |
 | OpenRouter | — | API key |
 | DeepSeek | — | API key |
+| fal.ai | — | API key (escopo Admin) |
 
-Detalhes: [`APIS_CLAUDE.md`](APIS_CLAUDE.md), [`APIS_GPT.md`](APIS_GPT.md), [`APIS_CURSOR.md`](APIS_CURSOR.md), [`APIS_OPENROUTER.md`](APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](APIS_DEEPSEEK.md).
+Detalhes: [`APIS_CLAUDE.md`](APIS_CLAUDE.md), [`APIS_GPT.md`](APIS_GPT.md), [`APIS_CURSOR.md`](APIS_CURSOR.md), [`APIS_OPENROUTER.md`](APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](APIS_DEEPSEEK.md), [`APIS_FAL.md`](APIS_FAL.md).
 
 ## Placa (hardware)
 

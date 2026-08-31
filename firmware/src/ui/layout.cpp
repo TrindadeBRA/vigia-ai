@@ -31,11 +31,11 @@ int g_eyeGazeX = 0;
 int g_eyeGazeY = 0;
 float g_eyeLid = 0.0f;
 View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER,
-                                       VIEW_DEEPSEEK, VIEW_OPENCODE_GO, VIEW_OPENCODE_ZEN};
-int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
-int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
-int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
-int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
+                                       VIEW_DEEPSEEK, VIEW_OPENCODE_GO, VIEW_OPENCODE_ZEN, VIEW_FAL};
+int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
 int g_homeCardCount = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;
@@ -238,6 +238,29 @@ int opencodeZenWorstIdx()
   return best;
 }
 
+// fal.ai e saldo de creditos, igual OpenCode Zen — "pior" e o saldo mais baixo.
+int falWorstIdx()
+{
+  int best = 0;
+  int bestVal = 0;
+  bool found = false;
+  for (int i = 0; i < g_snap.falCount; i++)
+  {
+    int rem = g_snap.fal[i].remainingCents;
+    if (rem < 0)
+    {
+      continue;
+    }
+    if (!found || rem < bestVal)
+    {
+      bestVal = rem;
+      best = i;
+      found = true;
+    }
+  }
+  return best;
+}
+
 static int currentProviderCount()
 {
   switch (g_view)
@@ -256,6 +279,8 @@ static int currentProviderCount()
     return g_snap.opencode_goCount;
   case VIEW_OPENCODE_ZEN:
     return g_snap.opencode_zenCount;
+  case VIEW_FAL:
+    return g_snap.falCount;
   default:
     return 0;
   }
@@ -279,6 +304,8 @@ static int *currentProviderIdx()
     return &g_opencodeGoIdx;
   case VIEW_OPENCODE_ZEN:
     return &g_opencodeZenIdx;
+  case VIEW_FAL:
+    return &g_falIdx;
   default:
     return nullptr;
   }

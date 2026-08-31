@@ -75,6 +75,7 @@ export type UsagePayload = {
   deepseek: CreditsAccount[];
   opencode_go: OpenCodeGoAccount[];
   opencode_zen: CreditsAccount[];
+  fal: CreditsAccount[];
 };
 
 export type AccountPublic = { id: string; label: string; suffix: string | null };

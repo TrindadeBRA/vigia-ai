@@ -4,6 +4,7 @@ from app.local.gpt_oauth import parse_auth_blob
 from app.providers.claude import parse_claude_payload
 from app.providers.cursor import parse_cursor_dashboard
 from app.providers.deepseek import parse_deepseek_payload
+from app.providers.fal import parse_fal_payload
 from app.providers.gpt import parse_gpt_payload
 from app.providers.openrouter import parse_openrouter_payload
 
@@ -116,3 +117,17 @@ def test_parse_deepseek_balance() -> None:
     assert parsed["ok"] is True
     assert parsed["remaining_cents"] == 750
     assert parsed["percent"] is None
+
+
+def test_parse_fal_billing() -> None:
+    parsed = parse_fal_payload(
+        {"username": "my-team", "credits": {"current_balance": 24.5, "currency": "USD"}}
+    )
+    assert parsed["ok"] is True
+    assert parsed["remaining_cents"] == 2450
+    assert parsed["percent"] is None
+
+
+def test_parse_fal_billing_missing_credits() -> None:
+    parsed = parse_fal_payload({"username": "my-team"})
+    assert parsed["ok"] is False

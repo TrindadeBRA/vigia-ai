@@ -65,6 +65,14 @@ void usageClientLogSnapshot(const char *why)
                   z.label.length() ? z.label.c_str() : "-", z.ok ? 1 : 0, z.percent,
                   z.error.length() ? z.error.c_str() : "-");
   }
+  Serial.printf("  fal contas=%d\n", g_snap.falCount);
+  for (int i = 0; i < g_snap.falCount; i++)
+  {
+    const FalAccount &f = g_snap.fal[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d pct=%.0f err=%s\n", i, f.id.c_str(),
+                  f.label.length() ? f.label.c_str() : "-", f.ok ? 1 : 0, f.percent,
+                  f.error.length() ? f.error.c_str() : "-");
+  }
 }
 
 // Falha total (Wi-Fi fora do ar, HTTP != 200, JSON ilegivel): marca todas as
@@ -109,6 +117,11 @@ void markAllAccountsFailed(const char *msg)
   {
     g_snap.opencode_zen[i].ok = false;
     g_snap.opencode_zen[i].error = msg;
+  }
+  for (int i = 0; i < g_snap.falCount; i++)
+  {
+    g_snap.fal[i].ok = false;
+    g_snap.fal[i].error = msg;
   }
 }
 
@@ -302,6 +315,26 @@ bool parseUsageJson(const String &body)
     z.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
     z.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
     z.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
+  }
+
+  g_snap.falCount = 0;
+  for (JsonVariantConst v : doc["fal"].as<JsonArrayConst>())
+  {
+    if (g_snap.falCount >= MAX_ACCOUNTS)
+    {
+      Serial.println("fal: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    FalAccount &f = g_snap.fal[g_snap.falCount++];
+    f.id = jsonText(acc["id"]);
+    f.label = jsonText(acc["label"]);
+    f.ok = acc["ok"] | false;
+    f.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char *>());
+    f.percent = jsonFloatOrNeg(acc["percent"]);
+    f.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
+    f.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
+    f.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
   }
 
   if (g_snap.updatedAt.length() >= 16)

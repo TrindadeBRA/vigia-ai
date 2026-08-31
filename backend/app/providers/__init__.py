@@ -1,6 +1,7 @@
 from app.providers.claude import claude_fail, fetch_claude_accounts, parse_claude_payload
 from app.providers.cursor import cursor_fail, fetch_cursor_accounts, parse_cursor_dashboard
 from app.providers.deepseek import deepseek_fail, fetch_deepseek_accounts, parse_deepseek_payload
+from app.providers.fal import fal_fail, fetch_fal_accounts, parse_fal_payload
 from app.providers.gpt import fetch_gpt_accounts, gpt_fail, parse_gpt_payload
 from app.providers.opencode_go import (
     fetch_opencode_go_accounts,
@@ -24,6 +25,9 @@ __all__ = [
     "deepseek_fail",
     "fetch_deepseek_accounts",
     "parse_deepseek_payload",
+    "fal_fail",
+    "fetch_fal_accounts",
+    "parse_fal_payload",
     "fetch_gpt_accounts",
     "gpt_fail",
     "parse_gpt_payload",

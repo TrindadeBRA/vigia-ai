@@ -16,7 +16,7 @@ FastAPI em `backend/`. Sobe em `0.0.0.0:8787`.
 
 Config: `backend/data/config.json` (gitignored, `version: 1`). Tokens nunca voltam no `GET /api/config`.
 
-Claude/GPT/Cursor: Keychain / `~/.codex/auth.json` / `state.vscdb` primeiro; paste no painel só como plano B. OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen: key no painel.
+Claude/GPT/Cursor: Keychain / `~/.codex/auth.json` / `state.vscdb` primeiro; paste no painel só como plano B. OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai: key no painel.
 
 Rate limit: o 429 quase sempre é Claude. User-Agent `claude-code/<ver>` é obrigatório. Intervalo seguro da comunidade ~180 s; o ciclo do hub é 60 s.
 

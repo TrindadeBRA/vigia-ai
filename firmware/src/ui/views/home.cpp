@@ -4,6 +4,7 @@
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
+#include "assets/icons/icon_fal.h"
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode_go.h"
 #include "assets/icons/icon_opencode_zen.h"
@@ -74,8 +75,9 @@ static void paintHomeList()
   const bool showDeepSeek = g_snap.deepseekCount > 0;
   const bool showOpenCodeGo = g_snap.opencode_goCount > 0;
   const bool showOpenCodeZen = g_snap.opencode_zenCount > 0;
+  const bool showFal = g_snap.falCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen;
+                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen + (int)showFal;
 
   g_homeCardCount = 0;
   g_detailCanScroll = false;
@@ -108,6 +110,7 @@ static void paintHomeList()
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
   const OpenCodeGoAccount &ocgAcct = g_snap.opencode_go[showOpenCodeGo ? opencodeGoWorstIdx() : 0];
   const OpenCodeZenAccount &oczAcct = g_snap.opencode_zen[showOpenCodeZen ? opencodeZenWorstIdx() : 0];
+  const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
   const bool gptTwo = gptAcct.sessionPercent >= 0 && gptAcct.weeklyPercent >= 0;
 
   int heights[MAX_HOME_CARDS];
@@ -137,6 +140,10 @@ static void paintHomeList()
     heights[ni++] = hTwo;
   }
   if (showOpenCodeZen)
+  {
+    heights[ni++] = hOne;
+  }
+  if (showFal)
   {
     heights[ni++] = hOne;
   }
@@ -267,6 +274,7 @@ static void paintHomeList()
   String dSub = deepseekBalance(dsAcct);
   String ocgSub = opencodeGoRemain(ocgAcct);
   String oczSub = opencodeZenBalance(oczAcct);
+  String falSub = falBalance(falAcct);
 
   tft.setViewport(pad, bodyTop, cardW, bodyH, false);
 
@@ -389,6 +397,18 @@ static void paintHomeList()
     }
     slot++;
   }
+  if (showFal)
+  {
+    int top = nextTop();
+    int h = heights[slot];
+    if (visible(top, h))
+    {
+      String suffix = accountSuffixText(falAcct.label, g_snap.falCount);
+      cardOne(VIEW_FAL, "fal.ai", suffix, ICON_FAL, top, h, falAcct.ok, falAcct.error,
+              t.accountCredits, -1, falSub);
+    }
+    slot++;
+  }
 
   tft.resetViewport();
   if (g_detailCanScroll)
@@ -439,8 +459,9 @@ static void paintHomeGrid()
   const bool showDeepSeek = g_snap.deepseekCount > 0;
   const bool showOpenCodeGo = g_snap.opencode_goCount > 0;
   const bool showOpenCodeZen = g_snap.opencode_zenCount > 0;
+  const bool showFal = g_snap.falCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen;
+                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen + (int)showFal;
 
   g_homeCardCount = 0;
   g_detailCanScroll = false;
@@ -593,6 +614,7 @@ static void paintHomeGrid()
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
   const OpenCodeGoAccount &ocgAcct = g_snap.opencode_go[showOpenCodeGo ? opencodeGoWorstIdx() : 0];
   const OpenCodeZenAccount &oczAcct = g_snap.opencode_zen[showOpenCodeZen ? opencodeZenWorstIdx() : 0];
+  const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
 
   String curTitle = cursorPlanTitle(cursorAcct);
   String curSuffix = accountSuffixText(cursorAcct.label, g_snap.cursorCount);
@@ -605,6 +627,7 @@ static void paintHomeGrid()
   String oSub = openrouterBalance(orAcct);
   String dSub = deepseekBalance(dsAcct);
   String oczSub = opencodeZenBalance(oczAcct);
+  String falSub = falBalance(falAcct);
 
   tft.setViewport(pad, bodyTop, gridW, bodyH, false);
 
@@ -686,6 +709,13 @@ static void paintHomeGrid()
             oczAcct.error, compact ? t.credits : t.accountCredits, -1, oczSub);
     slot++;
   }
+  if (showFal)
+  {
+    String suffix = accountSuffixText(falAcct.label, g_snap.falCount);
+    cardOne(VIEW_FAL, rects[slot], "fal.ai", suffix, ICON_FAL, falAcct.ok, falAcct.error,
+            compact ? t.credits : t.accountCredits, -1, falSub);
+    slot++;
+  }
 
   tft.resetViewport();
   if (g_detailCanScroll)
@@ -710,7 +740,7 @@ void paintHome()
   const int mask = (g_snap.claudeCount > 0 ? 1 : 0) | (g_snap.gptCount > 0 ? 2 : 0) |
                    (g_snap.cursorCount > 0 ? 4 : 0) | (g_snap.openrouterCount > 0 ? 8 : 0) |
                    (g_snap.deepseekCount > 0 ? 16 : 0) | (g_snap.opencode_goCount > 0 ? 32 : 0) |
-                   (g_snap.opencode_zenCount > 0 ? 64 : 0);
+                   (g_snap.opencode_zenCount > 0 ? 64 : 0) | (g_snap.falCount > 0 ? 128 : 0);
   if (mask != g_lastHomeConfigMask)
   {
     layoutContent();

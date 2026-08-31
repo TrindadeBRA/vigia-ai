@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ProviderId = Literal[
-    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode_go", "opencode_zen"
+    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode_go", "opencode_zen", "fal"
 ]
 
 USAGE_EXAMPLE = {
@@ -109,12 +109,24 @@ USAGE_EXAMPLE = {
             "remaining_cents": 1500,
         }
     ],
+    "fal": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "percent": None,
+            "limit_cents": None,
+            "used_cents": None,
+            "remaining_cents": 2450,
+        }
+    ],
 }
 
 SSE_WIRE_EXAMPLE = (
     ": connected\n\n"
     "event: usage\n"
-    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode_go":[],"opencode_zen":[]}\n\n'
+    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode_go":[],"opencode_zen":[],"fal":[]}\n\n'
     ": ping\n\n"
 )
 
@@ -187,6 +199,7 @@ class UsagePayload(BaseModel):
     deepseek: list[CreditsAccount]
     opencode_go: list[OpenCodeGoAccount]
     opencode_zen: list[CreditsAccount]
+    fal: list[CreditsAccount]
 
 
 class HealthPayload(BaseModel):
@@ -260,6 +273,7 @@ class ConfigPatch(BaseModel):
     deepseek_hidden: bool | None = None
     opencode_go_hidden: bool | None = None
     opencode_zen_hidden: bool | None = None
+    fal_hidden: bool | None = None
     claude_local_label: str | None = None
     gpt_local_label: str | None = None
     cursor_local_label: str | None = None
@@ -267,6 +281,7 @@ class ConfigPatch(BaseModel):
     deepseek_primary_label: str | None = None
     opencode_go_primary_label: str | None = None
     opencode_zen_primary_label: str | None = None
+    fal_primary_label: str | None = None
     claude_paste: str | None = None
     gpt_paste: str | None = None
     cursor_paste: str | None = None
@@ -274,6 +289,7 @@ class ConfigPatch(BaseModel):
     deepseek_paste: str | None = None
     opencode_go_paste: str | None = None
     opencode_zen_paste: str | None = None
+    fal_paste: str | None = None
 
 
 class ConfigSaveResult(BaseModel):

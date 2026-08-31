@@ -225,6 +225,18 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       metrics: [{ label: t.accountCredits, pct: null, sub }],
     });
   }
+  for (const f of data.fal || []) {
+    const sub = f.remaining_cents != null ? t.remainMoney + fmtUsd(f.remaining_cents) : t.noCredits;
+    list.push({
+      id: `fal:${f.id}`,
+      provider: "fal",
+      ok: f.ok,
+      error: f.error,
+      title: "fal.ai",
+      label: f.label || "",
+      metrics: [{ label: t.accountCredits, pct: null, sub }],
+    });
+  }
   return list;
 }
 
@@ -607,6 +619,19 @@ function OpenCodeZenBody({ data, account, t, pal }: { data: UsagePayload; accoun
   );
 }
 
+function FalBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
+  const f = account;
+  const remain = f.remaining_cents != null ? t.remainMoney + fmtUsd(f.remaining_cents) : t.noCredits;
+  return (
+    <>
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.credits} pct={f.percent} pal={pal} sub={remain} />
+      </MetricsGrid>
+    </>
+  );
+}
+
 function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeGoAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   let body: ReactNode = null;
   if (meta.ok && account) {
@@ -616,6 +641,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "opencode_go") body = <OpenCodeGoBody data={data} account={account as OpenCodeGoAccount} t={t} pal={pal} />;
+    else if (meta.provider === "fal") body = <FalBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else body = <OpenCodeZenBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
   }
   return (
@@ -802,7 +828,7 @@ export default function Display() {
     if (meta) {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
-      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode_go" | "opencode_zen";
+      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode_go" | "opencode_zen" | "fal";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
   }

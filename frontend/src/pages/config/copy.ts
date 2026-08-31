@@ -57,6 +57,7 @@ export type ConfigCopy = {
   deepseekBlurb: string;
   opencodeGoBlurb: string;
   opencodeZenBlurb: string;
+  falBlurb: string;
   cursorHint: string;
   cursorAdvanced: string;
   modeLocal: string;
@@ -85,6 +86,7 @@ export type ConfigCopy = {
   dsKeyPh: string;
   ocGoKeyPh: string;
   ocZenKeyPh: string;
+  falKeyPh: string;
   gptTokenPh: string;
   cursorTokenPh: string;
 };
@@ -146,6 +148,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     deepseekBlurb: "Cole a chave da sua conta. Você cria em platform.deepseek.com, em API Keys.",
     opencodeGoBlurb: "Cota da assinatura (janelas rolling, semanal e mensal). Crie a key em opencode.ai/auth.",
     opencodeZenBlurb: "Saldo pago-conforme-uso. Crie a key em opencode.ai/auth.",
+    falBlurb: "Saldo de créditos. Crie uma key com escopo Admin em fal.ai/dashboard/keys (uma key comum não lê o saldo).",
     cursorHint: "Se não aparecer sozinho: no Cursor, abra a conta, saia e entre de novo.",
     cursorAdvanced: "Opção avançada (Terminal)",
     modeLocal: "Encontramos o login neste computador.",
@@ -174,6 +177,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     dsKeyPh: "sk-…",
     ocGoKeyPh: "sk-…",
     ocZenKeyPh: "sk-…",
+    falKeyPh: "id:secret",
     gptTokenPh: "Token do Codex",
     cursorTokenPh: "Token da sessão",
   },
@@ -233,6 +237,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     deepseekBlurb: "Paste your account key. Create one at platform.deepseek.com, under API Keys.",
     opencodeGoBlurb: "Subscription quota (rolling, weekly and monthly windows). Create a key at opencode.ai/auth.",
     opencodeZenBlurb: "Pay-as-you-go balance. Create a key at opencode.ai/auth.",
+    falBlurb: "Credit balance. Create an Admin-scope key at fal.ai/dashboard/keys (a regular API key can't read the balance).",
     cursorHint: "If it doesn't show up: in Cursor, open the account, sign out, and sign back in.",
     cursorAdvanced: "Advanced (Terminal)",
     modeLocal: "We found the sign-in on this computer.",
@@ -261,6 +266,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     dsKeyPh: "sk-…",
     ocGoKeyPh: "sk-…",
     ocZenKeyPh: "sk-…",
+    falKeyPh: "id:secret",
     gptTokenPh: "Codex token",
     cursorTokenPh: "Session token",
   },
@@ -320,6 +326,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     deepseekBlurb: "Pega la clave de tu cuenta. La creas en platform.deepseek.com, en API Keys.",
     opencodeGoBlurb: "Cuota de la suscripción (ventanas rolling, semanal y mensual). Crea una clave en opencode.ai/auth.",
     opencodeZenBlurb: "Saldo de pago por uso. Crea una clave en opencode.ai/auth.",
+    falBlurb: "Saldo de créditos. Crea una clave con alcance Admin en fal.ai/dashboard/keys (una clave normal no puede leer el saldo).",
     cursorHint: "Si no aparece solo: en Cursor, abre la cuenta, cierra sesión y vuelve a entrar.",
     cursorAdvanced: "Opción avanzada (Terminal)",
     modeLocal: "Encontramos el inicio de sesión en este computador.",
@@ -348,6 +355,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     dsKeyPh: "sk-…",
     ocGoKeyPh: "sk-…",
     ocZenKeyPh: "sk-…",
+    falKeyPh: "id:secret",
     gptTokenPh: "Token de Codex",
     cursorTokenPh: "Token de sesión",
   },

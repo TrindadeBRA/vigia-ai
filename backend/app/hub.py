@@ -25,7 +25,7 @@ def interval_s() -> int:
 
 
 def _log_failures(payload: dict[str, Any]) -> None:
-    for name in ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode_go", "opencode_zen"):
+    for name in ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode_go", "opencode_zen", "fal"):
         for acc in payload.get(name) or []:
             if isinstance(acc, dict) and not acc.get("ok"):
                 who = acc.get("label") or acc.get("id") or "?"

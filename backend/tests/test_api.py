@@ -50,6 +50,7 @@ def test_usage_mock_schema(client: TestClient) -> None:
     assert isinstance(body["deepseek"], list)
     assert isinstance(body["opencode_go"], list)
     assert isinstance(body["opencode_zen"], list)
+    assert isinstance(body["fal"], list)
     assert body["claude"][0]["ok"] is True
     assert "session_percent" in body["claude"][0]
     assert body["gpt"][0]["ok"] is True
@@ -59,6 +60,8 @@ def test_usage_mock_schema(client: TestClient) -> None:
     assert "monthly_percent" in body["opencode_go"][0]
     assert body["opencode_zen"][0]["ok"] is True
     assert "remaining_cents" in body["opencode_zen"][0]
+    assert body["fal"][0]["ok"] is True
+    assert "remaining_cents" in body["fal"][0]
 
 
 def test_config_does_not_leak_token(client: TestClient) -> None:
