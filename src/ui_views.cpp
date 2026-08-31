@@ -126,13 +126,24 @@ int cursorWorstIdx() {
   return best;
 }
 
+// OpenRouter/DeepSeek sao saldo pago-conforme-uso (nunca reseta), nao
+// assinatura com janela — "pior" aqui e o saldo mais baixo (mais perto de
+// acabar o dinheiro), nao o maior percentual historico gasto (uma conta que
+// comprou pouco credito bate 90%+ facil sem estar "pior" de verdade que uma
+// que ainda tem saldo alto). Conta com saldo desconhecido nunca "ganha".
 int openrouterWorstIdx() {
   int best = 0;
-  float bestVal = -2;
+  int bestVal = 0;
+  bool found = false;
   for (int i = 0; i < g_snap.openrouterCount; i++) {
-    if (g_snap.openrouter[i].percent > bestVal) {
-      bestVal = g_snap.openrouter[i].percent;
+    int rem = g_snap.openrouter[i].remainingCents;
+    if (rem < 0) {
+      continue;
+    }
+    if (!found || rem < bestVal) {
+      bestVal = rem;
       best = i;
+      found = true;
     }
   }
   return best;
@@ -140,11 +151,17 @@ int openrouterWorstIdx() {
 
 int deepseekWorstIdx() {
   int best = 0;
-  float bestVal = -2;
+  int bestVal = 0;
+  bool found = false;
   for (int i = 0; i < g_snap.deepseekCount; i++) {
-    if (g_snap.deepseek[i].percent > bestVal) {
-      bestVal = g_snap.deepseek[i].percent;
+    int rem = g_snap.deepseek[i].remainingCents;
+    if (rem < 0) {
+      continue;
+    }
+    if (!found || rem < bestVal) {
+      bestVal = rem;
       best = i;
+      found = true;
     }
   }
   return best;
@@ -501,8 +518,12 @@ static String openrouterRemain(const OpenRouterAccount& o) {
   return String(uiTr().noCredits);
 }
 
-static String openrouterTotals(const OpenRouterAccount& o) {
-  return fmtUsdSite(o.usedCents) + uiTr().ofSep + fmtUsdSite(o.limitCents);
+// So o valor, sem o prefixo "restam" — mesmo papel de deepseekBalance() pro
+// card da Início: OpenRouter e DeepSeek sao saldo pago-conforme-uso (nao
+// reseta), nao assinatura com janela, entao o card mostra o saldo restante
+// em vez de uma barra de "% gasto historico" (ver docs/DECISOES.md).
+static String openrouterBalance(const OpenRouterAccount& o) {
+  return o.remainingCents >= 0 ? fmtUsdSite(o.remainingCents) : String(uiTr().noCredits);
 }
 
 // A DeepSeek so devolve saldo atual (sem teto/limite historico — ver
@@ -695,8 +716,7 @@ static void paintHomeList() {
     u1 += "  " + fmtWhen(cursorAcct.cycleEnd).substring(0, 5);
   }
 
-  String oSub =
-      showSub ? (openrouterRemain(orAcct) + "  " + openrouterTotals(orAcct)) : openrouterRemain(orAcct);
+  String oSub = openrouterBalance(orAcct);
   String dSub = deepseekBalance(dsAcct);
 
   int slot = 0;
@@ -716,9 +736,11 @@ static void paintHomeList() {
     slot++;
   }
   if (showOpenRouter) {
+    // Saldo, nao assinatura: card igual ao do DeepSeek (pct -1 forca
+    // paintHomeMetric a mostrar o valor em vez de barra de "% historico").
     String suffix = accountSuffixText(orAcct.label, g_snap.openrouterCount);
     cardOne(VIEW_OPENROUTER, "OpenRouter", suffix, ICON_OPENROUTER, nextTop(), orAcct.ok,
-            orAcct.error, compact ? t.credits : t.accountCredits, orAcct.percent, oSub);
+            orAcct.error, compact ? t.credits : t.accountCredits, -1, oSub);
     slot++;
   }
   if (showDeepSeek) {
@@ -893,10 +915,7 @@ static void paintHomeGrid() {
                    ? (String(compact ? "" : t.resetPrefix) + fmtWhen(cursorAcct.cycleEnd))
                    : "";
   String us2 = cursorOndemand(cursorAcct);
-  String oSub = openrouterRemain(orAcct);
-  if (showSub) {
-    oSub += "  " + openrouterTotals(orAcct);
-  }
+  String oSub = openrouterBalance(orAcct);
   String dSub = deepseekBalance(dsAcct);
 
   int slot = 0;
@@ -916,9 +935,11 @@ static void paintHomeGrid() {
     slot++;
   }
   if (showOpenRouter) {
+    // Saldo, nao assinatura: mesmo tratamento do card de DeepSeek (ver
+    // paintHomeList acima).
     String suffix = accountSuffixText(orAcct.label, g_snap.openrouterCount);
     cardOne(VIEW_OPENROUTER, rects[slot], "OpenRouter", suffix, ICON_OPENROUTER, orAcct.ok,
-            orAcct.error, compact ? t.credits : t.accountCredits, orAcct.percent, oSub);
+            orAcct.error, compact ? t.credits : t.accountCredits, -1, oSub);
     slot++;
   }
   if (showDeepSeek) {
@@ -1230,7 +1251,11 @@ void paintOpenRouter() {
   dNote(t.allKeysNote);
   dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
   dGap();
-  dBar(t.credits, o.percent, openrouterRemain(o));
+  // Saldo, nao assinatura: o destaque e o valor que resta (pct -1 forca
+  // dBar a mostrar o saldo em vez de barra de "% gasto historico" — mesmo
+  // tratamento do DeepSeek). O percentual historico continua disponivel
+  // logo abaixo, so nao e mais o dado principal.
+  dBar(t.credits, -1, openrouterRemain(o));
   dKv(t.used, o.usedCents >= 0 ? fmtUsdSite(o.usedCents) : "");
   dKv(t.left, o.remainingCents >= 0 ? fmtUsdSite(o.remainingCents) : "");
   dKv(t.cap, o.limitCents >= 0 ? fmtUsdSite(o.limitCents) : "");
@@ -1547,7 +1572,9 @@ void paintNow() {
   String cs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.weeklyPercent));
   String us1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(cursorAcct.percent));
   String us2 = compact ? String() : cursorOndemand(cursorAcct);
-  String os1 = compact ? String() : openrouterRemain(orAcct);
+  // Saldo, nao assinatura — sub sempre visivel (pct -1 nao tem barra pra
+  // mostrar no lugar), igual ao DeepSeek.
+  String os1 = openrouterBalance(orAcct);
   String ds1 = deepseekBalance(dsAcct);
 
   int slot = 0;
@@ -1564,7 +1591,7 @@ void paintNow() {
   if (showOpenRouter) {
     String suffix = accountSuffixText(orAcct.label, g_snap.openrouterCount);
     row(slot++, "OpenRouter", suffix, ICON_OPENROUTER, orAcct.ok, orAcct.error,
-        t.credits, orAcct.percent, os1, false, "", -1, "");
+        t.credits, -1, os1, false, "", -1, "");
   }
   if (showDeepSeek) {
     String suffix = accountSuffixText(dsAcct.label, g_snap.deepseekCount);
