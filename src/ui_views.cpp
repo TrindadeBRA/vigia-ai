@@ -752,6 +752,7 @@ void paintStatus() {
   }
   dAdvance(g_btnH + 8);
 
+  dSection(t.refreshSection);
   g_statusHasRefresh = true;
   g_btnRefY = dCursor;
   if (dVisible(g_btnH)) {
