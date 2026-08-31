@@ -792,7 +792,7 @@ static uint16_t lerp565(uint16_t a, uint16_t b, uint8_t t) {
   return (uint16_t)((r << 11) | (g << 5) | bc);
 }
 
-// Boot: mesma marca do header (VIGIA claro + AI bronze), com entrada em
+// Boot: mesma marca do header (VIGIA claro + AI vermelho), com entrada em
 // letras, linha de acento e pontos pulsando — curto o bastante pra nao
 // atrasar o Wi-Fi, visivel o bastante pra nao parecer um flash.
 void uiShowSplash() {

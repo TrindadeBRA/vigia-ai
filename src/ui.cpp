@@ -16,11 +16,11 @@ uint16_t COL_TRACK = 0x2966;
 uint16_t COL_TEXT = 0xF79D;
 uint16_t COL_TEXT_DIM = 0xAD76;
 uint16_t COL_TEXT_MUTED = 0x6B6E;
-uint16_t COL_ACCENT = 0xC50B;
+uint16_t COL_ACCENT = 0xE1C6;
 uint16_t COL_GOOD = 0x8DF2;
 uint16_t COL_WARN = 0xE52B;
 uint16_t COL_BAD = 0xDB6D;
-uint16_t COL_BADGE_YELLOW = 0xEDC4;
+uint16_t COL_BADGE_YELLOW = 0xE1C6;
 uint16_t COL_INVERSE = 0x10A3;
 
 static void applyTheme(UiTheme theme) {
@@ -33,11 +33,11 @@ static void applyTheme(UiTheme theme) {
     COL_TEXT = 0x18C3;
     COL_TEXT_DIM = 0x4A69;
     COL_TEXT_MUTED = 0x7BEF;
-    COL_ACCENT = 0xC50B;
+    COL_ACCENT = 0xC124;
     COL_GOOD = 0x3386;
     COL_WARN = 0xC3A0;
     COL_BAD = 0xC165;
-    COL_BADGE_YELLOW = 0xFE60;
+    COL_BADGE_YELLOW = 0xC124;
     COL_INVERSE = 0x18C3;
     return;
   }
@@ -49,11 +49,11 @@ static void applyTheme(UiTheme theme) {
     COL_TEXT = 0xFFFF;
     COL_TEXT_DIM = 0xFFFF;
     COL_TEXT_MUTED = 0xC618;
-    COL_ACCENT = 0xFFE0;
+    COL_ACCENT = 0xF800;
     COL_GOOD = 0x07E0;
     COL_WARN = 0xFFE0;
     COL_BAD = 0xF800;
-    COL_BADGE_YELLOW = 0xFFE0;
+    COL_BADGE_YELLOW = 0xF800;
     COL_INVERSE = 0x0000;
     return;
   }
@@ -64,11 +64,11 @@ static void applyTheme(UiTheme theme) {
   COL_TEXT = 0xF79D;
   COL_TEXT_DIM = 0xAD76;
   COL_TEXT_MUTED = 0x6B6E;
-  COL_ACCENT = 0xC50B;
+  COL_ACCENT = 0xE1C6;
   COL_GOOD = 0x8DF2;
   COL_WARN = 0xE52B;
   COL_BAD = 0xDB6D;
-  COL_BADGE_YELLOW = 0xEDC4;
+  COL_BADGE_YELLOW = 0xE1C6;
   COL_INVERSE = 0x10A3;
 }
 
