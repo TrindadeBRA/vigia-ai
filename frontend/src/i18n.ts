@@ -14,6 +14,8 @@ type Strings = {
   resetIn: string;
   week: string;
   weekLimit: string;
+  rolling: string;
+  monthLimit: string;
   cursorModels: string;
   otherModels: string;
   credits: string;
@@ -73,6 +75,8 @@ export const STR: Record<Lang, Strings> = {
     resetIn: "Reset em",
     week: "Semana",
     weekLimit: "Limite semanal",
+    rolling: "Janela rolling",
+    monthLimit: "Limite mensal",
     cursorModels: "Modelos Cursor",
     otherModels: "Outros modelos",
     credits: "Créditos",
@@ -130,6 +134,8 @@ export const STR: Record<Lang, Strings> = {
     resetIn: "Resets in",
     week: "Week",
     weekLimit: "Weekly limit",
+    rolling: "Rolling window",
+    monthLimit: "Monthly limit",
     cursorModels: "Cursor models",
     otherModels: "Other models",
     credits: "Credits",
@@ -187,6 +193,8 @@ export const STR: Record<Lang, Strings> = {
     resetIn: "Reset en",
     week: "Semana",
     weekLimit: "Límite semanal",
+    rolling: "Ventana rolling",
+    monthLimit: "Límite mensual",
     cursorModels: "Modelos Cursor",
     otherModels: "Otros modelos",
     credits: "Créditos",

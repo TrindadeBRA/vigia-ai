@@ -15,6 +15,8 @@ from app.local.cursor_state import cursor_missing_hint, cursor_token_candidates,
 from app.local.gpt_oauth import auth_path as gpt_auth_path, gpt_missing_hint, gpt_token_candidates, gpt_token_expired
 from app.netutil import lan_ipv4
 from app.providers.deepseek import clean_deepseek_key
+from app.providers.opencode_go import clean_opencode_key as clean_opencode_go_key
+from app.providers.opencode_zen import clean_opencode_key as clean_opencode_zen_key
 from app.providers.openrouter import clean_openrouter_key
 from app.schemas import (
     AccountPublic,
@@ -342,6 +344,8 @@ def config_public(listen_host: str, listen_port: int) -> ConfigPublic:
             "cursor": _cursor_card(cfg),
             "openrouter": _key_card(cfg, "openrouter"),
             "deepseek": _key_card(cfg, "deepseek"),
+            "opencode_go": _key_card(cfg, "opencode_go"),
+            "opencode_zen": _key_card(cfg, "opencode_zen"),
         },
     )
 
@@ -389,6 +393,8 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
             "cursor": (body.cursor_hidden, body.cursor_local_label, body.cursor_paste, None),
             "openrouter": (body.openrouter_hidden, body.openrouter_primary_label, body.openrouter_paste, "openrouter"),
             "deepseek": (body.deepseek_hidden, body.deepseek_primary_label, body.deepseek_paste, "deepseek"),
+            "opencode_go": (body.opencode_go_hidden, body.opencode_go_primary_label, body.opencode_go_paste, "opencode_go"),
+            "opencode_zen": (body.opencode_zen_hidden, body.opencode_zen_primary_label, body.opencode_zen_paste, "opencode_zen"),
         }
         for name, (hidden, label, paste, kind) in mapping.items():
             p = cfg["providers"][name]
@@ -407,6 +413,16 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
                     cleaned = clean_deepseek_key(secret)
                     if not cleaned:
                         raise HTTPException(400, "API key DeepSeek inválida; cole só a chave sk-...")
+                    secret = cleaned
+                elif kind == "opencode_go":
+                    cleaned = clean_opencode_go_key(secret)
+                    if not cleaned:
+                        raise HTTPException(400, "API key OpenCode inválida; cole só a chave sk-...")
+                    secret = cleaned
+                elif kind == "opencode_zen":
+                    cleaned = clean_opencode_zen_key(secret)
+                    if not cleaned:
+                        raise HTTPException(400, "API key OpenCode inválida; cole só a chave sk-...")
                     secret = cleaned
                 p["paste_secret"] = secret
 
@@ -435,6 +451,11 @@ def add_account(body: AddAccountBody) -> AddAccountResult:
         if not cleaned:
             return AddAccountResult(ok=False, error="API key DeepSeek inválida; cole só a chave sk-...")
         secret = cleaned
+    elif body.provider in ("opencode_go", "opencode_zen"):
+        cleaned = clean_opencode_go_key(secret)
+        if not cleaned:
+            return AddAccountResult(ok=False, error="API key OpenCode inválida; cole só a chave sk-...")
+        secret = cleaned
     elif not secret:
         return AddAccountResult(ok=False, error="token vazio")
     account_id = secrets.token_hex(4)
@@ -455,7 +476,7 @@ def add_account(body: AddAccountBody) -> AddAccountResult:
     description="Não apaga a conta local (Keychain / state.vscdb / primeira key).",
 )
 def delete_account(provider: str, account_id: str) -> OkResult:
-    if provider not in ("claude", "gpt", "cursor", "openrouter", "deepseek"):
+    if provider not in ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode_go", "opencode_zen"):
         return OkResult(ok=False, error="provider inválido")
     if not account_id:
         return OkResult(ok=False, error="id vazio")
@@ -492,6 +513,12 @@ def clear_secret(name: str) -> OkResult:
         "deepseek": "deepseek",
         "deepseek_paste": "deepseek",
         "DEEPSEEK_API_KEY": "deepseek",
+        "opencode_go": "opencode_go",
+        "opencode_go_paste": "opencode_go",
+        "OPENCODE_GO_API_KEY": "opencode_go",
+        "opencode_zen": "opencode_zen",
+        "opencode_zen_paste": "opencode_zen",
+        "OPENCODE_ZEN_API_KEY": "opencode_zen",
     }
     provider = mapping.get(name)
     if not provider:

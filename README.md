@@ -5,7 +5,7 @@
 
 ### Painel de mesa para cotas de IA — sem nunca expor um token
 
-**Claude** · **GPT** (ChatGPT / Codex) · **Cursor** · **OpenRouter** · **DeepSeek**
+**Claude** · **GPT** (ChatGPT / Codex) · **Cursor** · **OpenRouter** · **DeepSeek** · **OpenCode Go** · **OpenCode Zen**
 rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-e63931?style=flat-square)](LICENSE)
@@ -33,7 +33,7 @@ rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
 
 ## O problema
 
-Eu uso Claude, ChatGPT/Codex, Cursor, OpenRouter e DeepSeek no mesmo dia de trabalho — cada um com sua própria cota, sua própria janela de reset e sua própria aba pra checar. Na prática, eu só descobria que tinha estourado o limite do Cursor quando o autocomplete parava de responder no meio de uma tarefa.
+Eu uso Claude, ChatGPT/Codex, Cursor, OpenRouter, DeepSeek, OpenCode Go e OpenCode Zen no mesmo dia de trabalho — cada um com sua própria cota, sua própria janela de reset e sua própria aba pra checar. Na prática, eu só descobria que tinha estourado o limite do Cursor quando o autocomplete parava de responder no meio de uma tarefa.
 
 O **Vigia AI** tira essa pergunta da cabeça: um mostrador sempre ligado na mesa, com o consumo de todas as contas atualizado sozinho. Sem abrir aba, sem rodar `curl`, sem lembrar de conferir.
 
@@ -52,7 +52,7 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 
 ## Recursos
 
-- **5 provedores, múltiplas contas cada** — Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek
+- **7 provedores, múltiplas contas cada** — Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen
 - **Tempo real** — um único ciclo de consulta no coletor, distribuído por SSE; placa e abas de `/display` não multiplicam chamadas
 - **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
 - **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela
@@ -133,7 +133,7 @@ Mesmo contrato JSON, layout responsivo: sidebar no desktop, menu hambúrguer no 
 <th align="center">Responsivo (mobile)</th>
 </tr>
 <tr>
-<td><img src="docs/assets/web/web-config.png" width="440" alt="Painel de configuração de contas Claude, GPT, Cursor, OpenRouter e DeepSeek"></td>
+<td><img src="docs/assets/web/web-config.png" width="440" alt="Painel de configuração de contas Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode Go e OpenCode Zen"></td>
 <td><img src="docs/assets/web/web-mobile.png" width="220" alt="Mostrador web em viewport de celular com menu hambúrguer"></td>
 </tr>
 </table>
@@ -141,7 +141,7 @@ Mesmo contrato JSON, layout responsivo: sidebar no desktop, menu hambúrguer no 
 ## Como funciona
 
 ```
-Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek)
+Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go / OpenCode Zen)
         │  tokens só no host
         ▼
   backend FastAPI  :8787     GET /events  (SSE, JSON sem Bearer)

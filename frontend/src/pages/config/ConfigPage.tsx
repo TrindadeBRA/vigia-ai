@@ -145,6 +145,30 @@ export default function ConfigPage() {
           usesLocalApp={false}
           {...common}
         />
+        <ProviderCard
+          title="OpenCode Go"
+          blurb={c.opencodeGoBlurb}
+          providerId="opencode_go"
+          p={cfg.providers.opencode_go}
+          pasteKey="opencode_go_paste"
+          hiddenKey="opencode_go_hidden"
+          labelKey="opencode_go_primary_label"
+          placeholder={c.ocGoKeyPh}
+          usesLocalApp={false}
+          {...common}
+        />
+        <ProviderCard
+          title="OpenCode Zen"
+          blurb={c.opencodeZenBlurb}
+          providerId="opencode_zen"
+          p={cfg.providers.opencode_zen}
+          pasteKey="opencode_zen_paste"
+          hiddenKey="opencode_zen_hidden"
+          labelKey="opencode_zen_primary_label"
+          placeholder={c.ocZenKeyPh}
+          usesLocalApp={false}
+          {...common}
+        />
       </div>
 
       <div className="cfg-section-head">

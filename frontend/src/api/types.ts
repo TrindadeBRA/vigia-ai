@@ -53,6 +53,19 @@ export type CreditsAccount = {
   remaining_cents: number | null;
 };
 
+export type OpenCodeGoAccount = {
+  id: string;
+  label: string;
+  ok: boolean;
+  error: string | null;
+  rolling_percent: number | null;
+  rolling_resets_at: string | null;
+  weekly_percent: number | null;
+  weekly_resets_at: string | null;
+  monthly_percent: number | null;
+  monthly_resets_at: string | null;
+};
+
 export type UsagePayload = {
   updated_at: string;
   claude: ClaudeAccount[];
@@ -60,6 +73,8 @@ export type UsagePayload = {
   cursor: CursorAccount[];
   openrouter: CreditsAccount[];
   deepseek: CreditsAccount[];
+  opencode_go: OpenCodeGoAccount[];
+  opencode_zen: CreditsAccount[];
 };
 
 export type AccountPublic = { id: string; label: string; suffix: string | null };

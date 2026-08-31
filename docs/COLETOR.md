@@ -27,7 +27,7 @@ cd collector
 
 Abra **http://127.0.0.1:8787/** — painel para portas, URL da ESP32 e status do login. `GET /usage` continua sendo o contrato da placa.
 
-No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter e DeepSeek: cole a key de cada um no painel (`data/config.json`, gitignored). Claude e Cursor aparecem na placa automaticamente se o app local estiver logado; no painel, desmarque **Mostrar na placa** para ocultar o card na ESP32 sem apagar o login.
+No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter, DeepSeek, OpenCode Go e OpenCode Zen: cole a key de cada um no painel (`data/config.json`, gitignored). Claude e Cursor aparecem na placa automaticamente se o app local estiver logado; no painel, desmarque **Mostrar na placa** para ocultar o card na ESP32 sem apagar o login.
 
 O container **não** lê o Keychain do macOS. Prefira Python local neste Mac; no Docker, monte arquivos do host (abaixo) ou cole token só como plano B (`claude setup-token` **não** serve).
 
@@ -53,26 +53,26 @@ Firewall: permitir Python na porta **8787** para a rede local.
 
 Caminho feliz: **app oficial neste computador**. O coletor relê Keychain / `state.vscdb` a cada `GET /usage`. Quem renova o login é o Claude Code ou o Cursor — se expirou, abra o app. A placa nunca recebe Bearer.
 
-| Fonte | Claude | Cursor |
-| --- | --- | --- |
-| 1 (local) | Keychain `Claude Code-credentials`, senão `~/.claude/.credentials.json` | `state.vscdb` → `cursorAuth/accessToken` |
-| 2 (plano B) | `CLAUDE_OAUTH_TOKEN` no painel | `CURSOR_ACCESS_TOKEN` no painel |
+| Fonte       | Claude                                                                  | Cursor                                   |
+| ----------- | ----------------------------------------------------------------------- | ---------------------------------------- |
+| 1 (local)   | Keychain `Claude Code-credentials`, senão `~/.claude/.credentials.json` | `state.vscdb` → `cursorAuth/accessToken` |
+| 2 (plano B) | `CLAUDE_OAUTH_TOKEN` no painel                                          | `CURSOR_ACCESS_TOKEN` no painel          |
 
 Token colado **não** ganha do app local. Se o JWT/OAuth local falhar (expirado ou 401), tenta o colado.
 
 Não use `python3 gerar_env_claude.py` / `gerar_env_cursor.py` — copiam segredo para JSON; os scripts só imprimem este aviso.
 
-| Arquivo | Uso |
-| --- | --- |
-| `data/config.json` | Gitignored; painel; volume `./data` no Docker (OpenRouter, DeepSeek, plano B, `CLAUDE_HIDDEN` / `CURSOR_HIDDEN`) |
-| Painel `http://IP:8787/` | HOST, PORT, status da fonte real, interruptor **Mostrar na placa** (Claude/Cursor) |
-| `./start.sh` / `./dev-collector.sh` | Sobe o coletor; `docker` usa `compose.yaml` |
+| Arquivo                             | Uso                                                                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `data/config.json`                  | Gitignored; painel; volume `./data` no Docker (OpenRouter, DeepSeek, plano B, `CLAUDE_HIDDEN` / `CURSOR_HIDDEN`) |
+| Painel `http://IP:8787/`            | HOST, PORT, status da fonte real, interruptor **Mostrar na placa** (Claude/Cursor)                               |
+| `./start.sh` / `./dev-collector.sh` | Sobe o coletor; `docker` usa `compose.yaml`                                                                      |
 
 No painel, **Modo mock** grava JSON falso (útil sem login).
 
 ## Múltiplas contas por provedor
 
-Cada provedor aceita mais de uma conta — ex.: Claude pessoal + Claude da empresa — cada uma com um apelido opcional, na seção **Contas adicionais** de cada card no painel `/`. Claude e Cursor sempre têm a conta **local** (Keychain/`state.vscdb`, com apelido opcional próprio) mais quantas contas extras coladas você quiser; OpenRouter e DeepSeek são só uma lista de keys coladas (sem conta "local"). Guardado em `CLAUDE_ACCOUNTS`/`CURSOR_ACCOUNTS`/`OPENROUTER_ACCOUNTS`/`DEEPSEEK_ACCOUNTS` (`data/config.json`, JSON com `id`/`label`/token ou key por conta — gitignored, igual ao resto).
+Cada provedor aceita mais de uma conta — ex.: Claude pessoal + Claude da empresa — cada uma com um apelido opcional, na seção **Contas adicionais** de cada card no painel `/`. Claude e Cursor sempre têm a conta **local** (Keychain/`state.vscdb`, com apelido opcional próprio) mais quantas contas extras coladas você quiser; OpenRouter, DeepSeek, OpenCode Go e OpenCode Zen são só uma lista de keys coladas (sem conta "local"). Guardado em `CLAUDE_ACCOUNTS`/`CURSOR_ACCOUNTS`/`OPENROUTER_ACCOUNTS`/`DEEPSEEK_ACCOUNTS`/`OPENCODE_GO_ACCOUNTS`/`OPENCODE_ZEN_ACCOUNTS` (`data/config.json`, JSON com `id`/`label`/token ou key por conta — gitignored, igual ao resto).
 
 `GET /usage` reflete isso: cada provedor vira uma **lista** de contas (ver `docs/CONTRATO_JSON.md`), uma chamada real por conta. O `/display` mostra um card por conta; o firmware físico (tela pequena) continua com um card por *tipo* de provedor na Início, mostrando a que mais precisa de atenção — o detalhe ganha um paginador **‹ i/N ›** pra ver as outras (`docs/TOUCH.md`).
 

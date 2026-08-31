@@ -73,6 +73,8 @@ export const PROVIDER_ICON: Record<string, string> = {
   cursor: "/icons/cursor.png",
   openrouter: "/icons/openrouter.png",
   deepseek: "/icons/deepseek.png",
+  opencode_go: "/icons/opencode_go.png",
+  opencode_zen: "/icons/opencode_zen.png",
 };
 
 export function hexToRgba(hex: string, a: number): string {

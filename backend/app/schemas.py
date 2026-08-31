@@ -6,7 +6,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ProviderId = Literal["claude", "gpt", "cursor", "openrouter", "deepseek"]
+ProviderId = Literal[
+    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode_go", "opencode_zen"
+]
 
 USAGE_EXAMPLE = {
     "updated_at": "2026-08-31T14:00:00-03:00",
@@ -81,12 +83,38 @@ USAGE_EXAMPLE = {
             "remaining_cents": 750,
         }
     ],
+    "opencode_go": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "rolling_percent": 40.0,
+            "rolling_resets_at": "31/08 18h00",
+            "weekly_percent": 20.0,
+            "weekly_resets_at": "04/09 03h00",
+            "monthly_percent": 10.0,
+            "monthly_resets_at": "01/09 03h00",
+        }
+    ],
+    "opencode_zen": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "percent": None,
+            "limit_cents": None,
+            "used_cents": None,
+            "remaining_cents": 1500,
+        }
+    ],
 }
 
 SSE_WIRE_EXAMPLE = (
     ": connected\n\n"
     "event: usage\n"
-    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[]}\n\n'
+    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode_go":[],"opencode_zen":[]}\n\n'
     ": ping\n\n"
 )
 
@@ -137,6 +165,15 @@ class CreditsAccount(AccountBase):
     remaining_cents: int | None = None
 
 
+class OpenCodeGoAccount(AccountBase):
+    rolling_percent: float | None = Field(default=None, description="0–100, janela rolling (~5 h).")
+    rolling_resets_at: str | None = None
+    weekly_percent: float | None = Field(default=None, description="0–100, janela semanal.")
+    weekly_resets_at: str | None = None
+    monthly_percent: float | None = Field(default=None, description="0–100, janela mensal.")
+    monthly_resets_at: str | None = None
+
+
 class UsagePayload(BaseModel):
     """Contrato da placa e do mostrador. Mesmo JSON em GET /usage e no evento SSE `usage`."""
 
@@ -148,6 +185,8 @@ class UsagePayload(BaseModel):
     cursor: list[CursorAccount]
     openrouter: list[CreditsAccount]
     deepseek: list[CreditsAccount]
+    opencode_go: list[OpenCodeGoAccount]
+    opencode_zen: list[CreditsAccount]
 
 
 class HealthPayload(BaseModel):
@@ -219,16 +258,22 @@ class ConfigPatch(BaseModel):
     cursor_hidden: bool | None = None
     openrouter_hidden: bool | None = None
     deepseek_hidden: bool | None = None
+    opencode_go_hidden: bool | None = None
+    opencode_zen_hidden: bool | None = None
     claude_local_label: str | None = None
     gpt_local_label: str | None = None
     cursor_local_label: str | None = None
     openrouter_primary_label: str | None = None
     deepseek_primary_label: str | None = None
+    opencode_go_primary_label: str | None = None
+    opencode_zen_primary_label: str | None = None
     claude_paste: str | None = None
     gpt_paste: str | None = None
     cursor_paste: str | None = None
     openrouter_paste: str | None = None
     deepseek_paste: str | None = None
+    opencode_go_paste: str | None = None
+    opencode_zen_paste: str | None = None
 
 
 class ConfigSaveResult(BaseModel):
