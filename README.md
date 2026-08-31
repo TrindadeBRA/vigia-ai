@@ -53,7 +53,7 @@ Tokens (não vão para a placa):
 | Claude | `~/.claude/.credentials.json` |
 | Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` |
 
-Override no `collector/.env`: `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`.
+Override no `collector/.env`: `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`, `OPENROUTER_API_KEY`.
 
 ## Firmware na placa
 

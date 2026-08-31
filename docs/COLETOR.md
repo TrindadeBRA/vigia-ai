@@ -12,9 +12,9 @@ Cada `GET /usage` busca as duas APIs na hora — **sem cache**. Ver aviso de rat
 
 ```bash
 cd collector
-cp .env.example .env    # HOST/PORT; tokens vão em .env.claude e .env.cursor
-python3 gerar_env_claude.py    # ver TODO_CLAUDE.md
-python3 gerar_env_cursor.py    # ver TODO_CURSOR.md
+cp .env.example .env    # HOST/PORT + tokens (gitignored)
+python3 gerar_env_claude.py    # grava CLAUDE_OAUTH_TOKEN no .env; ver TODO_CLAUDE.md
+python3 gerar_env_cursor.py    # grava CURSOR_ACCESS_TOKEN no .env; ver TODO_CURSOR.md
 python3 server.py
 ```
 
@@ -40,9 +40,8 @@ Firewall: permitir Python na porta **8787** para a rede local.
 
 | Arquivo | Uso |
 | --- | --- |
-| `.env` | `HOST`, `PORT` |
-| `.env.claude` | `CLAUDE_OAUTH_TOKEN` (gitignored) — [TODO_CLAUDE.md](../collector/TODO_CLAUDE.md) |
-| `.env.cursor` | `CURSOR_ACCESS_TOKEN` (gitignored) — [TODO_CURSOR.md](../collector/TODO_CURSOR.md) |
+| `.env.example` | Modelo versionado (sem segredos) |
+| `.env` | Cópia local gitignored: `HOST`, `PORT`, `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`, `OPENROUTER_API_KEY` — [TODO_CLAUDE.md](../collector/TODO_CLAUDE.md) / [TODO_CURSOR.md](../collector/TODO_CURSOR.md) |
 
 `COLLECTOR_MOCK=1`: JSON falso (útil sem login).
 

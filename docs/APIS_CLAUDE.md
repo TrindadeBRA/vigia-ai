@@ -19,7 +19,7 @@ Não documentado no docs oficial. Pode mudar o path ou o valor do beta.
 
 1. **macOS (Claude Code 2.x):** Keychain, serviço `Claude Code-credentials` — o coletor lê com `security find-generic-password`.
 2. **Linux / fallback:** `~/.claude/.credentials.json` → `claudeAiOauth.accessToken`
-3. Override: `CLAUDE_OAUTH_TOKEN` em `collector/.env.claude`
+3. Override: `CLAUDE_OAUTH_TOKEN` em `collector/.env`
 
 `expiresAt` (ms): se no passado, abra o Claude Code para renovar.
 

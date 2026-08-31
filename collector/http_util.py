@@ -41,6 +41,30 @@ def load_dotenv(path: Path) -> None:
             os.environ[key] = val
 
 
+def upsert_dotenv(path: Path, updates: dict[str, str]) -> None:
+    """Atualiza chaves no .env sem apagar as outras. Cria o arquivo se faltar."""
+    lines: list[str] = []
+    if path.is_file():
+        lines = path.read_text(encoding="utf-8").splitlines()
+    pending = dict(updates)
+    out: list[str] = []
+    for raw in lines:
+        stripped = raw.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            key = stripped.partition("=")[0].strip()
+            if key in pending:
+                out.append(f"{key}={pending.pop(key)}")
+                continue
+        out.append(raw)
+    if pending:
+        if out and out[-1].strip():
+            out.append("")
+        for key, val in pending.items():
+            out.append(f"{key}={val}")
+    text = "\n".join(out).rstrip() + "\n"
+    path.write_text(text, encoding="utf-8")
+
+
 def http_json(
     url: str,
     *,

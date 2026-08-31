@@ -5,9 +5,6 @@
 .env.openrouter
 .env.*.local
 !.env.example
-!.env.claude.example
-!.env.cursor.example
-!.env.openrouter.example
 
 __pycache__/
 *.py[cod]

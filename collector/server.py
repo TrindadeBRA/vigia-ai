@@ -142,8 +142,7 @@ class CollectorServer(ThreadingHTTPServer):
 
 def main() -> None:
     here = Path(__file__).resolve().parent
-    for name in (".env", ".env.claude", ".env.cursor", ".env.openrouter"):
-        load_dotenv(here / name)
+    load_dotenv(here / ".env")
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT") or 8787)
     print(f"coletor em http://{host}:{port}/usage")

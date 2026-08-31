@@ -7,7 +7,7 @@ Não existe API key oficial de “% do Pro”. O coletor usa o **JWT que o Curso
 - [ ] Cursor instalado e **logado** neste Mac (mesma conta da assinatura)
 - [ ] Abrir o Cursor pelo menos uma vez depois do login
 - [ ] Na pasta `collector/`: `python3 gerar_env_cursor.py`
-- [ ] Conferir que nasceu `collector/.env.cursor` (gitignored)
+- [ ] Conferir que `CURSOR_ACCESS_TOKEN` entrou em `collector/.env` (gitignored)
 - [ ] Subir o coletor e testar só o Cursor:
 
 ```bash
@@ -21,14 +21,14 @@ curl -s http://127.0.0.1:8787/usage | python3 -c "import sys,json; d=json.load(s
 
 ## O que o script faz
 
-Lê `cursorAuth/accessToken` em `state.vscdb` e grava:
+Lê `cursorAuth/accessToken` em `state.vscdb` e grava no `.env`:
 
 ```
 CURSOR_ACCESS_TOKEN=...
 CURSOR_STATE_DB=...
 ```
 
-em `.env.cursor`. **Não imprime o token.**
+As outras chaves do `.env` ficam. **Não imprime o token.**
 
 macOS (caminho padrão):
 
@@ -37,7 +37,7 @@ macOS (caminho padrão):
 ## Se o script falhar
 
 1. Faça logout/login no Cursor e feche o app.
-2. Preenchimento manual: `.env.cursor.example` → `.env.cursor`.
+2. Preenchimento manual: copie `.env.example` → `.env` e preencha `CURSOR_ACCESS_TOKEN`.
 3. Extração manual (não cole o resultado no chat):
 
 ```bash

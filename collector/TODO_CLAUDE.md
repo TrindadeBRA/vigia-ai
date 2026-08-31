@@ -10,7 +10,7 @@ A cota da **assinatura** vem do **OAuth do Claude Code**.
 - [ ] Login no Claude Code (`claude` no terminal)
 - [ ] Na pasta `collector/`: `python3 gerar_env_claude.py`
   - No **macOS** o token está no **Keychain** (`Claude Code-credentials`), não em `.credentials.json`. O script lê o Keychain; o Mac pode pedir senha — permita.
-- [ ] Conferir que nasceu `collector/.env.claude` (gitignored)
+- [ ] Conferir que `CLAUDE_OAUTH_TOKEN` entrou em `collector/.env` (gitignored)
 - [ ] Subir o coletor e testar só o Claude:
 
 ```bash
@@ -24,14 +24,7 @@ curl -s http://127.0.0.1:8787/usage | python3 -c "import sys,json; d=json.load(s
 
 ## O que o script faz
 
-Lê o OAuth do **Keychain** (macOS) ou de `~/.claude/.credentials.json` (Linux) e grava:
-
-```
-CLAUDE_OAUTH_TOKEN=...
-CLAUDE_CREDENTIALS_PATH=...
-```
-
-em `.env.claude`. **Não imprime o token.**
+Lê o OAuth do **Keychain** (macOS) ou de `~/.claude/.credentials.json` (Linux) e grava `CLAUDE_OAUTH_TOKEN` no `.env` (as outras chaves ficam). **Não imprime o token.**
 
 ## Se o script não achar o token
 

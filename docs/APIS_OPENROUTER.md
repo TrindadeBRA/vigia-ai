@@ -6,7 +6,7 @@ Endpoint público e documentado da OpenRouter — não precisa imitar nenhum app
 
 API key gerada manualmente pelo usuário em https://openrouter.ai/settings/keys.
 
-Vai em `OPENROUTER_API_KEY` no `collector/.env.openrouter` (gitignored; sem gerador automático — é colar e salvar). Sem fallback de app local, porque o OpenRouter não roda nada instalado neste Mac.
+Vai em `OPENROUTER_API_KEY` no `collector/.env` (gitignored; sem gerador automático — é colar e salvar). Sem fallback de app local, porque o OpenRouter não roda nada instalado neste Mac.
 
 ## Por que `/credits` e não `/auth/key`
 
