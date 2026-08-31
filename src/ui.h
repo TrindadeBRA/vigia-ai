@@ -26,6 +26,16 @@ enum HeaderEdge : uint8_t {
   HEADER_RIGHT = 2,
   HEADER_BOTTOM = 3
 };
+enum UiAccent : uint8_t {
+  ACCENT_RED = 0,
+  ACCENT_ORANGE = 1,
+  ACCENT_YELLOW = 2,
+  ACCENT_GREEN = 3,
+  ACCENT_CYAN = 4,
+  ACCENT_BLUE = 5,
+  ACCENT_VIOLET = 6,
+  ACCENT_COUNT = 7
+};
 
 void uiInit();
 void uiShowSplash();
@@ -42,6 +52,9 @@ void uiSetLang(UiLang lang);
 UiLang uiLang();
 void uiSetHeaderEdge(HeaderEdge edge);
 HeaderEdge uiHeaderEdge();
+void uiSetAccent(UiAccent accent);
+UiAccent uiAccent();
+uint16_t uiAccentColor(UiAccent accent);
 void uiDetailScrollBy(int dy);
 void uiHandleTap(int16_t x, int16_t y);
 void uiHandleSwipe(int16_t dx);

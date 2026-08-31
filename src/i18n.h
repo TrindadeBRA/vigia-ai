@@ -46,6 +46,7 @@ struct UiStrings {
   const char* dark;
   const char* light;
   const char* contrast;
+  const char* accentSection;
   const char* langSection;
   const char* headerSection;
   const char* edgeLeft;
@@ -58,6 +59,7 @@ struct UiStrings {
   const char* splashSub;
   const char* noData;
   const char* tapCorners;
+  const char* quotaUsedHint;
 };
 
 const UiStrings& uiTr();

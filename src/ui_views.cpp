@@ -38,6 +38,11 @@ int g_themeBtnY = 0;
 int g_themeBtnH = 28;
 int g_themeSplit1 = 0;
 int g_themeSplit2 = 0;
+int g_accentBtnY = 0;
+int g_accentBtnH = 28;
+int g_accentX0 = 0;
+int g_accentCellW = 28;
+int g_accentGap = 6;
 int g_langBtnY = 0;
 int g_langBtnH = 28;
 int g_langSplit1 = 0;
@@ -878,6 +883,34 @@ void paintStatus() {
   }
   dAdvance(g_btnH + 8);
 
+  dSection(t.accentSection);
+  g_accentBtnH = g_btnH;
+  g_accentBtnY = dCursor;
+  g_accentGap = 6;
+  g_accentX0 = dX;
+  g_accentCellW = (dW - g_accentGap * ((int)ACCENT_COUNT - 1)) / (int)ACCENT_COUNT;
+  if (g_accentCellW < 16) {
+    g_accentCellW = 16;
+  }
+  if (dVisible(g_btnH)) {
+    int y = dScreenY();
+    const int s = g_accentCellW < g_btnH ? g_accentCellW : g_btnH - 4;
+    const int oy = y + (g_btnH - s) / 2;
+    UiAccent cur = uiAccent();
+    for (uint8_t i = 0; i < (uint8_t)ACCENT_COUNT; i++) {
+      int x = dX + (int)i * (g_accentCellW + g_accentGap);
+      int cx = x + (g_accentCellW - s) / 2;
+      uint16_t fill = uiAccentColor((UiAccent)i);
+      tft.fillRoundRect(cx, oy, s, s, 5, fill);
+      uint16_t ring = ((UiAccent)i == cur) ? COL_TEXT : COL_CARD_BORDER;
+      tft.drawRoundRect(cx, oy, s, s, 5, ring);
+      if ((UiAccent)i == cur && s > 8) {
+        tft.drawRoundRect(cx + 1, oy + 1, s - 2, s - 2, 4, ring);
+      }
+    }
+  }
+  dAdvance(g_btnH + 8);
+
   dSection(t.langSection);
   g_langBtnH = g_btnH;
   g_langBtnY = dCursor;
@@ -934,26 +967,73 @@ void paintStatus() {
   paintDetailFinish();
 }
 
+static int g_nowTimeY = 18;
+static uint8_t g_nowTimeFont = 4;
+
+static uint8_t nowTimeFont(int W) {
+  char probe[] = "00:00:00";
+  if (W >= 400 && tft.textWidth(probe, 6) <= W - 12) {
+    return 6;
+  }
+  return 4;
+}
+
+static void drawNowTime() {
+  const int W = tft.width();
+  int year = 0, mo = 0, dd = 0, hh = 0, mi = 0, ss = 0;
+  bool ok = wallClockNow(year, mo, dd, hh, mi, ss);
+  char timeBuf[12];
+  if (ok) {
+    snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d:%02d", hh, mi, ss);
+  } else {
+    snprintf(timeBuf, sizeof(timeBuf), "--:--:--");
+  }
+  tft.setTextDatum(TC_DATUM);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString(timeBuf, W / 2, g_nowTimeY, g_nowTimeFont);
+}
+
+static void paintNowMetric(int x, int y, int w, const char* label, float pct, const String& sub,
+                           uint8_t font, int labelH, int barH) {
+  const UiStrings& t = uiTr();
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT_DIM, COL_CARD);
+  tft.drawString(label, x, y, font);
+  tft.setTextDatum(TR_DATUM);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  String right;
+  if (pct < 0) {
+    right = "--";
+  } else if (w < 110) {
+    right = fmtPct(pct);
+  } else {
+    right = fmtPct(pct) + " " + t.used;
+  }
+  tft.drawString(right, x + w, y, font);
+  drawBar(x, y + labelH, w, barH, pct);
+  if (!sub.length()) {
+    return;
+  }
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+  tft.drawString(sub, x, y + labelH + 1 + barH, font);
+}
+
+void paintNowClock() {
+  drawNowTime();
+}
+
 void paintNow() {
   const int W = tft.width();
   const int H = tft.height();
   tft.fillRect(0, 0, W, H, COL_BG);
 
-  int year = 0, mo = 0, dd = 0, hh = 0, mi = 0;
-  bool ok = wallClockNow(year, mo, dd, hh, mi);
+  g_nowTimeFont = nowTimeFont(W);
+  g_nowTimeY = (H >= 300) ? 16 : 8;
+  drawNowTime();
 
-  char timeBuf[8];
-  if (ok) {
-    snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", hh, mi);
-  } else {
-    snprintf(timeBuf, sizeof(timeBuf), "--:--");
-  }
-  const uint8_t timeFont = (H >= 280) ? 6 : 4;
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(COL_TEXT, COL_BG);
-  const int timeY = (H >= 280) ? 28 : 18;
-  tft.drawString(timeBuf, W / 2, timeY, timeFont);
-
+  int year = 0, mo = 0, dd = 0, hh = 0, mi = 0, ss = 0;
+  bool ok = wallClockNow(year, mo, dd, hh, mi, ss);
   char dateBuf[28];
   if (ok) {
     snprintf(dateBuf, sizeof(dateBuf), "%s  %02d/%02d/%04d", uiWeekday(weekdaySun0(year, mo, dd)), dd,
@@ -961,32 +1041,71 @@ void paintNow() {
   } else {
     snprintf(dateBuf, sizeof(dateBuf), "--/--/----");
   }
+  const int dateY = g_nowTimeY + tft.fontHeight(g_nowTimeFont) + 2;
+  tft.setTextDatum(TC_DATUM);
   tft.setTextColor(COL_TEXT_DIM, COL_BG);
-  const int dateY = timeY + ((H >= 280) ? 52 : 36);
   tft.drawString(dateBuf, W / 2, dateY, 2);
 
-  const int rowTop = dateY + 28;
-  const int rowH = (H - rowTop - 12) / 3;
-  const int pad = (W < 360) ? 16 : 28;
-  const int barW = W - pad * 2 - 24 - ICON_CLAUDE_W;
-  const int barX = pad + ICON_CLAUDE_W + 10;
-  auto row = [&](int i, const char* name, const uint16_t* icon, float pct, const String& extra) {
-    int y = rowTop + i * rowH;
-    drawIcon(pad, y + 2, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
+  const UiStrings& t = uiTr();
+  const int hintY = dateY + 18;
+  tft.setTextColor(COL_TEXT_MUTED, COL_BG);
+  tft.drawString(t.quotaUsedHint, W / 2, hintY, 1);
+
+  const int bodyTop = hintY + 14;
+  const int bodyH = H - bodyTop - 8;
+  const int gap = 4;
+  const int pad = 8;
+  const int rowW = W - pad * 2;
+  const int rowH = (bodyH - gap * 2) / 3;
+  const bool compact = rowH < 64;
+  const uint8_t metricFont = 1;
+  const int labelH = 10;
+  const int barH = compact ? 5 : 7;
+  const int inner = 6;
+  const int leftW = inner + ICON_CLAUDE_W + 6 + 86;
+
+  auto row = [&](int i, const char* title, const uint16_t* icon, bool providerOk, const String& err,
+                 const char* label1, float pct1, const String& sub1, bool has2, const char* label2,
+                 float pct2, const String& sub2) {
+    const int x = pad;
+    const int y = bodyTop + i * (rowH + gap);
+    tft.fillRoundRect(x, y, rowW, rowH, 8, COL_CARD);
+    tft.drawRoundRect(x, y, rowW, rowH, 8, COL_CARD_BORDER);
+    const int iy = y + (rowH - ICON_CLAUDE_H) / 2;
+    drawIcon(x + inner, iy, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
     tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(COL_TEXT, COL_BG);
-    tft.drawString(name, barX, y, 2);
-    tft.setTextDatum(TR_DATUM);
-    String right = fmtPct(pct);
-    if (extra.length()) {
-      right = extra + "  " + right;
+    tft.setTextColor(COL_TEXT, COL_CARD);
+    tft.drawString(title, x + inner + ICON_CLAUDE_W + 6, iy + (ICON_CLAUDE_H - 16) / 2, 2);
+
+    const int mx0 = x + leftW;
+    const int mwAll = x + rowW - inner - mx0;
+    const int gapM = 8;
+    const int mw = has2 ? (mwAll - gapM) / 2 : mwAll;
+    const int metricH = labelH + 1 + barH + (compact || !sub1.length() ? 0 : 11);
+    const int my = y + (rowH - metricH) / 2;
+    if (!providerOk) {
+      drawError(mx0, y + 8, err, COL_CARD);
+      return;
     }
-    tft.drawString(right, W - pad, y, 2);
-    drawBar(barX, y + 18, barW, 8, pct);
+    paintNowMetric(mx0, my, mw, label1, pct1, compact ? String() : sub1, metricFont, labelH, barH);
+    if (has2) {
+      paintNowMetric(mx0 + mw + gapM, my, mw, label2, pct2, compact ? String() : sub2, metricFont,
+                     labelH, barH);
+    }
   };
-  row(0, "Claude", ICON_CLAUDE, g_snap.claude.weeklyPercent, fmtPct(g_snap.claude.sessionPercent));
-  row(1, "Cursor", ICON_CURSOR, g_snap.cursor.percent, "");
-  row(2, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.percent, "");
+
+  String cs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(g_snap.claude.sessionPercent));
+  String cs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(g_snap.claude.weeklyPercent));
+  String us1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(g_snap.cursor.percent));
+  String us2 = compact ? String() : cursorOndemand();
+  String os1 = compact ? String() : openrouterRemain();
+
+  row(0, "Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error, t.session5hShort,
+      g_snap.claude.sessionPercent, cs1, true, t.week, g_snap.claude.weeklyPercent, cs2);
+  row(1, "Cursor", ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error, t.cursorModelsShort,
+      g_snap.cursor.percent, us1, true, t.otherShort, g_snap.cursor.otherPercent, us2);
+  row(2, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok, g_snap.openrouter.error, t.credits,
+      g_snap.openrouter.percent, os1, false, "", -1, "");
 }
 
 static void splashDelay(uint32_t ms) {

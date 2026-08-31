@@ -10,6 +10,7 @@ HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
 static UiTheme g_theme = THEME_DARK;
 static UiLang g_lang = LANG_PT;
 static HeaderEdge g_headerEdge = HEADER_LEFT;
+static UiAccent g_accent = ACCENT_RED;
 
 uint16_t COL_BG = 0x10A3;
 uint16_t COL_CARD = 0x1904;
@@ -25,6 +26,33 @@ uint16_t COL_BAD = 0xDB6D;
 uint16_t COL_BADGE_YELLOW = 0xE1C6;
 uint16_t COL_INVERSE = 0x10A3;
 
+static uint16_t accentRgb(UiTheme theme, UiAccent accent) {
+  if (accent >= ACCENT_COUNT) {
+    accent = ACCENT_RED;
+  }
+  // Vermelho (padrao) + laranja, amarelo, verde, ciano, azul, violeta.
+  static const uint16_t k[3][ACCENT_COUNT] = {
+      {0xE1C6, 0xFCA3, 0xF6C4, 0x4E8A, 0x3D9B, 0x4C7F, 0xC2BB},
+      {0xC124, 0xD240, 0xC4A0, 0x1C64, 0x0453, 0x2257, 0x8019},
+      {0xF800, 0xFD20, 0xFFE0, 0x07E0, 0x07FF, 0x001F, 0xF81F},
+  };
+  return k[(uint8_t)theme][(uint8_t)accent];
+}
+
+static uint16_t inverseOnAccent(uint16_t c) {
+  int r = (c >> 11) & 0x1F;
+  int g = (c >> 5) & 0x3F;
+  int b = c & 0x1F;
+  int luma = r * 2 + g + b;
+  return luma > 80 ? (uint16_t)0x0000 : (uint16_t)0xFFFF;
+}
+
+static void applyAccentColors() {
+  COL_ACCENT = accentRgb(g_theme, g_accent);
+  COL_BADGE_YELLOW = COL_ACCENT;
+  COL_INVERSE = inverseOnAccent(COL_ACCENT);
+}
+
 static void applyTheme(UiTheme theme) {
   g_theme = theme;
   if (theme == THEME_LIGHT) {
@@ -35,12 +63,10 @@ static void applyTheme(UiTheme theme) {
     COL_TEXT = 0x18C3;
     COL_TEXT_DIM = 0x4A69;
     COL_TEXT_MUTED = 0x7BEF;
-    COL_ACCENT = 0xC124;
     COL_GOOD = 0x3386;
     COL_WARN = 0xC3A0;
     COL_BAD = 0xC165;
-    COL_BADGE_YELLOW = 0xC124;
-    COL_INVERSE = 0x18C3;
+    applyAccentColors();
     return;
   }
   if (theme == THEME_CONTRAST) {
@@ -51,12 +77,10 @@ static void applyTheme(UiTheme theme) {
     COL_TEXT = 0xFFFF;
     COL_TEXT_DIM = 0xFFFF;
     COL_TEXT_MUTED = 0xC618;
-    COL_ACCENT = 0xF800;
     COL_GOOD = 0x07E0;
     COL_WARN = 0xFFE0;
     COL_BAD = 0xF800;
-    COL_BADGE_YELLOW = 0xF800;
-    COL_INVERSE = 0x0000;
+    applyAccentColors();
     return;
   }
   COL_BG = 0x10A3;
@@ -66,12 +90,10 @@ static void applyTheme(UiTheme theme) {
   COL_TEXT = 0xF79D;
   COL_TEXT_DIM = 0xAD76;
   COL_TEXT_MUTED = 0x6B6E;
-  COL_ACCENT = 0xE1C6;
   COL_GOOD = 0x8DF2;
   COL_WARN = 0xE52B;
   COL_BAD = 0xDB6D;
-  COL_BADGE_YELLOW = 0xE1C6;
-  COL_INVERSE = 0x10A3;
+  applyAccentColors();
 }
 
 static void loadUiPrefs() {
@@ -84,6 +106,7 @@ static void loadUiPrefs() {
   uint8_t theme = prefs.getUChar("theme", (uint8_t)THEME_DARK);
   uint8_t lang = prefs.getUChar("lang", (uint8_t)LANG_PT);
   uint8_t edge = prefs.getUChar("edge", (uint8_t)HEADER_LEFT);
+  uint8_t accent = prefs.getUChar("accent", (uint8_t)ACCENT_RED);
   prefs.end();
   if (home > (uint8_t)HOME_LAYOUT_GRID) {
     home = (uint8_t)HOME_LAYOUT_LIST;
@@ -97,7 +120,11 @@ static void loadUiPrefs() {
   if (edge > (uint8_t)HEADER_BOTTOM) {
     edge = (uint8_t)HEADER_LEFT;
   }
+  if (accent >= (uint8_t)ACCENT_COUNT) {
+    accent = (uint8_t)ACCENT_RED;
+  }
   g_homeLayout = (HomeLayout)home;
+  g_accent = (UiAccent)accent;
   applyTheme((UiTheme)theme);
   g_lang = (UiLang)lang;
   g_headerEdge = (HeaderEdge)edge;
@@ -159,6 +186,23 @@ void uiSetLang(UiLang lang) {
 
 HeaderEdge uiHeaderEdge() { return g_headerEdge; }
 
+UiAccent uiAccent() { return g_accent; }
+
+uint16_t uiAccentColor(UiAccent accent) { return accentRgb(g_theme, accent); }
+
+void uiSetAccent(UiAccent accent) {
+  if (accent >= ACCENT_COUNT) {
+    return;
+  }
+  if (accent == g_accent) {
+    return;
+  }
+  g_accent = accent;
+  applyAccentColors();
+  saveUiPref("accent", (uint8_t)g_accent);
+  uiPaint();
+}
+
 void uiSetHeaderEdge(HeaderEdge edge) {
   if (edge > HEADER_BOTTOM) {
     return;
@@ -175,13 +219,18 @@ void uiSetHeaderEdge(HeaderEdge edge) {
 // sem repintar a tela inteira — chamado a cada volta do loop() em main.cpp.
 void uiTickClock() {
   if (g_view == VIEW_NOW) {
-    int year, mo, dd, hh, mi;
-    int key = wallClockNow(year, mo, dd, hh, mi) ? (hh * 60 + mi) : -1;
+    int year, mo, dd, hh, mi, ss;
+    int key = wallClockNow(year, mo, dd, hh, mi, ss) ? (hh * 3600 + mi * 60 + ss) : -1;
     if (key == g_lastHeaderKey) {
       return;
     }
+    const bool sameMinute = (g_lastHeaderKey >= 0 && key >= 0 && (key / 60) == (g_lastHeaderKey / 60));
     g_lastHeaderKey = key;
-    paintNow();
+    if (sameMinute) {
+      paintNowClock();
+    } else {
+      paintNow();
+    }
     return;
   }
   int key = headerDisplayKey(countdownSeconds(), showFetchOkCheck());
@@ -371,6 +420,17 @@ void uiHandleTap(int16_t x, int16_t y) {
         uiSetTheme(THEME_LIGHT);
       } else {
         uiSetTheme(THEME_CONTRAST);
+      }
+      return;
+    }
+    if (inRow(g_accentBtnY, g_accentBtnH)) {
+      int cell = g_accentCellW + g_accentGap;
+      if (cell < 1) {
+        return;
+      }
+      int i = (x - g_accentX0) / cell;
+      if (i >= 0 && i < (int)ACCENT_COUNT) {
+        uiSetAccent((UiAccent)i);
       }
       return;
     }

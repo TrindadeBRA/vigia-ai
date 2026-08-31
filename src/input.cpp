@@ -267,6 +267,8 @@ static void handleSerial() {
       uiSetLang((UiLang)(((uint8_t)uiLang() + 1) % 3));
     } else if (c == 'h' || c == 'H') {
       uiSetHeaderEdge((HeaderEdge)(((uint8_t)uiHeaderEdge() + 1) % 4));
+    } else if (c == 'a' || c == 'A') {
+      uiSetAccent((UiAccent)(((uint8_t)uiAccent() + 1) % (uint8_t)ACCENT_COUNT));
     }
   }
 }

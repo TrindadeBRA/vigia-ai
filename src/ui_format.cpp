@@ -79,7 +79,7 @@ int weekdaySun0(int year, int mo, int dd) {
   return (year + year / 4 - year / 100 + year / 400 + t[mo - 1] + dd) % 7;
 }
 
-bool wallClockNow(int& year, int& mo, int& dd, int& hh, int& mi) {
+bool wallClockNow(int& year, int& mo, int& dd, int& hh, int& mi, int& ss) {
   String s = g_snap.updatedAt;
   s.trim();
   if (s.length() < 16 || s.charAt(4) != '-' || s.indexOf('T') != 10) {
@@ -90,7 +90,7 @@ bool wallClockNow(int& year, int& mo, int& dd, int& hh, int& mi) {
   dd = s.substring(8, 10).toInt();
   hh = s.substring(11, 13).toInt();
   mi = s.substring(14, 16).toInt();
-  int ss = (s.length() >= 19) ? s.substring(17, 19).toInt() : 0;
+  ss = (s.length() >= 19) ? s.substring(17, 19).toInt() : 0;
   if (year < 2020 || mo < 1 || mo > 12 || dd < 1) {
     return false;
   }
@@ -99,10 +99,14 @@ bool wallClockNow(int& year, int& mo, int& dd, int& hh, int& mi) {
     ss += (int)((millis() - origin) / 1000UL);
   }
   mi += ss / 60;
+  ss %= 60;
   hh += mi / 60;
   dd += hh / 24;
   mi %= 60;
   hh %= 24;
+  if (ss < 0) {
+    ss += 60;
+  }
   if (mi < 0) {
     mi += 60;
   }
