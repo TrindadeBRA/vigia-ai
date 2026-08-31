@@ -105,6 +105,7 @@ void setup() {
 void loop() {
   inputPoll();
   uiTickClock();
+  uiTickEye();
 
 #ifdef MOCK_USAGE
   if (g_requestRefresh) {

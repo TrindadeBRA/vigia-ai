@@ -357,3 +357,15 @@ void drawBrand(int x, int y, uint8_t font) {
   tft.setTextColor(COL_ACCENT, COL_BG);
   tft.drawString(" AI", x + tft.textWidth("VIGIA", font), y, font);
 }
+
+void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY) {
+  tft.fillCircle(cx, cy, r, TFT_WHITE);
+  tft.drawCircle(cx, cy, r, COL_TEXT_DIM);
+  const int pupilR = r * 2 / 5;
+  const int px = cx + gazeX;
+  const int py = cy + gazeY;
+  tft.fillCircle(px, py, pupilR, COL_ACCENT);
+  if (pupilR >= 4) {
+    tft.fillCircle(px - pupilR / 3, py - pupilR / 3, 2, TFT_WHITE);
+  }
+}

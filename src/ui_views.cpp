@@ -28,6 +28,11 @@ int g_headerClockX0 = 0;
 int g_headerClockY0 = 0;
 int g_headerClockX1 = 0;
 int g_headerClockY1 = 0;
+int g_eyeCx = 0;
+int g_eyeCy = 0;
+int g_eyeR = 0;
+int g_eyeGazeX = 0;
+int g_eyeGazeY = 0;
 View g_homeCardView[4] = {VIEW_CLAUDE, VIEW_CURSOR, VIEW_OPENROUTER, VIEW_DEEPSEEK};
 int g_homeCardX[4] = {0, 0, 0, 0};
 int g_homeCardY[4] = {0, 0, 0, 0};
@@ -168,14 +173,6 @@ void layoutContent() {
   }
 }
 
-static void drawBrandStack(int cx, int y) {
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(COL_TEXT, COL_BG);
-  tft.drawString("VIGIA", cx, y, 1);
-  tft.setTextColor(COL_ACCENT, COL_BG);
-  tft.drawString("AI", cx, y + 10, 1);
-}
-
 void drawHeader() {
   layoutContent();
   const int W = tft.width();
@@ -208,10 +205,14 @@ void drawHeader() {
       drawBackChevron(g_hdrX0 + 14, midY, COL_TEXT_DIM);
       brandX = g_hdrX0 + 24;
     }
-    drawBrand(brandX, barY + 8, 2);
+    const int eyeR = g_headerH / 2 - 4;
+    g_eyeCx = brandX + eyeR;
+    g_eyeCy = midY;
+    g_eyeR = eyeR;
+    drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY);
     g_headerHomeX0 = g_hdrX0;
     g_headerHomeY0 = g_hdrY0;
-    g_headerHomeX1 = brandX + brandWidth(2) + 12;
+    g_headerHomeX1 = brandX + eyeR * 2 + 12;
     g_headerHomeY1 = g_hdrY1;
 
     const int badgeCx = g_hdrX1 - 8 - r;
@@ -246,20 +247,25 @@ void drawHeader() {
     drawBackChevron(cx, y + 6, COL_TEXT_DIM);
     y += 18;
   }
-  drawBrandStack(cx, y);
+  const int eyeR = g_headerH / 2 - 6;
+  g_eyeCx = cx;
+  g_eyeCy = y + eyeR;
+  g_eyeR = eyeR;
+  drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY);
+  const int iconBottom = y + eyeR * 2;
   g_headerHomeX0 = g_hdrX0;
   g_headerHomeY0 = g_hdrY0;
   g_headerHomeX1 = g_hdrX1;
-  g_headerHomeY1 = y + 28;
+  g_headerHomeY1 = iconBottom + 4;
 
   String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 5) : "--:--";
   tft.setTextDatum(TC_DATUM);
   tft.setTextColor(COL_TEXT, COL_BG);
-  tft.drawString(right, cx, y + 30, 1);
+  tft.drawString(right, cx, iconBottom + 10, 1);
   g_headerClockX0 = g_hdrX0;
-  g_headerClockY0 = y + 24;
+  g_headerClockY0 = iconBottom + 4;
   g_headerClockX1 = g_hdrX1;
-  g_headerClockY1 = y + 48;
+  g_headerClockY1 = iconBottom + 28;
 
   const int badgeCy = H - 8 - r;
   const int infoCy = showBadge ? badgeCy - r - 12 - infoR : H - 8 - infoR;

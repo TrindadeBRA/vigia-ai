@@ -31,3 +31,8 @@ void drawFwdChevron(int cx, int cy, uint16_t color);
 // Marca "VIGIA" (texto) + " AI" (acento), igual ao header. Datum TL.
 int brandWidth(uint8_t font);
 void drawBrand(int x, int y, uint8_t font);
+
+// Icone da marca: olho com esclera branca fixa (nao muda com o tema) e pupila
+// na cor de acento, desviada do centro por (gazeX, gazeY) em px — usado pra
+// animar o olhar (ver uiTickEye em ui.cpp). Centro (cx, cy), raio r.
+void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY);

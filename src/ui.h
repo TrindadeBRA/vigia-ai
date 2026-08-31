@@ -42,6 +42,7 @@ void uiShowSplash();
 void uiPaint();
 void uiRefreshData();
 void uiTickClock();
+void uiTickEye();
 void uiNext();
 void uiPrev();
 void uiSetView(View v);

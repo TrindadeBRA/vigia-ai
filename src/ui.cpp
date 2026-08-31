@@ -240,6 +240,45 @@ void uiTickClock() {
   drawHeader();
 }
 
+// Anima a pupila do olho da marca (saccade: olha pra um ponto, pausa curta,
+// olha pra outro) redesenhando só o icone, sem passar por drawHeader() —
+// chamado a cada volta do loop() em main.cpp, bem mais amiude que o resto do
+// header pra dar movimento continuo. VIEW_NOW e tela cheia sem header.
+void uiTickEye() {
+  if (g_view == VIEW_NOW || g_eyeR <= 0) {
+    return;
+  }
+  static uint32_t lastDrawMs = 0;
+  static uint32_t nextMoveMs = 0;
+  static int targetX = 0;
+  static int targetY = 0;
+  static float gazeX = 0;
+  static float gazeY = 0;
+
+  uint32_t now = millis();
+  if (now - lastDrawMs < 40) {
+    return;
+  }
+  lastDrawMs = now;
+
+  if ((int32_t)(now - nextMoveMs) >= 0) {
+    int maxGaze = g_eyeR * 3 / 5 - 2;
+    if (maxGaze < 1) {
+      maxGaze = 1;
+    }
+    targetX = random(-maxGaze, maxGaze + 1);
+    targetY = random(-maxGaze, maxGaze + 1);
+    nextMoveMs = now + random(900, 2600);
+  }
+
+  gazeX += (targetX - gazeX) * 0.2f;
+  gazeY += (targetY - gazeY) * 0.2f;
+  g_eyeGazeX = (int)gazeX;
+  g_eyeGazeY = (int)gazeY;
+
+  drawEyeIcon(g_eyeCx, g_eyeCy, g_eyeR, g_eyeGazeX, g_eyeGazeY);
+}
+
 void uiSetView(View v) {
   if (v >= VIEW_COUNT) {
     return;

@@ -27,6 +27,16 @@ extern int g_headerClockX0;
 extern int g_headerClockY0;
 extern int g_headerClockX1;
 extern int g_headerClockY1;
+// Geometria do olho da marca no header, preenchida por drawHeader() a cada
+// pintura — uiTickEye() usa pra saber onde redesenhar só a pupila animada.
+extern int g_eyeCx;
+extern int g_eyeCy;
+extern int g_eyeR;
+// Desvio atual da pupila (px a partir do centro), animado por uiTickEye() em
+// ui.cpp — drawHeader() reaproveita pra não "teleportar" o olhar de volta ao
+// centro a cada redesenho periódico do header (contador, refresh etc).
+extern int g_eyeGazeX;
+extern int g_eyeGazeY;
 // Retangulos de toque dos cards da Início, preenchidos por paintHomeList()/
 // paintHomeGrid() a cada pintura — só os provedores com `configured=true`
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta
