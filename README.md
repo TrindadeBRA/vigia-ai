@@ -18,6 +18,10 @@ rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
 
 <br>
 
+<img src="docs/assets/firmware/wokwi-wiring.png" width="640" alt="Diagrama de montagem: ESP32 + TFT 3,5&quot; touch, simulado no Wokwi">
+
+<br><br>
+
 <table>
 <tr>
 <td><img src="docs/assets/firmware/display-home-list.png" width="260" alt="Início — lista de contas"></td>
