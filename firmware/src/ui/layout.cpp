@@ -403,19 +403,24 @@ void layoutContent()
 }
 
 // Relógio no vão livre da barra (entre marca/horário e o "i"). Sem espaço, some.
-static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint16_t color) {
+static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint16_t color)
+{
   const int clockR = 9;
   const int pad = 8;
   const int need = (clockR + pad) * 2;
   g_clockIconR = 0;
-  if (gap1 - gap0 < need) {
+  if (gap1 - gap0 < need)
+  {
     return;
   }
   const int mid = (gap0 + gap1) / 2;
-  if (vert) {
+  if (vert)
+  {
     g_clockIconCx = along;
     g_clockIconCy = mid;
-  } else {
+  }
+  else
+  {
     g_clockIconCx = mid;
     g_clockIconCy = along;
   }
@@ -423,7 +428,8 @@ static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint
   drawClockIcon(g_clockIconCx, g_clockIconCy, clockR, color);
 }
 
-void drawHeader() {
+void drawHeader()
+{
   layoutContent();
   g_clockIconR = 0;
   const int W = tft.width();
@@ -494,7 +500,8 @@ void drawHeader() {
     tft.setTextColor(COL_TEXT, COL_BG);
     tft.drawString(right, g_headerInfoX0 - 4, barY + 8, 2);
     drawHeaderClockButton(g_headerHomeX1, g_headerClockX0, midY, false, clockCol);
-    if (showBadge) {
+    if (showBadge)
+    {
       drawCountdownBadgeAt(badgeCx, midY, secs);
     }
     return;
@@ -535,7 +542,8 @@ void drawHeader() {
   g_headerInfoX1 = g_hdrX1;
   g_headerInfoY1 = infoCy + infoR + 8;
   drawHeaderClockButton(g_headerClockY1, g_headerInfoY0, cx, true, clockCol);
-  if (showBadge) {
+  if (showBadge)
+  {
     drawCountdownBadgeAt(cx, badgeCy, secs);
   }
 }

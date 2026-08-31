@@ -1,5 +1,5 @@
-import type { Lang } from "../../i18n";
 import type { ProviderCardPublic } from "../../api/types";
+import type { Lang } from "../../i18n";
 
 export type ConfigCopy = {
   title: string;

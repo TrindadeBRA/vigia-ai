@@ -4,11 +4,11 @@ import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeGoAccount, UsagePayload } from "../api/types";
 import { Logo } from "../components/Logo";
 import { CheckIcon, ClockIcon, CloseIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
-import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs, prefersReducedMotion } from "../format";
+import "../display.css";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import type { ConfigOutlet } from "./config/ConfigPage";
-import "../display.css";
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang };
 type Pal = (typeof PALETTES)[ThemeName];

@@ -2,25 +2,25 @@
 
 Leia este arquivo **antes** de alterar o repositório. Complementos:
 
-| Arquivo | Quando usar |
-| --- | --- |
-| [SETUP.md](SETUP.md) | Instalar e rodar: quick start, comandos, placa, Wokwi, provedores |
-| [ARQUITETURA.md](ARQUITETURA.md) | Coletor ↔ ESP32 ↔ APIs |
-| [CONTRATO_JSON.md](CONTRATO_JSON.md) | Formato de `/usage` (não quebrar o firmware) |
-| [APIS_CLAUDE.md](APIS_CLAUDE.md) | OAuth usage da Anthropic |
-| [APIS_GPT.md](APIS_GPT.md) | OAuth usage do Codex / ChatGPT |
-| [APIS_CURSOR.md](APIS_CURSOR.md) | Dashboard Connect RPC do Cursor |
-| [APIS_OPENROUTER.md](APIS_OPENROUTER.md) | Créditos da key OpenRouter |
-| [APIS_DEEPSEEK.md](APIS_DEEPSEEK.md) | Saldo da key DeepSeek |
-| [APIS_OPENCODE_GO.md](APIS_OPENCODE_GO.md) | Assinatura mensal OpenCode Go |
-| [APIS_OPENCODE_ZEN.md](APIS_OPENCODE_ZEN.md) | Saldo pré-pago OpenCode Zen |
-| [HARDWARE.md](HARDWARE.md) | Placa, pinos, drivers TFT |
-| [TOUCH.md](TOUCH.md) | Views, XPT2046, calibração, Wokwi |
-| [BACKEND.md](BACKEND.md) | Como rodar o FastAPI |
-| [FRONTEND.md](FRONTEND.md) | Painel e mostrador React |
-| [FIRMWARE.md](FIRMWARE.md) | PlatformIO, Wokwi, `secrets.h` |
-| [DECISOES.md](DECISOES.md) | Por que as escolhas atuais |
-| [PLANO.md](PLANO.md) | Escopo do protótipo (histórico) |
+| Arquivo                                      | Quando usar                                                       |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| [SETUP.md](SETUP.md)                         | Instalar e rodar: quick start, comandos, placa, Wokwi, provedores |
+| [ARQUITETURA.md](ARQUITETURA.md)             | Coletor ↔ ESP32 ↔ APIs                                            |
+| [CONTRATO_JSON.md](CONTRATO_JSON.md)         | Formato de `/usage` (não quebrar o firmware)                      |
+| [APIS_CLAUDE.md](APIS_CLAUDE.md)             | OAuth usage da Anthropic                                          |
+| [APIS_GPT.md](APIS_GPT.md)                   | OAuth usage do Codex / ChatGPT                                    |
+| [APIS_CURSOR.md](APIS_CURSOR.md)             | Dashboard Connect RPC do Cursor                                   |
+| [APIS_OPENROUTER.md](APIS_OPENROUTER.md)     | Créditos da key OpenRouter                                        |
+| [APIS_DEEPSEEK.md](APIS_DEEPSEEK.md)         | Saldo da key DeepSeek                                             |
+| [APIS_OPENCODE_GO.md](APIS_OPENCODE_GO.md)   | Assinatura mensal OpenCode Go                                     |
+| [APIS_OPENCODE_ZEN.md](APIS_OPENCODE_ZEN.md) | Saldo pré-pago OpenCode Zen                                       |
+| [HARDWARE.md](HARDWARE.md)                   | Placa, pinos, drivers TFT                                         |
+| [TOUCH.md](TOUCH.md)                         | Views, XPT2046, calibração, Wokwi                                 |
+| [BACKEND.md](BACKEND.md)                     | Como rodar o FastAPI                                              |
+| [FRONTEND.md](FRONTEND.md)                   | Painel e mostrador React                                          |
+| [FIRMWARE.md](FIRMWARE.md)                   | PlatformIO, Wokwi, `secrets.h`                                    |
+| [DECISOES.md](DECISOES.md)                   | Por que as escolhas atuais                                        |
+| [PLANO.md](PLANO.md)                         | Escopo do protótipo (histórico)                                   |
 
 ## O que é este projeto
 
