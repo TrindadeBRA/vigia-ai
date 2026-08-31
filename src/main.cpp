@@ -50,11 +50,12 @@ static void applyMock() {
   g_snap.claude.sessionResets = "2026-08-31T04:00:00Z";
   g_snap.claude.weeklyResets = "2026-09-04T03:00:00Z";
   g_snap.cursor.ok = true;
-  g_snap.cursor.percent = 35;
-  g_snap.cursor.usedCents = 700;
-  g_snap.cursor.limitCents = 2000;
+  g_snap.cursor.percent = 70;
+  g_snap.cursor.otherPercent = 73;
+  g_snap.cursor.usedCents = 0;
+  g_snap.cursor.limitCents = 1000;
   g_snap.cursor.bonusCents = 0;
-  g_snap.cursor.cycleEnd = "2026-09-15T00:00:00Z";
+  g_snap.cursor.cycleEnd = "01/09";
   g_snap.cursor.plan = "pro";
   g_netLine = "simulador Wokwi";
 }
@@ -118,6 +119,7 @@ static bool parseUsageJson(const String& body) {
   g_snap.cursor.ok = cursor["ok"] | false;
   g_snap.cursor.error = cursor["error"].isNull() ? "" : String(cursor["error"].as<const char*>());
   g_snap.cursor.percent = jsonFloatOrNeg(cursor["percent"]);
+  g_snap.cursor.otherPercent = jsonFloatOrNeg(cursor["other_percent"]);
   g_snap.cursor.usedCents = cursor["used_cents"].isNull() ? -1 : cursor["used_cents"].as<int>();
   g_snap.cursor.limitCents = cursor["limit_cents"].isNull() ? -1 : cursor["limit_cents"].as<int>();
   g_snap.cursor.bonusCents = cursor["bonus_cents"].isNull() ? -1 : cursor["bonus_cents"].as<int>();
@@ -239,7 +241,7 @@ void setup() {
 
   tft.init();
   tft.setRotation(1);
-  tft.fillScreen(TFT_NAVY);
+  tft.fillScreen(COL_BG);
   uiInit();
 
 #ifdef MOCK_USAGE
@@ -258,7 +260,7 @@ void setup() {
   Serial.println("=== CONTROL-IA hardware ===");
 #endif
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_YELLOW, TFT_NAVY);
+  tft.setTextColor(COL_ACCENT, COL_BG);
   tft.drawString("CONTROL-IA", tft.width() / 2, tft.height() / 2, 4);
   inputBegin();
   g_lastFetchMs = 0;

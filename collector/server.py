@@ -28,8 +28,6 @@ CURSOR_AUTH_USAGE_URL = "https://api2.cursor.sh/auth/usage"
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {"ts": 0.0, "payload": None}
-_fx_lock = threading.Lock()
-_fx: dict[str, Any] = {"ts": 0.0, "usd_brl": 5.5}
 
 
 def _repo_root() -> Path:
@@ -92,9 +90,17 @@ def as_percent(value: Any) -> float | None:
     return round(n, 1)
 
 
-def iso_or_none(value: Any) -> str | None:
+def tela_data_utc(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).strftime("%d/%m")
+
+
+def parse_when(value: Any) -> datetime | None:
     if value is None:
         return None
+    if isinstance(value, datetime):
+        return value
     if isinstance(value, str):
         s = value.strip()
         if not s:
@@ -105,18 +111,37 @@ def iso_or_none(value: Any) -> str | None:
             value = float(s)
         else:
             try:
-                raw = s.replace("Z", "+00:00")
-                return tela_brt(datetime.fromisoformat(raw))
+                return datetime.fromisoformat(s.replace("Z", "+00:00"))
             except ValueError:
-                if "/" in s:
-                    return s
-                return s
+                return None
     if isinstance(value, (int, float)) and value > 1e11:
-        return tela_brt(datetime.fromtimestamp(value / 1000.0, tz=timezone.utc))
+        return datetime.fromtimestamp(value / 1000.0, tz=timezone.utc)
     if isinstance(value, (int, float)) and value > 1e9:
-        return tela_brt(datetime.fromtimestamp(float(value), tz=timezone.utc))
-    s = str(value).strip()
-    return s or None
+        return datetime.fromtimestamp(float(value), tz=timezone.utc)
+    return None
+
+
+def iso_or_none(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str) and "/" in value.strip() and "h" in value:
+        return value.strip()
+    dt = parse_when(value)
+    if dt is None:
+        s = str(value).strip() if value is not None else ""
+        return s or None
+    return tela_brt(dt)
+
+
+def cycle_end_label(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str) and len(value.strip()) >= 5 and value.strip()[2:3] == "/":
+        return value.strip()[:5]
+    dt = parse_when(value)
+    if dt is None:
+        return None
+    return tela_data_utc(dt)
 
 
 def money_cents(value: Any) -> int | None:
@@ -152,49 +177,6 @@ def http_json(
         return json.loads(raw)
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"JSON inválido de {url}: {exc}") from exc
-
-
-USD_BRL_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
-
-
-def usd_brl_rate() -> float:
-    env = (os.environ.get("USD_BRL") or "").strip()
-    if env:
-        try:
-            n = float(env.replace(",", "."))
-            if n > 0:
-                return n
-        except ValueError:
-            pass
-    now = time.time()
-    with _fx_lock:
-        if now - float(_fx["ts"]) < 3600 and float(_fx["usd_brl"]) > 0:
-            return float(_fx["usd_brl"])
-    try:
-        data = http_json(USD_BRL_URL, timeout=8.0)
-        bid = float((data.get("USDBRL") or {}).get("bid"))
-        if bid <= 0:
-            raise RuntimeError("cotacao vazia")
-        with _fx_lock:
-            _fx["ts"] = now
-            _fx["usd_brl"] = bid
-        print(f"USD/BRL {bid:.4f}")
-        return bid
-    except Exception as exc:  # noqa: BLE001
-        with _fx_lock:
-            fallback = float(_fx["usd_brl"] or 5.5)
-        print(f"USD/BRL fallback {fallback:.4f} ({exc})")
-        return fallback
-
-
-def cursor_values_brl(cursor: dict[str, Any]) -> dict[str, Any]:
-    out = dict(cursor)
-    rate = usd_brl_rate()
-    for key in ("used_cents", "limit_cents", "bonus_cents"):
-        if out.get(key) is not None:
-            out[key] = int(round(int(out[key]) * rate))
-    out["currency"] = "BRL"
-    return out
 
 
 def claude_token_and_expiry() -> tuple[str | None, int | None, str | None]:
@@ -336,32 +318,34 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
     usage = data.get("planUsage") or data.get("plan_usage") or {}
     if not isinstance(usage, dict):
         usage = {}
-    percent = as_percent(
-        usage.get("totalPercentUsed")
-        or usage.get("autoPercentUsed")
-        or usage.get("includedPercentUsed")
-    )
-    included = money_cents(usage.get("includedSpend"))
-    limit = money_cents(usage.get("limit") or usage.get("includedLimit"))
-    bonus = money_cents(usage.get("bonusSpend"))
-    total = money_cents(usage.get("totalSpend"))
-    used_cents = included if included is not None else total
-    cycle_end = iso_or_none(
+    # Painel Cursor: "Cursor Models" = auto, "Other Models" = api.
+    percent = as_percent(usage.get("autoPercentUsed") or usage.get("totalPercentUsed"))
+    other_percent = as_percent(usage.get("apiPercentUsed"))
+    spend = data.get("spendLimitUsage") or data.get("spend_limit_usage") or {}
+    if not isinstance(spend, dict):
+        spend = {}
+    ondemand_limit = money_cents(spend.get("individualLimit") or spend.get("limit"))
+    ondemand_remain = money_cents(spend.get("individualRemaining") or spend.get("remaining"))
+    ondemand_used = None
+    if ondemand_limit is not None and ondemand_remain is not None:
+        ondemand_used = max(0, ondemand_limit - ondemand_remain)
+    elif ondemand_limit is not None:
+        ondemand_used = 0
+    cycle_end = cycle_end_label(
         data.get("billingCycleEnd") or data.get("billing_cycle_end") or usage.get("endDate")
     )
-    if percent is None and used_cents is not None and limit:
-        percent = as_percent((used_cents / limit) * 100.0)
-    if percent is None and used_cents is None and not cycle_end and not usage:
+    if percent is None and other_percent is None and ondemand_limit is None and not cycle_end:
         return None
     return {
-        "ok": percent is not None or used_cents is not None,
+        "ok": percent is not None or other_percent is not None or ondemand_limit is not None,
         "error": None
-        if (percent is not None or used_cents is not None)
+        if (percent is not None or other_percent is not None or ondemand_limit is not None)
         else "planUsage sem números",
         "percent": percent,
-        "used_cents": used_cents,
-        "limit_cents": limit,
-        "bonus_cents": bonus,
+        "other_percent": other_percent,
+        "used_cents": ondemand_used,
+        "limit_cents": ondemand_limit,
+        "bonus_cents": 0,
         "cycle_end": cycle_end,
         "plan": (plan or data.get("membershipType") or "").strip() or None,
     }
@@ -391,6 +375,7 @@ def parse_cursor_auth_usage(data: dict[str, Any], plan: str | None) -> dict[str,
         "ok": ok,
         "error": None if ok else "auth/usage sem buckets",
         "percent": best_pct,
+        "other_percent": None,
         "used_cents": None,
         "limit_cents": None,
         "bonus_cents": None,
@@ -406,6 +391,7 @@ def _cursor_fail(msg: str) -> dict[str, Any]:
         "ok": False,
         "error": msg,
         "percent": None,
+        "other_percent": None,
         "used_cents": None,
         "limit_cents": None,
         "bonus_cents": None,
@@ -471,11 +457,12 @@ def mock_payload() -> dict[str, Any]:
         "cursor": {
             "ok": True,
             "error": None,
-            "percent": 35.0,
-            "used_cents": 700,
-            "limit_cents": 2000,
+            "percent": 70.0,
+            "other_percent": 73.0,
+            "used_cents": 0,
+            "limit_cents": 1000,
             "bonus_cents": 0,
-            "cycle_end": utc_now(),
+            "cycle_end": "01/09",
             "plan": "pro",
         },
     }
@@ -484,7 +471,6 @@ def mock_payload() -> dict[str, Any]:
 def build_payload() -> dict[str, Any]:
     if os.environ.get("COLLECTOR_MOCK", "").strip() in ("1", "true", "yes"):
         payload = mock_payload()
-        payload["cursor"] = cursor_values_brl(payload["cursor"])
         return payload
     claude: dict[str, Any]
     cursor: dict[str, Any]
@@ -496,7 +482,7 @@ def build_payload() -> dict[str, Any]:
         cursor = fetch_cursor()
     except Exception as exc:  # noqa: BLE001
         cursor = _cursor_fail(str(exc))
-    return {"updated_at": utc_now(), "claude": claude, "cursor": cursor_values_brl(cursor)}
+    return {"updated_at": utc_now(), "claude": claude, "cursor": cursor}
 
 
 def cached_payload() -> dict[str, Any]:

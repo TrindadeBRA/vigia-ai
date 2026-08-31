@@ -121,13 +121,13 @@ bool inputHasTouch() {
 
 void inputRunCalibration() {
 #ifdef TOUCH_CS
-  tft.fillScreen(TFT_NAVY);
+  tft.fillScreen(COL_BG);
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_YELLOW, TFT_NAVY);
+  tft.setTextColor(COL_ACCENT, COL_BG);
   tft.drawString("Toque os cantos", tft.width() / 2, tft.height() / 2 - 12, 4);
   delay(400);
   uint16_t cal[5];
-  tft.calibrateTouch(cal, TFT_WHITE, TFT_NAVY, 20);
+  tft.calibrateTouch(cal, COL_TEXT, COL_BG, 20);
   saveCal(cal);
   tft.setTouch(cal);
   g_requestCalibrate = false;

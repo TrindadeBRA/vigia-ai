@@ -16,15 +16,15 @@ static int g_btnH = 36;
 
 static uint16_t barColor(float pct) {
   if (pct < 0) {
-    return TFT_DARKGREY;
+    return COL_TEXT_MUTED;
   }
   if (pct < 70) {
-    return TFT_GREEN;
+    return COL_GOOD;
   }
   if (pct < 90) {
-    return TFT_ORANGE;
+    return COL_WARN;
   }
-  return TFT_RED;
+  return COL_BAD;
 }
 
 static String fmtWhen(const String& raw) {
@@ -96,50 +96,59 @@ static String fmtRemain(float used) {
   return fmtPct(100.0f - constrain(used, 0, 100));
 }
 
-static String fmtBrl(int cents) {
+static String fmtUsdSite(int cents) {
   if (cents < 0) {
     return "--";
   }
-  long v = (long)cents;
-  long reais = v / 100;
-  int cc = (int)(v % 100);
-  char num[16];
-  snprintf(num, sizeof(num), "%ld", reais);
-  String s;
-  int n = (int)strlen(num);
-  for (int i = 0; i < n; i++) {
-    if (i > 0 && (n - i) % 3 == 0) {
-      s += '.';
-    }
-    s += num[i];
+  long reais = cents / 100;
+  int cc = (int)(cents % 100);
+  if (cents == 0) {
+    return "$0.00";
   }
-  char frac[8];
-  snprintf(frac, sizeof(frac), ",%02d", cc);
-  return String("R$") + s + frac;
+  if (cc == 0) {
+    char buf[20];
+    snprintf(buf, sizeof(buf), "$%ld", reais);
+    return String(buf);
+  }
+  char buf[24];
+  snprintf(buf, sizeof(buf), "$%ld.%02d", reais, cc);
+  return String(buf);
 }
 
+// Barra em pílula: trilho arredondado + preenchimento arredondado por cima.
 static void drawBar(int x, int y, int w, int h, float pct) {
-  tft.drawRect(x, y, w, h, TFT_DARKGREY);
-  int inner = w - 2;
-  int fill = 0;
-  if (pct >= 0) {
-    fill = (int)((inner * constrain(pct, 0, 100)) / 100.0f);
+  const int r = h / 2;
+  tft.fillRoundRect(x, y, w, h, r, COL_TRACK);
+  if (pct < 0) {
+    return;
   }
-  tft.fillRect(x + 1, y + 1, inner, h - 2, 0x0008);
-  if (fill > 0) {
-    tft.fillRect(x + 1, y + 1, fill, h - 2, barColor(pct));
+  int fill = (int)((w * constrain(pct, 0, 100)) / 100.0f);
+  if (fill <= 0) {
+    return;
   }
+  if (fill < h) {
+    fill = h; // mantem a ponta arredondada visivel mesmo com % baixo
+  }
+  if (fill > w) {
+    fill = w;
+  }
+  tft.fillRoundRect(x, y, fill, h, r, barColor(pct));
 }
 
 static void drawHeader() {
   const int W = tft.width();
-  tft.fillRect(0, 0, W, g_headerH, 0x0008);
+  tft.fillRect(0, 0, W, g_headerH, COL_BG);
+  tft.drawFastHLine(0, g_headerH - 1, W, COL_CARD_BORDER);
+
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_YELLOW, 0x0008);
-  tft.drawString("CONTROL-IA", 8, 8, 2);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString("CONTROL", 8, 8, 2);
+  int wControl = tft.textWidth("CONTROL", 2);
+  tft.setTextColor(COL_ACCENT, COL_BG);
+  tft.drawString("-IA", 8 + wControl, 8, 2);
 
   tft.setTextDatum(TR_DATUM);
-  tft.setTextColor(TFT_CYAN, 0x0008);
+  tft.setTextColor(COL_TEXT_DIM, COL_BG);
   String right = g_snap.statusLine.length() ? g_snap.statusLine : "---";
   tft.drawString(right.substring(0, 18), W - 8, 8, 2);
 }
@@ -157,27 +166,34 @@ static const char* navLabel(uint8_t i) {
   }
 }
 
+// Abas minimalistas: rotulo + traço fino de destaque sob a aba ativa
+// (em vez de um bloco preenchido), para um acabamento mais discreto.
 static void drawNav() {
   const int W = tft.width();
   const int H = tft.height();
   const int navH = (H < 280) ? 32 : 52;
   g_navTop = H - navH;
-  tft.fillRect(0, g_navTop, W, navH, 0x0008);
+  tft.fillRect(0, g_navTop, W, navH, COL_NAV_BG);
+  tft.drawFastHLine(0, g_navTop, W, COL_CARD_BORDER);
   const int slot = W / VIEW_COUNT;
   for (uint8_t i = 0; i < VIEW_COUNT; i++) {
     int x = slot * i;
     bool on = (g_view == i);
-    uint16_t bg = on ? TFT_DARKCYAN : 0x0008;
-    tft.fillRect(x + 2, g_navTop + 2, slot - 4, navH - 4, bg);
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(on ? TFT_WHITE : TFT_SILVER, bg);
-    tft.drawString(navLabel(i), x + slot / 2, g_navTop + navH / 2, 2);
+    tft.setTextColor(on ? COL_ACCENT : COL_TEXT_MUTED, COL_NAV_BG);
+    tft.drawString(navLabel(i), x + slot / 2, g_navTop + navH / 2 - 3, 2);
+    if (on) {
+      const int lineW = slot - 28;
+      if (lineW > 0) {
+        tft.fillRoundRect(x + (slot - lineW) / 2, g_navTop + navH - 6, lineW, 3, 1, COL_ACCENT);
+      }
+    }
   }
 }
 
-static void drawError(int x, int y, const String& err) {
+static void drawError(int x, int y, const String& err, uint16_t bg) {
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_ORANGE, TFT_NAVY);
+  tft.setTextColor(COL_BAD, bg);
   String e = err.length() ? err : "sem dados";
   if (e.length() > 40) {
     e = e.substring(0, 40);
@@ -187,53 +203,54 @@ static void drawError(int x, int y, const String& err) {
 
 static void paintHome() {
   const int W = tft.width();
-  const int bodyTop = g_headerH + 6;
-  const int bodyH = g_navTop - bodyTop - 4;
-  const int pad = 8;
-  const int gap = 8;
+  const int bodyTop = g_headerH + 8;
+  const int bodyH = g_navTop - bodyTop - 6;
+  const int pad = 10;
+  const int gap = 10;
   const int cardH = (bodyH - gap) / 2;
   g_homeSplitY = bodyTop + cardH + gap / 2;
 
   auto card = [&](const char* title, int top, bool ok, const String& err, const String& l1,
                   float p1, const String& l2, float p2, bool two) {
     const bool compact = cardH < 120;
-    tft.drawRoundRect(pad, top, W - pad * 2, cardH, 6, TFT_DARKCYAN);
+    tft.fillRoundRect(pad, top, W - pad * 2, cardH, 8, COL_CARD);
+    tft.drawRoundRect(pad, top, W - pad * 2, cardH, 8, COL_CARD_BORDER);
     tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(TFT_WHITE, TFT_NAVY);
-    tft.drawString(title, pad + 10, top + (compact ? 4 : 6), compact ? 2 : 4);
-    tft.setTextColor(TFT_DARKGREY, TFT_NAVY);
+    tft.setTextColor(COL_TEXT, COL_CARD);
+    tft.drawString(title, pad + 12, top + (compact ? 4 : 6), compact ? 2 : 4);
+    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
     tft.setTextDatum(TR_DATUM);
     tft.drawString(">", W - pad - 12, top + (compact ? 4 : 10), 2);
 
     if (!ok) {
-      drawError(pad + 10, top + (compact ? 22 : 40), err);
+      drawError(pad + 12, top + (compact ? 22 : 40), err, COL_CARD);
       return;
     }
-    const int barX = pad + 10;
-    const int barW = W - pad * 2 - (compact ? 52 : 72);
-    const int barH = compact ? 10 : 16;
+    const int barX = pad + 12;
+    const int barW = W - pad * 2 - (compact ? 56 : 76) - 12;
+    const int barH = compact ? 8 : 12;
     const int y1 = top + (compact ? 20 : 36);
     const int yBar1 = top + (compact ? 34 : 54);
     const int y2 = top + (compact ? 48 : 76);
     const int yBar2 = top + (compact ? 62 : 94);
     tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(TFT_SILVER, TFT_NAVY);
+    tft.setTextColor(COL_TEXT_DIM, COL_CARD);
     tft.drawString(l1, barX, y1, 2);
     drawBar(barX, yBar1, barW, barH, p1);
     tft.setTextDatum(TR_DATUM);
-    tft.setTextColor(TFT_WHITE, TFT_NAVY);
-    tft.drawString(fmtPct(p1), W - pad - 12, yBar1 - 2, 2);
+    tft.setTextColor(COL_TEXT, COL_CARD);
+    tft.drawString(fmtPct(p1), W - pad - 12, yBar1 - 3, 2);
     if (two) {
       tft.setTextDatum(TL_DATUM);
-      tft.setTextColor(TFT_SILVER, TFT_NAVY);
+      tft.setTextColor(COL_TEXT_DIM, COL_CARD);
       tft.drawString(l2, barX, y2, 2);
       drawBar(barX, yBar2, barW, barH, p2);
       tft.setTextDatum(TR_DATUM);
-      tft.setTextColor(TFT_WHITE, TFT_NAVY);
-      tft.drawString(fmtPct(p2), W - pad - 12, yBar2 - 2, 2);
+      tft.setTextColor(COL_TEXT, COL_CARD);
+      tft.drawString(fmtPct(p2), W - pad - 12, yBar2 - 3, 2);
     } else if (l2.length()) {
       tft.setTextDatum(TL_DATUM);
-      tft.setTextColor(TFT_SILVER, TFT_NAVY);
+      tft.setTextColor(COL_TEXT_DIM, COL_CARD);
       tft.drawString(l2, barX, compact ? y2 : top + 80, 2);
     }
   };
@@ -246,129 +263,166 @@ static void paintHome() {
   if (g_snap.claude.weeklyResets.length()) {
     c2 += "  " + fmtWhen(g_snap.claude.weeklyResets);
   }
-  String u1 = g_snap.cursor.plan.length() ? String("Plano ") + g_snap.cursor.plan : "Plano";
-  String u2;
-  if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents > 0) {
-    u2 = "incluso " + fmtBrl(g_snap.cursor.usedCents) + " / " + fmtBrl(g_snap.cursor.limitCents);
-  }
-  if (g_snap.cursor.bonusCents > 0) {
-    if (u2.length()) {
-      u2 += "  ";
+  String u1 = "Modelos Cursor";
+  String u2 = "Outros modelos";
+  bool twoCursor = g_snap.cursor.otherPercent >= 0;
+  if (!twoCursor) {
+    u2 = "";
+    if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents >= 0) {
+      u2 = "On-demand " + fmtUsdSite(g_snap.cursor.usedCents) + " / " +
+           fmtUsdSite(g_snap.cursor.limitCents);
     }
-    u2 += "extra " + fmtBrl(g_snap.cursor.bonusCents);
-  }
-  if (g_snap.cursor.cycleEnd.length()) {
-    if (u2.length()) {
-      u2 += "  ";
-    }
-    u2 += "ate " + fmtWhen(g_snap.cursor.cycleEnd);
   }
 
   card("Claude", bodyTop, g_snap.claude.ok, g_snap.claude.error, c1, g_snap.claude.sessionPercent, c2,
        g_snap.claude.weeklyPercent, true);
   card("Cursor", bodyTop + cardH + gap, g_snap.cursor.ok, g_snap.cursor.error, u1, g_snap.cursor.percent,
-       u2, -1, false);
+       u2, twoCursor ? g_snap.cursor.otherPercent : -1, twoCursor);
 }
 
-static void paintMetric(const char* title, int y, float used, const String& resetLabel) {
-  const int W = tft.width();
-  const bool compact = tft.height() < 280;
+// Uma métrica dentro de um painel: rótulo + número em destaque à direita,
+// barra em pílula, e uma linha discreta com o que resta / data de reset.
+static void paintMetric(int x, int w, const char* title, int y, float used, const String& resetLabel,
+                         uint16_t bg, bool compact) {
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_SILVER, TFT_NAVY);
-  tft.drawString(title, 12, y, 2);
+  tft.setTextColor(COL_TEXT_DIM, bg);
+  tft.drawString(title, x, y, 2);
   tft.setTextDatum(TR_DATUM);
-  tft.setTextColor(TFT_WHITE, TFT_NAVY);
-  tft.drawString("resta " + fmtRemain(used), W - 12, y, 2);
-  const int barH = compact ? 14 : 22;
-  drawBar(12, y + 18, W - 24, barH, used);
+  tft.setTextColor(COL_TEXT, bg);
+  tft.drawString(fmtPct(used), x + w, y - (compact ? 2 : 6), compact ? 2 : 4);
+
+  const int barY = y + (compact ? 16 : 26);
+  const int barH = compact ? 10 : 14;
+  drawBar(x, barY, w, barH, used);
+
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_YELLOW, TFT_NAVY);
-  tft.drawString(fmtPct(used) + " usado", 12, y + (compact ? 36 : 48), compact ? 2 : 4);
+  tft.setTextColor(COL_TEXT_MUTED, bg);
+  String sub = "resta " + fmtRemain(used);
   if (resetLabel.length()) {
-    tft.setTextColor(TFT_CYAN, TFT_NAVY);
-    tft.drawString(resetLabel, 12, y + (compact ? 54 : 78), 2);
+    sub += "   " + resetLabel;
   }
+  tft.drawString(sub, x, barY + barH + 5, 2);
 }
 
 static void paintClaude() {
+  const int W = tft.width();
+  const int top = g_headerH + 8;
+  const int bottom = g_navTop - 8;
+  const int cardH = bottom - top;
+  tft.fillRoundRect(8, top, W - 16, cardH, 8, COL_CARD);
+  tft.drawRoundRect(8, top, W - 16, cardH, 8, COL_CARD_BORDER);
+
+  const int padX = 20;
+  const int innerW = W - 16 - padX * 2;
+  const bool compact = cardH < 160;
+
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_WHITE, TFT_NAVY);
-  tft.drawString("Claude", 12, g_headerH + 8, 4);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.drawString("Claude", padX, top + 8, compact ? 2 : 4);
+
   if (!g_snap.claude.ok) {
-    drawError(12, g_headerH + 48, g_snap.claude.error);
+    drawError(padX, top + (compact ? 28 : 48), g_snap.claude.error, COL_CARD);
     return;
   }
-  String r1 = g_snap.claude.sessionResets.length()
-                  ? ("reset sessao " + fmtWhen(g_snap.claude.sessionResets))
-                  : "";
-  String r2 = g_snap.claude.weeklyResets.length()
-                  ? ("reset semana " + fmtWhen(g_snap.claude.weeklyResets))
-                  : "";
-  paintMetric("Janela de 5 horas", g_headerH + 44, g_snap.claude.sessionPercent, r1);
-  const int y2 = tft.height() < 280 ? g_headerH + 112 : g_headerH + 160;
-  paintMetric("Limite semanal", y2, g_snap.claude.weeklyPercent, r2);
+
+  const int titleH = compact ? 20 : 34;
+  const int slotY1 = top + 8 + titleH + 6;
+  const int slotH = (cardH - (8 + titleH + 6) - 10) / 2;
+
+  String r1 = g_snap.claude.sessionResets.length() ? fmtWhen(g_snap.claude.sessionResets) : "";
+  String r2 = g_snap.claude.weeklyResets.length() ? fmtWhen(g_snap.claude.weeklyResets) : "";
+  paintMetric(padX, innerW, "Janela de 5 horas", slotY1, g_snap.claude.sessionPercent, r1, COL_CARD,
+              compact);
+  paintMetric(padX, innerW, "Limite semanal", slotY1 + slotH + 6, g_snap.claude.weeklyPercent, r2,
+              COL_CARD, compact);
 }
 
 static void paintCursor() {
+  const int W = tft.width();
+  const int top = g_headerH + 8;
+  const int bottom = g_navTop - 8;
+  const int cardH = bottom - top;
+  tft.fillRoundRect(8, top, W - 16, cardH, 8, COL_CARD);
+  tft.drawRoundRect(8, top, W - 16, cardH, 8, COL_CARD_BORDER);
+
+  const int padX = 20;
+  const int innerW = W - 16 - padX * 2;
+  const bool compact = cardH < 160;
+
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_WHITE, TFT_NAVY);
-  tft.drawString("Cursor", 12, g_headerH + 8, 4);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.drawString("Cursor", padX, top + 8, compact ? 2 : 4);
+
   if (!g_snap.cursor.ok) {
-    drawError(12, g_headerH + 48, g_snap.cursor.error);
+    drawError(padX, top + (compact ? 28 : 48), g_snap.cursor.error, COL_CARD);
     return;
   }
-  String plan = g_snap.cursor.plan.length() ? g_snap.cursor.plan : "assinatura";
-  paintMetric(plan.c_str(), g_headerH + 48, g_snap.cursor.percent,
-              g_snap.cursor.cycleEnd.length() ? ("ciclo ate " + fmtWhen(g_snap.cursor.cycleEnd)) : "");
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_SILVER, TFT_NAVY);
-  int y = tft.height() < 280 ? g_headerH + 128 : g_headerH + 180;
-  if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents > 0) {
-    tft.drawString("Incluso " + fmtBrl(g_snap.cursor.usedCents) + " / " + fmtBrl(g_snap.cursor.limitCents),
-                   12, y, 2);
-    y += 18;
+
+  const int titleH = compact ? 20 : 34;
+  const int slotY1 = top + 8 + titleH + 6;
+  const int slotH = (cardH - (8 + titleH + 6) - 10) / 2;
+
+  String reset = g_snap.cursor.cycleEnd.length() ? ("reset " + fmtWhen(g_snap.cursor.cycleEnd)) : "";
+  paintMetric(padX, innerW, "Modelos Cursor", slotY1, g_snap.cursor.percent, reset, COL_CARD, compact);
+
+  String ondemand;
+  if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents >= 0) {
+    ondemand = "On-demand " + fmtUsdSite(g_snap.cursor.usedCents) + " / " +
+               fmtUsdSite(g_snap.cursor.limitCents);
   }
-  if (g_snap.cursor.bonusCents > 0) {
-    tft.setTextColor(TFT_ORANGE, TFT_NAVY);
-    tft.drawString("Extra " + fmtBrl(g_snap.cursor.bonusCents), 12, y, 2);
-  }
+  float p2 = g_snap.cursor.otherPercent >= 0 ? g_snap.cursor.otherPercent : -1;
+  paintMetric(padX, innerW, "Outros modelos", slotY1 + slotH + 6, p2, ondemand, COL_CARD, compact);
 }
 
+// Botão contornado (borda em acento, fundo do card) — mais discreto que um
+// bloco solido, condizente com a paleta neutra.
 static void drawButton(int y, const char* label) {
   const int W = tft.width();
-  tft.fillRoundRect(12, y, W - 24, g_btnH, 6, TFT_DARKCYAN);
+  tft.fillRoundRect(12, y, W - 24, g_btnH, 8, COL_CARD);
+  tft.drawRoundRect(12, y, W - 24, g_btnH, 8, COL_ACCENT);
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_WHITE, TFT_DARKCYAN);
+  tft.setTextColor(COL_ACCENT, COL_CARD);
   tft.drawString(label, W / 2, y + g_btnH / 2, 2);
 }
 
 static void paintStatus() {
-  int y = g_headerH + 10;
+  const int W = tft.width();
+  const bool compact = tft.height() < 280;
+  g_btnH = compact ? 28 : 36;
+
+  int y = g_headerH + (compact ? 6 : 10);
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_WHITE, TFT_NAVY);
-  tft.drawString("Sistema", 12, y, 4);
-  y += 36;
-  tft.setTextColor(TFT_SILVER, TFT_NAVY);
-  tft.drawString("Rede", 12, y, 2);
-  y += 18;
-  tft.setTextColor(TFT_WHITE, TFT_NAVY);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString("Sistema", 12, y, compact ? 2 : 4);
+  y += compact ? 20 : 34;
+
+  const int cardTop = y;
+  const int cardH = compact ? 62 : 76;
+  tft.fillRoundRect(8, cardTop, W - 16, cardH, 8, COL_CARD);
+  tft.drawRoundRect(8, cardTop, W - 16, cardH, 8, COL_CARD_BORDER);
+
+  int cy = cardTop + (compact ? 6 : 10);
+  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+  tft.drawString("REDE", 20, cy, 2);
+  cy += compact ? 14 : 18;
+  tft.setTextColor(COL_TEXT, COL_CARD);
   String net = g_netLine.length() ? g_netLine : "---";
   if (net.length() > 38) {
     net = net.substring(0, 38);
   }
-  tft.drawString(net, 12, y, 2);
-  y += 22;
-  tft.setTextColor(TFT_SILVER, TFT_NAVY);
-  tft.drawString("Atualizado", 12, y, 2);
-  y += 18;
-  tft.setTextColor(TFT_WHITE, TFT_NAVY);
-  tft.drawString(g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine, 12, y, 2);
-  y += 28;
+  tft.drawString(net, 20, cy, 2);
+  cy += compact ? 16 : 22;
+  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+  tft.drawString("ATUALIZADO", 20, cy, 2);
+  cy += compact ? 14 : 18;
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.drawString(g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine, 20, cy, 2);
 
+  y = cardTop + cardH + (compact ? 10 : 14);
   g_statusHasRefresh = true;
   g_btnRefY = y;
   drawButton(y, "Atualizar agora");
-  y += g_btnH + 10;
+  y += g_btnH + (compact ? 8 : 10);
 
 #ifdef TOUCH_CS
   g_statusHasCal = true;
@@ -376,8 +430,8 @@ static void paintStatus() {
   drawButton(y, "Calibrar touch");
 #else
   g_statusHasCal = false;
-  tft.setTextColor(TFT_DARKGREY, TFT_NAVY);
-  tft.drawString("Wokwi: clique na tela, botoes ou n/p", 12, y, 2);
+  tft.setTextColor(COL_TEXT_MUTED, COL_BG);
+  tft.drawString("Wokwi: clique na tela, botoes ou n/p", 12, y + g_btnH / 2 - 6, 2);
 #endif
 }
 
@@ -402,7 +456,7 @@ void uiPrev() {
 }
 
 void uiPaint() {
-  tft.fillScreen(TFT_NAVY);
+  tft.fillScreen(COL_BG);
   drawHeader();
   drawNav();
   switch (g_view) {

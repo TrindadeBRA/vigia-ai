@@ -24,6 +24,7 @@ struct CursorUsage {
   bool ok = false;
   String error;
   float percent = -1;
+  float otherPercent = -1;
   int usedCents = -1;
   int limitCents = -1;
   int bonusCents = -1;
