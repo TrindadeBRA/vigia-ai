@@ -12,9 +12,11 @@ Cotas são da conta pessoal. Evita hospedar JWT/OAuth. LAN é suficiente para um
 
 Mesma fonte do CLI/IDE. HTML do dashboard quebra mais. Risco: contrato não oficial (documentado em `APIS_*.md`).
 
-## Um JSON para os dois cards
+## Um JSON, um GET, um parse — mas cada provedor é uma lista de contas
 
-Firmware pequeno: um GET, um parse. Provedor com `ok: false` não derruba o HTTP.
+Continua um único `GET /usage` por ciclo (decisão original: firmware pequeno, provedor com `ok: false` não derruba o HTTP). O que mudou: cada provedor deixou de ser um objeto único e virou uma **lista de contas** (`docs/CONTRATO_JSON.md`), pra suportar múltiplas assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com apelido opcional. Quem tem uma conta só (o caso comum) não vê diferença nenhuma — lista com 1 item. O firmware guarda no máximo `MAX_ACCOUNTS` (5) por provedor; excedentes são ignorados (log serial, nunca trava) — o coletor e o `/display` não têm esse teto.
+
+Decisão de UI física: a Início continua com no máximo 4 cards, um por *tipo* de provedor (não por conta) — dar scroll à Início pra caber N contas seria uma mudança bem maior, numa tela de 3,5". Com mais de uma conta, o card mostra a que mais precisa de atenção (maior percentual) e o detalhe ganha um paginador `‹ i/N ›` pra ver as outras. O mostrador web (`/display`) não tem esse limite de tela — lá cada conta é um card próprio.
 
 ## Wokwi fala com o coletor de verdade (via `wokwigw`)
 

@@ -94,6 +94,16 @@
             Mostrar na placa
           </label>
           <p class="mt-1 text-xs text-ink3">O login local continua; desmarque só para tirar o card da ESP32.</p>
+          <label class="mt-2 block text-xs text-ink3">Apelido da conta local (opcional)</label>
+          <div id="claude-local-skel" class="mt-1 flex flex-wrap gap-2">
+            <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+          </div>
+          <div id="claude-local-fields" class="mt-1 flex flex-wrap gap-2" style="display:none">
+            <input id="claude-local-label" type="text" autocomplete="off" placeholder="ex.: Assinatura Pessoal" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink" />
+            <button type="button" id="save-claude-local-label" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90">Salvar</button>
+          </div>
+          <p id="claude-local-label-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
           <div class="mt-3">
             <p class="text-xs leading-relaxed text-ink3">Só para Docker ou outro PC sem o Claude Code. Não cole o resultado de <code class="text-ink2">claude setup-token</code>.</p>
             <div id="claude-fields-skel" class="mt-2 flex flex-wrap gap-2">
@@ -107,6 +117,26 @@
               <button type="button" id="clear-claude" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">Apagar token</button>
             </div>
             <p id="claude-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
+          </div>
+          <div class="mt-4 border-t border-edge pt-3">
+            <p class="text-xs font-medium text-ink2">Contas adicionais — outra assinatura Claude (ex.: empresa)</p>
+            <div id="claude-accounts-skel" class="mt-2 space-y-2">
+              <span class="block h-11 animate-pulse rounded-lg bg-surface"></span>
+              <div class="flex flex-wrap gap-2">
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 w-36 animate-pulse rounded-lg bg-surface"></span>
+              </div>
+            </div>
+            <div id="claude-accounts-fields" style="display:none">
+              <div id="claude-accounts" class="space-y-2"></div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <input id="claude-new-label" type="text" placeholder="Apelido (ex.: Assinatura Empresarial)" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <input id="claude-new-secret" type="password" autocomplete="off" placeholder="Token OAuth" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <button type="button" id="claude-add" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">+ Adicionar conta</button>
+              </div>
+            </div>
+            <p id="claude-accounts-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
           </div>
         </article>
 
@@ -124,6 +154,16 @@
             Mostrar na placa
           </label>
           <p class="mt-1 text-xs text-ink3">O login local continua; desmarque só para tirar o card da ESP32.</p>
+          <label class="mt-2 block text-xs text-ink3">Apelido da conta local (opcional)</label>
+          <div id="cursor-local-skel" class="mt-1 flex flex-wrap gap-2">
+            <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+          </div>
+          <div id="cursor-local-fields" class="mt-1 flex flex-wrap gap-2" style="display:none">
+            <input id="cursor-local-label" type="text" autocomplete="off" placeholder="ex.: Assinatura Pessoal" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink" />
+            <button type="button" id="save-cursor-local-label" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90">Salvar</button>
+          </div>
+          <p id="cursor-local-label-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
           <div class="mt-3">
             <p class="text-xs leading-relaxed text-ink3">
               <strong class="text-ink2">Tente primeiro:</strong> no Cursor, Settings → Account → sair e entrar de novo,
@@ -152,6 +192,26 @@ rm -f "$tmp"
             </div>
             <p id="cursor-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
           </div>
+          <div class="mt-4 border-t border-edge pt-3">
+            <p class="text-xs font-medium text-ink2">Contas adicionais — outra conta Cursor (ex.: empresa)</p>
+            <div id="cursor-accounts-skel" class="mt-2 space-y-2">
+              <span class="block h-11 animate-pulse rounded-lg bg-surface"></span>
+              <div class="flex flex-wrap gap-2">
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 w-36 animate-pulse rounded-lg bg-surface"></span>
+              </div>
+            </div>
+            <div id="cursor-accounts-fields" style="display:none">
+              <div id="cursor-accounts" class="space-y-2"></div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <input id="cursor-new-label" type="text" placeholder="Apelido (ex.: Assinatura Empresarial)" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <input id="cursor-new-secret" type="password" autocomplete="off" placeholder="Token de sessão" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <button type="button" id="cursor-add" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">+ Adicionar conta</button>
+              </div>
+            </div>
+            <p id="cursor-accounts-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
+          </div>
         </article>
 
         <article class="rounded-2xl border border-edge bg-panel p-5">
@@ -174,6 +234,26 @@ rm -f "$tmp"
             <button type="button" id="clear-or" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">Apagar key</button>
           </div>
           <p id="or-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
+          <div class="mt-4 border-t border-edge pt-3">
+            <p class="text-xs font-medium text-ink2">Contas adicionais — outra key OpenRouter</p>
+            <div id="or-accounts-skel" class="mt-2 space-y-2">
+              <span class="block h-11 animate-pulse rounded-lg bg-surface"></span>
+              <div class="flex flex-wrap gap-2">
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 w-36 animate-pulse rounded-lg bg-surface"></span>
+              </div>
+            </div>
+            <div id="or-accounts-fields" style="display:none">
+              <div id="or-accounts" class="space-y-2"></div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <input id="or-new-label" type="text" placeholder="Apelido (ex.: Projeto X)" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <input id="or-new-secret" type="password" autocomplete="off" placeholder="sk-or-…" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <button type="button" id="or-add" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">+ Adicionar conta</button>
+              </div>
+            </div>
+            <p id="or-accounts-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
+          </div>
         </article>
 
         <article class="rounded-2xl border border-edge bg-panel p-5">
@@ -196,6 +276,26 @@ rm -f "$tmp"
             <button type="button" id="clear-deepseek" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">Apagar key</button>
           </div>
           <p id="deepseek-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
+          <div class="mt-4 border-t border-edge pt-3">
+            <p class="text-xs font-medium text-ink2">Contas adicionais — outra key DeepSeek</p>
+            <div id="deepseek-accounts-skel" class="mt-2 space-y-2">
+              <span class="block h-11 animate-pulse rounded-lg bg-surface"></span>
+              <div class="flex flex-wrap gap-2">
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+                <span class="h-9 w-36 animate-pulse rounded-lg bg-surface"></span>
+              </div>
+            </div>
+            <div id="deepseek-accounts-fields" style="display:none">
+              <div id="deepseek-accounts" class="space-y-2"></div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <input id="deepseek-new-label" type="text" placeholder="Apelido (ex.: Projeto X)" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <input id="deepseek-new-secret" type="password" autocomplete="off" placeholder="sk-…" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm" />
+                <button type="button" id="deepseek-add" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">+ Adicionar conta</button>
+              </div>
+            </div>
+            <p id="deepseek-accounts-msg" class="mt-1 min-h-[1.25rem] text-xs text-ink3"></p>
+          </div>
         </article>
       </div>
     </section>
@@ -273,6 +373,79 @@ rm -f "$tmp"
 
     const MASKED_VALUE = "•".repeat(24);
 
+    function esc(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[c]));
+    }
+
+    function renderAccounts(prefix, provider, accounts) {
+      const box = $(prefix + "-accounts");
+      if (!accounts || !accounts.length) {
+        box.innerHTML = `<p class="text-xs text-ink3">Nenhuma conta extra.</p>`;
+        return;
+      }
+      box.innerHTML = accounts.map((a) => `
+        <div class="flex items-center justify-between gap-2 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm">
+          <div class="min-w-0">
+            <p class="truncate font-medium">${esc(a.label) || "(sem apelido)"}</p>
+            <p class="text-xs text-ink3">•••• ${esc(a.suffix) || "----"}</p>
+          </div>
+          <button type="button" class="remove-account shrink-0 rounded-lg border border-edge px-2 py-1 text-xs hover:bg-surface" data-provider="${provider}" data-id="${esc(a.id)}">Remover</button>
+        </div>
+      `).join("");
+    }
+
+    function bindAddAccount(prefix, provider) {
+      $(prefix + "-add").onclick = async () => {
+        const labelEl = $(prefix + "-new-label");
+        const secretEl = $(prefix + "-new-secret");
+        const msg = $(prefix + "-accounts-msg");
+        const secret = secretEl.value.trim();
+        if (!secret) {
+          msg.textContent = "Cole o token/key antes de adicionar.";
+          return;
+        }
+        const r = await fetch("/api/config/account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider, label: labelEl.value.trim(), token: secret, key: secret }),
+        });
+        const out = await r.json();
+        msg.textContent = out.ok ? "Conta adicionada." : (out.error || "Falha ao adicionar.");
+        if (out.ok) {
+          labelEl.value = "";
+          secretEl.value = "";
+        }
+        await load();
+      };
+    }
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".remove-account");
+      if (!btn) return;
+      btn.disabled = true;
+      await fetch("/api/config/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: btn.dataset.provider, id: btn.dataset.id }),
+      });
+      await load();
+    });
+
+    function bindLocalLabel(prefix, envKey) {
+      const input = $(prefix + "-local-label");
+      const msg = $(prefix + "-local-label-msg");
+      $("save-" + prefix + "-local-label").onclick = async () => {
+        const out = await postConfig({ [envKey]: input.value.trim() });
+        msg.textContent = out.ok ? "Apelido salvo." : (out.error || "Falha ao salvar.");
+        await load();
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") $("save-" + prefix + "-local-label").click();
+      });
+    }
+
     function fillProv(prefix, p) {
       const state = p.configured ? "ok" : p.source === "expired" ? "warn" : "missing";
       $(prefix + "-dot").className = "h-2 w-2 rounded-full " + DOT[state];
@@ -341,7 +514,28 @@ rm -f "$tmp"
       fillProv("deepseek", d.providers.deepseek);
       $("claude-on-board").checked = !d.providers.claude.hidden;
       $("cursor-on-board").checked = !d.providers.cursor.hidden;
+      if (document.activeElement !== $("claude-local-label")) {
+        $("claude-local-label").value = d.providers.claude.local_label || "";
+      }
+      if (document.activeElement !== $("cursor-local-label")) {
+        $("cursor-local-label").value = d.providers.cursor.local_label || "";
+      }
+      renderAccounts("claude", "claude", d.providers.claude.accounts);
+      renderAccounts("cursor", "cursor", d.providers.cursor.accounts);
+      renderAccounts("or", "openrouter", d.providers.openrouter.accounts);
+      renderAccounts("deepseek", "deepseek", d.providers.deepseek.accounts);
+      reveal("claude-local");
+      reveal("cursor-local");
+      reveal("claude-accounts");
+      reveal("cursor-accounts");
+      reveal("or-accounts");
+      reveal("deepseek-accounts");
       fillDocker(d);
+    }
+
+    function reveal(id) {
+      $(id + "-skel").style.display = "none";
+      $(id + "-fields").style.display = "";
     }
 
     async function postConfig(body) {
@@ -441,6 +635,12 @@ rm -f "$tmp"
     }
     bindOnBoard("claude", "CLAUDE_HIDDEN");
     bindOnBoard("cursor", "CURSOR_HIDDEN");
+    bindLocalLabel("claude", "CLAUDE_LOCAL_LABEL");
+    bindLocalLabel("cursor", "CURSOR_LOCAL_LABEL");
+    bindAddAccount("claude", "claude");
+    bindAddAccount("cursor", "cursor");
+    bindAddAccount("or", "openrouter");
+    bindAddAccount("deepseek", "deepseek");
 
     $("copy-cursor-cmd").onclick = async () => {
       const btn = $("copy-cursor-cmd");
@@ -459,25 +659,28 @@ rm -f "$tmp"
       const r = await fetch("/usage");
       const d = await r.json();
       const card = (name, title) => {
-        const b = d[name] || {};
-        if (!b.configured) {
+        const list = d[name] || [];
+        if (!list.length) {
           return `<div class="rounded-xl border border-edge bg-surface/40 p-3">
-          <p class="text-sm font-medium">${title}</p>
+          <p class="text-sm font-medium">${esc(title)}</p>
           <p class="mt-1 text-xs text-ink3">não listado na placa</p>
         </div>`;
         }
-        const ok = !!b.ok;
-        const detail = ok
-          ? (name === "claude"
-              ? `sessão ${b.session_percent ?? "—"}% · semana ${b.weekly_percent ?? "—"}%`
-              : name === "cursor"
-                ? `modelos ${b.percent ?? "—"}% · outros ${b.other_percent ?? "—"}%`
-                : `${b.percent ?? "—"}% da conta`)
-          : (b.error || "falhou");
-        return `<div class="rounded-xl border ${ok ? "border-good/30 bg-good/10" : "border-bad/30 bg-bad/10"} p-3">
-          <p class="text-sm font-medium">${title}</p>
-          <p class="mt-1 text-xs ${ok ? "text-good" : "text-bad"}">${detail}</p>
-        </div>`;
+        return list.map((b) => {
+          const ok = !!b.ok;
+          const who = b.label ? `${title} · ${b.label}` : title;
+          const detail = ok
+            ? (name === "claude"
+                ? `sessão ${b.session_percent ?? "—"}% · semana ${b.weekly_percent ?? "—"}%`
+                : name === "cursor"
+                  ? `modelos ${b.percent ?? "—"}% · outros ${b.other_percent ?? "—"}%`
+                  : `${b.percent ?? "—"}% da conta`)
+            : (b.error || "falhou");
+          return `<div class="rounded-xl border ${ok ? "border-good/30 bg-good/10" : "border-bad/30 bg-bad/10"} p-3">
+            <p class="text-sm font-medium">${esc(who)}</p>
+            <p class="mt-1 text-xs ${ok ? "text-good" : "text-bad"}">${esc(detail)}</p>
+          </div>`;
+        }).join("");
       };
       box.innerHTML = card("claude", "Claude") + card("cursor", "Cursor") + card("openrouter", "OpenRouter") + card("deepseek", "DeepSeek");
     };

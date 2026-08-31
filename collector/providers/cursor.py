@@ -1,12 +1,21 @@
-"""Provedor Cursor: JWT local (state.vscdb) + Dashboard Connect RPC / auth/usage legado."""
+"""Provedor Cursor: JWT local (conta "local", state.vscdb) + contas extras
+coladas no painel, todas via Dashboard Connect RPC / auth/usage legado.
+"""
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
-from cursor_state import cursor_token_and_plan, cursor_token_candidates, jwt_expired
+from cursor_state import (
+    cursor_token_and_plan,
+    cursor_token_candidates,
+    env_cursor_token,
+    jwt_expired,
+)
 from formatting import as_percent, cycle_end_label, money_cents, ratio_percent
 from http_util import http_json
+from store import env_flag, get_accounts
 
 CURSOR_USAGE_URL = (
     "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage"
@@ -150,17 +159,22 @@ def _fetch_cursor_with_token(token: str, plan: str | None) -> dict[str, Any]:
     return _cursor_fail(dash_err)
 
 
-def fetch_cursor() -> dict[str, Any]:
-    cands = cursor_token_candidates()
-    if not cands:
-        _token, _plan, err = cursor_token_and_plan()
-        return _cursor_fail(err or "sem JWT Cursor")
+def fetch_cursor_one(token: str, plan: str | None) -> dict[str, Any]:
+    """Uma chamada de uso pra um token já resolvido (conta extra colada)."""
+    token = (token or "").strip()
+    if not token:
+        return _cursor_fail("sem token Cursor")
+    return _fetch_cursor_with_token(token, plan)
+
+
+def _fetch_cursor_local(cands: list[tuple[str, str, str | None]]) -> dict[str, Any]:
+    """Tenta cada candidato local (vscdb) até um funcionar; pula 401/403."""
     last_err = "sem JWT Cursor"
     for _source, token, plan in cands:
         if jwt_expired(token):
             last_err = "JWT expirado; abra o Cursor neste Mac"
             continue
-        parsed = _fetch_cursor_with_token(token, plan)
+        parsed = fetch_cursor_one(token, plan)
         if parsed.get("ok"):
             return parsed
         err = str(parsed.get("error") or "")
@@ -169,3 +183,31 @@ def fetch_cursor() -> dict[str, Any]:
             continue
         return parsed
     return _cursor_fail(last_err)
+
+
+def fetch_cursor_accounts() -> list[dict[str, Any]]:
+    """Conta "local" (state.vscdb, se não oculta) + contas extras coladas no
+    painel (`CURSOR_ACCOUNTS`)."""
+    accounts: list[dict[str, Any]] = []
+
+    if not env_flag("CURSOR_HIDDEN"):
+        local_cands = [c for c in cursor_token_candidates() if c[0] != "env"]
+        if local_cands:
+            result = _fetch_cursor_local(local_cands)
+            label = os.environ.get("CURSOR_LOCAL_LABEL", "").strip()
+            accounts.append({"id": "local", "label": label, **result})
+
+    extra = get_accounts("CURSOR_ACCOUNTS")
+    if not extra:
+        # Migração transparente do CURSOR_ACCESS_TOKEN colado no formato antigo.
+        legacy = env_cursor_token()
+        if legacy:
+            extra = [{"id": "legacy", "label": "", "token": legacy}]
+    for acc in extra:
+        token = str(acc.get("token") or "").strip()
+        label = str(acc.get("label") or "").strip()
+        aid = str(acc.get("id") or "extra")
+        result = fetch_cursor_one(token, None)
+        accounts.append({"id": aid, "label": label, **result})
+
+    return accounts

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 import socket
 import time
 from pathlib import Path
@@ -17,6 +18,7 @@ from store import FLAG_KEYS
 from store import KEYS as ALLOWED_KEYS
 from store import apply as apply_store
 from store import env_flag
+from store import get_accounts, set_accounts
 from store import update as update_store
 
 HERE = Path(__file__).resolve().parent
@@ -220,6 +222,68 @@ def _deepseek_card() -> dict[str, Any]:
     }
 
 
+_PROVIDER_ACCOUNTS_KEY = {
+    "claude": "CLAUDE_ACCOUNTS",
+    "cursor": "CURSOR_ACCOUNTS",
+    "openrouter": "OPENROUTER_ACCOUNTS",
+    "deepseek": "DEEPSEEK_ACCOUNTS",
+}
+_PROVIDER_SECRET_FIELD = {
+    "claude": "token",
+    "cursor": "token",
+    "openrouter": "key",
+    "deepseek": "key",
+}
+
+
+def _accounts_public(store_key: str, field: str) -> list[dict[str, Any]]:
+    """Contas extras de um provedor, sem o segredo — só id/apelido/sufixo pro painel."""
+    out: list[dict[str, Any]] = []
+    for acc in get_accounts(store_key):
+        secret = str(acc.get(field) or "")
+        out.append({"id": acc.get("id"), "label": acc.get("label") or "", "suffix": _suffix(secret)})
+    return out
+
+
+def add_account(provider: str, label: str, secret: str) -> dict[str, Any]:
+    """Adiciona uma conta extra (token/key colado) a um provedor."""
+    store_key = _PROVIDER_ACCOUNTS_KEY.get(provider)
+    if not store_key:
+        return {"ok": False, "error": "provider inválido"}
+    secret = (secret or "").strip()
+    if provider == "openrouter":
+        cleaned = clean_openrouter_key(secret)
+        if not cleaned:
+            return {"ok": False, "error": "API key OpenRouter inválida; cole só a chave sk-or-..."}
+        secret = cleaned
+    elif provider == "deepseek":
+        cleaned_ds = clean_deepseek_key(secret)
+        if not cleaned_ds:
+            return {"ok": False, "error": "API key DeepSeek inválida; cole só a chave sk-..."}
+        secret = cleaned_ds
+    elif not secret:
+        return {"ok": False, "error": "token vazio"}
+    accounts = get_accounts(store_key)
+    field = _PROVIDER_SECRET_FIELD[provider]
+    account_id = secrets.token_hex(4)
+    accounts.append({"id": account_id, "label": (label or "").strip(), field: secret})
+    set_accounts(store_key, accounts)
+    reload_env()
+    return {"ok": True, "id": account_id}
+
+
+def remove_account(provider: str, account_id: str) -> dict[str, Any]:
+    store_key = _PROVIDER_ACCOUNTS_KEY.get(provider)
+    if not store_key:
+        return {"ok": False, "error": "provider inválido"}
+    if not account_id:
+        return {"ok": False, "error": "id vazio"}
+    accounts = [a for a in get_accounts(store_key) if a.get("id") != account_id]
+    set_accounts(store_key, accounts)
+    reload_env()
+    return {"ok": True}
+
+
 def config_payload(listen_host: str, listen_port: int) -> dict[str, Any]:
     reload_env()
     ips = lan_ipv4()
@@ -258,10 +322,20 @@ def config_payload(listen_host: str, listen_port: int) -> dict[str, Any]:
         "port_file": env_port or str(listen_port),
         "restart_needed_for_port": restart,
         "providers": {
-            "claude": {**_claude_card(), "hidden": env_flag("CLAUDE_HIDDEN")},
-            "cursor": {**_cursor_card(), "hidden": env_flag("CURSOR_HIDDEN")},
-            "openrouter": _openrouter_card(),
-            "deepseek": _deepseek_card(),
+            "claude": {
+                **_claude_card(),
+                "hidden": env_flag("CLAUDE_HIDDEN"),
+                "local_label": os.environ.get("CLAUDE_LOCAL_LABEL", ""),
+                "accounts": _accounts_public("CLAUDE_ACCOUNTS", "token"),
+            },
+            "cursor": {
+                **_cursor_card(),
+                "hidden": env_flag("CURSOR_HIDDEN"),
+                "local_label": os.environ.get("CURSOR_LOCAL_LABEL", ""),
+                "accounts": _accounts_public("CURSOR_ACCOUNTS", "token"),
+            },
+            "openrouter": {**_openrouter_card(), "accounts": _accounts_public("OPENROUTER_ACCOUNTS", "key")},
+            "deepseek": {**_deepseek_card(), "accounts": _accounts_public("DEEPSEEK_ACCOUNTS", "key")},
         },
         "docker": docker_status(),
         "fields": {

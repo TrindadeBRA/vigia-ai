@@ -7,6 +7,10 @@
 
 View g_view = VIEW_HOME;
 HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
+int g_claudeIdx = 0;
+int g_cursorIdx = 0;
+int g_openrouterIdx = 0;
+int g_deepseekIdx = 0;
 static UiTheme g_theme = THEME_DARK;
 static UiLang g_lang = LANG_PT;
 static HeaderEdge g_headerEdge = HEADER_LEFT;
@@ -282,13 +286,13 @@ void uiTickEye() {
 static bool viewProviderVisible(View v) {
   switch (v) {
     case VIEW_CLAUDE:
-      return g_snap.claude.configured;
+      return g_snap.claudeCount > 0;
     case VIEW_CURSOR:
-      return g_snap.cursor.configured;
+      return g_snap.cursorCount > 0;
     case VIEW_OPENROUTER:
-      return g_snap.openrouter.configured;
+      return g_snap.openrouterCount > 0;
     case VIEW_DEEPSEEK:
-      return g_snap.deepseek.configured;
+      return g_snap.deepseekCount > 0;
     default:
       return true;
   }
@@ -303,6 +307,19 @@ void uiSetView(View v) {
   }
   if (v == g_view) {
     return;
+  }
+  // Entrando numa view de detalhe vinda de outra: comeca pela conta que mais
+  // precisa de atencao. Reabrir a mesma view (idx ja escolhido pelo
+  // paginador) nao passa por aqui, pois o "if (v == g_view) return;" acima
+  // ja teria voltado.
+  if (v == VIEW_CLAUDE) {
+    g_claudeIdx = claudeWorstIdx();
+  } else if (v == VIEW_CURSOR) {
+    g_cursorIdx = cursorWorstIdx();
+  } else if (v == VIEW_OPENROUTER) {
+    g_openrouterIdx = openrouterWorstIdx();
+  } else if (v == VIEW_DEEPSEEK) {
+    g_deepseekIdx = deepseekWorstIdx();
   }
   g_view = v;
   g_detailScroll = 0;
@@ -441,6 +458,16 @@ void uiHandleTap(int16_t x, int16_t y) {
     }
     if (y >= g_arrowDownY && y <= g_arrowDownY + s) {
       uiDetailScrollBy(48);
+      return;
+    }
+  }
+  if (g_acctPagerVisible && y >= g_acctPagerY && y <= g_acctPagerY + g_acctPagerH) {
+    if (x >= g_acctPagerLeftX0 && x < g_acctPagerLeftX1) {
+      uiAccountStep(-1);
+      return;
+    }
+    if (x >= g_acctPagerRightX0 && x < g_acctPagerRightX1) {
+      uiAccountStep(1);
       return;
     }
   }

@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from http_util import http_json
+from store import get_accounts
 
 _DS_KEY_RE = re.compile(r"sk-[A-Za-z0-9]+")
 _INVISIBLE = ("﻿", "​", "‌", "‍", "\xa0")
@@ -35,14 +36,6 @@ def clean_deepseek_key(raw: str) -> str | None:
     return text or None
 
 
-def deepseek_token() -> tuple[str | None, str | None]:
-    raw = os.environ.get("DEEPSEEK_API_KEY", "").strip()
-    if not raw:
-        return None, "sem DEEPSEEK_API_KEY (grave no painel)"
-    token = clean_deepseek_key(raw)
-    if not token:
-        return None, "API key inválida; cole só a chave sk-... no painel"
-    return token, None
 
 
 def _usd_cents(value: Any) -> int | None:
@@ -93,14 +86,38 @@ def _deepseek_fail(msg: str) -> dict[str, Any]:
     }
 
 
-def fetch_deepseek() -> dict[str, Any]:
-    token, err = deepseek_token()
-    if err:
-        return _deepseek_fail(err)
-    data = http_json(
-        DEEPSEEK_BALANCE_URL,
-        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-    )
+def fetch_deepseek_one(raw_key: str) -> dict[str, Any]:
+    """Uma chamada de saldo pra uma key já resolvida (uma conta da lista)."""
+    key = clean_deepseek_key(raw_key or "")
+    if not key:
+        return _deepseek_fail("API key inválida; cole só a chave sk-... no painel")
+    try:
+        data = http_json(
+            DEEPSEEK_BALANCE_URL,
+            headers={"Authorization": f"Bearer {key}", "Accept": "application/json"},
+        )
+    except RuntimeError as exc:
+        return _deepseek_fail(str(exc))
     if not isinstance(data, dict):
         return _deepseek_fail("resposta DeepSeek inesperada")
     return parse_deepseek_payload(data)
+
+
+def fetch_deepseek_accounts() -> list[dict[str, Any]]:
+    """Uma entrada por key configurada (`DEEPSEEK_ACCOUNTS`). Sem conceito de
+    conta "local" — toda conta DeepSeek é uma key colada no painel.
+    """
+    accounts = get_accounts("DEEPSEEK_ACCOUNTS")
+    if not accounts:
+        # Migração transparente da DEEPSEEK_API_KEY única do formato antigo.
+        legacy = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+        if legacy:
+            accounts = [{"id": "legacy", "label": "", "key": legacy}]
+    out: list[dict[str, Any]] = []
+    for acc in accounts:
+        key = str(acc.get("key") or "").strip()
+        label = str(acc.get("label") or "").strip()
+        aid = str(acc.get("id") or "extra")
+        result = fetch_deepseek_one(key)
+        out.append({"id": aid, "label": label, **result})
+    return out

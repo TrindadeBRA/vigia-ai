@@ -67,6 +67,16 @@ Não use `python3 gerar_env_claude.py` / `gerar_env_cursor.py` — copiam segred
 
 No painel, **Modo mock** grava JSON falso (útil sem login).
 
+## Múltiplas contas por provedor
+
+Cada provedor aceita mais de uma conta — ex.: Claude pessoal + Claude da empresa — cada uma com um apelido opcional, na seção **Contas adicionais** de cada card no painel `/`. Claude e Cursor sempre têm a conta **local** (Keychain/`state.vscdb`, com apelido opcional próprio) mais quantas contas extras coladas você quiser; OpenRouter e DeepSeek são só uma lista de keys coladas (sem conta "local"). Guardado em `CLAUDE_ACCOUNTS`/`CURSOR_ACCOUNTS`/`OPENROUTER_ACCOUNTS`/`DEEPSEEK_ACCOUNTS` (`data/config.json`, JSON com `id`/`label`/token ou key por conta — gitignored, igual ao resto).
+
+`GET /usage` reflete isso: cada provedor vira uma **lista** de contas (ver `docs/CONTRATO_JSON.md`), uma chamada real por conta. O `/display` mostra um card por conta; o firmware físico (tela pequena) continua com um card por *tipo* de provedor na Início, mostrando a que mais precisa de atenção — o detalhe ganha um paginador **‹ i/N ›** pra ver as outras (`docs/TOUCH.md`).
+
+Apelido só ASCII no firmware — a fonte da TFT_eSPI não cobre acentos/Latin-1 (mesma limitação dos textos do próprio app, ver `src/i18n.h`); no `/display` acentos aparecem normalmente.
+
+Rate limit: N contas Claude = N chamadas reais por `GET /usage`, não uma só — ver aviso abaixo antes de cadastrar várias.
+
 ## Docker e credenciais do host
 
 `./dev-collector.sh docker` sobe só `compose.yaml` (`./data` para config). O Keychain **não** entra no container.
@@ -97,4 +107,6 @@ Cada aba aberta em `/display` faz o próprio poll de `/usage` (padrão 60 s, `PO
 
 Todo `GET /usage` chama as duas APIs na hora (a pedido do usuário; v1 tinha cache de 5 min pra não martelar o endpoint do Claude). Cada GET no coletor = uma chamada real em `/api/oauth/usage`. Como a placa faz poll a cada `USAGE_POLL_MS` (padrão 60 s, ver [FIRMWARE.md](FIRMWARE.md)), isso significa uma chamada ao Claude a cada 60 s enquanto a placa estiver ligada.
 
-O 429 quase sempre é o Claude, não o Cursor. Endpoint sem número oficial; com `User-Agent: claude-code/<ver>` a comunidade trata **~180 s** como intervalo seguro — 60 s ainda pode estourar. Sem esse UA, o `Python-urllib` cai num bucket de ~5 requests e o 429 fica persistente. Provedor com `ok: false` (incluindo `HTTP 429`) agora imprime `ERRO claude:` / `ERRO cursor:` no terminal do coletor. Se continuar 429, aumente `USAGE_POLL_MS` em `platformio.ini`.
+O 429 quase sempre é o Claude, não o Cursor. Endpoint sem número oficial; com `User-Agent: claude-code/<ver>` a comunidade trata **~180 s** como intervalo seguro — 60 s ainda pode estourar. Sem esse UA, o `Python-urllib` cai num bucket de ~5 requests e o 429 fica persistente. Conta com `ok: false` (incluindo `HTTP 429`) agora imprime `ERRO claude (<apelido ou id>):` / `ERRO cursor (...):` no terminal do coletor. Se continuar 429, aumente `USAGE_POLL_MS` em `platformio.ini`.
+
+**Múltiplas contas multiplicam a chamada**, não dividem o intervalo: 2 contas Claude configuradas = 2 chamadas reais em `/api/oauth/usage` a cada `GET /usage`, cada uma contra sua própria conta (buckets de rate limit separados, então uma conta tomando 429 normalmente não afeta a outra) — mas se forem contas diferentes por trás do mesmo IP/rede, ainda vale ficar de olho.

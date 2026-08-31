@@ -25,19 +25,59 @@
 
 void usageClientLogSnapshot(const char* why) {
   Serial.printf("usage %s\n", why);
-  Serial.printf("  claude ok=%d sessao=%.0f semana=%.0f err=%s\n", g_snap.claude.ok ? 1 : 0,
-                g_snap.claude.sessionPercent, g_snap.claude.weeklyPercent,
-                g_snap.claude.error.length() ? g_snap.claude.error.c_str() : "-");
-  Serial.printf("  cursor ok=%d pct=%.0f plan=%s err=%s\n", g_snap.cursor.ok ? 1 : 0,
-                g_snap.cursor.percent,
-                g_snap.cursor.plan.length() ? g_snap.cursor.plan.c_str() : "-",
-                g_snap.cursor.error.length() ? g_snap.cursor.error.c_str() : "-");
-  Serial.printf("  openrouter ok=%d pct=%.0f err=%s\n", g_snap.openrouter.ok ? 1 : 0,
-                g_snap.openrouter.percent,
-                g_snap.openrouter.error.length() ? g_snap.openrouter.error.c_str() : "-");
-  Serial.printf("  deepseek ok=%d pct=%.0f err=%s\n", g_snap.deepseek.ok ? 1 : 0,
-                g_snap.deepseek.percent,
-                g_snap.deepseek.error.length() ? g_snap.deepseek.error.c_str() : "-");
+  Serial.printf("  claude contas=%d\n", g_snap.claudeCount);
+  for (int i = 0; i < g_snap.claudeCount; i++) {
+    const ClaudeAccount& c = g_snap.claude[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d sessao=%.0f semana=%.0f err=%s\n", i,
+                  c.id.c_str(), c.label.length() ? c.label.c_str() : "-", c.ok ? 1 : 0,
+                  c.sessionPercent, c.weeklyPercent, c.error.length() ? c.error.c_str() : "-");
+  }
+  Serial.printf("  cursor contas=%d\n", g_snap.cursorCount);
+  for (int i = 0; i < g_snap.cursorCount; i++) {
+    const CursorAccount& c = g_snap.cursor[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d pct=%.0f plan=%s err=%s\n", i, c.id.c_str(),
+                  c.label.length() ? c.label.c_str() : "-", c.ok ? 1 : 0, c.percent,
+                  c.plan.length() ? c.plan.c_str() : "-", c.error.length() ? c.error.c_str() : "-");
+  }
+  Serial.printf("  openrouter contas=%d\n", g_snap.openrouterCount);
+  for (int i = 0; i < g_snap.openrouterCount; i++) {
+    const OpenRouterAccount& o = g_snap.openrouter[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d pct=%.0f err=%s\n", i, o.id.c_str(),
+                  o.label.length() ? o.label.c_str() : "-", o.ok ? 1 : 0, o.percent,
+                  o.error.length() ? o.error.c_str() : "-");
+  }
+  Serial.printf("  deepseek contas=%d\n", g_snap.deepseekCount);
+  for (int i = 0; i < g_snap.deepseekCount; i++) {
+    const DeepSeekAccount& d = g_snap.deepseek[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d pct=%.0f err=%s\n", i, d.id.c_str(),
+                  d.label.length() ? d.label.c_str() : "-", d.ok ? 1 : 0, d.percent,
+                  d.error.length() ? d.error.c_str() : "-");
+  }
+}
+
+// Falha total (Wi-Fi fora do ar, HTTP != 200, JSON ilegivel): marca todas as
+// contas ja conhecidas (de um /usage anterior bem-sucedido) como falhas, sem
+// apagar id/label/contagem — o card de cada uma continua visivel, com erro,
+// em vez de sumir. No boot, antes do primeiro /usage OK, as contagens ainda
+// sao 0 (o firmware so descobre quantas contas existem depois do primeiro
+// contato com o coletor) — a Início mostra vazio ate la, por alguns segundos.
+void markAllAccountsFailed(const char* msg) {
+  for (int i = 0; i < g_snap.claudeCount; i++) {
+    g_snap.claude[i].ok = false;
+    g_snap.claude[i].error = msg;
+  }
+  for (int i = 0; i < g_snap.cursorCount; i++) {
+    g_snap.cursor[i].ok = false;
+    g_snap.cursor[i].error = msg;
+  }
+  for (int i = 0; i < g_snap.openrouterCount; i++) {
+    g_snap.openrouter[i].ok = false;
+    g_snap.openrouter[i].error = msg;
+  }
+  for (int i = 0; i < g_snap.deepseekCount; i++) {
+    g_snap.deepseek[i].ok = false;
+    g_snap.deepseek[i].error = msg;
+  }
 }
 
 #ifndef MOCK_USAGE
@@ -71,75 +111,93 @@ static bool parseUsageJson(const String& body) {
   if (err) {
     Serial.printf("JSON parse falhou: %s (%d bytes)\n", err.c_str(), body.length());
     g_snap.statusLine = "JSON";
-    g_snap.claude.ok = false;
-    g_snap.claude.error = err.c_str();
-    g_snap.cursor.ok = false;
-    g_snap.cursor.error = err.c_str();
-    g_snap.openrouter.ok = false;
-    g_snap.openrouter.error = err.c_str();
-    g_snap.deepseek.ok = false;
-    g_snap.deepseek.error = err.c_str();
+    markAllAccountsFailed(err.c_str());
     return false;
   }
 
   g_snap.updatedAt = doc["updated_at"] | "";
-  JsonObjectConst claude = doc["claude"];
-  JsonObjectConst cursor = doc["cursor"];
-  JsonObjectConst openrouter = doc["openrouter"];
-  JsonObjectConst deepseek = doc["deepseek"];
 
-  g_snap.claude.ok = claude["ok"] | false;
-  g_snap.claude.configured = claude["configured"] | true;
-  g_snap.claude.error = claude["error"].isNull() ? "" : String(claude["error"].as<const char*>());
-  g_snap.claude.sessionPercent = jsonFloatOrNeg(claude["session_percent"]);
-  g_snap.claude.weeklyPercent = jsonFloatOrNeg(claude["weekly_percent"]);
-  g_snap.claude.sessionResets = jsonText(claude["session_resets_at"]);
-  g_snap.claude.weeklyResets = jsonText(claude["weekly_resets_at"]);
-  g_snap.claude.sonnetPercent = jsonFloatOrNeg(claude["sonnet_percent"]);
-  g_snap.claude.sonnetResets = jsonText(claude["sonnet_resets_at"]);
-  g_snap.claude.opusPercent = jsonFloatOrNeg(claude["opus_percent"]);
-  g_snap.claude.opusResets = jsonText(claude["opus_resets_at"]);
+  g_snap.claudeCount = 0;
+  for (JsonVariantConst v : doc["claude"].as<JsonArrayConst>()) {
+    if (g_snap.claudeCount >= MAX_ACCOUNTS) {
+      Serial.println("claude: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    ClaudeAccount& c = g_snap.claude[g_snap.claudeCount++];
+    c.id = jsonText(acc["id"]);
+    c.label = jsonText(acc["label"]);
+    c.ok = acc["ok"] | false;
+    c.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char*>());
+    c.sessionPercent = jsonFloatOrNeg(acc["session_percent"]);
+    c.sessionResets = jsonText(acc["session_resets_at"]);
+    c.weeklyPercent = jsonFloatOrNeg(acc["weekly_percent"]);
+    c.weeklyResets = jsonText(acc["weekly_resets_at"]);
+    c.sonnetPercent = jsonFloatOrNeg(acc["sonnet_percent"]);
+    c.sonnetResets = jsonText(acc["sonnet_resets_at"]);
+    c.opusPercent = jsonFloatOrNeg(acc["opus_percent"]);
+    c.opusResets = jsonText(acc["opus_resets_at"]);
+  }
 
-  g_snap.cursor.ok = cursor["ok"] | false;
-  g_snap.cursor.configured = cursor["configured"] | true;
-  g_snap.cursor.error = cursor["error"].isNull() ? "" : String(cursor["error"].as<const char*>());
-  g_snap.cursor.percent = jsonFloatOrNeg(cursor["percent"]);
-  g_snap.cursor.otherPercent = jsonFloatOrNeg(cursor["other_percent"]);
-  g_snap.cursor.usedCents = cursor["used_cents"].isNull() ? -1 : cursor["used_cents"].as<int>();
-  g_snap.cursor.limitCents = cursor["limit_cents"].isNull() ? -1 : cursor["limit_cents"].as<int>();
-  g_snap.cursor.remainingCents =
-      cursor["remaining_cents"].isNull() ? -1 : cursor["remaining_cents"].as<int>();
-  g_snap.cursor.bonusCents = cursor["bonus_cents"].isNull() ? -1 : cursor["bonus_cents"].as<int>();
-  g_snap.cursor.requestsUsed =
-      cursor["requests_used"].isNull() ? -1 : cursor["requests_used"].as<int>();
-  g_snap.cursor.requestsLimit =
-      cursor["requests_limit"].isNull() ? -1 : cursor["requests_limit"].as<int>();
-  g_snap.cursor.cycleEnd = jsonText(cursor["cycle_end"]);
-  g_snap.cursor.plan = jsonText(cursor["plan"]);
+  g_snap.cursorCount = 0;
+  for (JsonVariantConst v : doc["cursor"].as<JsonArrayConst>()) {
+    if (g_snap.cursorCount >= MAX_ACCOUNTS) {
+      Serial.println("cursor: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    CursorAccount& c = g_snap.cursor[g_snap.cursorCount++];
+    c.id = jsonText(acc["id"]);
+    c.label = jsonText(acc["label"]);
+    c.ok = acc["ok"] | false;
+    c.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char*>());
+    c.percent = jsonFloatOrNeg(acc["percent"]);
+    c.otherPercent = jsonFloatOrNeg(acc["other_percent"]);
+    c.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
+    c.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
+    c.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
+    c.bonusCents = acc["bonus_cents"].isNull() ? -1 : acc["bonus_cents"].as<int>();
+    c.requestsUsed = acc["requests_used"].isNull() ? -1 : acc["requests_used"].as<int>();
+    c.requestsLimit = acc["requests_limit"].isNull() ? -1 : acc["requests_limit"].as<int>();
+    c.cycleEnd = jsonText(acc["cycle_end"]);
+    c.plan = jsonText(acc["plan"]);
+  }
 
-  g_snap.openrouter.ok = openrouter["ok"] | false;
-  g_snap.openrouter.configured = openrouter["configured"] | true;
-  g_snap.openrouter.error =
-      openrouter["error"].isNull() ? "" : String(openrouter["error"].as<const char*>());
-  g_snap.openrouter.percent = jsonFloatOrNeg(openrouter["percent"]);
-  g_snap.openrouter.limitCents =
-      openrouter["limit_cents"].isNull() ? -1 : openrouter["limit_cents"].as<int>();
-  g_snap.openrouter.usedCents =
-      openrouter["used_cents"].isNull() ? -1 : openrouter["used_cents"].as<int>();
-  g_snap.openrouter.remainingCents =
-      openrouter["remaining_cents"].isNull() ? -1 : openrouter["remaining_cents"].as<int>();
+  g_snap.openrouterCount = 0;
+  for (JsonVariantConst v : doc["openrouter"].as<JsonArrayConst>()) {
+    if (g_snap.openrouterCount >= MAX_ACCOUNTS) {
+      Serial.println("openrouter: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    OpenRouterAccount& o = g_snap.openrouter[g_snap.openrouterCount++];
+    o.id = jsonText(acc["id"]);
+    o.label = jsonText(acc["label"]);
+    o.ok = acc["ok"] | false;
+    o.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char*>());
+    o.percent = jsonFloatOrNeg(acc["percent"]);
+    o.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
+    o.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
+    o.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
+  }
 
-  g_snap.deepseek.ok = deepseek["ok"] | false;
-  g_snap.deepseek.configured = deepseek["configured"] | true;
-  g_snap.deepseek.error =
-      deepseek["error"].isNull() ? "" : String(deepseek["error"].as<const char*>());
-  g_snap.deepseek.percent = jsonFloatOrNeg(deepseek["percent"]);
-  g_snap.deepseek.limitCents =
-      deepseek["limit_cents"].isNull() ? -1 : deepseek["limit_cents"].as<int>();
-  g_snap.deepseek.usedCents =
-      deepseek["used_cents"].isNull() ? -1 : deepseek["used_cents"].as<int>();
-  g_snap.deepseek.remainingCents =
-      deepseek["remaining_cents"].isNull() ? -1 : deepseek["remaining_cents"].as<int>();
+  g_snap.deepseekCount = 0;
+  for (JsonVariantConst v : doc["deepseek"].as<JsonArrayConst>()) {
+    if (g_snap.deepseekCount >= MAX_ACCOUNTS) {
+      Serial.println("deepseek: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    DeepSeekAccount& d = g_snap.deepseek[g_snap.deepseekCount++];
+    d.id = jsonText(acc["id"]);
+    d.label = jsonText(acc["label"]);
+    d.ok = acc["ok"] | false;
+    d.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char*>());
+    d.percent = jsonFloatOrNeg(acc["percent"]);
+    d.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
+    d.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
+    d.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
+  }
 
   if (g_snap.updatedAt.length() >= 16) {
     g_snap.statusLine = g_snap.updatedAt.substring(11, 16);
@@ -163,14 +221,7 @@ void usageClientFetch() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("coletor: sem Wi-Fi, aborta GET");
     g_snap.statusLine = "Wi-Fi";
-    g_snap.claude.ok = false;
-    g_snap.claude.error = "sem Wi-Fi";
-    g_snap.cursor.ok = false;
-    g_snap.cursor.error = "sem Wi-Fi";
-    g_snap.openrouter.ok = false;
-    g_snap.openrouter.error = "sem Wi-Fi";
-    g_snap.deepseek.ok = false;
-    g_snap.deepseek.error = "sem Wi-Fi";
+    markAllAccountsFailed("sem Wi-Fi");
     usageClientLogSnapshot("wifi-down");
     g_lastFetchMs = millis();
     uiRefreshData();
@@ -188,8 +239,7 @@ void usageClientFetch() {
   if (!http.begin(USAGE_URL)) {
     Serial.printf("coletor: http.begin falhou URL=%s\n", USAGE_URL);
     g_snap.statusLine = "URL";
-    g_snap.claude.ok = false;
-    g_snap.claude.error = "USAGE_URL";
+    markAllAccountsFailed("USAGE_URL");
     usageClientLogSnapshot("url");
     g_lastFetchMs = millis();
     uiRefreshData();
@@ -201,14 +251,7 @@ void usageClientFetch() {
   if (code != 200) {
     g_snap.httpOk = false;
     g_snap.statusLine = "HTTP " + String(code);
-    g_snap.claude.ok = false;
-    g_snap.claude.error = "coletor HTTP " + String(code);
-    g_snap.cursor.ok = false;
-    g_snap.cursor.error = "coletor HTTP " + String(code);
-    g_snap.openrouter.ok = false;
-    g_snap.openrouter.error = "coletor HTTP " + String(code);
-    g_snap.deepseek.ok = false;
-    g_snap.deepseek.error = "coletor HTTP " + String(code);
+    markAllAccountsFailed(("coletor HTTP " + String(code)).c_str());
     http.end();
     usageClientLogSnapshot("http-erro");
     g_lastFetchMs = millis();

@@ -8,12 +8,13 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 
 | Tela | Conteúdo |
 | --- | --- |
-| Inicio | Lista (3 cards) ou grade 2×2; escolhe em **Info → Início**. Toque no card abre o detalhe |
-| Claude | Janelas 5h, semana, Sonnet/Opus se existirem; usado/resta/reset. **Setas** à direita se precisar de scroll |
-| Cursor | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). Setas de scroll |
-| OpenRouter | Créditos da conta: barra, usado, resta, teto. Setas de scroll |
+| Inicio | Lista (3 cards) ou grade 2×2; escolhe em **Info → Início**. Um card por *tipo* de provedor (não por conta) — com mais de uma conta do mesmo provedor, mostra a que mais precisa de atenção + "+N" no título. Toque no card abre o detalhe |
+| Claude | Janelas 5h, semana, Sonnet/Opus se existirem; usado/resta/reset. **Setas** à direita se precisar de scroll. Com mais de uma conta configurada (`docs/CONTRATO_JSON.md`), aparece um paginador **‹ i/N ›** logo abaixo do título pra trocar de conta |
+| Cursor | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). Setas de scroll. Mesmo paginador de contas do Claude |
+| OpenRouter | Créditos da conta: barra, usado, resta, teto. Setas de scroll. Mesmo paginador de contas |
+| DeepSeek | Saldo da conta: barra, resta. Mesmo paginador de contas |
 | Info | Rede, layout da home (**Lista** / **Grade**), **tema** (Escuro / Claro / Contraste), **cor** (7 tons, padrao vermelho), **idioma** (PT / EN / ES, padrão pt-BR), **Atualizar**, **Calibrar**. **Setas** à direita se precisar de scroll |
-| Relogio | Hora com segundos, data e resumo das 3 IAs. **Sem barra**. Toque em qualquer lugar volta ao inicio |
+| Relogio | Hora com segundos, data e resumo dos provedores (mesma regra de "pior conta" da Início). **Sem barra**. Toque em qualquer lugar volta ao inicio |
 
 Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O **horario** da barra abre a tela Relogio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
 

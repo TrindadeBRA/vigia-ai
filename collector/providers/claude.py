@@ -1,13 +1,17 @@
-"""Provedor Claude: OAuth local + endpoint de uso não oficial da Anthropic."""
+"""Provedor Claude: OAuth local (conta "local") + contas extras coladas no
+painel, cada uma consultando o mesmo endpoint de uso não oficial da Anthropic.
+"""
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Any
 
-from claude_oauth import claude_token_candidates, load_claude_oauth
+from claude_oauth import claude_token_candidates, env_claude_token, load_claude_oauth
 from formatting import as_percent, iso_or_none, pick
 from http_util import http_json
+from store import env_flag, get_accounts
 
 CLAUDE_USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 CLAUDE_BETA = "oauth-2025-04-20"
@@ -91,39 +95,73 @@ def _is_scope_error(msg: str) -> bool:
     return "user:profile" in low or "oauth_scope_insufficient" in low
 
 
-def fetch_claude() -> dict[str, Any]:
-    cands = claude_token_candidates()
-    if not cands:
-        _token, _exp, err = claude_token_and_expiry()
-        return _claude_fail(err or "sem token Claude")
+def fetch_claude_one(token: str) -> dict[str, Any]:
+    """Uma chamada de uso pra um token já resolvido (conta extra colada)."""
+    token = (token or "").strip()
+    if not token:
+        return _claude_fail("sem token Claude")
+    try:
+        data = http_json(
+            CLAUDE_USAGE_URL,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "anthropic-beta": CLAUDE_BETA,
+                "Accept": "application/json",
+                "User-Agent": CLAUDE_USER_AGENT,
+            },
+        )
+    except RuntimeError as exc:
+        msg = str(exc)
+        return _claude_fail(SCOPE_HINT if _is_scope_error(msg) else msg)
+    if not isinstance(data, dict):
+        return _claude_fail("resposta Claude inesperada")
+    parsed = parse_claude_payload(data)
+    if parsed.get("ok"):
+        return parsed
+    return _claude_fail(str(parsed.get("error") or "resposta Claude sem janelas de cota"))
+
+
+def _fetch_claude_local(cands: list[tuple[str, str, int | None]]) -> dict[str, Any]:
+    """Tenta cada candidato local (Keychain, depois credentials.json) até um funcionar."""
     last_err = "sem token Claude"
     now_ms = int(time.time() * 1000)
-    for source, token, exp_ms in cands:
+    for _source, token, exp_ms in cands:
         if exp_ms and exp_ms < now_ms:
             last_err = "OAuth expirado; abra o Claude Code neste Mac"
             continue
-        try:
-            data = http_json(
-                CLAUDE_USAGE_URL,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "anthropic-beta": CLAUDE_BETA,
-                    "Accept": "application/json",
-                    "User-Agent": CLAUDE_USER_AGENT,
-                },
-            )
-        except RuntimeError as exc:
-            msg = str(exc)
-            if _is_scope_error(msg):
-                last_err = SCOPE_HINT
-                continue
-            last_err = msg
-            continue
-        if not isinstance(data, dict):
-            last_err = "resposta Claude inesperada"
-            continue
-        parsed = parse_claude_payload(data)
-        if parsed.get("ok"):
-            return parsed
-        last_err = str(parsed.get("error") or "resposta Claude sem janelas de cota")
+        result = fetch_claude_one(token)
+        if result.get("ok"):
+            return result
+        last_err = str(result.get("error") or last_err)
     return _claude_fail(last_err)
+
+
+def fetch_claude_accounts() -> list[dict[str, Any]]:
+    """Conta "local" (Keychain/credentials.json, se não oculta) + contas extras
+    coladas no painel (`CLAUDE_ACCOUNTS`). Uma entrada por conta, na ordem:
+    local primeiro, depois as extras na ordem gravada.
+    """
+    accounts: list[dict[str, Any]] = []
+
+    if not env_flag("CLAUDE_HIDDEN"):
+        local_cands = [c for c in claude_token_candidates() if c[0] != "env"]
+        if local_cands:
+            result = _fetch_claude_local(local_cands)
+            label = os.environ.get("CLAUDE_LOCAL_LABEL", "").strip()
+            accounts.append({"id": "local", "label": label, **result})
+
+    extra = get_accounts("CLAUDE_ACCOUNTS")
+    if not extra:
+        # Migração transparente: token colado no formato antigo (single-account)
+        # vira uma conta extra sem apelido, sem exigir ação do usuário.
+        legacy = env_claude_token()
+        if legacy:
+            extra = [{"id": "legacy", "label": "", "token": legacy}]
+    for acc in extra:
+        token = str(acc.get("token") or "").strip()
+        label = str(acc.get("label") or "").strip()
+        aid = str(acc.get("id") or "extra")
+        result = fetch_claude_one(token)
+        accounts.append({"id": aid, "label": label, **result})
+
+    return accounts

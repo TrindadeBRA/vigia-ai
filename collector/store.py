@@ -25,9 +25,22 @@ KEYS = (
     # na ESP32 (configured=false no /usage). Ausente = visível.
     "CLAUDE_HIDDEN",
     "CURSOR_HIDDEN",
+    # Apelido opcional da conta local (Keychain/state.vscdb). "" = sem apelido.
+    "CLAUDE_LOCAL_LABEL",
+    "CURSOR_LOCAL_LABEL",
+    # Contas extras por provedor: string JSON com lista de
+    # {"id","label","token"} (Claude/Cursor) ou {"id","label","key"}
+    # (OpenRouter/DeepSeek). Ver get_accounts()/set_accounts() abaixo.
+    "CLAUDE_ACCOUNTS",
+    "CURSOR_ACCOUNTS",
+    "OPENROUTER_ACCOUNTS",
+    "DEEPSEEK_ACCOUNTS",
 )
 
 FLAG_KEYS = frozenset({"COLLECTOR_MOCK", "CLAUDE_HIDDEN", "CURSOR_HIDDEN"})
+ACCOUNTS_KEYS = frozenset(
+    {"CLAUDE_ACCOUNTS", "CURSOR_ACCOUNTS", "OPENROUTER_ACCOUNTS", "DEEPSEEK_ACCOUNTS"}
+)
 
 
 def env_flag(key: str) -> bool:
@@ -133,3 +146,34 @@ def update(updates: dict[str, str]) -> dict[str, str]:
             data.pop(key, None)
     _write_file(data)
     return data
+
+
+def get_accounts(key: str) -> list[dict[str, str]]:
+    """Lê uma lista de contas extras (CLAUDE_ACCOUNTS etc.). Entradas inválidas são ignoradas."""
+    if key not in ACCOUNTS_KEYS:
+        raise ValueError(f"{key} não é uma chave de contas")
+    raw = os.environ.get(key, "").strip()
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in parsed:
+        if isinstance(item, dict) and item.get("id") and (item.get("token") or item.get("key")):
+            out.append(item)
+    return out
+
+
+def set_accounts(key: str, accounts: list[dict[str, str]]) -> None:
+    if key not in ACCOUNTS_KEYS:
+        raise ValueError(f"{key} não é uma chave de contas")
+    val = json.dumps(accounts, ensure_ascii=False) if accounts else ""
+    update({key: val})
+    if val:
+        os.environ[key] = val
+    else:
+        os.environ.pop(key, None)

@@ -14,9 +14,17 @@ enum View : uint8_t {
   VIEW_COUNT = 7
 };
 
-struct ClaudeUsage {
+// Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
+// empresa), cada uma com um `id` estavel e um `label` (apelido) opcional —
+// ver docs/CONTRATO_JSON.md. MAX_ACCOUNTS limita quantas o firmware guarda
+// por provedor; o coletor pode ter mais configuradas, as excedentes so nao
+// aparecem na placa (log serial, nunca trava).
+constexpr int MAX_ACCOUNTS = 5;
+
+struct ClaudeAccount {
+  String id;
+  String label;
   bool ok = false;
-  bool configured = true;
   String error;
   float sessionPercent = -1;
   String sessionResets;
@@ -28,9 +36,10 @@ struct ClaudeUsage {
   String opusResets;
 };
 
-struct CursorUsage {
+struct CursorAccount {
+  String id;
+  String label;
   bool ok = false;
-  bool configured = true;
   String error;
   float percent = -1;
   float otherPercent = -1;
@@ -44,9 +53,10 @@ struct CursorUsage {
   String plan;
 };
 
-struct OpenRouterUsage {
+struct OpenRouterAccount {
+  String id;
+  String label;
   bool ok = false;
-  bool configured = true;
   String error;
   float percent = -1;
   int limitCents = -1;
@@ -54,9 +64,10 @@ struct OpenRouterUsage {
   int remainingCents = -1;
 };
 
-struct DeepSeekUsage {
+struct DeepSeekAccount {
+  String id;
+  String label;
   bool ok = false;
-  bool configured = true;
   String error;
   float percent = -1;
   int limitCents = -1;
@@ -68,10 +79,14 @@ struct UsageSnapshot {
   bool httpOk = false;
   String statusLine;
   String updatedAt;
-  ClaudeUsage claude;
-  CursorUsage cursor;
-  OpenRouterUsage openrouter;
-  DeepSeekUsage deepseek;
+  ClaudeAccount claude[MAX_ACCOUNTS];
+  int claudeCount = 0;
+  CursorAccount cursor[MAX_ACCOUNTS];
+  int cursorCount = 0;
+  OpenRouterAccount openrouter[MAX_ACCOUNTS];
+  int openrouterCount = 0;
+  DeepSeekAccount deepseek[MAX_ACCOUNTS];
+  int deepseekCount = 0;
 };
 
 extern TFT_eSPI tft;

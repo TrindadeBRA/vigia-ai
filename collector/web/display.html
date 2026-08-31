@@ -106,10 +106,8 @@
   .flat .status-strip .who-dot { box-shadow: none; }
 
   /* ---------- provider cards ---------- */
-  .home-grid { display: grid; gap: 12px; }
-  .home-grid.n-1 { grid-template-columns: 1fr; }
-  .home-grid.n-2, .home-grid.n-3, .home-grid.n-4 { grid-template-columns: 1fr 1fr; }
-  .home-grid.n-3 > .card:nth-child(3) { grid-column: 1 / -1; }
+  /* Genérico: N cards (uma por conta, não por tipo de provedor) sem teto de 4. */
+  .home-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
   .home-list { display: flex; flex-direction: column; gap: 12px; }
 
   .card {
@@ -130,8 +128,13 @@
     box-shadow: inset 0 0 0 1px var(--card-border);
   }
   .icon-img { width: 20px; height: 20px; object-fit: contain; }
-  .card-title { font-weight: 650; flex: 1; font-size: 15px; display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .card-title-wrap { flex: 1; min-width: 0; }
+  .card-title { font-weight: 650; font-size: 15px; display: flex; align-items: center; gap: 7px; min-width: 0; }
   .card-title span.txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card-label {
+    margin-top: 2px; font-size: 11.5px; font-weight: 500; color: var(--text-muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
   .status-dot.ok { background: var(--good); }
   .status-dot.bad { background: var(--bad); }
@@ -233,7 +236,8 @@
   }
   .flat .now-row { box-shadow: none; }
   .now-row-head { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
-  .now-row-title { font-weight: 650; font-size: 13.5px; }
+  .now-row-title-wrap { min-width: 0; flex: 1; }
+  .now-row-title { font-weight: 650; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .now-row-metrics { display: flex; gap: 18px; }
   .now-metric { flex: 1; min-width: 0; }
   .now-metric-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
@@ -516,10 +520,10 @@ function Icon({ id }) {
 // em paintHome*/paintNow.
 function buildProviders(data, t) {
   const list = [];
-  if (data.claude && data.claude.configured) {
-    const c = data.claude;
+  for (const c of data.claude || []) {
     list.push({
-      id: "claude", title: "Claude", ok: c.ok, error: c.error,
+      id: "claude:" + c.id, provider: "claude", ok: c.ok, error: c.error,
+      title: "Claude", label: c.label || "",
       metrics: [
         { label: t.session5h, pct: c.session_percent,
           sub: c.session_percent != null ? (t.remainingPrefix + fmtRemain(c.session_percent) + (c.session_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.session_resets_at) : "")) : null },
@@ -528,32 +532,37 @@ function buildProviders(data, t) {
       ],
     });
   }
-  if (data.cursor && data.cursor.configured) {
-    const c = data.cursor;
+  for (const c of data.cursor || []) {
     let ondemand = "";
     if (c.used_cents != null && c.limit_cents != null) ondemand = fmtUsd(c.used_cents) + " / " + fmtUsd(c.limit_cents);
     if (c.bonus_cents > 0) ondemand += (ondemand ? "  " : "") + t.bonusPrefix + fmtUsd(c.bonus_cents);
+    const base = c.plan ? `Cursor ${c.plan}` : "Cursor";
     list.push({
-      id: "cursor", title: c.plan ? `Cursor ${c.plan}` : "Cursor", ok: c.ok, error: c.error,
+      id: "cursor:" + c.id, provider: "cursor", ok: c.ok, error: c.error,
+      title: base, label: c.label || "",
       metrics: [
         { label: t.cursorModels, pct: c.percent, sub: c.cycle_end ? (t.resetPrefix + fmtWhen(c.cycle_end)) : null },
         { label: t.otherModels, pct: c.other_percent, sub: ondemand || null },
       ],
     });
   }
-  if (data.openrouter && data.openrouter.configured) {
-    const o = data.openrouter;
+  for (const o of data.openrouter || []) {
     const sub = o.limit_cents != null
       ? (t.remainMoney + fmtUsd(o.remaining_cents) + "  " + fmtUsd(o.used_cents) + t.ofSep + fmtUsd(o.limit_cents))
       : t.noCredits;
-    list.push({ id: "openrouter", title: "OpenRouter", ok: o.ok, error: o.error,
-      metrics: [{ label: t.accountCredits, pct: o.percent, sub }] });
+    list.push({
+      id: "openrouter:" + o.id, provider: "openrouter", ok: o.ok, error: o.error,
+      title: "OpenRouter", label: o.label || "",
+      metrics: [{ label: t.accountCredits, pct: o.percent, sub }],
+    });
   }
-  if (data.deepseek && data.deepseek.configured) {
-    const d = data.deepseek;
+  for (const d of data.deepseek || []) {
     const sub = d.remaining_cents != null ? fmtUsd(d.remaining_cents) : t.noCredits;
-    list.push({ id: "deepseek", title: "DeepSeek", ok: d.ok, error: d.error,
-      metrics: [{ label: t.accountCredits, pct: d.percent, sub }] });
+    list.push({
+      id: "deepseek:" + d.id, provider: "deepseek", ok: d.ok, error: d.error,
+      title: "DeepSeek", label: d.label || "",
+      metrics: [{ label: t.accountCredits, pct: d.percent, sub }],
+    });
   }
   return list;
 }
@@ -561,10 +570,12 @@ function buildProviders(data, t) {
 function ProviderCard({ p, pal, onOpen }) {
   return h("div", { className: "card", onClick: onOpen },
     h("div", { className: "card-head" },
-      h(Icon, { id: p.id }),
-      h("div", { className: "card-title" },
-        h("span", { className: "txt" }, p.title),
-        h("span", { className: "status-dot " + (p.ok ? "ok" : "bad") })),
+      h(Icon, { id: p.provider }),
+      h("div", { className: "card-title-wrap" },
+        h("div", { className: "card-title" },
+          h("span", { className: "txt" }, p.title),
+          h("span", { className: "status-dot " + (p.ok ? "ok" : "bad") })),
+        p.label ? h("div", { className: "card-label" }, p.label) : null),
       h(ChevronRight, { size: 17, className: "chev" })),
     !p.ok ? h("div", { className: "error-text" }, p.error || "") :
       h(React.Fragment, null, p.metrics.map((m, i) => h(MetricRow, { key: i, ...m, pal }))));
@@ -590,13 +601,17 @@ function Home({ data, prefs, t, pal, now, okFlashAt, onOpen }) {
   return h(React.Fragment, null,
     h(StatusStrip, { providers, okFlashAt, now, t }),
     prefs.homeLayout === "grid"
-      ? h("div", { className: `home-grid n-${providers.length}` }, cards)
+      ? h("div", { className: "home-grid" }, cards)
       : h("div", { className: "home-list" }, cards));
 }
 
 function NowRow({ p, pal }) {
   return h("div", { className: "now-row" },
-    h("div", { className: "now-row-head" }, h(Icon, { id: p.id }), h("div", { className: "now-row-title" }, p.title)),
+    h("div", { className: "now-row-head" },
+      h(Icon, { id: p.provider }),
+      h("div", { className: "now-row-title-wrap" },
+        h("div", { className: "now-row-title" }, p.title),
+        p.label ? h("div", { className: "card-label" }, p.label) : null)),
     !p.ok ? h("div", { className: "error-text" }, p.error || "") :
       h("div", { className: "now-row-metrics" }, p.metrics.map((m, i) => h("div", { key: i, className: "now-metric" },
         h("div", { className: "now-metric-top" },
@@ -649,15 +664,19 @@ function Kv({ k, v }) {
   return h("div", { className: "kv" }, h("span", { className: "k" }, k), h("span", { className: "v num" }, v));
 }
 
-function DetailShell({ id, title, ok, error, children, t }) {
+function DetailShell({ id, title, label, ok, error, children, t }) {
   return h("div", { className: "detail-card" },
-    h("div", { className: "card-head" }, h(Icon, { id }), h("div", { className: "card-title" }, h("span", { className: "txt" }, title))),
+    h("div", { className: "card-head" },
+      h(Icon, { id }),
+      h("div", { className: "card-title-wrap" },
+        h("div", { className: "card-title" }, h("span", { className: "txt" }, title)),
+        label ? h("div", { className: "card-label" }, label) : null)),
     !ok ? h("div", { className: "error-text" }, error || t.noData) : children);
 }
 
-function ClaudeDetail({ data, t, pal }) {
-  const c = data.claude || {};
-  return h(DetailShell, { id: "claude", title: "Claude", ok: c.ok, error: c.error, t },
+function ClaudeDetail({ data, account, t, pal }) {
+  const c = account || {};
+  return h(DetailShell, { id: "claude", title: "Claude", label: c.label, ok: c.ok, error: c.error, t },
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
     h(DetailBar, { label: t.window5h, pct: c.session_percent, pal,
       sub: t.remainingPrefix + fmtRemain(c.session_percent) + (c.session_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.session_resets_at) : "") }),
@@ -677,9 +696,10 @@ function ClaudeDetail({ data, t, pal }) {
     c.opus_percent != null ? h(Kv, { k: t.reset, v: fmtWhen(c.opus_resets_at) }) : null);
 }
 
-function CursorDetail({ data, t, pal }) {
-  const c = data.cursor || {};
-  return h(DetailShell, { id: "cursor", title: c.plan ? `Cursor ${c.plan}` : "Cursor", ok: c.ok, error: c.error, t },
+function CursorDetail({ data, account, t, pal }) {
+  const c = account || {};
+  const base = c.plan ? `Cursor ${c.plan}` : "Cursor";
+  return h(DetailShell, { id: "cursor", title: base, label: c.label, ok: c.ok, error: c.error, t },
     h(Kv, { k: t.plan, v: c.plan }),
     h(Kv, { k: t.cycle, v: fmtWhen(c.cycle_end) }),
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
@@ -699,10 +719,10 @@ function CursorDetail({ data, t, pal }) {
     (c.requests_used != null && c.requests_limit > 0) ? h(Kv, { k: t.limit, v: String(c.requests_limit) }) : null);
 }
 
-function OpenRouterDetail({ data, t, pal }) {
-  const o = data.openrouter || {};
+function OpenRouterDetail({ data, account, t, pal }) {
+  const o = account || {};
   const remain = o.limit_cents != null ? (t.remainMoney + fmtUsd(o.remaining_cents)) : t.noCredits;
-  return h(DetailShell, { id: "openrouter", title: "OpenRouter", ok: o.ok, error: o.error, t },
+  return h(DetailShell, { id: "openrouter", title: "OpenRouter", label: o.label, ok: o.ok, error: o.error, t },
     h("div", { className: "note" }, t.allKeysNote),
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
     h(DetailBar, { label: t.credits, pct: o.percent, pal, sub: remain }),
@@ -712,10 +732,10 @@ function OpenRouterDetail({ data, t, pal }) {
     h(Kv, { k: t.percent, v: fmtPct(o.percent) }));
 }
 
-function DeepSeekDetail({ data, t, pal }) {
-  const d = data.deepseek || {};
+function DeepSeekDetail({ data, account, t, pal }) {
+  const d = account || {};
   const remain = d.remaining_cents != null ? (t.remainMoney + fmtUsd(d.remaining_cents)) : t.noCredits;
-  return h(DetailShell, { id: "deepseek", title: "DeepSeek", ok: d.ok, error: d.error, t },
+  return h(DetailShell, { id: "deepseek", title: "DeepSeek", label: d.label, ok: d.ok, error: d.error, t },
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
     h(DetailBar, { label: t.credits, pct: d.percent, pal, sub: remain }));
 }
@@ -796,6 +816,21 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
+  // Se a conta aberta no detalhe sumir (removida no painel, ou coletor
+  // reiniciado sem ela) entre um refresh e outro, volta pra Início.
+  useEffect(() => {
+    if (!data || view === "home" || view === "status" || view === "now") return;
+    const idx = view.indexOf(":");
+    if (idx <= 0) {
+      setView("home");
+      return;
+    }
+    const provider = view.slice(0, idx);
+    const accountId = view.slice(idx + 1);
+    const list = data[provider] || [];
+    if (!list.some((a) => a.id === accountId)) setView("home");
+  }, [data, view]);
+
   if (!data) {
     return h("div", { className: shellClass },
       h("div", { className: "header" },
@@ -812,12 +847,22 @@ function App() {
   const showCheck = okFlashAt && (now - okFlashAt < FETCH_OK_FLASH_MS);
   const secsLeft = showCheck ? null : Math.max(0, Math.ceil((nextFetchAt - now) / 1000));
 
-  const detailMap = {
+  const detailComponents = {
     claude: ClaudeDetail, cursor: CursorDetail, openrouter: OpenRouterDetail, deepseek: DeepSeekDetail,
   };
   const isHome = view === "home";
   const isStatus = view === "status";
-  const DetailComp = detailMap[view];
+  let DetailComp = null;
+  let detailAccount = null;
+  if (!isHome && !isStatus) {
+    const idx = view.indexOf(":");
+    if (idx > 0) {
+      const provider = view.slice(0, idx);
+      const accountId = view.slice(idx + 1);
+      detailAccount = (data[provider] || []).find((a) => a.id === accountId) || null;
+      DetailComp = detailComponents[provider] || null;
+    }
+  }
 
   return h("div", { className: shellClass },
     h("div", { className: "header" },
@@ -834,7 +879,7 @@ function App() {
     h("div", { className: "content view-fade", key: view },
       isHome ? h(Home, { data, prefs, t, pal, now, okFlashAt, onOpen: setView }) : null,
       isStatus ? h(StatusView, { prefs, setPrefs, t, onRefresh: fetchUsage, data, refreshing, fetchFailed }) : null,
-      DetailComp ? h(DetailComp, { data, t, pal }) : null));
+      (DetailComp && detailAccount) ? h(DetailComp, { data, account: detailAccount, t, pal }) : null));
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(App));

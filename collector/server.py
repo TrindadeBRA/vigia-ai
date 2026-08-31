@@ -11,17 +11,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from claude_oauth import claude_token_candidates
-from cursor_state import cursor_token_candidates
 from docker_ctl import docker_down, docker_up
 from formatting import utc_now
 from store import apply as apply_store
 from store import env_flag
-from panel import WEB_DIR, clear_secret, config_payload, lan_ipv4, reload_env, save_config
-from providers.claude import _claude_fail, fetch_claude
-from providers.cursor import _cursor_fail, fetch_cursor
-from providers.deepseek import _deepseek_fail, fetch_deepseek
-from providers.openrouter import _openrouter_fail, fetch_openrouter
+from panel import WEB_DIR, add_account, clear_secret, config_payload, lan_ipv4, reload_env, remove_account, save_config
+from providers.claude import _claude_fail, fetch_claude_accounts
+from providers.cursor import _cursor_fail, fetch_cursor_accounts
+from providers.deepseek import _deepseek_fail, fetch_deepseek_accounts
+from providers.openrouter import _openrouter_fail, fetch_openrouter_accounts
 
 LISTEN_HOST = "0.0.0.0"
 LISTEN_PORT = 8787
@@ -32,73 +30,68 @@ def _repo_root() -> Path:
 
 
 def mock_payload() -> dict[str, Any]:
+    now = utc_now()
     return {
-        "updated_at": utc_now(),
-        "claude": {
-            "ok": True,
-            "error": None,
-            "configured": True,
-            "session_percent": 42.0,
-            "session_resets_at": utc_now(),
-            "weekly_percent": 18.0,
-            "weekly_resets_at": utc_now(),
-        },
-        "cursor": {
-            "ok": True,
-            "error": None,
-            "configured": True,
-            "percent": 70.0,
-            "other_percent": 73.0,
-            "used_cents": 0,
-            "limit_cents": 1000,
-            "bonus_cents": 0,
-            "cycle_end": "01/09",
-            "plan": "pro",
-        },
-        "openrouter": {
-            "ok": True,
-            "error": None,
-            "configured": True,
-            "percent": 66.6,
-            "limit_cents": 1000,
-            "used_cents": 666,
-            "remaining_cents": 334,
-        },
-        "deepseek": {
-            "ok": True,
-            "error": None,
-            "configured": True,
-            "percent": 25.0,
-            "limit_cents": 1000,
-            "used_cents": 250,
-            "remaining_cents": 750,
-        },
+        "updated_at": now,
+        "claude": [
+            {
+                "id": "local",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "session_percent": 42.0,
+                "session_resets_at": now,
+                "weekly_percent": 18.0,
+                "weekly_resets_at": now,
+                "sonnet_percent": None,
+                "sonnet_resets_at": None,
+                "opus_percent": None,
+                "opus_resets_at": None,
+            }
+        ],
+        "cursor": [
+            {
+                "id": "local",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "percent": 70.0,
+                "other_percent": 73.0,
+                "used_cents": 0,
+                "limit_cents": 1000,
+                "remaining_cents": 1000,
+                "bonus_cents": 0,
+                "cycle_end": "01/09",
+                "plan": "pro",
+                "requests_used": None,
+                "requests_limit": None,
+            }
+        ],
+        "openrouter": [
+            {
+                "id": "legacy",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "percent": 66.6,
+                "limit_cents": 1000,
+                "used_cents": 666,
+                "remaining_cents": 334,
+            }
+        ],
+        "deepseek": [
+            {
+                "id": "legacy",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "percent": 25.0,
+                "limit_cents": 1000,
+                "used_cents": 250,
+                "remaining_cents": 750,
+            }
+        ],
     }
-
-
-def _is_configured() -> dict[str, bool]:
-    """Provedor deve aparecer na ESP32?
-
-    Distinto de `ok`: um provedor configurado pode falhar (rede, token
-    expirado) e ainda assim deve aparecer na tela, com erro. Fica de fora
-    quem nunca foi preenchido (OpenRouter/DeepSeek sem key) ou quem o
-    usuário ocultou no painel (Claude/Cursor — o login local continua).
-    """
-    return {
-        "claude": (not env_flag("CLAUDE_HIDDEN")) and bool(claude_token_candidates()),
-        "cursor": (not env_flag("CURSOR_HIDDEN")) and bool(cursor_token_candidates()),
-        "openrouter": bool(os.environ.get("OPENROUTER_API_KEY", "").strip()),
-        "deepseek": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()),
-    }
-
-
-def _stamp_configured(payload: dict[str, Any]) -> dict[str, Any]:
-    configured = _is_configured()
-    for name in ("claude", "cursor", "openrouter", "deepseek"):
-        block = payload.get(name)
-        if isinstance(block, dict):
-            block["configured"] = configured[name]
-    return payload
 
 
 def build_payload() -> dict[str, Any]:
@@ -106,47 +99,36 @@ def build_payload() -> dict[str, Any]:
     if env_flag("COLLECTOR_MOCK"):
         payload = mock_payload()
         if env_flag("CLAUDE_HIDDEN"):
-            payload["claude"]["configured"] = False
+            payload["claude"] = []
         if env_flag("CURSOR_HIDDEN"):
-            payload["cursor"]["configured"] = False
+            payload["cursor"] = []
         return payload
-    claude: dict[str, Any]
-    cursor: dict[str, Any]
-    openrouter: dict[str, Any]
-    deepseek: dict[str, Any]
-    # Oculto no painel: não chama a API (rate limit do Claude) e o firmware
-    # some o card via configured=false.
-    if env_flag("CLAUDE_HIDDEN"):
-        claude = _claude_fail("oculto no painel")
-    else:
-        try:
-            claude = fetch_claude()
-        except Exception as exc:  # noqa: BLE001 — isolar provedor
-            claude = _claude_fail(str(exc))
-    if env_flag("CURSOR_HIDDEN"):
-        cursor = _cursor_fail("oculto no painel")
-    else:
-        try:
-            cursor = fetch_cursor()
-        except Exception as exc:  # noqa: BLE001
-            cursor = _cursor_fail(str(exc))
+    # Cada fetch_*_accounts() já isola erro por conta (uma conta ruim não
+    # derruba as outras do mesmo provedor); o try/except aqui é só rede de
+    # segurança pra um provedor inteiro nunca derrubar o HTTP 200 do /usage.
     try:
-        openrouter = fetch_openrouter()
-    except Exception as exc:  # noqa: BLE001
-        openrouter = _openrouter_fail(str(exc))
+        claude = fetch_claude_accounts()
+    except Exception as exc:  # noqa: BLE001 — isolar provedor
+        claude = [{"id": "local", "label": "", **_claude_fail(str(exc))}]
     try:
-        deepseek = fetch_deepseek()
+        cursor = fetch_cursor_accounts()
     except Exception as exc:  # noqa: BLE001
-        deepseek = _deepseek_fail(str(exc))
-    return _stamp_configured(
-        {
-            "updated_at": utc_now(),
-            "claude": claude,
-            "cursor": cursor,
-            "openrouter": openrouter,
-            "deepseek": deepseek,
-        }
-    )
+        cursor = [{"id": "local", "label": "", **_cursor_fail(str(exc))}]
+    try:
+        openrouter = fetch_openrouter_accounts()
+    except Exception as exc:  # noqa: BLE001
+        openrouter = [{"id": "legacy", "label": "", **_openrouter_fail(str(exc))}]
+    try:
+        deepseek = fetch_deepseek_accounts()
+    except Exception as exc:  # noqa: BLE001
+        deepseek = [{"id": "legacy", "label": "", **_deepseek_fail(str(exc))}]
+    return {
+        "updated_at": utc_now(),
+        "claude": claude,
+        "cursor": cursor,
+        "openrouter": openrouter,
+        "deepseek": deepseek,
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -246,6 +228,21 @@ class Handler(BaseHTTPRequestHandler):
             result = clear_secret(name)
             self._send_json(200 if result.get("ok") else 400, result)
             return
+        if path == "/api/config/account":
+            body = self._read_json()
+            provider = str(body.get("provider") or "")
+            label = str(body.get("label") or "")
+            secret = str(body.get("token") or body.get("key") or "")
+            result = add_account(provider, label, secret)
+            self._send_json(200 if result.get("ok") else 400, result)
+            return
+        if path == "/api/config/account/delete":
+            body = self._read_json()
+            provider = str(body.get("provider") or "")
+            account_id = str(body.get("id") or "")
+            result = remove_account(provider, account_id)
+            self._send_json(200 if result.get("ok") else 400, result)
+            return
         self._send_json(404, {"ok": False, "error": "not found"})
 
     def do_GET(self) -> None:  # noqa: N802
@@ -292,9 +289,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/usage":
             payload = build_payload()
             for name in ("claude", "cursor", "openrouter", "deepseek"):
-                block = payload.get(name) or {}
-                if isinstance(block, dict) and not block.get("ok") and block.get("configured"):
-                    print(f"[{utc_now()}] ERRO {name}: {block.get('error')}")
+                for acc in payload.get(name) or []:
+                    if isinstance(acc, dict) and not acc.get("ok"):
+                        who = acc.get("label") or acc.get("id") or "?"
+                        print(f"[{utc_now()}] ERRO {name} ({who}): {acc.get('error')}")
             self._send_json(200, payload)
             return
         self._send_json(404, {"ok": False, "error": "not found"})

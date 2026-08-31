@@ -86,6 +86,32 @@ extern int g_arrowDownY;
 extern int g_arrowS;
 extern bool g_detailCanScroll;
 
+// Qual conta de cada provedor esta aberta no detalhe (indice em
+// g_snap.claude[]/cursor[]/etc.) — uiSetView() reseta pra "a que mais precisa
+// de atencao" (ver claudeWorstIdx() etc.) toda vez que entra na view vindo de
+// outra; o paginador (uiAccountStep(), abaixo) so move dentro da view atual.
+extern int g_claudeIdx;
+extern int g_cursorIdx;
+extern int g_openrouterIdx;
+extern int g_deepseekIdx;
+
+// Geometria do paginador "< i/N >" no topo do card de detalhe — só existe
+// (g_acctPagerVisible) quando o provedor tem mais de uma conta.
+extern bool g_acctPagerVisible;
+extern int g_acctPagerLeftX0;
+extern int g_acctPagerLeftX1;
+extern int g_acctPagerRightX0;
+extern int g_acctPagerRightX1;
+extern int g_acctPagerY;
+extern int g_acctPagerH;
+
+// Indice da conta que mais precisa de atencao (maior percentual) — usado
+// pelo card compacto da Início e como ponto de entrada ao abrir o detalhe.
+int claudeWorstIdx();
+int cursorWorstIdx();
+int openrouterWorstIdx();
+int deepseekWorstIdx();
+
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
 // selo do header deve mostrar o check verde de sucesso em vez do contador.
 int countdownSeconds();
@@ -102,3 +128,6 @@ void paintDeepSeek();
 void paintStatus();
 void paintNow();
 void paintNowClock();
+// Move o paginador de contas da view de detalhe atual (dir -1/+1); sem
+// efeito se a view atual nao tiver mais de uma conta.
+void uiAccountStep(int dir);

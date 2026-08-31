@@ -8,6 +8,7 @@ from typing import Any
 
 from formatting import ratio_percent
 from http_util import http_json
+from store import get_accounts
 
 # Key real: sk-or-v1- + hex. Paste do painel às vezes vem "Nome — sk-or-v1-..."
 # (travessão U+2014). Header HTTP não aceita isso.
@@ -40,16 +41,6 @@ def clean_openrouter_key(raw: str) -> str | None:
 # /credits é o saldo real da conta: quanto foi comprado e quanto foi gasto no
 # total, não importa qual key fez a chamada. É o que a tela deve mostrar.
 OPENROUTER_CREDITS_URL = "https://openrouter.ai/api/v1/credits"
-
-
-def openrouter_token() -> tuple[str | None, str | None]:
-    raw = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    if not raw:
-        return None, "sem OPENROUTER_API_KEY (grave no painel)"
-    token = clean_openrouter_key(raw)
-    if not token:
-        return None, "API key inválida; cole só a chave sk-or- no painel"
-    return token, None
 
 
 def _usd_cents(value: Any) -> int | None:
@@ -96,14 +87,38 @@ def _openrouter_fail(msg: str) -> dict[str, Any]:
     }
 
 
-def fetch_openrouter() -> dict[str, Any]:
-    token, err = openrouter_token()
-    if err:
-        return _openrouter_fail(err)
-    data = http_json(
-        OPENROUTER_CREDITS_URL,
-        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
-    )
+def fetch_openrouter_one(raw_key: str) -> dict[str, Any]:
+    """Uma chamada de créditos pra uma key já resolvida (uma conta da lista)."""
+    key = clean_openrouter_key(raw_key or "")
+    if not key:
+        return _openrouter_fail("API key inválida; cole só a chave sk-or- no painel")
+    try:
+        data = http_json(
+            OPENROUTER_CREDITS_URL,
+            headers={"Authorization": f"Bearer {key}", "Accept": "application/json"},
+        )
+    except RuntimeError as exc:
+        return _openrouter_fail(str(exc))
     if not isinstance(data, dict):
         return _openrouter_fail("resposta OpenRouter inesperada")
     return parse_openrouter_payload(data)
+
+
+def fetch_openrouter_accounts() -> list[dict[str, Any]]:
+    """Uma entrada por key configurada (`OPENROUTER_ACCOUNTS`). Sem conceito de
+    conta "local" — toda conta OpenRouter é uma key colada no painel.
+    """
+    accounts = get_accounts("OPENROUTER_ACCOUNTS")
+    if not accounts:
+        # Migração transparente da OPENROUTER_API_KEY única do formato antigo.
+        legacy = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        if legacy:
+            accounts = [{"id": "legacy", "label": "", "key": legacy}]
+    out: list[dict[str, Any]] = []
+    for acc in accounts:
+        key = str(acc.get("key") or "").strip()
+        label = str(acc.get("label") or "").strip()
+        aid = str(acc.get("id") or "extra")
+        result = fetch_openrouter_one(key)
+        out.append({"id": aid, "label": label, **result})
+    return out
