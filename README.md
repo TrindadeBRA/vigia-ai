@@ -6,7 +6,7 @@
 ### Painel de mesa para cotas de IA — sem nunca expor um token
 
 **Claude** · **GPT** (ChatGPT / Codex) · **Cursor** · **OpenRouter** · **DeepSeek**
-rodando em **ESP32 + TFT 3,5" touch**
+rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-e63931?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](backend)
@@ -27,204 +27,38 @@ rodando em **ESP32 + TFT 3,5" touch**
 </table>
 </div>
 
-A placa **não** guarda tokens. O coletor roda no seu computador, lê o login local (ou o que você colar no painel), chama as APIs e publica JSON na LAN. A ESP32 e o mostrador web (`/display`) escutam `GET /events` (SSE). `GET /usage` continua o contrato JSON e força uma consulta na hora.
+## O problema
+
+Eu uso Claude, ChatGPT/Codex, Cursor, OpenRouter e DeepSeek no mesmo dia de trabalho — cada um com sua própria cota, sua própria janela de reset e sua própria aba pra checar. Na prática, eu só descobria que tinha estourado o limite do Cursor quando o autocomplete parava de responder no meio de uma tarefa.
+
+O **Vigia AI** tira essa pergunta da cabeça: um mostrador sempre ligado na mesa, com o consumo de todas as contas atualizado sozinho. Sem abrir aba, sem rodar `curl`, sem lembrar de conferir.
+
+## Onde roda
+
+Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é **opcional**: o mesmo painel roda como página web, então dá pra usar num monitor extra, no celular, ou sem ter a placa em mãos.
+
+| | |
+| --- | --- |
+| 🖥️ **Físico** | ESP32 Dev Module + TFT SPI **3,5"** touch (XPT2046), tela sempre ligada na mesa |
+| 🌐 **Web** | [`/display`](docs/SETUP.md), mesmo layout, responsivo (desktop e mobile), tema/cor salvos no navegador |
+| 🧪 **Simulado** | [Wokwi](https://wokwi.com/) no VS Code — testa o firmware sem soldar nada |
 
 > [!WARNING]
-> **LAN only.** Os endpoints de cota do Claude, do GPT e do Cursor **não são API pública** — são os mesmos que o CLI/IDE já usam neste computador. O projeto pode quebrar se esses contratos internos mudarem. **Não exponha a porta 8787 na internet.** OpenRouter e DeepSeek usam o saldo público da API key.
+> **LAN only.** Os endpoints de cota do Claude, do GPT e do Cursor **não são API pública** — são os mesmos que o CLI/IDE já usam neste computador. **Não exponha a porta 8787 na internet.** A placa **nunca** guarda tokens — só percentuais e datas. Detalhes em [Privacidade e segurança](#privacidade-e-segurança).
 
-Licença [MIT](LICENSE).
+## Recursos
 
-## Como funciona
-
-```
-Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek)
-        │  tokens só no host
-        ▼
-  backend FastAPI  :8787     GET /events  (SSE, JSON sem Bearer)
-        │                    GET /usage   (consulta na hora)
-        │                    GET /docs    (Swagger)
-        ├──────────────────► ESP32 / Wokwi   (escuta o stream)
-        └──────────────────► React            /display          réplica da placa
-                                              /display/config   contas e placa
-```
-
-<div align="center">
-<img src="docs/assets/firmware/display-home-grid.png" width="380" alt="Visão geral em grade no mostrador">
-</div>
-
-1. Tokens ficam no Mac (`Keychain`, `~/.codex/auth.json`, `state.vscdb`, ou `backend/data/config.json` gitignored).
-2. O coletor consulta as APIs **uma vez por ciclo** (padrão 60 s) e empurra o mesmo JSON a todos os clientes SSE. `GET /usage` força um ciclo extra.
-3. O JSON na LAN tem percentuais e datas, **nunca** o Bearer.
-4. Falha de uma conta (`ok: false`) não derruba as outras. HTTP 200.
-
-Arquitetura completa: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md). Contrato da placa: [`docs/CONTRATO_JSON.md`](docs/CONTRATO_JSON.md).
-
-## Como o Vigia sabe os limites (Claude, GPT, Cursor)
-
-Não é mágica e **não é chave de API** (`sk-ant-…`, `sk-…`). Também **não é a placa** que liga para a Anthropic, a OpenAI ou o Cursor.
-
-Pense assim: o Claude Code, o Codex e o Cursor **já perguntam isso o tempo todo** para desenhar a barra de uso no próprio app. O Vigia só pede **a mesma informação**, neste computador, com o **mesmo login** que você já fez.
-
-```
-Você já entrou no app  →  o app guarda um “crachá” neste Mac
-        →  o coletor (Vigia) lê esse crachá  →  pergunta ao servidor da assinatura
-        →  recebe “usou X% da sessão / da semana”
-        →  manda só esses números para a placa e o /display
-```
-
-O crachá (token) **nunca sai deste computador**. A placa e o navegador só veem porcentagens e datas.
-
-| App | Onde o login já está neste Mac | O que o Vigia pergunta |
-| --- | --- | --- |
-| **Claude** (Claude Code) | Chaveiro do macOS (Keychain), o mesmo lugar das senhas do sistema. No Linux, um arquivo em `~/.claude/`. | “Quanto da assinatura Claude já foi usado nesta sessão de 5 h e nesta semana?” |
-| **GPT** (ChatGPT / Codex) | Arquivo `~/.codex/auth.json`, gravado quando você roda `codex login`. | “Quanto da cota ChatGPT/Codex já foi usado na janela curta e na longa?” |
-| **Cursor** | Um arquivo interno do app (`state.vscdb`). O coletor **copia e lê**, não altera o Cursor. | “Quanto do plano (modelos Cursor / outros) já foi usado neste ciclo?” |
-
-> [!TIP]
-> Se o app não estiver neste PC (Docker, outro computador), aí sim você cola o token no painel — plano B. Enquanto o Claude Code, o Codex ou o Cursor estiverem logados **aqui**, não precisa colar nada.
-
-O coletor **não renova** o login. Se a sessão expirou, abra o app oficial e entre de novo; na próxima volta o Vigia volta a enxergar a cota.
-
-OpenRouter e DeepSeek são outro caso: não há app local. Você cria uma chave no site e cola no painel — o Vigia consulta o **saldo público** dessa chave.
-
-### O que acontece de verdade (técnico)
-
-Há **três camadas**. Só a do meio fala com Anthropic / OpenAI / Cursor.
-
-```
-app oficial (Claude Code / Codex / Cursor)
-    grava access token neste host
-        ↓
-coletor FastAPI  :8787   (backend/app/providers/* + local/*)
-    1. lê o token  2. GET/POST no endpoint de cota  3. normaliza
-        ↓  JSON sem token  (docs/CONTRATO_JSON.md)
-GET /usage  (na hora)   ·   GET /events  (SSE a cada USAGE_INTERVAL_S)
-        ↓
-firmware ESP32  ·  /display  ·  /display/config
-```
-
-O coletor **não** é um OAuth client. Não tem `client_id`, não faz authorization code, **não faz refresh**. Quem emite e renova o access token é o app oficial. O Vigia só **reusa** o token já gravado e dispara HTTP (`http_json`) com `Authorization: Bearer …`. Token expirado → `ok: false` naquela conta; as outras seguem.
-
-`UsageHub` (`backend/app/hub.py`) faz **um** ciclo de APIs e espalha o snapshot. Placa e abas de `/display` só escutam SSE. `GET /usage` força um ciclo extra (botão «Atualizar consumo», Swagger). Falha de um provedor **não** derruba o HTTP 200 nem os outros cards.
-
-Esses endpoints **não são produto público**. Path, header e envelope podem mudar; a quebra fica em `ok: false` naquela conta.
-
-#### Claude
-
-| | |
-| --- | --- |
-| Credencial | macOS: `security find-generic-password -s "Claude Code-credentials" -w` → JSON `claudeAiOauth.accessToken` + `expiresAt` (ms). Linux: `~/.claude/.credentials.json`. |
-| HTTP | `GET https://api.anthropic.com/api/oauth/usage` |
-| Headers | `Authorization: Bearer`, `anthropic-beta: oauth-2025-04-20`, `User-Agent: claude-code/2.1` |
-| Mapeamento | `five_hour` / `kind=session` → `session_percent`; `seven_day` → `weekly_percent`; sonnet/opus se vierem |
-| Não serve | `sk-ant-…` (API paga); `claude setup-token` / `sk-ant-oat01-…` (escopo `user:inference` → 403; precisa `user:profile`) |
-
-Sem `anthropic-beta` → 401. Sem o User-Agent do CLI → 429 persistente. Rate limit é **por access token**. Código: `backend/app/local/claude_oauth.py`, `providers/claude.py`. Doc: [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md).
-
-#### GPT (ChatGPT / Codex)
-
-| | |
-| --- | --- |
-| Credencial | `~/.codex/auth.json` (`CODEX_HOME` / `CODEX_AUTH_PATH`) → `tokens.access_token` + `tokens.account_id`. Gravado por `codex login`. |
-| HTTP | `GET https://chatgpt.com/backend-api/wham/usage` |
-| Headers | `Authorization: Bearer`, `User-Agent: codex-cli`, `ChatGPT-Account-Id` se existir |
-| Mapeamento | `rate_limit.primary_window` (≤ 8 h) → sessão; `secondary_window` → semana; `plan_type` → `plan`. `used_percent` já vem 0–100. |
-| Não serve | `OPENAI_API_KEY` / `sk-…` (ledger da API de plataforma, outro produto) |
-
-Código: `backend/app/local/gpt_oauth.py`, `providers/gpt.py`. Doc: [`docs/APIS_GPT.md`](docs/APIS_GPT.md).
-
-#### Cursor
-
-| | |
-| --- | --- |
-| Credencial | Cópia do SQLite `state.vscdb` (evita lock) → `SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken'`. Plano em `cursorAuth/stripeMembershipType`. `exp` do JWT só para mensagem de erro (sem verificar assinatura). |
-| HTTP principal | `POST https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage` body `{}`, `Connect-Protocol-Version: 1` |
-| Fallback | `GET https://api2.cursor.sh/auth/usage` (Enterprise: `numRequests` / `maxRequestUsage`) |
-| Mapeamento | `planUsage.autoPercentUsed` → `percent` (Cursor Models); `apiPercentUsed` → `other_percent`; `spendLimitUsage` em centavos; `billingCycleEnd` → `cycle_end` |
-
-Contas SSO/Team às vezes **não gravam** `cursorAuth/accessToken` — o coletor não inventa o JWT. Código: `backend/app/local/cursor_state.py`, `providers/cursor.py`. Doc: [`docs/APIS_CURSOR.md`](docs/APIS_CURSOR.md).
-
-#### Ordem de credencial e o que nunca sai do host
-
-Local **ganha** do token colado em `backend/data/config.json` (gitignored). Colado é plano B (Docker / outro PC). Extra accounts são contas **além** da local.
-
-O JSON público (`claude[]`, `gpt[]`, `cursor[]`, …) tem `ok`, percentuais, resets, `plan` — **nunca** Bearer, Keychain, path do `auth.json` ou dump do SQLite. Firmware e browser só consomem esse contrato.
-
-## Quick start
-
-Precisa de **Python ≥ 3.11**, **Node 20+** e, para firmware, [PlatformIO Core](https://platformio.org/).
-
-```bash
-./dev up
-```
-
-| O quê | URL |
-| --- | --- |
-| Painel (contas, mock, `secrets.h`) | http://127.0.0.1:5173/display/config |
-| Mostrador web | http://127.0.0.1:5173/display |
-| Swagger | http://127.0.0.1:8787/docs |
-| Contrato JSON | `GET http://127.0.0.1:8787/usage` |
-| Stream SSE | `GET http://127.0.0.1:8787/events` |
-
-`Ctrl+C` encerra. Se as portas ficarem ocupadas: `./dev down`.
-
-Docker (backend serve o `frontend/dist` em `:8787`):
-
-```bash
-./dev up --docker
-```
-
-## Comandos
-
-| Comando | Faz |
-| --- | --- |
-| `./dev up` | Backend + Vite; rebuilda `frontend/dist` (coletor em `:8787`) |
-| `./dev down` | Encerra o que ficou em `:8787` / `:5173` |
-| `./dev test` | pytest + `tsc` |
-| `./dev lint` | ruff |
-| `./dev wokwi` | Coletor + gateway Wokwi + firmware simulado; rebuilda o dist |
-| `./dev firmware flash` | Grava a ESP32 |
-
-## Provedores
-
-Várias contas por serviço. O coletor consulta as APIs a cada 60 s (`USAGE_INTERVAL_S`) e espalha o resultado por SSE — placa e abas de `/display` **não** multiplicam as chamadas. Cuidado com **429** no Claude; a comunidade sugere ~180 s se bater rate limit (`USAGE_INTERVAL_S=180`).
-
-| Serviço | Padrão neste computador | Plano B (painel) |
-| --- | --- | --- |
-| Claude | Keychain / `~/.claude/.credentials.json` | token OAuth colado |
-| GPT | `~/.codex/auth.json` (`codex login`) | token OAuth colado |
-| Cursor | `state.vscdb` (macOS / Linux / Windows) | JWT colado |
-| OpenRouter | — | API key |
-| DeepSeek | — | API key |
-
-Detalhes: [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md), [`APIS_GPT.md`](docs/APIS_GPT.md), [`APIS_CURSOR.md`](docs/APIS_CURSOR.md), [`APIS_OPENROUTER.md`](docs/APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](docs/APIS_DEEPSEEK.md).
-
-## Placa
-
-**BOM:** ESP32 Dev Module (WROOM / DevKit C) + TFT SPI **3,5"** 320×480 (**ILI9488**; ILI9486 = flag no `platformio.ini`). Touch **XPT2046**. GPIO **2** é `TFT_DC` — não usar como LED.
-
-| Sinal | GPIO |
-| --- | --- |
-| MOSI / T_DIN | 23 |
-| MISO / T_DO | 19 |
-| SCLK / T_CLK | 18 |
-| TFT CS | 15 |
-| TFT DC | **2** |
-| TFT RST | 4 |
-| Touch CS | 21 |
-
-Pinos, backlight e rotação: [`docs/HARDWARE.md`](docs/HARDWARE.md). Views e calibração: [`docs/TOUCH.md`](docs/TOUCH.md).
-
-```bash
-cp firmware/src/secrets.h.example firmware/src/secrets.h
-# SSID, senha Wi-Fi, USAGE_URL = http://IP-DO-MAC:8787/usage
-./dev firmware flash
-```
-
-> [!NOTE]
-> A ESP32 **não** alcança `127.0.0.1`. No macOS: `ipconfig getifaddr en0`. O painel imprime o `USAGE_URL` de LAN e gera o `secrets.h`.
+- **5 provedores, múltiplas contas cada** — Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek
+- **Tempo real** — um único ciclo de consulta no coletor, distribuído por SSE; placa e abas de `/display` não multiplicam chamadas
+- **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
+- **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela
+- **3 temas × 7 cores de destaque**, **PT / EN / ES**
+- **QR code na tela** — abre o painel de configuração de qualquer aparelho na mesma Wi-Fi
+- **Resiliente** — falha numa conta (`ok: false`) nunca derruba as outras
 
 ## Capturas de tela
+
+### Firmware (ESP32 + TFT 3,5")
 
 Telas reais do firmware (touch XPT2046, tema **Escuro** com destaque vermelho). Toque em qualquer card para abrir o detalhe da conta; deslize para ver mais.
 
@@ -270,28 +104,91 @@ Telas reais do firmware (touch XPT2046, tema **Escuro** com destaque vermelho). 
 <br><sub>Sistema — idioma, posição da barra e atualização manual</sub>
 </div>
 
-## Simulador (Wokwi)
+### Web (`/display` no navegador)
 
-Mesmo sketch, Wi-Fi simulada, coletor **real** via [`wokwigw`](https://github.com/wokwi/wokwigw).
+Mesmo contrato JSON, layout responsivo: sidebar no desktop, menu hambúrguer no celular. Tema, cor de destaque e idioma ficam salvos no navegador (`localStorage`).
 
-```bash
-./dev wokwi
+<table>
+<tr>
+<th align="center">Visão geral (desktop)</th>
+<th align="center">Detalhe — Cursor</th>
+</tr>
+<tr>
+<td><img src="docs/assets/web/web-overview.png" width="360" alt="Visão geral do mostrador web com sidebar e cards das 5 contas"></td>
+<td><img src="docs/assets/web/web-detail-cursor.png" width="360" alt="Detalhe da conta Cursor no mostrador web"></td>
+</tr>
+<tr>
+<th align="center">Agora (relógio + resumo)</th>
+<th align="center">Aparência (tema e cor)</th>
+</tr>
+<tr>
+<td><img src="docs/assets/web/web-now.png" width="360" alt="View Agora com relógio grande e cards resumidos"></td>
+<td><img src="docs/assets/web/web-settings.png" width="360" alt="Painel de aparência com temas Escuro/Claro/Contraste e 7 cores de destaque"></td>
+</tr>
+</table>
+
+<table>
+<tr>
+<th align="center">Configurações (`/display/config`)</th>
+<th align="center">Responsivo (mobile)</th>
+</tr>
+<tr>
+<td><img src="docs/assets/web/web-config.png" width="440" alt="Painel de configuração de contas Claude, GPT, Cursor, OpenRouter e DeepSeek"></td>
+<td><img src="docs/assets/web/web-mobile.png" width="220" alt="Mostrador web em viewport de celular com menu hambúrguer"></td>
+</tr>
+</table>
+
+## Como funciona
+
+```
+Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek)
+        │  tokens só no host
+        ▼
+  backend FastAPI  :8787     GET /events  (SSE, JSON sem Bearer)
+        │                    GET /usage   (consulta na hora)
+        │                    GET /docs    (Swagger)
+        ├──────────────────► ESP32 / Wokwi   (escuta o stream)
+        └──────────────────► React            /display          réplica da placa
+                                              /display/config   contas e placa
 ```
 
-Depois, no editor: `Cmd+Shift+P` → **Wokwi: Start Simulator**. O display no Wokwi é ILI9341 320×240 — não é o tamanho físico da 3,5". Guia: [`docs/FIRMWARE.md`](docs/FIRMWARE.md).
+<div align="center">
+<img src="docs/assets/firmware/display-home-grid.png" width="380" alt="Visão geral em grade no mostrador">
+</div>
 
-## Layout
+1. Tokens ficam no computador (`Keychain`, `~/.codex/auth.json`, `state.vscdb`, ou `backend/data/config.json` gitignored) — o Vigia **reusa** o mesmo login que o Claude Code, o Codex ou o Cursor já fizeram, do mesmo jeito que esses apps fazem para desenhar a própria barra de uso.
+2. O coletor consulta as APIs **uma vez por ciclo** (padrão 60 s) e empurra o mesmo JSON a todos os clientes SSE. `GET /usage` força um ciclo extra.
+3. O JSON na LAN tem percentuais e datas, **nunca** o Bearer.
+4. Falha de uma conta (`ok: false`) não derruba as outras. HTTP 200.
 
-| Pasta | Papel |
-| --- | --- |
-| [`firmware/`](firmware/) | PlatformIO (`esp32dev` + `wokwi`) |
-| [`backend/`](backend/) | FastAPI, OpenAPI, provedores |
-| [`frontend/`](frontend/) | Vite + React + TypeScript |
-| [`docs/`](docs/) | Contrato, APIs, hardware |
-| [`./dev`](dev) | Único script de desenvolvimento |
+Quer entender exatamente como cada provedor é consultado (endpoints, headers, mapeamento de campos)? Guia técnico completo em [`docs/SETUP.md`](docs/SETUP.md#como-o-vigia-lê-as-cotas). Arquitetura: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md). Contrato da placa: [`docs/CONTRATO_JSON.md`](docs/CONTRATO_JSON.md).
 
-Para agentes de IA: [`AGENTS.md`](AGENTS.md) e [`docs/CONTEXTO_IA.md`](docs/CONTEXTO_IA.md).
+## Privacidade e segurança
+
+- O coletor **não é** um OAuth client: não emite, não autoriza e não renova tokens — só reusa o que o app oficial já gravou neste host.
+- Token expirado numa conta vira `ok: false` **só naquela conta**; as outras continuam funcionando.
+- O JSON público (`claude[]`, `gpt[]`, `cursor[]`, …) nunca carrega Bearer, Keychain, caminho do `auth.json` ou dump do SQLite — só `ok`, percentuais, resets e `plan`.
+- Esses endpoints de cota **não são produto público**; podem mudar sem aviso, e a quebra fica isolada em `ok: false`.
+
+> [!TIP]
+> Se o app oficial não estiver neste computador (Docker, outro PC), dá pra colar o token manualmente no painel — é o plano B. Enquanto o Claude Code, o Codex ou o Cursor estiverem logados **aqui**, não precisa colar nada.
+
+## Comece agora
+
+Precisa de **Python ≥ 3.11**, **Node 20+** e, para o firmware, [PlatformIO Core](https://platformio.org/).
+
+```bash
+./dev up
+```
+
+Isso já sobe o coletor e o mostrador web em `http://127.0.0.1:8787/display`. Para gravar a placa física, simular no Wokwi, configurar provedores e ver todos os comandos disponíveis:
+
+### 📖 [Guia completo de instalação e setup → `docs/SETUP.md`](docs/SETUP.md)
 
 ## Contribuir
 
 [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) · [CHANGELOG.md](CHANGELOG.md)
+
+Para agentes de IA: [`AGENTS.md`](AGENTS.md) e [`docs/CONTEXTO_IA.md`](docs/CONTEXTO_IA.md).
+
+Licença [MIT](LICENSE).
