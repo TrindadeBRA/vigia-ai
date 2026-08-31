@@ -184,9 +184,23 @@ void drawScrollChevron(int cx, int cy, bool up, bool enabled) {
   }
 }
 
+static void drawChevronH(int cx, int cy, int dir, uint16_t color) {
+  const int w = 3;
+  const int h = 4;
+  const int tip = cx + dir * w;
+  const int tail = cx - dir * w;
+  for (int i = 0; i <= 1; i++) {
+    tft.drawLine(tail + i, cy - h, tip + i, cy, color);
+    tft.drawLine(tip + i, cy, tail + i, cy + h, color);
+  }
+}
+
 void drawBackChevron(int cx, int cy, uint16_t color) {
-  const int r = 6;
-  tft.fillTriangle(cx - r, cy, cx + r / 2, cy - r, cx + r / 2, cy + r, color);
+  drawChevronH(cx, cy, -1, color);
+}
+
+void drawFwdChevron(int cx, int cy, uint16_t color) {
+  drawChevronH(cx, cy, 1, color);
 }
 
 int brandWidth(uint8_t font) {

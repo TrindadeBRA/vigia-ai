@@ -226,9 +226,7 @@ static void paintHomeList() {
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(COL_TEXT, COL_CARD);
     tft.drawString(title, pad + 12 + ICON_CLAUDE_W + 6, textY, 2);
-    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-    tft.setTextDatum(TR_DATUM);
-    tft.drawString(">", W - pad - 12, textY, 2);
+    drawFwdChevron(W - pad - 16, textY + 8, COL_TEXT_DIM);
     return titleY;
   };
 
@@ -351,9 +349,7 @@ static void paintHomeGrid() {
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(COL_TEXT, COL_CARD);
     tft.drawString(title, iconX + ICON_CLAUDE_W + 6, textY, 2);
-    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-    tft.setTextDatum(TR_DATUM);
-    tft.drawString(">", x + cardW - innerPadX, textY, 2);
+    drawFwdChevron(x + cardW - innerPadX - 4, textY + 8, COL_TEXT_DIM);
     return titleY;
   };
 

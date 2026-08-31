@@ -20,6 +20,7 @@ void drawIcon(int x, int y, int w, int h, const uint16_t* data);
 void drawInfoIcon(int cx, int cy, int r, uint16_t color);
 void drawScrollChevron(int cx, int cy, bool up, bool enabled);
 void drawBackChevron(int cx, int cy, uint16_t color);
+void drawFwdChevron(int cx, int cy, uint16_t color);
 
 // Marca "VIGIA" (texto) + " AI" (acento), igual ao header. Datum TL.
 int brandWidth(uint8_t font);
