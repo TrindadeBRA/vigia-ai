@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
-import type { CreditsAccount, CursorAccount, ClaudeAccount, GptAccount, UsagePayload } from "../api/types";
+import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeGoAccount, UsagePayload } from "../api/types";
 import { Logo } from "../components/Logo";
 import { CheckIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import "../display.css";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import type { ConfigOutlet } from "./config/ConfigPage";
-import "../display.css";
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang };
 type Pal = (typeof PALETTES)[ThemeName];
@@ -184,6 +184,45 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       title: "DeepSeek",
       label: d.label || "",
       metrics: [{ label: t.accountCredits, pct: d.percent, sub }],
+    });
+  }
+  for (const g of data.opencode_go || []) {
+    list.push({
+      id: `opencode_go:${g.id}`,
+      provider: "opencode_go",
+      ok: g.ok,
+      error: g.error,
+      title: "OpenCode Go",
+      label: g.label || "",
+      metrics: [
+        {
+          label: t.rolling,
+          pct: g.rolling_percent,
+          sub: g.rolling_percent != null ? t.remainingPrefix + fmtRemain(g.rolling_percent) + (g.rolling_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.rolling_resets_at)}` : "") : null,
+        },
+        {
+          label: t.weekLimit,
+          pct: g.weekly_percent,
+          sub: g.weekly_percent != null ? t.remainingPrefix + fmtRemain(g.weekly_percent) + (g.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.weekly_resets_at)}` : "") : null,
+        },
+        {
+          label: t.monthLimit,
+          pct: g.monthly_percent,
+          sub: g.monthly_percent != null ? t.remainingPrefix + fmtRemain(g.monthly_percent) + (g.monthly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.monthly_resets_at)}` : "") : null,
+        },
+      ],
+    });
+  }
+  for (const z of data.opencode_zen || []) {
+    const sub = z.remaining_cents != null ? t.remainMoney + fmtUsd(z.remaining_cents) : t.noCredits;
+    list.push({
+      id: `opencode_zen:${z.id}`,
+      provider: "opencode_zen",
+      ok: z.ok,
+      error: z.error,
+      title: "OpenCode Zen",
+      label: z.label || "",
+      metrics: [{ label: t.accountCredits, pct: null, sub }],
     });
   }
   return list;
@@ -541,14 +580,43 @@ function DeepSeekBody({ data, account, t, pal }: { data: UsagePayload; account: 
   );
 }
 
-function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
+function OpenCodeGoBody({ data, account, t, pal }: { data: UsagePayload; account: OpenCodeGoAccount; t: T; pal: Pal }) {
+  const g = account;
+  return (
+    <>
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.rolling} pct={g.rolling_percent} pal={pal} sub={remainLine(t, g.rolling_percent, g.rolling_resets_at)} />
+        <MetricCard label={t.weekLimit} pct={g.weekly_percent} pal={pal} sub={remainLine(t, g.weekly_percent, g.weekly_resets_at)} />
+        <MetricCard label={t.monthLimit} pct={g.monthly_percent} pal={pal} sub={remainLine(t, g.monthly_percent, g.monthly_resets_at)} />
+      </MetricsGrid>
+    </>
+  );
+}
+
+function OpenCodeZenBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
+  const z = account;
+  const remain = z.remaining_cents != null ? t.remainMoney + fmtUsd(z.remaining_cents) : t.noCredits;
+  return (
+    <>
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.credits} pct={z.percent} pal={pal} sub={remain} />
+      </MetricsGrid>
+    </>
+  );
+}
+
+function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeGoAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   let body: ReactNode = null;
   if (meta.ok && account) {
     if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} />;
     else if (meta.provider === "gpt") body = <GptBody data={data} account={account as GptAccount} t={t} pal={pal} nowMs={nowMs} />;
     else if (meta.provider === "cursor") body = <CursorBody data={data} account={account as CursorAccount} t={t} pal={pal} />;
     else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
-    else body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
+    else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
+    else if (meta.provider === "opencode_go") body = <OpenCodeGoBody data={data} account={account as OpenCodeGoAccount} t={t} pal={pal} />;
+    else body = <OpenCodeZenBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
   }
   return (
     <div className="account-page view-fade">
@@ -657,7 +725,7 @@ export default function Display() {
           setPollMs(h.interval_s * 1000);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -728,13 +796,13 @@ export default function Display() {
 
   const providers = data ? buildProviders(data, t, now) : [];
   let meta: ProviderMeta | null = null;
-  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null = null;
+  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeGoAccount | null = null;
   if (data && section === "account") {
     meta = providers.find((p) => p.id === selectedId) || null;
     if (meta) {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
-      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek";
+      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode_go" | "opencode_zen";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
   }

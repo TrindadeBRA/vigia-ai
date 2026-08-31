@@ -47,7 +47,7 @@ extern int g_eyeGazeY;
 // paintHomeGrid() a cada pintura — só os provedores com pelo menos uma conta
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta
 // lista em vez de assumir posições fixas.
-constexpr int MAX_HOME_CARDS = 5;
+constexpr int MAX_HOME_CARDS = 7;
 extern View g_homeCardView[MAX_HOME_CARDS];
 extern int g_homeCardX[MAX_HOME_CARDS];
 extern int g_homeCardY[MAX_HOME_CARDS];
@@ -102,6 +102,8 @@ extern int g_gptIdx;
 extern int g_cursorIdx;
 extern int g_openrouterIdx;
 extern int g_deepseekIdx;
+extern int g_opencodeGoIdx;
+extern int g_opencodeZenIdx;
 
 // Geometria do paginador "< i/N >" no topo do card de detalhe — só existe
 // (g_acctPagerVisible) quando o provedor tem mais de uma conta.
@@ -120,6 +122,8 @@ int gptWorstIdx();
 int cursorWorstIdx();
 int openrouterWorstIdx();
 int deepseekWorstIdx();
+int opencodeGoWorstIdx();
+int opencodeZenWorstIdx();
 
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
 // selo do header deve mostrar o check verde de sucesso em vez do contador.
@@ -136,6 +140,8 @@ void paintGpt();
 void paintCursor();
 void paintOpenRouter();
 void paintDeepSeek();
+void paintOpenCodeGo();
+void paintOpenCodeZen();
 void paintStatus();
 void paintNow();
 void paintNowClock();
@@ -144,19 +150,22 @@ void paintNowClock();
 void uiAccountStep(int dir);
 
 // Rótulos e títulos compartilhados entre Início, Agora e telas de detalhe.
-String withResta(float pct, const String& whenRaw);
-String gptPlanTitle(const GptAccount& g);
-String cursorPlanTitle(const CursorAccount& c);
-String accountSuffixText(const String& label, int count);
-void drawTitleWithLabel(int x, int y, int maxW, const String& name, const String& suffix);
+String withResta(float pct, const String &whenRaw);
+String gptPlanTitle(const GptAccount &g);
+String cursorPlanTitle(const CursorAccount &c);
+String accountSuffixText(const String &label, int count);
+void drawTitleWithLabel(int x, int y, int maxW, const String &name, const String &suffix);
 int stackedTitleHeight(bool hasLabel);
-void drawStackedTitle(int x, int y, int maxW, const String& name, const String& suffix);
-String cursorOndemand(const CursorAccount& c);
-String openrouterRemain(const OpenRouterAccount& o);
-String openrouterBalance(const OpenRouterAccount& o);
-String deepseekRemain(const DeepSeekAccount& d);
-String deepseekBalance(const DeepSeekAccount& d);
-const char* emptyProvidersMsg();
+void drawStackedTitle(int x, int y, int maxW, const String &name, const String &suffix);
+String cursorOndemand(const CursorAccount &c);
+String openrouterRemain(const OpenRouterAccount &o);
+String openrouterBalance(const OpenRouterAccount &o);
+String deepseekRemain(const DeepSeekAccount &d);
+String deepseekBalance(const DeepSeekAccount &d);
+String opencodeGoRemain(const OpenCodeGoAccount &g);
+String opencodeZenRemain(const OpenCodeZenAccount &z);
+String opencodeZenBalance(const OpenCodeZenAccount &z);
+const char *emptyProvidersMsg();
 
 // Chrome das telas de detalhe / Sistema (card com scroll).
 extern int dX;
@@ -167,14 +176,14 @@ extern int dCursor;
 int dScreenY();
 bool dVisible(int h);
 void dAdvance(int h);
-void dKv(const char* k, const String& v);
-void dNote(const String& s);
-void dPanelQr(const String& url);
-void dBar(const char* title, float pct, const String& sub);
+void dKv(const char *k, const String &v);
+void dNote(const String &s);
+void dPanelQr(const String &url);
+void dBar(const char *title, float pct, const String &sub);
 void dGap();
-void dSection(const char* title);
-void beginScrollCard(const char* title, const String& suffix, const uint16_t* icon,
+void dSection(const char *title);
+void beginScrollCard(const char *title, const String &suffix, const uint16_t *icon,
                      int pagerCount = 0, int pagerIdx = 0);
-bool paintDetailChrome(const char* title, const String& suffix, const uint16_t* icon, bool ok,
-                       const String& err, int pagerCount = 0, int pagerIdx = 0);
+bool paintDetailChrome(const char *title, const String &suffix, const uint16_t *icon, bool ok,
+                       const String &err, int pagerCount = 0, int pagerIdx = 0);
 void paintDetailFinish();

@@ -30,11 +30,11 @@ int g_eyeR = 0;
 int g_eyeGazeX = 0;
 int g_eyeGazeY = 0;
 View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER,
-                                      VIEW_DEEPSEEK};
-int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
-int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
-int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
-int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
+                                       VIEW_DEEPSEEK, VIEW_OPENCODE_GO, VIEW_OPENCODE_ZEN};
+int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
+int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
+int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
+int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
 int g_homeCardCount = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;
@@ -83,8 +83,10 @@ int g_acctPagerH = 0;
 
 // Segundos ate o proximo ciclo do coletor (USAGE_INTERVAL), a partir do
 // ultimo evento SSE / GET /usage. -1 quando g_pollMs == 0.
-int countdownSeconds() {
-  if (g_pollMs == 0) {
+int countdownSeconds()
+{
+  if (g_pollMs == 0)
+  {
     return -1;
   }
   uint32_t elapsed = millis() - g_lastFetchMs;
@@ -96,12 +98,15 @@ int countdownSeconds() {
 // cada provedor — usado no card compacto da Início/Agora e como ponto de
 // entrada ao abrir o detalhe pela primeira vez. Sem contas, devolve 0 (o
 // chamador so usa isso se count > 0).
-int claudeWorstIdx() {
+int claudeWorstIdx()
+{
   int best = 0;
   float bestVal = -2;
-  for (int i = 0; i < g_snap.claudeCount; i++) {
+  for (int i = 0; i < g_snap.claudeCount; i++)
+  {
     float v = max(g_snap.claude[i].sessionPercent, g_snap.claude[i].weeklyPercent);
-    if (v > bestVal) {
+    if (v > bestVal)
+    {
       bestVal = v;
       best = i;
     }
@@ -109,12 +114,15 @@ int claudeWorstIdx() {
   return best;
 }
 
-int gptWorstIdx() {
+int gptWorstIdx()
+{
   int best = 0;
   float bestVal = -2;
-  for (int i = 0; i < g_snap.gptCount; i++) {
+  for (int i = 0; i < g_snap.gptCount; i++)
+  {
     float v = max(g_snap.gpt[i].sessionPercent, g_snap.gpt[i].weeklyPercent);
-    if (v > bestVal) {
+    if (v > bestVal)
+    {
       bestVal = v;
       best = i;
     }
@@ -122,12 +130,15 @@ int gptWorstIdx() {
   return best;
 }
 
-int cursorWorstIdx() {
+int cursorWorstIdx()
+{
   int best = 0;
   float bestVal = -2;
-  for (int i = 0; i < g_snap.cursorCount; i++) {
+  for (int i = 0; i < g_snap.cursorCount; i++)
+  {
     float v = max(g_snap.cursor[i].percent, g_snap.cursor[i].otherPercent);
-    if (v > bestVal) {
+    if (v > bestVal)
+    {
       bestVal = v;
       best = i;
     }
@@ -140,16 +151,20 @@ int cursorWorstIdx() {
 // acabar o dinheiro), nao o maior percentual historico gasto (uma conta que
 // comprou pouco credito bate 90%+ facil sem estar "pior" de verdade que uma
 // que ainda tem saldo alto). Conta com saldo desconhecido nunca "ganha".
-int openrouterWorstIdx() {
+int openrouterWorstIdx()
+{
   int best = 0;
   int bestVal = 0;
   bool found = false;
-  for (int i = 0; i < g_snap.openrouterCount; i++) {
+  for (int i = 0; i < g_snap.openrouterCount; i++)
+  {
     int rem = g_snap.openrouter[i].remainingCents;
-    if (rem < 0) {
+    if (rem < 0)
+    {
       continue;
     }
-    if (!found || rem < bestVal) {
+    if (!found || rem < bestVal)
+    {
       bestVal = rem;
       best = i;
       found = true;
@@ -158,16 +173,20 @@ int openrouterWorstIdx() {
   return best;
 }
 
-int deepseekWorstIdx() {
+int deepseekWorstIdx()
+{
   int best = 0;
   int bestVal = 0;
   bool found = false;
-  for (int i = 0; i < g_snap.deepseekCount; i++) {
+  for (int i = 0; i < g_snap.deepseekCount; i++)
+  {
     int rem = g_snap.deepseek[i].remainingCents;
-    if (rem < 0) {
+    if (rem < 0)
+    {
       continue;
     }
-    if (!found || rem < bestVal) {
+    if (!found || rem < bestVal)
+    {
       bestVal = rem;
       best = i;
       found = true;
@@ -176,50 +195,107 @@ int deepseekWorstIdx() {
   return best;
 }
 
-static int currentProviderCount() {
-  switch (g_view) {
-    case VIEW_CLAUDE:
-      return g_snap.claudeCount;
-    case VIEW_GPT:
-      return g_snap.gptCount;
-    case VIEW_CURSOR:
-      return g_snap.cursorCount;
-    case VIEW_OPENROUTER:
-      return g_snap.openrouterCount;
-    case VIEW_DEEPSEEK:
-      return g_snap.deepseekCount;
-    default:
-      return 0;
+// OpenCode Go e assinatura com janelas (rolling/semanal/mensal) — "pior" e o
+// maior percentual entre as tres janelas, como Claude/GPT.
+int opencodeGoWorstIdx()
+{
+  int best = 0;
+  float bestVal = -2;
+  for (int i = 0; i < g_snap.opencode_goCount; i++)
+  {
+    float v = max(g_snap.opencode_go[i].rollingPercent,
+                  max(g_snap.opencode_go[i].weeklyPercent, g_snap.opencode_go[i].monthlyPercent));
+    if (v > bestVal)
+    {
+      bestVal = v;
+      best = i;
+    }
+  }
+  return best;
+}
+
+// OpenCode Zen e saldo pago-conforme-uso — "pior" e o saldo mais baixo.
+int opencodeZenWorstIdx()
+{
+  int best = 0;
+  int bestVal = 0;
+  bool found = false;
+  for (int i = 0; i < g_snap.opencode_zenCount; i++)
+  {
+    int rem = g_snap.opencode_zen[i].remainingCents;
+    if (rem < 0)
+    {
+      continue;
+    }
+    if (!found || rem < bestVal)
+    {
+      bestVal = rem;
+      best = i;
+      found = true;
+    }
+  }
+  return best;
+}
+
+static int currentProviderCount()
+{
+  switch (g_view)
+  {
+  case VIEW_CLAUDE:
+    return g_snap.claudeCount;
+  case VIEW_GPT:
+    return g_snap.gptCount;
+  case VIEW_CURSOR:
+    return g_snap.cursorCount;
+  case VIEW_OPENROUTER:
+    return g_snap.openrouterCount;
+  case VIEW_DEEPSEEK:
+    return g_snap.deepseekCount;
+  case VIEW_OPENCODE_GO:
+    return g_snap.opencode_goCount;
+  case VIEW_OPENCODE_ZEN:
+    return g_snap.opencode_zenCount;
+  default:
+    return 0;
   }
 }
 
-static int* currentProviderIdx() {
-  switch (g_view) {
-    case VIEW_CLAUDE:
-      return &g_claudeIdx;
-    case VIEW_GPT:
-      return &g_gptIdx;
-    case VIEW_CURSOR:
-      return &g_cursorIdx;
-    case VIEW_OPENROUTER:
-      return &g_openrouterIdx;
-    case VIEW_DEEPSEEK:
-      return &g_deepseekIdx;
-    default:
-      return nullptr;
+static int *currentProviderIdx()
+{
+  switch (g_view)
+  {
+  case VIEW_CLAUDE:
+    return &g_claudeIdx;
+  case VIEW_GPT:
+    return &g_gptIdx;
+  case VIEW_CURSOR:
+    return &g_cursorIdx;
+  case VIEW_OPENROUTER:
+    return &g_openrouterIdx;
+  case VIEW_DEEPSEEK:
+    return &g_deepseekIdx;
+  case VIEW_OPENCODE_GO:
+    return &g_opencodeGoIdx;
+  case VIEW_OPENCODE_ZEN:
+    return &g_opencodeZenIdx;
+  default:
+    return nullptr;
   }
 }
 
 // Move o paginador de contas da view de detalhe atual; cíclico (passa do
 // último pro primeiro e vice-versa), como um carrossel de poucos itens.
-void uiAccountStep(int dir) {
+void uiAccountStep(int dir)
+{
   int count = currentProviderCount();
-  int* idx = currentProviderIdx();
-  if (!idx || count <= 1) {
+  int *idx = currentProviderIdx();
+  if (!idx || count <= 1)
+  {
     return;
   }
   int next = (*idx + dir + count) % count;
-  if (next == *idx) {
+  if (next == *idx)
+  {
     return;
   }
   *idx = next;
@@ -229,25 +305,29 @@ void uiAccountStep(int dir) {
 
 static const uint32_t FETCH_OK_FLASH_MS = 1500;
 
-bool showFetchOkCheck() {
+bool showFetchOkCheck()
+{
   return g_hasFetchedOk && (millis() - g_lastFetchOkMs < FETCH_OK_FLASH_MS);
 }
 
 // -2 = mostrando o check de sucesso (estado proprio, nao depende do segundo);
 // caso contrario, o proprio valor do contador. Usado pra saber quando o
 // header precisa ser redesenhado.
-int headerDisplayKey(int secs, bool showCheck) {
+int headerDisplayKey(int secs, bool showCheck)
+{
   return showCheck ? -2 : secs;
 }
 
 // Selo circular no canto do header: enquanto espera o proximo refresh mostra
 // a contagem regressiva em um circulo amarelo; nos ~1.5s apos um refresh
 // bem-sucedido, mostra um check verde no lugar do numero.
-void drawCountdownBadgeAt(int cx, int cy, int secs) {
+void drawCountdownBadgeAt(int cx, int cy, int secs)
+{
   const int r = 11;
   bool showCheck = showFetchOkCheck();
 
-  if (secs < 0 && !showCheck) {
+  if (secs < 0 && !showCheck)
+  {
     return;
   }
 
@@ -255,9 +335,12 @@ void drawCountdownBadgeAt(int cx, int cy, int secs) {
   tft.fillCircle(cx, cy, r, bg);
   tft.drawCircle(cx, cy, r, COL_BG);
 
-  if (showCheck) {
+  if (showCheck)
+  {
     drawCheckIcon(cx, cy, r, COL_INVERSE);
-  } else {
+  }
+  else
+  {
     char buf[4];
     snprintf(buf, sizeof(buf), "%d", secs > 99 ? 99 : secs);
     tft.setTextDatum(MC_DATUM);
@@ -266,13 +349,15 @@ void drawCountdownBadgeAt(int cx, int cy, int secs) {
   }
 }
 
-void layoutContent() {
+void layoutContent()
+{
   const int W = tft.width();
   const int H = tft.height();
   const HeaderEdge edge = uiHeaderEdge();
   const bool vert = (edge == HEADER_LEFT || edge == HEADER_RIGHT);
   g_headerH = vert ? 40 : 32;
-  if (edge == HEADER_LEFT) {
+  if (edge == HEADER_LEFT)
+  {
     g_hdrX0 = 0;
     g_hdrY0 = 0;
     g_hdrX1 = g_headerH;
@@ -281,7 +366,9 @@ void layoutContent() {
     g_contentY = 0;
     g_contentW = W - g_headerH;
     g_contentH = H;
-  } else if (edge == HEADER_RIGHT) {
+  }
+  else if (edge == HEADER_RIGHT)
+  {
     g_hdrX0 = W - g_headerH;
     g_hdrY0 = 0;
     g_hdrX1 = W;
@@ -290,7 +377,9 @@ void layoutContent() {
     g_contentY = 0;
     g_contentW = W - g_headerH;
     g_contentH = H;
-  } else if (edge == HEADER_BOTTOM) {
+  }
+  else if (edge == HEADER_BOTTOM)
+  {
     g_hdrX0 = 0;
     g_hdrY0 = H - g_headerH;
     g_hdrX1 = W;
@@ -299,7 +388,9 @@ void layoutContent() {
     g_contentY = 0;
     g_contentW = W;
     g_contentH = H - g_headerH;
-  } else {
+  }
+  else
+  {
     g_hdrX0 = 0;
     g_hdrY0 = 0;
     g_hdrX1 = W;
@@ -312,19 +403,24 @@ void layoutContent() {
 }
 
 // Relógio no vão livre da barra (entre marca/horário e o "i"). Sem espaço, some.
-static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint16_t color) {
+static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint16_t color)
+{
   const int clockR = 9;
   const int pad = 8;
   const int need = (clockR + pad) * 2;
   g_clockIconR = 0;
-  if (gap1 - gap0 < need) {
+  if (gap1 - gap0 < need)
+  {
     return;
   }
   const int mid = (gap0 + gap1) / 2;
-  if (vert) {
+  if (vert)
+  {
     g_clockIconCx = along;
     g_clockIconCy = mid;
-  } else {
+  }
+  else
+  {
     g_clockIconCx = mid;
     g_clockIconCy = along;
   }
@@ -332,7 +428,8 @@ static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint
   drawClockIcon(g_clockIconCx, g_clockIconCy, clockR, color);
 }
 
-void drawHeader() {
+void drawHeader()
+{
   layoutContent();
   g_clockIconR = 0;
   const int W = tft.width();
@@ -341,10 +438,13 @@ void drawHeader() {
   const bool vert = (edge == HEADER_LEFT || edge == HEADER_RIGHT);
 
   tft.fillRect(g_hdrX0, g_hdrY0, g_hdrX1 - g_hdrX0, g_hdrY1 - g_hdrY0, COL_BG);
-  if (vert) {
+  if (vert)
+  {
     int vx = (edge == HEADER_LEFT) ? (g_hdrX1 - 1) : g_hdrX0;
     tft.drawFastVLine(vx, 0, H, COL_CARD_BORDER);
-  } else {
+  }
+  else
+  {
     int hy = (edge == HEADER_TOP) ? (g_hdrY1 - 1) : g_hdrY0;
     tft.drawFastHLine(0, hy, W, COL_CARD_BORDER);
   }
@@ -358,11 +458,13 @@ void drawHeader() {
   uint16_t infoCol = (g_view == VIEW_STATUS) ? COL_ACCENT : COL_TEXT_MUTED;
   uint16_t clockCol = COL_TEXT_MUTED;
 
-  if (!vert) {
+  if (!vert)
+  {
     const int barY = g_hdrY0;
     const int midY = barY + g_headerH / 2;
     int brandX = g_hdrX0 + 8;
-    if (g_view != VIEW_HOME) {
+    if (g_view != VIEW_HOME)
+    {
       drawBackChevron(g_hdrX0 + 14, midY, COL_TEXT_DIM);
       brandX = g_hdrX0 + 24;
     }
@@ -388,7 +490,8 @@ void drawHeader() {
     int tw = tft.textWidth(right, 2);
     g_headerClockX1 = g_headerInfoX0 - 2;
     g_headerClockX0 = g_headerClockX1 - tw - 10;
-    if (g_headerClockX0 < g_headerHomeX1) {
+    if (g_headerClockX0 < g_headerHomeX1)
+    {
       g_headerClockX0 = g_headerHomeX1;
     }
     g_headerClockY0 = g_hdrY0;
@@ -397,7 +500,8 @@ void drawHeader() {
     tft.setTextColor(COL_TEXT, COL_BG);
     tft.drawString(right, g_headerInfoX0 - 4, barY + 8, 2);
     drawHeaderClockButton(g_headerHomeX1, g_headerClockX0, midY, false, clockCol);
-    if (showBadge) {
+    if (showBadge)
+    {
       drawCountdownBadgeAt(badgeCx, midY, secs);
     }
     return;
@@ -405,7 +509,8 @@ void drawHeader() {
 
   const int cx = (g_hdrX0 + g_hdrX1) / 2;
   int y = 8;
-  if (g_view != VIEW_HOME) {
+  if (g_view != VIEW_HOME)
+  {
     drawBackChevron(cx, y + 6, COL_TEXT_DIM);
     y += 18;
   }
@@ -437,7 +542,8 @@ void drawHeader() {
   g_headerInfoX1 = g_hdrX1;
   g_headerInfoY1 = infoCy + infoR + 8;
   drawHeaderClockButton(g_headerClockY1, g_headerInfoY0, cx, true, clockCol);
-  if (showBadge) {
+  if (showBadge)
+  {
     drawCountdownBadgeAt(cx, badgeCy, secs);
   }
 }

@@ -7,6 +7,8 @@ static const UiStrings kPt = {
     "5h",
     "Semana",
     "Limite semanal",
+    "Janela rolling",
+    "Limite mensal",
     "Modelos Cursor",
     "Cursor",
     "Outros modelos",
@@ -71,6 +73,8 @@ static const UiStrings kEn = {
     "5h",
     "Week",
     "Weekly limit",
+    "Rolling window",
+    "Monthly limit",
     "Cursor models",
     "Cursor",
     "Other models",
@@ -135,6 +139,8 @@ static const UiStrings kEs = {
     "5h",
     "Semana",
     "Limite semanal",
+    "Ventana rolling",
+    "Limite mensual",
     "Modelos Cursor",
     "Cursor",
     "Otros modelos",
@@ -194,31 +200,36 @@ static const UiStrings kEs = {
     "Esperando al colector...",
 };
 
-const UiStrings& uiTr() {
-  switch (uiLang()) {
-    case LANG_EN:
-      return kEn;
-    case LANG_ES:
-      return kEs;
-    default:
-      return kPt;
+const UiStrings &uiTr()
+{
+  switch (uiLang())
+  {
+  case LANG_EN:
+    return kEn;
+  case LANG_ES:
+    return kEs;
+  default:
+    return kPt;
   }
 }
 
-const char* uiWeekday(int dowSun0) {
-  static const char* pt[] = {"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"};
-  static const char* en[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-  static const char* es[] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"};
+const char *uiWeekday(int dowSun0)
+{
+  static const char *pt[] = {"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"};
+  static const char *en[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+  static const char *es[] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"};
   int i = dowSun0;
-  if (i < 0 || i > 6) {
+  if (i < 0 || i > 6)
+  {
     i = 0;
   }
-  switch (uiLang()) {
-    case LANG_EN:
-      return en[i];
-    case LANG_ES:
-      return es[i];
-    default:
-      return pt[i];
+  switch (uiLang())
+  {
+  case LANG_EN:
+    return en[i];
+  case LANG_ES:
+    return es[i];
+  default:
+    return pt[i];
   }
 }
