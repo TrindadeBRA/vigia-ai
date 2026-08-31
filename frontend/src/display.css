@@ -362,8 +362,8 @@
   .cfg-grid {
     display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px; width: 100%;
   }
-  .cfg-grid > * { flex: 1 1 360px; min-width: 0; }
-  .cfg-grid > form { display: flex; }
+  .cfg-grid > * { flex: 0 0 360px; min-width: 0; }
+  .cfg-grid > form { display: flex; flex: 0 0 360px; }
   .cfg-grid > form > .cfg-card { flex: 1; width: 100%; }
 
   .cfg-card {
@@ -540,5 +540,5 @@
   .cfg-skel-lead { height: 44px; }
   .cfg-skel-banner { height: 92px; }
   .cfg-skel-card { height: 172px; }
-  .cfg-grid > .cfg-skel { flex: 1 1 360px; }
+  .cfg-grid > .cfg-skel { flex: 0 0 360px; }
   @keyframes cfgShimmer { to { background-position: -200% 0; } }
