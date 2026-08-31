@@ -6,6 +6,8 @@
 .DS_Store
 __pycache__/
 *.pyc
+.cache/
+compile_commands.json
 
 .env
 !.env.example
