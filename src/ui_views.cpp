@@ -16,6 +16,10 @@ int g_homeSplitY2 = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;
 int g_layoutMidX = 0;
+int g_themeBtnY = 0;
+int g_themeBtnH = 28;
+int g_themeSplit1 = 0;
+int g_themeSplit2 = 0;
 bool g_statusHasCal = false;
 bool g_statusHasRefresh = false;
 int g_btnCalY = 0;
@@ -24,6 +28,10 @@ int g_btnH = 36;
 int g_lastHeaderKey = -1000000;
 int g_detailScroll = 0;
 int g_detailMaxScroll = 0;
+int g_detailClipTop = 0;
+int g_detailClipH = 0;
+int g_detailContentX = 0;
+int g_detailContentW = 0;
 int g_arrowX = 0;
 int g_arrowUpY = 0;
 int g_arrowDownY = 0;
@@ -74,12 +82,12 @@ static void drawCountdownBadge(int secs) {
   tft.drawCircle(cx, cy, r, COL_BG);
 
   if (showCheck) {
-    drawCheckIcon(cx, cy, r, COL_BG);
+    drawCheckIcon(cx, cy, r, COL_INVERSE);
   } else {
     char buf[4];
     snprintf(buf, sizeof(buf), "%d", secs > 99 ? 99 : secs);
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(COL_BG, bg);
+    tft.setTextColor(COL_INVERSE, bg);
     tft.drawString(buf, cx, cy + 1, 2);
   }
 }
@@ -473,8 +481,8 @@ static void dKv(const char* k, const String& v) {
     tft.setTextDatum(TR_DATUM);
     tft.setTextColor(COL_TEXT, COL_CARD);
     String s = v;
-    if ((int)s.length() > 22) {
-      s = s.substring(0, 22);
+    if ((int)s.length() > 28) {
+      s = s.substring(0, 28);
     }
     tft.drawString(s, dX + dW, y, 2);
   }
@@ -524,7 +532,17 @@ static void dBar(const char* title, float pct, const String& sub) {
 
 static void dGap() { dAdvance(8); }
 
-static bool paintDetailChrome(const char* title, const uint16_t* icon, bool ok, const String& err) {
+static void dSection(const char* title) {
+  const int h = 18;
+  if (dVisible(h)) {
+    tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+    tft.drawString(title, dX, dScreenY(), 2);
+  }
+  dAdvance(h);
+}
+
+static void beginScrollCard(const char* title, const uint16_t* icon) {
   const int W = tft.width();
   const int top = g_headerH + 8;
   const int bottom = tft.height() - 8;
@@ -538,7 +556,11 @@ static bool paintDetailChrome(const char* title, const uint16_t* icon, bool ok, 
   g_arrowDownY = bottom - 8 - g_arrowS;
 
   const int titleY = top + 8;
-  drawIcon(20, titleY, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
+  if (icon) {
+    drawIcon(20, titleY, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
+  } else {
+    drawInfoIcon(20 + ICON_CLAUDE_W / 2, titleY + ICON_CLAUDE_H / 2, 8, COL_ACCENT);
+  }
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT, COL_CARD);
   tft.drawString(title, 20 + ICON_CLAUDE_W + 6, titleY + (ICON_CLAUDE_H - 16) / 2, 2);
@@ -548,7 +570,14 @@ static bool paintDetailChrome(const char* title, const uint16_t* icon, bool ok, 
   dW = g_arrowX - dX - 6;
   dClipH = (bottom - 8) - dClipTop;
   dCursor = 0;
+  g_detailClipTop = dClipTop;
+  g_detailClipH = dClipH;
+  g_detailContentX = dX;
+  g_detailContentW = dW;
+}
 
+static bool paintDetailChrome(const char* title, const uint16_t* icon, bool ok, const String& err) {
+  beginScrollCard(title, icon);
   if (!ok) {
     drawError(dX, dClipTop, err, COL_CARD);
     g_detailCanScroll = false;
@@ -657,65 +686,66 @@ void paintOpenRouter() {
 }
 
 void paintStatus() {
-  const int W = tft.width();
   const bool compact = tft.height() < 280;
   g_btnH = compact ? 28 : 36;
 
-  int y = g_headerH + (compact ? 6 : 10);
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_TEXT, COL_BG);
-  tft.drawString("Sistema", 12, y, compact ? 2 : 4);
-  y += compact ? 20 : 34;
+  beginScrollCard("Sistema", nullptr);
+  tft.setViewport(dX, dClipTop, dW, dClipH, false);
 
-  const int cardTop = y;
-  const int cardH = compact ? 62 : 76;
-  tft.fillRoundRect(8, cardTop, W - 16, cardH, 8, COL_CARD);
-  tft.drawRoundRect(8, cardTop, W - 16, cardH, 8, COL_CARD_BORDER);
-
-  int cy = cardTop + (compact ? 6 : 10);
-  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-  tft.drawString("REDE", 20, cy, 2);
-  cy += compact ? 14 : 18;
-  tft.setTextColor(COL_TEXT, COL_CARD);
   String net = g_netLine.length() ? g_netLine : "---";
-  if (net.length() > 38) {
-    net = net.substring(0, 38);
-  }
-  tft.drawString(net, 20, cy, 2);
-  cy += compact ? 16 : 22;
-  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-  tft.drawString("ATUALIZADO", 20, cy, 2);
-  cy += compact ? 14 : 18;
-  tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.drawString(g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine, 20, cy, 2);
-
-  y = cardTop + cardH + (compact ? 8 : 12);
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_TEXT_MUTED, COL_BG);
-  tft.drawString("INICIO", 12, y, 2);
-  y += compact ? 16 : 20;
+  dKv("rede", net);
+  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine);
+  dGap();
+  dSection("INICIO");
 
   g_layoutBtnH = g_btnH;
-  g_layoutBtnY = y;
+  g_layoutBtnY = dCursor;
   const int gapBtn = 8;
-  const int btnW = (W - 24 - gapBtn) / 2;
-  g_layoutMidX = 12 + btnW + gapBtn / 2;
-  drawChoiceButton(12, y, btnW, g_btnH, "Lista", g_homeLayout == HOME_LAYOUT_LIST);
-  drawChoiceButton(12 + btnW + gapBtn, y, btnW, g_btnH, "Grade", g_homeLayout == HOME_LAYOUT_GRID);
-  y += g_btnH + (compact ? 8 : 10);
+  const int btn2W = (dW - gapBtn) / 2;
+  g_layoutMidX = dX + btn2W + gapBtn / 2;
+  if (dVisible(g_btnH)) {
+    int y = dScreenY();
+    drawChoiceButton(dX, y, btn2W, g_btnH, "Lista", g_homeLayout == HOME_LAYOUT_LIST);
+    drawChoiceButton(dX + btn2W + gapBtn, y, btn2W, g_btnH, "Grade",
+                     g_homeLayout == HOME_LAYOUT_GRID);
+  }
+  dAdvance(g_btnH + 8);
+
+  dSection("TEMA");
+  g_themeBtnH = g_btnH;
+  g_themeBtnY = dCursor;
+  const int gap3 = 6;
+  const int btn3W = (dW - gap3 * 2) / 3;
+  g_themeSplit1 = dX + btn3W + gap3 / 2;
+  g_themeSplit2 = dX + 2 * (btn3W + gap3) - gap3 / 2;
+  if (dVisible(g_btnH)) {
+    int y = dScreenY();
+    UiTheme th = uiTheme();
+    drawChoiceButton(dX, y, btn3W, g_btnH, "Escuro", th == THEME_DARK);
+    drawChoiceButton(dX + btn3W + gap3, y, btn3W, g_btnH, "Claro", th == THEME_LIGHT);
+    drawChoiceButton(dX + 2 * (btn3W + gap3), y, btn3W, g_btnH, "Contraste", th == THEME_CONTRAST);
+  }
+  dAdvance(g_btnH + 8);
 
   g_statusHasRefresh = true;
-  g_btnRefY = y;
-  drawButton(y, g_btnH, "Atualizar agora");
-  y += g_btnH + (compact ? 8 : 10);
+  g_btnRefY = dCursor;
+  if (dVisible(g_btnH)) {
+    drawButton(dX, dScreenY(), dW, g_btnH, "Atualizar agora");
+  }
+  dAdvance(g_btnH + 8);
 
 #ifdef TOUCH_CS
   g_statusHasCal = true;
-  g_btnCalY = y;
-  drawButton(y, g_btnH, "Calibrar touch");
+  g_btnCalY = dCursor;
+  if (dVisible(g_btnH)) {
+    drawButton(dX, dScreenY(), dW, g_btnH, "Calibrar touch");
+  }
+  dAdvance(g_btnH);
 #else
   g_statusHasCal = false;
 #endif
+
+  paintDetailFinish();
 }
 
 static void splashDelay(uint32_t ms) {

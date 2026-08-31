@@ -6,32 +6,102 @@
 
 View g_view = VIEW_HOME;
 HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
+static UiTheme g_theme = THEME_DARK;
 
-static void loadHomeLayout() {
-  Preferences prefs;
-  if (!prefs.begin("ui", true)) {
+uint16_t COL_BG = 0x10A3;
+uint16_t COL_CARD = 0x1904;
+uint16_t COL_CARD_BORDER = 0x39E8;
+uint16_t COL_TRACK = 0x2966;
+uint16_t COL_TEXT = 0xF79D;
+uint16_t COL_TEXT_DIM = 0xAD76;
+uint16_t COL_TEXT_MUTED = 0x6B6E;
+uint16_t COL_ACCENT = 0xC50B;
+uint16_t COL_GOOD = 0x8DF2;
+uint16_t COL_WARN = 0xE52B;
+uint16_t COL_BAD = 0xDB6D;
+uint16_t COL_BADGE_YELLOW = 0xEDC4;
+uint16_t COL_INVERSE = 0x10A3;
+
+static void applyTheme(UiTheme theme) {
+  g_theme = theme;
+  if (theme == THEME_LIGHT) {
+    COL_BG = 0xEF5A;
+    COL_CARD = 0xFFDE;
+    COL_CARD_BORDER = 0xC638;
+    COL_TRACK = 0xDEFB;
+    COL_TEXT = 0x18C3;
+    COL_TEXT_DIM = 0x4A69;
+    COL_TEXT_MUTED = 0x7BEF;
+    COL_ACCENT = 0xC50B;
+    COL_GOOD = 0x3386;
+    COL_WARN = 0xC3A0;
+    COL_BAD = 0xC165;
+    COL_BADGE_YELLOW = 0xFE60;
+    COL_INVERSE = 0x18C3;
     return;
   }
-  uint8_t v = prefs.getUChar("home", (uint8_t)HOME_LAYOUT_LIST);
-  prefs.end();
-  if (v > (uint8_t)HOME_LAYOUT_GRID) {
-    v = (uint8_t)HOME_LAYOUT_LIST;
+  if (theme == THEME_CONTRAST) {
+    COL_BG = 0x0000;
+    COL_CARD = 0x0000;
+    COL_CARD_BORDER = 0xFFFF;
+    COL_TRACK = 0x4208;
+    COL_TEXT = 0xFFFF;
+    COL_TEXT_DIM = 0xFFFF;
+    COL_TEXT_MUTED = 0xC618;
+    COL_ACCENT = 0xFFE0;
+    COL_GOOD = 0x07E0;
+    COL_WARN = 0xFFE0;
+    COL_BAD = 0xF800;
+    COL_BADGE_YELLOW = 0xFFE0;
+    COL_INVERSE = 0x0000;
+    return;
   }
-  g_homeLayout = (HomeLayout)v;
+  COL_BG = 0x10A3;
+  COL_CARD = 0x1904;
+  COL_CARD_BORDER = 0x39E8;
+  COL_TRACK = 0x2966;
+  COL_TEXT = 0xF79D;
+  COL_TEXT_DIM = 0xAD76;
+  COL_TEXT_MUTED = 0x6B6E;
+  COL_ACCENT = 0xC50B;
+  COL_GOOD = 0x8DF2;
+  COL_WARN = 0xE52B;
+  COL_BAD = 0xDB6D;
+  COL_BADGE_YELLOW = 0xEDC4;
+  COL_INVERSE = 0x10A3;
 }
 
-static void saveHomeLayout() {
+static void loadUiPrefs() {
+  Preferences prefs;
+  if (!prefs.begin("ui", true)) {
+    applyTheme(THEME_DARK);
+    return;
+  }
+  uint8_t home = prefs.getUChar("home", (uint8_t)HOME_LAYOUT_LIST);
+  uint8_t theme = prefs.getUChar("theme", (uint8_t)THEME_DARK);
+  prefs.end();
+  if (home > (uint8_t)HOME_LAYOUT_GRID) {
+    home = (uint8_t)HOME_LAYOUT_LIST;
+  }
+  if (theme > (uint8_t)THEME_CONTRAST) {
+    theme = (uint8_t)THEME_DARK;
+  }
+  g_homeLayout = (HomeLayout)home;
+  applyTheme((UiTheme)theme);
+}
+
+static void saveUiPref(const char* key, uint8_t value) {
   Preferences prefs;
   if (!prefs.begin("ui", false)) {
     return;
   }
-  prefs.putUChar("home", (uint8_t)g_homeLayout);
+  prefs.putUChar(key, value);
   prefs.end();
 }
 
 void uiInit() {
   g_view = VIEW_HOME;
-  loadHomeLayout();
+  loadUiPrefs();
 }
 
 void uiSetHomeLayout(HomeLayout layout) {
@@ -42,7 +112,21 @@ void uiSetHomeLayout(HomeLayout layout) {
     return;
   }
   g_homeLayout = layout;
-  saveHomeLayout();
+  saveUiPref("home", (uint8_t)g_homeLayout);
+  uiPaint();
+}
+
+UiTheme uiTheme() { return g_theme; }
+
+void uiSetTheme(UiTheme theme) {
+  if (theme > THEME_CONTRAST) {
+    return;
+  }
+  if (theme == g_theme) {
+    return;
+  }
+  applyTheme(theme);
+  saveUiPref("theme", (uint8_t)g_theme);
   uiPaint();
 }
 
@@ -68,12 +152,13 @@ void uiSetView(View v) {
   uiPaint();
 }
 
-static bool isDetailView() {
-  return g_view == VIEW_CLAUDE || g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER;
+static bool viewHasScroll() {
+  return g_view == VIEW_CLAUDE || g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER ||
+         g_view == VIEW_STATUS;
 }
 
 void uiDetailScrollBy(int dy) {
-  if (!isDetailView()) {
+  if (!viewHasScroll()) {
     return;
   }
   int next = g_detailScroll + dy;
@@ -141,7 +226,7 @@ void uiHandleSwipe(int16_t dx) {
 }
 
 void uiHandleVerticalSwipe(int16_t dy) {
-  if (!isDetailView()) {
+  if (!viewHasScroll()) {
     return;
   }
   // Dedo pra cima (dy negativo) revela o que está abaixo.
@@ -164,7 +249,7 @@ void uiHandleTap(int16_t x, int16_t y) {
     g_requestRefresh = true;
     return;
   }
-  if (isDetailView() && g_detailCanScroll && x >= g_arrowX) {
+  if (viewHasScroll() && g_detailCanScroll && x >= g_arrowX) {
     int s = g_arrowS > 0 ? g_arrowS : 28;
     if (y >= g_arrowUpY && y <= g_arrowUpY + s) {
       uiDetailScrollBy(-48);
@@ -198,18 +283,33 @@ void uiHandleTap(int16_t x, int16_t y) {
     return;
   }
   if (g_view == VIEW_STATUS) {
-    auto inBtn = [&](int by) {
-      return y >= by && y <= by + g_btnH && x >= 12 && x <= W - 12;
+    if (y < g_detailClipTop || y >= g_detailClipTop + g_detailClipH) {
+      return;
+    }
+    int cy = (y - g_detailClipTop) + g_detailScroll;
+    auto inRow = [&](int by, int bh) {
+      return cy >= by && cy <= by + bh && x >= g_detailContentX &&
+             x <= g_detailContentX + g_detailContentW;
     };
-    if (y >= g_layoutBtnY && y <= g_layoutBtnY + g_layoutBtnH) {
+    if (inRow(g_layoutBtnY, g_layoutBtnH)) {
       uiSetHomeLayout(x < g_layoutMidX ? HOME_LAYOUT_LIST : HOME_LAYOUT_GRID);
       return;
     }
-    if (g_statusHasRefresh && inBtn(g_btnRefY)) {
+    if (inRow(g_themeBtnY, g_themeBtnH)) {
+      if (x < g_themeSplit1) {
+        uiSetTheme(THEME_DARK);
+      } else if (x < g_themeSplit2) {
+        uiSetTheme(THEME_LIGHT);
+      } else {
+        uiSetTheme(THEME_CONTRAST);
+      }
+      return;
+    }
+    if (g_statusHasRefresh && inRow(g_btnRefY, g_btnH)) {
       g_requestRefresh = true;
       return;
     }
-    if (g_statusHasCal && inBtn(g_btnCalY)) {
+    if (g_statusHasCal && inRow(g_btnCalY, g_btnH)) {
       g_requestCalibrate = true;
     }
   }

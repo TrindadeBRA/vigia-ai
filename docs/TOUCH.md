@@ -12,17 +12,17 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 | Claude | Janelas 5h, semana, Sonnet/Opus se existirem; usado/resta/reset. **Setas** à direita se precisar de scroll |
 | Cursor | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). Setas de scroll |
 | OpenRouter | Créditos da conta: barra, usado, resta, teto. Setas de scroll |
-| Info | Rede, layout da home (**Lista** / **Grade**), **Atualizar**, **Calibrar** |
+| Info | Rede, layout da home (**Lista** / **Grade**), **tema** (Escuro / Claro / Contraste), **Atualizar**, **Calibrar**. **Setas** à direita se precisar de scroll |
 
-Navegação no **header**: título **VIGIA AI** volta ao início; fora da home, um chevron **‹** à esquerda do logo faz o mesmo (breadcrumb). Ícone **i** abre Info. Não há atalho no header para os detalhes — só tocando o card na home. O selo/área livre do header pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
+Navegação no **header**: título **VIGIA AI** volta ao início; fora da home, uma seta **←** à esquerda do logo faz o mesmo (breadcrumb). Ícone **i** abre Info. Não há atalho no header para os detalhes — só tocando o card na home. O selo/área livre do header pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
 
-Nas telas internas (Claude / Cursor / OpenRouter): se o conteúdo não couber, aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`. Home e Info não têm esse scroll.
+Nas telas internas (Claude / Cursor / OpenRouter / Info): se o conteúdo não couber, aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`.
 
 Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`4`.
 
-Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `l` lista, `g` grade, `u`/`d` scroll no detalhe, `r` refresh, `c` calibrar (só hardware).
+Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `l` lista, `g` grade, `t` ciclo de tema, `u`/`d` scroll no detalhe/info, `r` refresh, `c` calibrar (só hardware).
 
-A escolha Lista/Grade fica na NVS (namespace `ui`, chave `home`), igual à calibração do toque — sobrevive a reboot.
+A escolha Lista/Grade e o tema ficam na NVS (namespace `ui`, chaves `home` e `theme`), igual à calibração do toque — sobrevivem a reboot.
 
 ## Ligação típica (XPT2046)
 

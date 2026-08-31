@@ -260,6 +260,8 @@ static void handleSerial() {
       uiDetailScrollBy(-48);
     } else if (c == 'd' || c == 'D') {
       uiDetailScrollBy(48);
+    } else if (c == 't' || c == 'T') {
+      uiSetTheme((UiTheme)(((uint8_t)uiTheme() + 1) % 3));
     }
   }
 }

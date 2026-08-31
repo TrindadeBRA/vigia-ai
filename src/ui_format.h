@@ -13,7 +13,7 @@ String fmtUsdSite(int cents);
 
 void drawBar(int x, int y, int w, int h, float pct);
 void drawError(int x, int y, const String& err, uint16_t bg);
-void drawButton(int y, int h, const char* label);
+void drawButton(int x, int y, int w, int h, const char* label);
 void drawChoiceButton(int x, int y, int w, int h, const char* label, bool selected);
 void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor);
 void drawIcon(int x, int y, int w, int h, const uint16_t* data);

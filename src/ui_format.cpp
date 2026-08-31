@@ -1,6 +1,7 @@
 #include "ui_format.h"
 
 #include <cstdlib>
+#include <pgmspace.h>
 
 uint16_t barColor(float pct) {
   if (pct < 0) {
@@ -145,8 +146,8 @@ void drawChoiceButton(int x, int y, int w, int h, const char* label, bool select
   tft.drawString(label, x + w / 2, y + h / 2, 2);
 }
 
-void drawButton(int y, int h, const char* label) {
-  drawChoiceButton(12, y, tft.width() - 24, h, label, true);
+void drawButton(int x, int y, int w, int h, const char* label) {
+  drawChoiceButton(x, y, w, h, label, true);
 }
 
 void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor) {
@@ -163,7 +164,21 @@ void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor) {
 // outros desenhos (fillRect/drawString etc. nao usam pushImage).
 void drawIcon(int x, int y, int w, int h, const uint16_t* data) {
   tft.setSwapBytes(true);
-  tft.pushImage(x, y, w, h, data);
+  constexpr uint16_t kBakedCard = 0x1904; // fundo do gen_icons.py
+  if (COL_CARD == kBakedCard) {
+    tft.pushImage(x, y, w, h, data);
+  } else {
+    uint16_t buf[400];
+    int n = w * h;
+    if (n > 400) {
+      n = 400;
+    }
+    for (int i = 0; i < n; i++) {
+      uint16_t p = pgm_read_word(&data[i]);
+      buf[i] = (p == kBakedCard) ? COL_CARD : p;
+    }
+    tft.pushImage(x, y, w, h, buf);
+  }
   tft.setSwapBytes(false);
 }
 

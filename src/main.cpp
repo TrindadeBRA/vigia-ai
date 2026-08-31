@@ -69,9 +69,9 @@ void setup() {
   tft.init();
   tft.setRotation(TFT_ROTATION);
   tft.resetViewport();
+  uiInit();
   tft.fillScreen(COL_BG);
   Serial.printf("tft %dx%d rot=%d\n", tft.width(), tft.height(), (int)TFT_ROTATION);
-  uiInit();
 
   uiShowSplash();
 
