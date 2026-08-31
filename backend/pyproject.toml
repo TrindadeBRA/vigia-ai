@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vigia-ai"
 version = "1.0.0"
-description = "Coletor local de cotas Claude/Cursor/OpenRouter/DeepSeek para o painel ESP32 Vigia AI"
+description = "Coletor local de cotas Claude/GPT/Cursor/OpenRouter/DeepSeek para o painel ESP32 Vigia AI"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

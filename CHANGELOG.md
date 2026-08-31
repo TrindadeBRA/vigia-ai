@@ -7,6 +7,12 @@ All notable changes to this project are documented here.
 ### Added
 
 - Provedor **GPT** (cota da assinatura ChatGPT / Codex CLI via `~/.codex/auth.json` e `GET /backend-api/wham/usage`). Card no firmware, no mostrador e no painel.
+- Template de issue de feature.
+
+### Changed
+
+- Início da placa abre em **grade** por padrão.
+- `docs/REESCRITA.md` removido — o monorepo (`firmware/`, `backend/`, `frontend/`, `./dev`) é o estado vigente. Índice aponta para ARQUITETURA e CONTRIBUTING.
 
 ## [1.0.0] — 2026-08-31
 

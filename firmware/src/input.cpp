@@ -49,7 +49,9 @@ static void onPointer(bool down, uint16_t x, uint16_t y) {
       g_startX = x;
       g_startY = y;
       g_downMs = now;
-      if (now - g_lastTapMs > 160) {
+      // Com scroll, o toque só confirma no soltar — senão o deslize vertical
+      // nunca chega (o tap no down já teria aberto o card / consumido o gesto).
+      if (!uiCanScroll() && now - g_lastTapMs > 160) {
         uiHandleTap((int16_t)x, (int16_t)y);
         g_didTap = true;
         g_lastTapMs = now;
@@ -68,6 +70,14 @@ static void onPointer(bool down, uint16_t x, uint16_t y) {
       }
     }
     return;
+  }
+  if (g_wasDown && !g_didTap && uiCanScroll() && now - g_lastTapMs > 160) {
+    int16_t dx = (int16_t)g_lastX - (int16_t)g_startX;
+    int16_t dy = (int16_t)g_lastY - (int16_t)g_startY;
+    if (abs(dx) < 20 && abs(dy) < 20) {
+      uiHandleTap((int16_t)g_startX, (int16_t)g_startY);
+      g_lastTapMs = now;
+    }
   }
   g_wasDown = false;
   g_didTap = false;

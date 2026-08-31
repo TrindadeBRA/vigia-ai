@@ -134,8 +134,16 @@ String fmtPct(float pct) {
   if (pct < 0) {
     return "--";
   }
-  char buf[16];
-  snprintf(buf, sizeof(buf), "%.0f%%", pct);
+  // Inteiro: %.0f de 0.0 às vezes sai vazio no newlib da ESP32.
+  int n = (int)(pct + 0.5f);
+  if (n < 0) {
+    n = 0;
+  }
+  if (n > 100) {
+    n = 100;
+  }
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%d%%", n);
   return String(buf);
 }
 

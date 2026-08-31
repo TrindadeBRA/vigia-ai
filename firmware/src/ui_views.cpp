@@ -583,7 +583,10 @@ static void paintHomeMetric(int x, int y, int w, const char* label, float pct, c
   }
   tft.setTextColor(COL_TEXT, COL_CARD);
   tft.drawString(fmtPct(pct), x + w, y, font);
-  drawBar(x, y + labelH, w, barH, pct);
+  // 2px entre o texto e a barra — senão a pílula come a base do "0" (fonte 2
+  // usa os 16px todos) e o percentual some.
+  const int barY = y + labelH + 2;
+  drawBar(x, barY, w, barH, pct);
   if (!sub.length()) {
     return;
   }
@@ -597,7 +600,7 @@ static void paintHomeMetric(int x, int y, int w, const char* label, float pct, c
   }
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-  tft.drawString(s, x, y + labelH + 1 + barH + 1, font);
+  tft.drawString(s, x, barY + barH + 2, font);
 }
 
 static const char* emptyProvidersMsg() {
@@ -626,7 +629,6 @@ static void paintHomeList() {
   const int gap = (H < 280) ? 6 : 10;
   const int bodyH = H - 12;
   const int pad = x0 + 8;
-  const int cardW = W - 16;
 
   const bool showClaude = g_snap.claudeCount > 0;
   const bool showGpt = g_snap.gptCount > 0;
@@ -637,34 +639,96 @@ static void paintHomeList() {
                 (int)showDeepSeek;
 
   g_homeCardCount = 0;
+  g_detailCanScroll = false;
+  g_detailMaxScroll = 0;
+  tft.fillRect(g_contentX, g_contentY, g_contentW, g_contentH, COL_BG);
   if (n == 0) {
-    drawErrorWrapped(pad, bodyTop, cardW, emptyProvidersMsg(), COL_BG, 2);
+    drawErrorWrapped(pad, bodyTop, W - 16, emptyProvidersMsg(), COL_BG, 2);
     return;
   }
 
-  const int cardH = (bodyH - gap * (n - 1)) / n;
-
-  const bool compact = cardH < 80;
-  const bool showSub = cardH >= 72;
-  const int barH = compact ? 5 : 7;
-  const uint8_t metricFont = compact ? 1 : 2;
-  const int labelH = compact ? 8 : 16;
-  const int subH = showSub ? (compact ? 8 : 14) : 0;
-  const int metricH = labelH + 1 + barH + (subH ? 1 + subH : 0);
+  // Altura natural (fonte 2 + barra + sub) — não espreme N cards na tela.
+  // Se a soma não couber, o mesmo scroll das telas de detalhe (setas / u / d).
+  const int barH = 7;
+  const uint8_t metricFont = 2;
+  const int labelH = 16;
+  const int subH = 14;
+  const int metricH = labelH + 2 + barH + 2 + subH;
   const int titleH = ICON_CLAUDE_H;
-  const int titleToMetric = compact ? 6 : 12;
-  const int gapM = compact ? 2 : 6;
-  const int innerPadY = compact ? 4 : 8;
+  const int titleToMetric = 8;
+  const int gapM = 4;
+  const int innerPadY = 8;
+  const int hTwo = innerPadY * 2 + titleH + titleToMetric + metricH + gapM + metricH;
+  const int hOne = innerPadY * 2 + titleH + titleToMetric + metricH;
+
+  const ClaudeAccount& claudeAcct = g_snap.claude[showClaude ? claudeWorstIdx() : 0];
+  const GptAccount& gptAcct = g_snap.gpt[showGpt ? gptWorstIdx() : 0];
+  const CursorAccount& cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
+  const OpenRouterAccount& orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
+  const DeepSeekAccount& dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
+  const bool gptTwo = gptAcct.sessionPercent >= 0 && gptAcct.weeklyPercent >= 0;
+
+  int heights[MAX_HOME_CARDS];
+  int ni = 0;
+  if (showClaude) {
+    heights[ni++] = hTwo;
+  }
+  if (showGpt) {
+    heights[ni++] = gptTwo ? hTwo : hOne;
+  }
+  if (showCursor) {
+    heights[ni++] = hTwo;
+  }
+  if (showOpenRouter) {
+    heights[ni++] = hOne;
+  }
+  if (showDeepSeek) {
+    heights[ni++] = hOne;
+  }
+
+  int totalH = gap * (n - 1);
+  for (int i = 0; i < n; i++) {
+    totalH += heights[i];
+  }
+  if (totalH < bodyH) {
+    int extra = bodyH - totalH;
+    int add = extra / n;
+    int rem = extra % n;
+    for (int i = 0; i < n; i++) {
+      heights[i] += add + (i < rem ? 1 : 0);
+    }
+    totalH = bodyH;
+  }
+
+  g_detailMaxScroll = totalH - bodyH;
+  if (g_detailMaxScroll < 0) {
+    g_detailMaxScroll = 0;
+  }
+  if (g_detailScroll > g_detailMaxScroll) {
+    g_detailScroll = g_detailMaxScroll;
+  }
+  g_detailCanScroll = g_detailMaxScroll > 0;
+  g_detailClipTop = bodyTop;
+  g_detailClipH = bodyH;
+
+  int cardW = W - 16;
+  if (g_detailCanScroll) {
+    g_arrowS = 26;
+    g_arrowX = x0 + W - 8 - g_arrowS;
+    g_arrowUpY = bodyTop;
+    g_arrowDownY = bodyTop + bodyH - 8 - g_arrowS;
+    cardW = g_arrowX - pad - 6;
+  }
 
   auto cardChrome = [&](const char* title, const String& suffix, const uint16_t* icon, int top,
-                       int contentH) -> int {
-    tft.fillRoundRect(pad, top, cardW, cardH, 8, COL_CARD);
-    tft.drawRoundRect(pad, top, cardW, cardH, 8, COL_CARD_BORDER);
+                       int h, int contentH) -> int {
+    tft.fillRoundRect(pad, top, cardW, h, 8, COL_CARD);
+    tft.drawRoundRect(pad, top, cardW, h, 8, COL_CARD_BORDER);
     int padY = innerPadY;
-    int avail = cardH - padY * 2;
+    int avail = h - padY * 2;
     if (avail < contentH) {
       padY = 0;
-      avail = cardH;
+      avail = h;
     }
     const int extra = avail > contentH ? (avail - contentH) : 0;
     const int titleY = top + padY + extra / 2;
@@ -677,24 +741,24 @@ static void paintHomeList() {
     return titleY;
   };
 
-  auto registerCard = [&](View view, int top) {
+  auto registerCard = [&](View view, int top, int h) {
     g_homeCardView[g_homeCardCount] = view;
     g_homeCardX[g_homeCardCount] = pad;
     g_homeCardY[g_homeCardCount] = top;
     g_homeCardW[g_homeCardCount] = cardW;
-    g_homeCardH[g_homeCardCount] = cardH;
+    g_homeCardH[g_homeCardCount] = h;
     g_homeCardCount++;
   };
 
   auto cardTwo = [&](View view, const char* title, const String& suffix, const uint16_t* icon,
-                     int top, bool ok, const String& err, const char* label1, float pct1,
+                     int top, int h, bool ok, const String& err, const char* label1, float pct1,
                      const String& sub1, const char* label2, float pct2, const String& sub2) {
-    registerCard(view, top);
+    registerCard(view, top, h);
     const int contentH = titleH + titleToMetric + metricH + gapM + metricH;
-    const int titleY = cardChrome(title, suffix, icon, top, contentH);
+    const int titleY = cardChrome(title, suffix, icon, top, h, contentH);
     if (!ok) {
       const int errY = titleY + titleH + 4;
-      const int errMaxH = (top + cardH - 8) - errY;
+      const int errMaxH = (top + h - 8) - errY;
       drawErrorWrapped(pad + 12, errY, cardW - 24, err, COL_CARD, 1, errMaxH);
       return;
     }
@@ -706,14 +770,14 @@ static void paintHomeList() {
   };
 
   auto cardOne = [&](View view, const char* title, const String& suffix, const uint16_t* icon,
-                     int top, bool ok, const String& err, const char* label, float pct,
+                     int top, int h, bool ok, const String& err, const char* label, float pct,
                      const String& sub) {
-    registerCard(view, top);
+    registerCard(view, top, h);
     const int contentH = titleH + titleToMetric + metricH;
-    const int titleY = cardChrome(title, suffix, icon, top, contentH);
+    const int titleY = cardChrome(title, suffix, icon, top, h, contentH);
     if (!ok) {
       const int errY = titleY + titleH + 4;
-      const int errMaxH = (top + cardH - 8) - errY;
+      const int errMaxH = (top + h - 8) - errY;
       drawErrorWrapped(pad + 12, errY, cardW - 24, err, COL_CARD, 1, errMaxH);
       return;
     }
@@ -724,88 +788,100 @@ static void paintHomeList() {
   };
 
   const UiStrings& t = uiTr();
-  const ClaudeAccount& claudeAcct = g_snap.claude[showClaude ? claudeWorstIdx() : 0];
-  const GptAccount& gptAcct = g_snap.gpt[showGpt ? gptWorstIdx() : 0];
-  const CursorAccount& cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
-  const OpenRouterAccount& orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
-  const DeepSeekAccount& dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
 
-  String c1 = compact ? t.session5hShort : t.session5h;
-  String c2 = compact ? t.week : t.weekLimit;
   String cs1 = withResta(claudeAcct.sessionPercent, claudeAcct.sessionResets);
   String cs2 = withResta(claudeAcct.weeklyPercent, claudeAcct.weeklyResets);
-  if (!showSub) {
-    if (claudeAcct.sessionResets.length()) {
-      c1 += "  " + fmtWhen(claudeAcct.sessionResets).substring(0, 5);
-    }
-    if (claudeAcct.weeklyResets.length()) {
-      c2 += "  " + fmtWhen(claudeAcct.weeklyResets).substring(0, 5);
-    }
-    cs1 = "";
-    cs2 = "";
-  }
-
-  String u1 = compact ? t.cursorModelsShort : t.cursorModels;
-  String u2 = compact ? t.otherShort : t.otherModels;
-  String us1 = showSub && cursorAcct.cycleEnd.length()
-                   ? (String(compact ? "" : t.resetPrefix) + fmtWhen(cursorAcct.cycleEnd))
+  String us1 = cursorAcct.cycleEnd.length()
+                   ? (String(t.resetPrefix) + fmtWhen(cursorAcct.cycleEnd))
                    : "";
-  String us2 = showSub ? cursorOndemand(cursorAcct) : "";
-  if (!showSub && cursorAcct.cycleEnd.length()) {
-    u1 += "  " + fmtWhen(cursorAcct.cycleEnd).substring(0, 5);
-  }
-
+  String us2 = cursorOndemand(cursorAcct);
   String oSub = openrouterBalance(orAcct);
   String dSub = deepseekBalance(dsAcct);
 
+  tft.setViewport(pad, bodyTop, cardW, bodyH, false);
+
   int slot = 0;
-  auto nextTop = [&]() { return bodyTop + slot * (cardH + gap); };
+  auto nextTop = [&]() {
+    int y = bodyTop - g_detailScroll;
+    for (int i = 0; i < slot; i++) {
+      y += heights[i] + gap;
+    }
+    return y;
+  };
+  auto visible = [&](int top, int h) {
+    return top + h > bodyTop && top < bodyTop + bodyH;
+  };
+
   if (showClaude) {
-    String suffix = accountSuffixText(claudeAcct.label, g_snap.claudeCount);
-    cardTwo(VIEW_CLAUDE, "Claude", suffix, ICON_CLAUDE, nextTop(), claudeAcct.ok, claudeAcct.error,
-            c1.c_str(), claudeAcct.sessionPercent, cs1, c2.c_str(), claudeAcct.weeklyPercent, cs2);
+    int top = nextTop();
+    int h = heights[slot];
+    if (visible(top, h)) {
+      String suffix = accountSuffixText(claudeAcct.label, g_snap.claudeCount);
+      cardTwo(VIEW_CLAUDE, "Claude", suffix, ICON_CLAUDE, top, h, claudeAcct.ok, claudeAcct.error,
+              t.session5h, claudeAcct.sessionPercent, cs1, t.weekLimit, claudeAcct.weeklyPercent,
+              cs2);
+    }
     slot++;
   }
   if (showGpt) {
-    String gptTitle = gptPlanTitle(gptAcct);
-    String suffix = accountSuffixText(gptAcct.label, g_snap.gptCount);
-    String gs1 = showSub ? withResta(gptAcct.sessionPercent, gptAcct.sessionResets) : "";
-    String gs2 = showSub ? withResta(gptAcct.weeklyPercent, gptAcct.weeklyResets) : "";
-    String g1 = compact ? t.session5hShort : t.session5h;
-    String g2 = compact ? t.week : t.weekLimit;
-    if (!showSub) {
-      if (gptAcct.sessionResets.length()) {
-        g1 += "  " + fmtWhen(gptAcct.sessionResets).substring(0, 5);
-      }
-      if (gptAcct.weeklyResets.length()) {
-        g2 += "  " + fmtWhen(gptAcct.weeklyResets).substring(0, 5);
+    int top = nextTop();
+    int h = heights[slot];
+    if (visible(top, h)) {
+      String gptTitle = gptPlanTitle(gptAcct);
+      String suffix = accountSuffixText(gptAcct.label, g_snap.gptCount);
+      String gs1 = withResta(gptAcct.sessionPercent, gptAcct.sessionResets);
+      String gs2 = withResta(gptAcct.weeklyPercent, gptAcct.weeklyResets);
+      if (gptTwo) {
+        cardTwo(VIEW_GPT, gptTitle.c_str(), suffix, ICON_GPT, top, h, gptAcct.ok, gptAcct.error,
+                t.session5h, gptAcct.sessionPercent, gs1, t.weekLimit, gptAcct.weeklyPercent, gs2);
+      } else if (gptAcct.weeklyPercent >= 0) {
+        cardOne(VIEW_GPT, gptTitle.c_str(), suffix, ICON_GPT, top, h, gptAcct.ok, gptAcct.error,
+                t.weekLimit, gptAcct.weeklyPercent, gs2);
+      } else {
+        cardOne(VIEW_GPT, gptTitle.c_str(), suffix, ICON_GPT, top, h, gptAcct.ok, gptAcct.error,
+                t.session5h, gptAcct.sessionPercent, gs1);
       }
     }
-    cardTwo(VIEW_GPT, gptTitle.c_str(), suffix, ICON_GPT, nextTop(), gptAcct.ok, gptAcct.error,
-            g1.c_str(), gptAcct.sessionPercent, gs1, g2.c_str(), gptAcct.weeklyPercent, gs2);
     slot++;
   }
   if (showCursor) {
-    String cursorTitle = cursorPlanTitle(cursorAcct);
-    String suffix = accountSuffixText(cursorAcct.label, g_snap.cursorCount);
-    cardTwo(VIEW_CURSOR, cursorTitle.c_str(), suffix, ICON_CURSOR, nextTop(), cursorAcct.ok,
-            cursorAcct.error, u1.c_str(), cursorAcct.percent, us1, u2.c_str(),
-            cursorAcct.otherPercent, us2);
+    int top = nextTop();
+    int h = heights[slot];
+    if (visible(top, h)) {
+      String cursorTitle = cursorPlanTitle(cursorAcct);
+      String suffix = accountSuffixText(cursorAcct.label, g_snap.cursorCount);
+      cardTwo(VIEW_CURSOR, cursorTitle.c_str(), suffix, ICON_CURSOR, top, h, cursorAcct.ok,
+              cursorAcct.error, t.cursorModels, cursorAcct.percent, us1, t.otherModels,
+              cursorAcct.otherPercent, us2);
+    }
     slot++;
   }
   if (showOpenRouter) {
-    // Saldo, nao assinatura: card igual ao do DeepSeek (pct -1 forca
-    // paintHomeMetric a mostrar o valor em vez de barra de "% historico").
-    String suffix = accountSuffixText(orAcct.label, g_snap.openrouterCount);
-    cardOne(VIEW_OPENROUTER, "OpenRouter", suffix, ICON_OPENROUTER, nextTop(), orAcct.ok,
-            orAcct.error, compact ? t.credits : t.accountCredits, -1, oSub);
+    int top = nextTop();
+    int h = heights[slot];
+    if (visible(top, h)) {
+      String suffix = accountSuffixText(orAcct.label, g_snap.openrouterCount);
+      cardOne(VIEW_OPENROUTER, "OpenRouter", suffix, ICON_OPENROUTER, top, h, orAcct.ok,
+              orAcct.error, t.accountCredits, -1, oSub);
+    }
     slot++;
   }
   if (showDeepSeek) {
-    String suffix = accountSuffixText(dsAcct.label, g_snap.deepseekCount);
-    cardOne(VIEW_DEEPSEEK, "DeepSeek", suffix, ICON_DEEPSEEK, nextTop(), dsAcct.ok, dsAcct.error,
-            compact ? t.credits : t.accountCredits, dsAcct.percent, dSub);
+    int top = nextTop();
+    int h = heights[slot];
+    if (visible(top, h)) {
+      String suffix = accountSuffixText(dsAcct.label, g_snap.deepseekCount);
+      cardOne(VIEW_DEEPSEEK, "DeepSeek", suffix, ICON_DEEPSEEK, top, h, dsAcct.ok, dsAcct.error,
+              t.accountCredits, dsAcct.percent, dSub);
+    }
     slot++;
+  }
+
+  tft.resetViewport();
+  if (g_detailCanScroll) {
+    int cx = g_arrowX + g_arrowS / 2;
+    drawScrollChevron(cx, g_arrowUpY + g_arrowS / 2, true, g_detailScroll > 0);
+    drawScrollChevron(cx, g_arrowDownY + g_arrowS / 2, false, g_detailScroll < g_detailMaxScroll);
   }
 }
 
@@ -813,57 +889,29 @@ struct HomeGridRect {
   int x, y, w, h;
 };
 
-// Reflui 1..5 cards num grid: 1 = celula unica; 2 = duas colunas; 3 = duas
-// em cima + uma ocupando a linha toda embaixo; 4 = 2x2; 5 = 2x2 + uma
-// ocupando a linha toda embaixo.
-static void computeHomeGridRects(int n, int bx, int by, int bw, int bh, int gap,
+// Grade sempre 2 colunas (1/2 da largura). O card ímpar fica na esquerda —
+// nunca estica pra preencher a linha.
+static void computeHomeGridRects(int n, int bx, int by, int bw, int rowH, int gap,
                                  HomeGridRect out[MAX_HOME_CARDS]) {
-  if (n <= 1) {
-    out[0] = {bx, by, bw, bh};
-    return;
-  }
-  if (n == 2) {
-    const int colW = (bw - gap) / 2;
-    out[0] = {bx, by, colW, bh};
-    out[1] = {bx + colW + gap, by, bw - colW - gap, bh};
-    return;
-  }
-  if (n == 5) {
-    const int rowH = (bh - 2 * gap) / 3;
-    const int colW = (bw - gap) / 2;
-    const int row2Y = by + rowH + gap;
-    const int row3Y = by + 2 * (rowH + gap);
-    const int row3H = bh - 2 * (rowH + gap);
-    out[0] = {bx, by, colW, rowH};
-    out[1] = {bx + colW + gap, by, bw - colW - gap, rowH};
-    out[2] = {bx, row2Y, colW, rowH};
-    out[3] = {bx + colW + gap, row2Y, bw - colW - gap, rowH};
-    out[4] = {bx, row3Y, bw, row3H};
-    return;
-  }
-  const int rowH = (bh - gap) / 2;
   const int colW = (bw - gap) / 2;
-  const int row2H = bh - rowH - gap;
-  out[0] = {bx, by, colW, rowH};
-  out[1] = {bx + colW + gap, by, bw - colW - gap, rowH};
-  if (n == 3) {
-    out[2] = {bx, by + rowH + gap, bw, row2H};
-    return;
+  const int rightW = bw - colW - gap;
+  for (int i = 0; i < n; i++) {
+    const int col = i % 2;
+    const int row = i / 2;
+    out[i] = {bx + (col ? colW + gap : 0), by + row * (rowH + gap), col ? rightW : colW, rowH};
   }
-  out[2] = {bx, by + rowH + gap, colW, row2H};
-  out[3] = {bx + colW + gap, by + rowH + gap, bw - colW - gap, row2H};
 }
 
-// Home em grade: 1 a 5 cards, um por provedor configurado. Com 4
-// preenchidos fica 2x2; com 5, 2x2 + uma faixa embaixo.
+// Home em grade: 2 colunas fixas (1/2). Células cabem 3 linhas (6 itens)
+// sem corte; o ímpar não estica.
 static void paintHomeGrid() {
   layoutContent();
   const int W = g_contentW;
   const int H = g_contentH;
-  const int bodyTop = g_contentY + 6;
-  const int padInner = (W < 360) ? 8 : 10;
-  const int gap = (H < 280) ? 6 : 8;
-  const int bodyH = H - 12;
+  const int bodyTop = g_contentY + 4;
+  const int padInner = 6;
+  const int gap = 4;
+  const int bodyH = H - 8;
   const int pad = g_contentX + padInner;
 
   const bool showClaude = g_snap.claudeCount > 0;
@@ -875,33 +923,58 @@ static void paintHomeGrid() {
                 (int)showDeepSeek;
 
   g_homeCardCount = 0;
+  g_detailCanScroll = false;
+  g_detailMaxScroll = 0;
+  tft.fillRect(g_contentX, g_contentY, g_contentW, g_contentH, COL_BG);
   if (n == 0) {
     drawErrorWrapped(pad, bodyTop, W - padInner * 2, emptyProvidersMsg(), COL_BG, 2);
     return;
   }
 
-  HomeGridRect rects[MAX_HOME_CARDS];
-  computeHomeGridRects(n, pad, bodyTop, W - padInner * 2, bodyH, gap, rects);
+  const int fitRows = 3;
+  int rowH = (bodyH - gap * (fitRows - 1)) / fitRows;
+  if (rowH < 56) {
+    rowH = 56;
+  }
+  const int rows = (n + 1) / 2;
+  int totalH = rows * rowH + gap * (rows - 1);
 
-  int minW = rects[0].w;
-  int minH = rects[0].h;
-  for (int i = 1; i < n; i++) {
-    minW = min(minW, rects[i].w);
-    minH = min(minH, rects[i].h);
+  g_detailMaxScroll = totalH - bodyH;
+  if (g_detailMaxScroll < 0) {
+    g_detailMaxScroll = 0;
+  }
+  if (g_detailScroll > g_detailMaxScroll) {
+    g_detailScroll = g_detailMaxScroll;
+  }
+  g_detailCanScroll = g_detailMaxScroll > 0;
+  g_detailClipTop = bodyTop;
+  g_detailClipH = bodyH;
+
+  int gridW = W - padInner * 2;
+  if (g_detailCanScroll) {
+    g_arrowS = 26;
+    g_arrowX = g_contentX + W - 8 - g_arrowS;
+    g_arrowUpY = bodyTop;
+    g_arrowDownY = bodyTop + bodyH - 8 - g_arrowS;
+    gridW = g_arrowX - pad - 6;
   }
 
-  const bool compact = minW < 180 || minH < 110;
-  const bool showSub = minH >= 72;
-  const int barH = compact ? 5 : 7;
+  HomeGridRect rects[MAX_HOME_CARDS];
+  computeHomeGridRects(n, pad, bodyTop - g_detailScroll, gridW, rowH, gap, rects);
+
+  const int colW = rects[0].w;
+  const bool compact = colW < 180 || rowH < 100;
+  const bool showSub = rowH >= 96;
+  const int barH = compact ? 4 : 7;
   const uint8_t metricFont = compact ? 1 : 2;
   const int labelH = compact ? 8 : 16;
   const int subH = showSub ? (compact ? 8 : 14) : 0;
-  const int metricH = labelH + 1 + barH + (subH ? 1 + subH : 0);
+  const int metricH = labelH + 2 + barH + (subH ? 2 + subH : 0);
   const int titleH = ICON_CLAUDE_H;
-  const int titleToMetric = compact ? 6 : 10;
-  const int gapM = compact ? 3 : 6;
-  const int innerPadY = compact ? 4 : 8;
-  const int innerPadX = compact ? 8 : 12;
+  const int titleToMetric = compact ? 2 : 8;
+  const int gapM = compact ? 2 : 4;
+  const int innerPadY = compact ? 3 : 8;
+  const int innerPadX = compact ? 6 : 12;
 
   auto registerCard = [&](View view, const HomeGridRect& r) {
     g_homeCardView[g_homeCardCount] = view;
@@ -938,6 +1011,9 @@ static void paintHomeGrid() {
                      const uint16_t* icon, bool ok, const String& err, const char* label1,
                      float pct1, const String& sub1, const char* label2, float pct2,
                      const String& sub2) {
+    if (r.y + r.h <= bodyTop || r.y >= bodyTop + bodyH) {
+      return;
+    }
     registerCard(view, r);
     const int contentH = titleH + titleToMetric + metricH + gapM + metricH;
     const int titleY = cardChrome(r.x, r.y, r.w, r.h, title, suffix, icon, contentH);
@@ -957,6 +1033,9 @@ static void paintHomeGrid() {
   auto cardOne = [&](View view, const HomeGridRect& r, const char* title, const String& suffix,
                      const uint16_t* icon, bool ok, const String& err, const char* label, float pct,
                      const String& sub) {
+    if (r.y + r.h <= bodyTop || r.y >= bodyTop + bodyH) {
+      return;
+    }
     registerCard(view, r);
     const int contentH = titleH + titleToMetric + metricH;
     const int titleY = cardChrome(r.x, r.y, r.w, r.h, title, suffix, icon, contentH);
@@ -990,6 +1069,8 @@ static void paintHomeGrid() {
   String oSub = openrouterBalance(orAcct);
   String dSub = deepseekBalance(dsAcct);
 
+  tft.setViewport(pad, bodyTop, gridW, bodyH, false);
+
   int slot = 0;
   if (showClaude) {
     String suffix = accountSuffixText(claudeAcct.label, g_snap.claudeCount);
@@ -1002,11 +1083,22 @@ static void paintHomeGrid() {
   if (showGpt) {
     String gptTitle = gptPlanTitle(gptAcct);
     String suffix = accountSuffixText(gptAcct.label, g_snap.gptCount);
-    cardTwo(VIEW_GPT, rects[slot], gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error,
-            compact ? t.session5hShort : t.session5h, gptAcct.sessionPercent,
-            showSub ? withResta(gptAcct.sessionPercent, gptAcct.sessionResets) : "",
-            compact ? t.week : t.weekLimit, gptAcct.weeklyPercent,
-            showSub ? withResta(gptAcct.weeklyPercent, gptAcct.weeklyResets) : "");
+    const bool gptTwo = gptAcct.sessionPercent >= 0 && gptAcct.weeklyPercent >= 0;
+    if (gptTwo) {
+      cardTwo(VIEW_GPT, rects[slot], gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error,
+              compact ? t.session5hShort : t.session5h, gptAcct.sessionPercent,
+              showSub ? withResta(gptAcct.sessionPercent, gptAcct.sessionResets) : "",
+              compact ? t.week : t.weekLimit, gptAcct.weeklyPercent,
+              showSub ? withResta(gptAcct.weeklyPercent, gptAcct.weeklyResets) : "");
+    } else if (gptAcct.weeklyPercent >= 0) {
+      cardOne(VIEW_GPT, rects[slot], gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error,
+              compact ? t.week : t.weekLimit, gptAcct.weeklyPercent,
+              showSub ? withResta(gptAcct.weeklyPercent, gptAcct.weeklyResets) : "");
+    } else {
+      cardOne(VIEW_GPT, rects[slot], gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error,
+              compact ? t.session5hShort : t.session5h, gptAcct.sessionPercent,
+              showSub ? withResta(gptAcct.sessionPercent, gptAcct.sessionResets) : "");
+    }
     slot++;
   }
   if (showCursor) {
@@ -1029,6 +1121,13 @@ static void paintHomeGrid() {
     cardOne(VIEW_DEEPSEEK, rects[slot], "DeepSeek", suffix, ICON_DEEPSEEK, dsAcct.ok,
             dsAcct.error, compact ? t.credits : t.accountCredits, dsAcct.percent, dSub);
     slot++;
+  }
+
+  tft.resetViewport();
+  if (g_detailCanScroll) {
+    int cx = g_arrowX + g_arrowS / 2;
+    drawScrollChevron(cx, g_arrowUpY + g_arrowS / 2, true, g_detailScroll > 0);
+    drawScrollChevron(cx, g_arrowDownY + g_arrowS / 2, false, g_detailScroll < g_detailMaxScroll);
   }
 }
 
@@ -1355,11 +1454,13 @@ void paintGpt() {
   dKv(t.plan, g.plan);
   dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
   dGap();
-  dBar(t.window5h, g.sessionPercent, withResta(g.sessionPercent, g.sessionResets));
-  dKv(t.used, fmtPct(g.sessionPercent));
-  dKv(t.left, fmtRemain(g.sessionPercent));
-  dKv(t.reset, g.sessionResets.length() ? fmtWhen(g.sessionResets) : "");
-  dGap();
+  if (g.sessionPercent >= 0 || g.sessionResets.length()) {
+    dBar(t.window5h, g.sessionPercent, withResta(g.sessionPercent, g.sessionResets));
+    dKv(t.used, fmtPct(g.sessionPercent));
+    dKv(t.left, fmtRemain(g.sessionPercent));
+    dKv(t.reset, g.sessionResets.length() ? fmtWhen(g.sessionResets) : "");
+    dGap();
+  }
   dBar(t.weekLimit, g.weeklyPercent, withResta(g.weeklyPercent, g.weeklyResets));
   dKv(t.used, fmtPct(g.weeklyPercent));
   dKv(t.left, fmtRemain(g.weeklyPercent));
@@ -1624,13 +1725,13 @@ static void paintNowMetric(int x, int y, int w, const char* label, float pct, co
   }
   String right = w < 110 ? fmtPct(pct) : fmtPct(pct) + " " + t.used;
   tft.drawString(right, x + w, y, font);
-  drawBar(x, y + labelH, w, barH, pct);
+  drawBar(x, y + labelH + 2, w, barH, pct);
   if (!sub.length()) {
     return;
   }
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-  tft.drawString(sub, x, y + labelH + 1 + barH, font);
+  tft.drawString(sub, x, y + labelH + 2 + barH + 1, font);
 }
 
 // Selo de contagem no canto superior direito, igual ao do header — a tela
@@ -1763,8 +1864,17 @@ void paintNow() {
   if (showGpt) {
     String suffix = accountSuffixText(gptAcct.label, g_snap.gptCount);
     String gptTitle = gptPlanTitle(gptAcct);
-    row(slot++, gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error, t.session5hShort,
-        gptAcct.sessionPercent, gs1, true, t.week, gptAcct.weeklyPercent, gs2);
+    const bool gptTwo = gptAcct.sessionPercent >= 0 && gptAcct.weeklyPercent >= 0;
+    if (gptTwo) {
+      row(slot++, gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error, t.session5hShort,
+          gptAcct.sessionPercent, gs1, true, t.week, gptAcct.weeklyPercent, gs2);
+    } else if (gptAcct.weeklyPercent >= 0) {
+      row(slot++, gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error, t.week,
+          gptAcct.weeklyPercent, gs2, false, "", -1, "");
+    } else {
+      row(slot++, gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error, t.session5hShort,
+          gptAcct.sessionPercent, gs1, false, "", -1, "");
+    }
   }
   if (showCursor) {
     String suffix = accountSuffixText(cursorAcct.label, g_snap.cursorCount);

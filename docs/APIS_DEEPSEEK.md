@@ -6,7 +6,7 @@ Endpoint público e documentado da DeepSeek — não precisa imitar nenhum app.
 
 API key gerada manualmente pelo usuário em https://platform.deepseek.com/api_keys.
 
-Vai em `DEEPSEEK_API_KEY` no painel web (persistido em `collector/data/config.json`, gitignored). Sem fallback de app local, porque a DeepSeek não roda nada instalado neste Mac.
+Vai no painel web (persistido em `backend/data/config.json`, gitignored). Sem fallback de app local, porque a DeepSeek não roda nada instalado neste Mac.
 
 ## `GET /user/balance`
 

@@ -214,7 +214,7 @@ HTTP 5xx só se o processo do coletor quebrar de fato.
 Uma conta só entra no array se estiver visível — o firmware **não desenha o card** de nenhuma conta que não veio no JSON, em nenhuma tela (Início lista/grade, Agora). Um provedor com array vazio (`[]`) não desenha nenhum card daquele tipo. Origens de "de fora":
 
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
-   painel (`collector/data/config.json`). OpenRouter e DeepSeek somem ao
+   painel (`backend/data/config.json`). OpenRouter e DeepSeek somem ao
    apagar a última key.
 2. **Oculta no painel** — a conta **local** de Claude/GPT/Cursor (Keychain/`auth.json`/`state.vscdb`) e
    a **primeira key** de OpenRouter/DeepSeek (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`)

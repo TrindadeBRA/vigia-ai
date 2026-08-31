@@ -4,8 +4,6 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 | Arquivo | Quando usar |
 | --- | --- |
-| [PLANO.md](PLANO.md) | Escopo do protótipo (histórico) |
-| [REESCRITA.md](REESCRITA.md) | Plano da reescrita open source |
 | [ARQUITETURA.md](ARQUITETURA.md) | Coletor ↔ ESP32 ↔ APIs |
 | [CONTRATO_JSON.md](CONTRATO_JSON.md) | Formato de `/usage` (não quebrar o firmware) |
 | [APIS_CLAUDE.md](APIS_CLAUDE.md) | OAuth usage da Anthropic |
@@ -19,6 +17,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [FRONTEND.md](FRONTEND.md) | Painel e mostrador React |
 | [FIRMWARE.md](FIRMWARE.md) | PlatformIO, Wokwi, `secrets.h` |
 | [DECISOES.md](DECISOES.md) | Por que as escolhas atuais |
+| [PLANO.md](PLANO.md) | Escopo do protótipo (histórico) |
 
 ## O que é este projeto
 

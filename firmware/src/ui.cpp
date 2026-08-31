@@ -6,7 +6,7 @@
 #include <Preferences.h>
 
 View g_view = VIEW_HOME;
-HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
+HomeLayout g_homeLayout = HOME_LAYOUT_GRID;
 int g_claudeIdx = 0;
 int g_gptIdx = 0;
 int g_cursorIdx = 0;
@@ -107,14 +107,14 @@ static void loadUiPrefs() {
     applyTheme(THEME_DARK);
     return;
   }
-  uint8_t home = prefs.getUChar("home", (uint8_t)HOME_LAYOUT_LIST);
+  uint8_t home = prefs.getUChar("home", (uint8_t)HOME_LAYOUT_GRID);
   uint8_t theme = prefs.getUChar("theme", (uint8_t)THEME_DARK);
   uint8_t lang = prefs.getUChar("lang", (uint8_t)LANG_PT);
   uint8_t edge = prefs.getUChar("edge", (uint8_t)HEADER_LEFT);
   uint8_t accent = prefs.getUChar("accent", (uint8_t)ACCENT_RED);
   prefs.end();
   if (home > (uint8_t)HOME_LAYOUT_GRID) {
-    home = (uint8_t)HOME_LAYOUT_LIST;
+    home = (uint8_t)HOME_LAYOUT_GRID;
   }
   if (theme > (uint8_t)THEME_CONTRAST) {
     theme = (uint8_t)THEME_DARK;
@@ -157,6 +157,7 @@ void uiSetHomeLayout(HomeLayout layout) {
     return;
   }
   g_homeLayout = layout;
+  g_detailScroll = 0;
   saveUiPref("home", (uint8_t)g_homeLayout);
   uiPaint();
 }
@@ -333,9 +334,12 @@ void uiSetView(View v) {
 }
 
 static bool viewHasScroll() {
-  return g_view == VIEW_CLAUDE || g_view == VIEW_GPT || g_view == VIEW_CURSOR ||
-         g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK || g_view == VIEW_STATUS;
+  return g_view == VIEW_HOME || g_view == VIEW_CLAUDE || g_view == VIEW_GPT ||
+         g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK ||
+         g_view == VIEW_STATUS;
 }
+
+bool uiCanScroll() { return viewHasScroll() && g_detailCanScroll; }
 
 void uiDetailScrollBy(int dy) {
   if (!viewHasScroll()) {
@@ -483,6 +487,10 @@ void uiHandleTap(int16_t x, int16_t y) {
     for (int i = 0; i < g_homeCardCount; i++) {
       if (x >= g_homeCardX[i] && x < g_homeCardX[i] + g_homeCardW[i] && y >= g_homeCardY[i] &&
           y < g_homeCardY[i] + g_homeCardH[i]) {
+        if (g_detailCanScroll &&
+            (y < g_detailClipTop || y >= g_detailClipTop + g_detailClipH)) {
+          return;
+        }
         uiSetView(g_homeCardView[i]);
         return;
       }

@@ -4,9 +4,17 @@
 
 Cotas são da conta pessoal. Evita hospedar JWT/OAuth. LAN é suficiente para um painel na mesa.
 
-## Python stdlib, não Node
+## FastAPI no host, não stdlib pura
 
-`http.server`, `urllib`, `sqlite3`, `json` já vêm no macOS. Menos setup para quem não é dev.
+O protótipo usava `http.server`. O coletor oficial é **FastAPI + Uvicorn**: OpenAPI em `/docs`, modelos Pydantic = contrato, pytest. Tokens continuam só no host.
+
+## Um app React, duas rotas
+
+Painel (`/`) e mostrador (`/display`) são Vite + React + TypeScript. Em desenvolvimento o Vite roda em `:5173` e faz proxy da API. Em produção o backend serve o `frontend/dist`. `/display` lê **somente** `GET /events` / `GET /usage` — zero tokens no browser.
+
+## Docker opcional
+
+`./dev up --docker`. O container não lê Keychain. Cursor/Codex: overlay `compose.credentials.yaml` (bind-mount somente leitura). Claude no Mac Docker: Python local ou token colado. No Mac da mesa, `./dev up` (Python + Vite) continua o caminho mais simples.
 
 ## Endpoints internos, não scraping HTML
 
@@ -16,7 +24,7 @@ Mesma fonte do CLI/IDE. HTML do dashboard quebra mais. Risco: contrato não ofic
 
 Continua um único `GET /usage` por ciclo (decisão original: firmware pequeno, provedor com `ok: false` não derruba o HTTP). O que mudou: cada provedor deixou de ser um objeto único e virou uma **lista de contas** (`docs/CONTRATO_JSON.md`), pra suportar múltiplas assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com apelido opcional. Quem tem uma conta só (o caso comum) não vê diferença nenhuma — lista com 1 item. O firmware guarda no máximo `MAX_ACCOUNTS` (5) por provedor; excedentes são ignorados (log serial, nunca trava) — o coletor e o `/display` não têm esse teto.
 
-Decisão de UI física: a Início cabe até **5 cards**, um por *tipo* de provedor (não por conta) — lista empilha; grade 2×2, e com 5 vira 2×2 + uma faixa embaixo. Com mais de uma conta, o card mostra a que mais precisa de atenção (maior percentual) e o detalhe ganha um paginador `‹ i/N ›` pra ver as outras. O mostrador web (`/display`) não tem esse limite de tela — lá cada conta é um card próprio.
+Decisão de UI física: a Início cabe até **5 cards**, um por *tipo* de provedor (não por conta) — lista empilha; grade sempre **2 colunas × 3 linhas visíveis** (1/2 da largura, o ímpar não estica). Layout padrão: **grade**. Com mais de uma conta, o card mostra a que mais precisa de atenção (maior percentual) e o detalhe ganha um paginador `‹ i/N ›` pra ver as outras. O mostrador web (`/display`) não tem esse limite de tela — lá cada conta é um card próprio.
 
 ## Wokwi fala com o coletor de verdade (via `wokwigw`)
 
@@ -38,13 +46,9 @@ Um CS extra (GPIO 21) evita biblioteca à parte. Calibração na NVS, não no sk
 
 A placa real é XPT2046 (SPI, `T_CS` 21). O Wokwi não tem XPT2046; usa `board-ili9341-cap-touch` (FT6206 I2C) só para clicar no simulador. O caminho de código é `WOKWI_SIM` (`firmware/src/input.cpp`). Os dados vêm do coletor de verdade.
 
-## Painel web no mesmo processo (config)
+## Painel sem devolver tokens
 
-`GET /` é o painel (portas, IPs LAN, tokens). `GET /usage` não muda. Sem Node: HTML estático + `http.server`. Segredos não voltam no `GET /api/config` (só sufixo e origem).
-
-## Docker opcional
-
-`./dev-collector.sh docker`. O container não lê Keychain. Cursor: overlay `compose.credentials.yaml` (bind-mount somente leitura). Claude no Mac Docker: Python local ou token colado (plano B). No Mac da mesa, Python local continua o caminho mais simples.
+`GET /api/config` devolve status (sufixo, origem), nunca `paste_token` / key. Gravar contas é `POST /api/config`.
 
 ## Login local, sem copiar token
 

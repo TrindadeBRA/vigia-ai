@@ -2,6 +2,6 @@
 
 Leia **[`docs/CONTEXTO_IA.md`](docs/CONTEXTO_IA.md)** antes de alterar o repositório.
 
-Reescrita / estrutura alvo: [`docs/REESCRITA.md`](docs/REESCRITA.md).
+Estrutura e decisões vigentes: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md), [`docs/DECISOES.md`](docs/DECISOES.md), [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Comandos: `./dev up`, `./dev test`, `./dev wokwi`, `./dev firmware flash`.

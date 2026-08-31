@@ -1,3 +1,9 @@
+# Plano — protótipo v1 (histórico)
+
+Este arquivo descreve o **protótipo original** (Claude + Cursor, coletor `http.server`). O produto vigente está em [`ARQUITETURA.md`](ARQUITETURA.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md) e no README da raiz.
+
+---
+
 # Plano — painel de cotas Claude + Cursor
 
 ## Objetivo
@@ -36,7 +42,7 @@ A placa só conhece Wi-Fi e a URL do coletor (`USAGE_URL`).
 - [x] JSON único com `claude` e `cursor`, cada um com `ok` / `error`
 - [x] Segredos fora do git (`data/config.json`, `secrets.h`)
 - [x] Tela com duas barras (Claude sessão+semana; Cursor plano)
-- [x] Wokwi fala com o coletor de verdade via `wokwigw` (`./dev-wokwi.sh`)
+- [x] Wokwi fala com o coletor de verdade via `wokwigw` (`./dev wokwi`)
 - [x] README + `docs/` para humanos e agentes
 - [ ] Hardware físico conferido pelo usuário (precisa da placa ligada e do coletor no Mac)
 
@@ -46,4 +52,4 @@ A placa só conhece Wi-Fi e a URL do coletor (`USAGE_URL`).
 - Token OAuth Claude expira: abrir o Claude Code / app renova.
 - JWT Cursor: abrir o Cursor no Mac.
 - Firewall do macOS pode bloquear porta 8787 para a ESP32.
-- IP do Mac muda: atualizar `USAGE_URL` em `src/secrets.h`.
+- IP do Mac muda: atualizar `USAGE_URL` em `firmware/src/secrets.h`.

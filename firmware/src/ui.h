@@ -57,6 +57,8 @@ void uiSetAccent(UiAccent accent);
 UiAccent uiAccent();
 uint16_t uiAccentColor(UiAccent accent);
 void uiDetailScrollBy(int dy);
+// True quando a view atual tem conteúdo maior que a tela (setas ↑↓ visíveis).
+bool uiCanScroll();
 void uiHandleTap(int16_t x, int16_t y);
 void uiHandleSwipe(int16_t dx);
 void uiHandleVerticalSwipe(int16_t dy);

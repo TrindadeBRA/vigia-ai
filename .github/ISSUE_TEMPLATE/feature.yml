@@ -1,0 +1,29 @@
+---
+name: Feature
+description: Pedido de funcionalidade (placa, coletor ou mostrador)
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        GPT já é um provedor. Não abrir issue para Gemini, Copilot, nuvem pública ou MQTT sem conversa prévia — ver `CONTRIBUTING.md`.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Onde
+      options: [firmware, backend, frontend, docs]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: O que você quer
+      description: Comportamento esperado, na placa e/ou no `/display`.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Por quê
+      description: Problema que isso resolve.

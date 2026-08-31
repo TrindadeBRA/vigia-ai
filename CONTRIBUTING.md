@@ -22,7 +22,7 @@ Python ≥ 3.11, Node 20+, PlatformIO Core.
 3. Falha de uma conta não derruba as outras (`ok: false` só naquela entrada). HTTP 200.
 4. Um ciclo de APIs no coletor (`USAGE_INTERVAL_S`); placa e `/display` só escutam SSE. `GET /usage` força um ciclo extra.
 5. UI e docs em **português (Brasil)**; identificadores de código em inglês.
-6. Não adicionar GPT/Gemini/nuvem/MQTT sem uma issue acordada.
+6. Não adicionar Gemini, Copilot, nuvem ou MQTT sem uma issue acordada.
 7. GPIO 2 é `TFT_DC`. Não usar como LED.
 8. Commits no estilo Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`.
 
