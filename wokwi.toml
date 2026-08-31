@@ -2,3 +2,6 @@
 version = 1
 firmware = ".pio/build/wokwi/firmware.bin"
 elf = ".pio/build/wokwi/firmware.elf"
+
+[net]
+gateway = "ws://localhost:9011"

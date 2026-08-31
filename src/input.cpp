@@ -11,7 +11,7 @@
 #define BTN_NEXT 5
 #endif
 
-#ifdef MOCK_USAGE
+#ifdef WOKWI_SIM
 #include <Wire.h>
 #ifndef FT6206_ADDR
 #define FT6206_ADDR 0x38
@@ -31,7 +31,6 @@ static uint16_t g_lastX = 0;
 static uint16_t g_lastY = 0;
 static uint32_t g_downMs = 0;
 static uint32_t g_lastBtnMs = 0;
-static uint32_t g_lastDbgMs = 0;
 static uint32_t g_lastTapMs = 0;
 
 static void onPointer(bool down, uint16_t x, uint16_t y) {
@@ -39,7 +38,6 @@ static void onPointer(bool down, uint16_t x, uint16_t y) {
   if (down) {
     g_lastX = x;
     g_lastY = y;
-    uiMarkTouch((int16_t)x, (int16_t)y, 1);
     if (!g_wasDown) {
       g_wasDown = true;
       g_didTap = false;
@@ -47,7 +45,6 @@ static void onPointer(bool down, uint16_t x, uint16_t y) {
       g_startY = y;
       g_downMs = now;
       if (now - g_lastTapMs > 160) {
-        Serial.printf("touch %u,%u\n", x, y);
         uiHandleTap((int16_t)x, (int16_t)y);
         g_didTap = true;
         g_lastTapMs = now;
@@ -115,7 +112,7 @@ static void saveCal(const uint16_t cal[5]) {
 }
 
 bool inputHasTouch() {
-#if defined(TOUCH_CS) || defined(MOCK_USAGE)
+#if defined(TOUCH_CS) || defined(WOKWI_SIM)
   return true;
 #else
   return false;
@@ -140,7 +137,7 @@ void inputRunCalibration() {
 #endif
 }
 
-#ifdef MOCK_USAGE
+#ifdef WOKWI_SIM
 static void capTouchBegin() {
   Wire.begin(21, 22);
   Wire.setClock(100000);
@@ -204,7 +201,7 @@ static void pollCapTouch() {
 #endif
 
 void inputBegin() {
-#ifdef MOCK_USAGE
+#ifdef WOKWI_SIM
   pinMode(BTN_PREV, INPUT_PULLUP);
   pinMode(BTN_NEXT, INPUT_PULLUP);
   capTouchBegin();
@@ -245,7 +242,7 @@ static void handleSerial() {
   }
 }
 
-#ifdef MOCK_USAGE
+#ifdef WOKWI_SIM
 static void pollButtons() {
   uint32_t now = millis();
   if (now - g_lastBtnMs < 280) {
@@ -261,7 +258,7 @@ static void pollButtons() {
 }
 #endif
 
-#ifndef MOCK_USAGE
+#ifndef WOKWI_SIM
 static void pollTouch() {
 #ifdef TOUCH_CS
   uint16_t z = tft.getTouchRawZ();
@@ -279,11 +276,6 @@ static void pollTouch() {
   if (y >= tft.height()) {
     y = tft.height() - 1;
   }
-  uint32_t now = millis();
-  if (now - g_lastDbgMs > 400) {
-    Serial.printf("touch z=%u -> %u,%u\n", z, x, y);
-    g_lastDbgMs = now;
-  }
   onPointer(true, x, y);
 #else
   (void)0;
@@ -293,7 +285,7 @@ static void pollTouch() {
 
 void inputPoll() {
   handleSerial();
-#ifdef MOCK_USAGE
+#ifdef WOKWI_SIM
   pollButtons();
   pollCapTouch();
 #else

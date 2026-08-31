@@ -6,12 +6,14 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import sys
 import tempfile
 import threading
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from shutil import copy2
@@ -26,6 +28,8 @@ CURSOR_AUTH_USAGE_URL = "https://api2.cursor.sh/auth/usage"
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {"ts": 0.0, "payload": None}
+_fx_lock = threading.Lock()
+_fx: dict[str, Any] = {"ts": 0.0, "usd_brl": 5.5}
 
 
 def _repo_root() -> Path:
@@ -48,8 +52,28 @@ def load_dotenv(path: Path) -> None:
             os.environ[key] = val
 
 
+BRT = ZoneInfo("America/Sao_Paulo")
+
+
+def iso_brt(dt: datetime | None = None) -> str:
+    if dt is None:
+        dt = datetime.now(BRT)
+    elif dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(BRT)
+    else:
+        dt = dt.astimezone(BRT)
+    off = dt.strftime("%z")
+    return dt.strftime("%Y-%m-%dT%H:%M:%S") + f"{off[:3]}:{off[3:]}"
+
+
+def tela_brt(dt: datetime) -> str:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(BRT).strftime("%d/%m %Hh%M")
+
+
 def utc_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return iso_brt()
 
 
 def as_percent(value: Any) -> float | None:
@@ -71,16 +95,38 @@ def as_percent(value: Any) -> float | None:
 def iso_or_none(value: Any) -> str | None:
     if value is None:
         return None
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return None
+        if s.isdigit():
+            value = int(s)
+        elif s.replace(".", "", 1).isdigit():
+            value = float(s)
+        else:
+            try:
+                raw = s.replace("Z", "+00:00")
+                return tela_brt(datetime.fromisoformat(raw))
+            except ValueError:
+                if "/" in s:
+                    return s
+                return s
     if isinstance(value, (int, float)) and value > 1e11:
-        return datetime.fromtimestamp(value / 1000.0, tz=timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        return tela_brt(datetime.fromtimestamp(value / 1000.0, tz=timezone.utc))
     if isinstance(value, (int, float)) and value > 1e9:
-        return datetime.fromtimestamp(float(value), tz=timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        return tela_brt(datetime.fromtimestamp(float(value), tz=timezone.utc))
     s = str(value).strip()
     return s or None
+
+
+def money_cents(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(round(n))
 
 
 def http_json(
@@ -106,6 +152,49 @@ def http_json(
         return json.loads(raw)
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"JSON inválido de {url}: {exc}") from exc
+
+
+USD_BRL_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
+
+
+def usd_brl_rate() -> float:
+    env = (os.environ.get("USD_BRL") or "").strip()
+    if env:
+        try:
+            n = float(env.replace(",", "."))
+            if n > 0:
+                return n
+        except ValueError:
+            pass
+    now = time.time()
+    with _fx_lock:
+        if now - float(_fx["ts"]) < 3600 and float(_fx["usd_brl"]) > 0:
+            return float(_fx["usd_brl"])
+    try:
+        data = http_json(USD_BRL_URL, timeout=8.0)
+        bid = float((data.get("USDBRL") or {}).get("bid"))
+        if bid <= 0:
+            raise RuntimeError("cotacao vazia")
+        with _fx_lock:
+            _fx["ts"] = now
+            _fx["usd_brl"] = bid
+        print(f"USD/BRL {bid:.4f}")
+        return bid
+    except Exception as exc:  # noqa: BLE001
+        with _fx_lock:
+            fallback = float(_fx["usd_brl"] or 5.5)
+        print(f"USD/BRL fallback {fallback:.4f} ({exc})")
+        return fallback
+
+
+def cursor_values_brl(cursor: dict[str, Any]) -> dict[str, Any]:
+    out = dict(cursor)
+    rate = usd_brl_rate()
+    for key in ("used_cents", "limit_cents", "bonus_cents"):
+        if out.get(key) is not None:
+            out[key] = int(round(int(out[key]) * rate))
+    out["currency"] = "BRL"
+    return out
 
 
 def claude_token_and_expiry() -> tuple[str | None, int | None, str | None]:
@@ -252,21 +341,16 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
         or usage.get("autoPercentUsed")
         or usage.get("includedPercentUsed")
     )
-    used = usage.get("totalSpend") or usage.get("includedSpend")
-    limit = usage.get("limit") or usage.get("includedLimit")
+    included = money_cents(usage.get("includedSpend"))
+    limit = money_cents(usage.get("limit") or usage.get("includedLimit"))
+    bonus = money_cents(usage.get("bonusSpend"))
+    total = money_cents(usage.get("totalSpend"))
+    used_cents = included if included is not None else total
     cycle_end = iso_or_none(
         data.get("billingCycleEnd") or data.get("billing_cycle_end") or usage.get("endDate")
     )
-    try:
-        used_cents = int(used) if used is not None else None
-    except (TypeError, ValueError):
-        used_cents = None
-    try:
-        limit_cents = int(limit) if limit is not None else None
-    except (TypeError, ValueError):
-        limit_cents = None
-    if percent is None and used_cents is not None and limit_cents:
-        percent = as_percent((used_cents / limit_cents) * 100.0)
+    if percent is None and used_cents is not None and limit:
+        percent = as_percent((used_cents / limit) * 100.0)
     if percent is None and used_cents is None and not cycle_end and not usage:
         return None
     return {
@@ -276,7 +360,8 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
         else "planUsage sem números",
         "percent": percent,
         "used_cents": used_cents,
-        "limit_cents": limit_cents,
+        "limit_cents": limit,
+        "bonus_cents": bonus,
         "cycle_end": cycle_end,
         "plan": (plan or data.get("membershipType") or "").strip() or None,
     }
@@ -308,6 +393,7 @@ def parse_cursor_auth_usage(data: dict[str, Any], plan: str | None) -> dict[str,
         "percent": best_pct,
         "used_cents": None,
         "limit_cents": None,
+        "bonus_cents": None,
         "cycle_end": None,
         "plan": plan,
         "requests_used": used,
@@ -322,6 +408,7 @@ def _cursor_fail(msg: str) -> dict[str, Any]:
         "percent": None,
         "used_cents": None,
         "limit_cents": None,
+        "bonus_cents": None,
         "cycle_end": None,
         "plan": None,
     }
@@ -387,6 +474,7 @@ def mock_payload() -> dict[str, Any]:
             "percent": 35.0,
             "used_cents": 700,
             "limit_cents": 2000,
+            "bonus_cents": 0,
             "cycle_end": utc_now(),
             "plan": "pro",
         },
@@ -395,7 +483,9 @@ def mock_payload() -> dict[str, Any]:
 
 def build_payload() -> dict[str, Any]:
     if os.environ.get("COLLECTOR_MOCK", "").strip() in ("1", "true", "yes"):
-        return mock_payload()
+        payload = mock_payload()
+        payload["cursor"] = cursor_values_brl(payload["cursor"])
+        return payload
     claude: dict[str, Any]
     cursor: dict[str, Any]
     try:
@@ -406,7 +496,7 @@ def build_payload() -> dict[str, Any]:
         cursor = fetch_cursor()
     except Exception as exc:  # noqa: BLE001
         cursor = _cursor_fail(str(exc))
-    return {"updated_at": utc_now(), "claude": claude, "cursor": cursor}
+    return {"updated_at": utc_now(), "claude": claude, "cursor": cursor_values_brl(cursor)}
 
 
 def cached_payload() -> dict[str, Any]:
@@ -422,7 +512,22 @@ def cached_payload() -> dict[str, Any]:
 
 
 class Handler(BaseHTTPRequestHandler):
-    protocol_version = "HTTP/1.1"
+    # HTTP/1.0 + Connection: close — o HTTPClient da ESP32 (Wokwi) abre TCP e
+    # às vezes reseta keep-alive 1.1 antes de ler o body.
+    protocol_version = "HTTP/1.0"
+    timeout = 20
+
+    def handle(self) -> None:
+        try:
+            super().handle()
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, TimeoutError):
+            return
+
+    def handle_one_request(self) -> None:
+        try:
+            super().handle_one_request()
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, TimeoutError):
+            self.close_connection = True
 
     def log_message(self, fmt: str, *args: Any) -> None:
         print(f"[{utc_now()}] {self.address_string()} {fmt % args}")
@@ -432,6 +537,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(raw)))
+        self.send_header("Connection", "close")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
@@ -448,6 +554,18 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {"ok": False, "error": "not found"})
 
 
+class CollectorServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        err = sys.exc_info()[1]
+        if isinstance(
+            err, (ConnectionResetError, BrokenPipeError, ConnectionAbortedError, TimeoutError)
+        ):
+            return
+        super().handle_error(request, client_address)
+
+
 def main() -> None:
     here = Path(__file__).resolve().parent
     for name in (".env", ".env.claude", ".env.cursor"):
@@ -456,7 +574,14 @@ def main() -> None:
     port = int(os.environ.get("PORT") or 8787)
     print(f"coletor em http://{host}:{port}/usage")
     print(f"repo {_repo_root()}")
-    httpd = ThreadingHTTPServer((host, port), Handler)
+    CollectorServer.allow_reuse_address = True
+    try:
+        httpd = CollectorServer((host, port), Handler)
+    except OSError as exc:
+        if getattr(exc, "errno", None) == 48:
+            print(f"porta {port} ocupada. Feche o outro python3 server.py ou: lsof -nP -iTCP:{port}")
+            raise SystemExit(1) from exc
+        raise
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

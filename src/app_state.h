@@ -26,6 +26,7 @@ struct CursorUsage {
   float percent = -1;
   int usedCents = -1;
   int limitCents = -1;
+  int bonusCents = -1;
   String cycleEnd;
   String plan;
 };

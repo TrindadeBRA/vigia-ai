@@ -2,7 +2,7 @@
 
 A maioria das TFT SPI 3,5" com toque usa controlador **XPT2046** (resistivo) no **mesmo SPI** da tela, com um CS extra (`T_CS`).
 
-O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrato 240×320**; o firmware está em paisagem (`setRotation(1)`), então o toque vira `x = y_nativo`, `y = 239 - x_nativo`. Clique na aba deve mostrar no topo algo como `120,220`, não `14,126`.
+O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrato 240×320**; o firmware está em paisagem (`setRotation(1)`), então o toque vira `x = y_nativo`, `y = 239 - x_nativo`.
 
 ## Views
 

@@ -1,5 +1,8 @@
 #include "ui.h"
 
+#include <cstdlib>
+#include <cstring>
+
 View g_view = VIEW_HOME;
 
 static int g_navTop = 0;
@@ -24,11 +27,57 @@ static uint16_t barColor(float pct) {
   return TFT_RED;
 }
 
-static String shortIso(const String& iso) {
-  if (iso.length() < 16) {
-    return iso;
+static String fmtWhen(const String& raw) {
+  String s = raw;
+  s.trim();
+  if (!s.length()) {
+    return "";
   }
-  return iso.substring(5, 10) + " " + iso.substring(11, 16);
+  if (s.indexOf('/') >= 0 && s.indexOf('h') > 0) {
+    return s;
+  }
+  int tPos = s.indexOf('T');
+  if (tPos >= 10 && s.indexOf('-') == 4) {
+    int dd = s.substring(8, 10).toInt();
+    int mo = s.substring(5, 7).toInt();
+    int hh = s.substring(11, 13).toInt();
+    int mi = s.substring(14, 16).toInt();
+    char buf[20];
+    snprintf(buf, sizeof(buf), "%02d/%02d %02dh%02d", dd, mo, hh, mi);
+    return String(buf);
+  }
+  bool digits = s.length() >= 9;
+  for (unsigned i = 0; i < s.length() && digits; i++) {
+    if (s[i] < '0' || s[i] > '9') {
+      digits = false;
+    }
+  }
+  if (!digits) {
+    return s;
+  }
+  unsigned long long n = strtoull(s.c_str(), nullptr, 10);
+  unsigned long unixSec = (n > 100000000000ULL) ? (unsigned long)(n / 1000ULL) : (unsigned long)n;
+  if (unixSec > 3UL * 3600UL) {
+    unixSec -= 3UL * 3600UL;
+  }
+  unsigned long z = unixSec / 86400UL;
+  unsigned long rem = unixSec % 86400UL;
+  int hh = (int)(rem / 3600UL);
+  int mi = (int)((rem % 3600UL) / 60UL);
+  z += 719468UL;
+  int era = (int)(z / 146097UL);
+  unsigned doe = (unsigned)(z - (unsigned long)era * 146097UL);
+  unsigned yoe = (doe - doe / 1460U + doe / 36524U - doe / 146096U) / 365U;
+  int year = (int)yoe + era * 400;
+  unsigned doy = doe - (365U * yoe + yoe / 4U - yoe / 100U);
+  unsigned mp = (5U * doy + 2U) / 153U;
+  int dd = (int)(doy - (153U * mp + 2U) / 5U + 1U);
+  int mo = (int)(mp < 10 ? mp + 3 : mp - 9);
+  year += (mo <= 2);
+  (void)year;
+  char buf[20];
+  snprintf(buf, sizeof(buf), "%02d/%02d %02dh%02d", dd, mo, hh, mi);
+  return String(buf);
 }
 
 static String fmtPct(float pct) {
@@ -47,13 +96,26 @@ static String fmtRemain(float used) {
   return fmtPct(100.0f - constrain(used, 0, 100));
 }
 
-static String fmtUsd(int cents) {
+static String fmtBrl(int cents) {
   if (cents < 0) {
     return "--";
   }
-  char buf[24];
-  snprintf(buf, sizeof(buf), "$%.2f", cents / 100.0f);
-  return String(buf);
+  long v = (long)cents;
+  long reais = v / 100;
+  int cc = (int)(v % 100);
+  char num[16];
+  snprintf(num, sizeof(num), "%ld", reais);
+  String s;
+  int n = (int)strlen(num);
+  for (int i = 0; i < n; i++) {
+    if (i > 0 && (n - i) % 3 == 0) {
+      s += '.';
+    }
+    s += num[i];
+  }
+  char frac[8];
+  snprintf(frac, sizeof(frac), ",%02d", cc);
+  return String("R$") + s + frac;
 }
 
 static void drawBar(int x, int y, int w, int h, float pct) {
@@ -178,22 +240,28 @@ static void paintHome() {
 
   String c1 = "Sessao 5h";
   if (g_snap.claude.sessionResets.length()) {
-    c1 += "  " + shortIso(g_snap.claude.sessionResets);
+    c1 += "  " + fmtWhen(g_snap.claude.sessionResets);
   }
   String c2 = "Semana";
   if (g_snap.claude.weeklyResets.length()) {
-    c2 += "  " + shortIso(g_snap.claude.weeklyResets);
+    c2 += "  " + fmtWhen(g_snap.claude.weeklyResets);
   }
   String u1 = g_snap.cursor.plan.length() ? String("Plano ") + g_snap.cursor.plan : "Plano";
   String u2;
   if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents > 0) {
-    u2 = fmtUsd(g_snap.cursor.usedCents) + " / " + fmtUsd(g_snap.cursor.limitCents);
+    u2 = "incluso " + fmtBrl(g_snap.cursor.usedCents) + " / " + fmtBrl(g_snap.cursor.limitCents);
+  }
+  if (g_snap.cursor.bonusCents > 0) {
+    if (u2.length()) {
+      u2 += "  ";
+    }
+    u2 += "extra " + fmtBrl(g_snap.cursor.bonusCents);
   }
   if (g_snap.cursor.cycleEnd.length()) {
     if (u2.length()) {
       u2 += "  ";
     }
-    u2 += "ate " + shortIso(g_snap.cursor.cycleEnd);
+    u2 += "ate " + fmtWhen(g_snap.cursor.cycleEnd);
   }
 
   card("Claude", bodyTop, g_snap.claude.ok, g_snap.claude.error, c1, g_snap.claude.sessionPercent, c2,
@@ -231,10 +299,10 @@ static void paintClaude() {
     return;
   }
   String r1 = g_snap.claude.sessionResets.length()
-                  ? ("reset sessao " + shortIso(g_snap.claude.sessionResets))
+                  ? ("reset sessao " + fmtWhen(g_snap.claude.sessionResets))
                   : "";
   String r2 = g_snap.claude.weeklyResets.length()
-                  ? ("reset semana " + shortIso(g_snap.claude.weeklyResets))
+                  ? ("reset semana " + fmtWhen(g_snap.claude.weeklyResets))
                   : "";
   paintMetric("Janela de 5 horas", g_headerH + 44, g_snap.claude.sessionPercent, r1);
   const int y2 = tft.height() < 280 ? g_headerH + 112 : g_headerH + 160;
@@ -251,14 +319,19 @@ static void paintCursor() {
   }
   String plan = g_snap.cursor.plan.length() ? g_snap.cursor.plan : "assinatura";
   paintMetric(plan.c_str(), g_headerH + 48, g_snap.cursor.percent,
-              g_snap.cursor.cycleEnd.length() ? ("ciclo ate " + shortIso(g_snap.cursor.cycleEnd)) : "");
+              g_snap.cursor.cycleEnd.length() ? ("ciclo ate " + fmtWhen(g_snap.cursor.cycleEnd)) : "");
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(TFT_SILVER, TFT_NAVY);
-  int y = tft.height() < 280 ? g_headerH + 130 : g_headerH + 180;
-  tft.drawString("Gasto incluso", 12, y, 2);
-  tft.setTextColor(TFT_WHITE, TFT_NAVY);
-  tft.drawString(fmtUsd(g_snap.cursor.usedCents) + " de " + fmtUsd(g_snap.cursor.limitCents), 12, y + 22,
-                 4);
+  int y = tft.height() < 280 ? g_headerH + 128 : g_headerH + 180;
+  if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents > 0) {
+    tft.drawString("Incluso " + fmtBrl(g_snap.cursor.usedCents) + " / " + fmtBrl(g_snap.cursor.limitCents),
+                   12, y, 2);
+    y += 18;
+  }
+  if (g_snap.cursor.bonusCents > 0) {
+    tft.setTextColor(TFT_ORANGE, TFT_NAVY);
+    tft.drawString("Extra " + fmtBrl(g_snap.cursor.bonusCents), 12, y, 2);
+  }
 }
 
 static void drawButton(int y, const char* label) {
@@ -289,7 +362,7 @@ static void paintStatus() {
   tft.drawString("Atualizado", 12, y, 2);
   y += 18;
   tft.setTextColor(TFT_WHITE, TFT_NAVY);
-  tft.drawString(g_snap.updatedAt.length() ? shortIso(g_snap.updatedAt) : g_snap.statusLine, 12, y, 2);
+  tft.drawString(g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine, 12, y, 2);
   y += 28;
 
   g_statusHasRefresh = true;
@@ -326,15 +399,6 @@ void uiNext() {
 
 void uiPrev() {
   uiSetView((View)((g_view + VIEW_COUNT - 1) % VIEW_COUNT));
-}
-
-void uiMarkTouch(int16_t x, int16_t y, uint16_t z) {
-  tft.fillRect(118, 2, 200, 28, 0x0008);
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(TFT_GREEN, 0x0008);
-  char buf[28];
-  snprintf(buf, sizeof(buf), "%d,%d z%d", (int)x, (int)y, (int)z);
-  tft.drawString(buf, 120, 8, 2);
 }
 
 void uiPaint() {
