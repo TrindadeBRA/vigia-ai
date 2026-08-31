@@ -6,16 +6,19 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 
 ## Views
 
-| Aba | Conteúdo |
+| Tela | Conteúdo |
 | --- | --- |
-| Inicio | Claude + Cursor; toque no card abre o detalhe |
+| Inicio | Claude (sessão 5h + semana), Cursor (modelos + outros), OpenRouter; toque no card abre o detalhe |
 | Claude | Sessão 5h e semana, % usado e restante |
 | Cursor | Ciclo do plano, dólares se existirem |
+| OpenRouter | Crédito da key |
 | Info | Rede, última atualização, **Atualizar**, **Calibrar** |
 
-Gestos: o toque **já na descida** troca a tela (clique curto no Wokwi não era registrado). Faixa de baixo (~20%) conta como abas. Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`3`.
+Navegação no **header**: título **VIGIA AI** volta ao início; ícone **i** abre Info. Não há atalho no header para os detalhes — só tocando o card na home. O selo/área livre do header pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
 
-Serial (placa e Wokwi): `n` / `p` próxima/anterior, `0`–`3` aba, `r` refresh, `c` calibrar (só hardware).
+Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`4`.
+
+Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `r` refresh, `c` calibrar (só hardware).
 
 ## Ligação típica (XPT2046)
 
@@ -33,7 +36,7 @@ Se o silkscreen da sua placa usar outros pinos, mude `TOUCH_CS` / `TOUCH_IRQ` no
 
 ## Calibração
 
-Salva na NVS da ESP32 (namespace `touch`). Primeira vez: aba **Info** → **Calibrar touch** (quatro cantos). Se girar a tela (`setRotation`), calibre de novo.
+Salva na NVS da ESP32 (namespace `touch`). Primeira vez: tela **Info** → **Calibrar touch** (quatro cantos). Se girar a tela (`setRotation`), calibre de novo.
 
 Toque “fantasma” ou invertido = calibração ruim ou `T_CS` errado.
 

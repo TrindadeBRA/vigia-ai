@@ -15,3 +15,5 @@ void drawBar(int x, int y, int w, int h, float pct);
 void drawError(int x, int y, const String& err, uint16_t bg);
 void drawButton(int y, int h, const char* label);
 void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor);
+void drawIcon(int x, int y, int w, int h, const uint16_t* data);
+void drawInfoIcon(int cx, int cy, int r, uint16_t color);

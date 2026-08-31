@@ -10,6 +10,21 @@ from pathlib import Path
 from typing import Any
 
 
+def _rate_limit_extra(exc: urllib.error.HTTPError) -> str:
+    """Retry-After e headers *ratelimit* — úteis no 429; não vaza Authorization."""
+    if not exc.headers:
+        return ""
+    bits: list[str] = []
+    retry = exc.headers.get("Retry-After")
+    if retry:
+        bits.append(f"retry-after={retry}")
+    for key, val in exc.headers.items():
+        low = key.lower()
+        if "ratelimit" in low.replace("-", "") and val:
+            bits.append(f"{key}={val}")
+    return (" " + " ".join(bits)) if bits else ""
+
+
 def load_dotenv(path: Path) -> None:
     if not path.is_file():
         return
@@ -40,9 +55,10 @@ def http_json(
             raw = resp.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         err_body = exc.read().decode("utf-8", errors="replace")[:300]
-        raise RuntimeError(f"HTTP {exc.code} {url}: {err_body}") from exc
+        extra = _rate_limit_extra(exc)
+        raise RuntimeError(f"HTTP {exc.code} {method} {url}{extra}: {err_body}") from exc
     except urllib.error.URLError as exc:
-        raise RuntimeError(f"rede {url}: {exc.reason}") from exc
+        raise RuntimeError(f"rede {method} {url}: {exc.reason}") from exc
     if not raw:
         return {}
     try:

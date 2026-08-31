@@ -14,9 +14,9 @@
 1. Usuário inicia `python3 collector/server.py` no Mac (mesma LAN da ESP32).
 2. Coletor busca as duas APIs a cada `GET /usage` — sem cache (dado sempre em tempo real; ver aviso de rate limit em [COLETOR.md](COLETOR.md#sem-cache--cuidado-com-rate-limit)).
 3. ESP32 conecta no Wi-Fi, faz GET em `USAGE_URL`, parseia JSON, redesenha.
-4. Poll a cada `USAGE_POLL_MS` (padrão 15 s). Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
+4. Poll a cada `USAGE_POLL_MS` (padrão 60 s). Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
 
-Sem cache no coletor, o intervalo de poll da placa (`USAGE_POLL_MS`) é também o intervalo real de chamadas às APIs — 15 s de poll = uma chamada ao Claude a cada 15 s.
+Sem cache no coletor, o intervalo de poll da placa (`USAGE_POLL_MS`) é também o intervalo real de chamadas às APIs — 60 s de poll = uma chamada ao Claude a cada 60 s.
 
 ## Fluxo (Wokwi)
 

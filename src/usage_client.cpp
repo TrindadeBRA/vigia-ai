@@ -32,6 +32,9 @@ void usageClientLogSnapshot(const char* why) {
                 g_snap.cursor.percent,
                 g_snap.cursor.plan.length() ? g_snap.cursor.plan.c_str() : "-",
                 g_snap.cursor.error.length() ? g_snap.cursor.error.c_str() : "-");
+  Serial.printf("  openrouter ok=%d pct=%.0f err=%s\n", g_snap.openrouter.ok ? 1 : 0,
+                g_snap.openrouter.percent,
+                g_snap.openrouter.error.length() ? g_snap.openrouter.error.c_str() : "-");
 }
 
 #ifndef MOCK_USAGE
@@ -69,12 +72,15 @@ static bool parseUsageJson(const String& body) {
     g_snap.claude.error = err.c_str();
     g_snap.cursor.ok = false;
     g_snap.cursor.error = err.c_str();
+    g_snap.openrouter.ok = false;
+    g_snap.openrouter.error = err.c_str();
     return false;
   }
 
   g_snap.updatedAt = doc["updated_at"] | "";
   JsonObjectConst claude = doc["claude"];
   JsonObjectConst cursor = doc["cursor"];
+  JsonObjectConst openrouter = doc["openrouter"];
 
   g_snap.claude.ok = claude["ok"] | false;
   g_snap.claude.error = claude["error"].isNull() ? "" : String(claude["error"].as<const char*>());
@@ -92,6 +98,17 @@ static bool parseUsageJson(const String& body) {
   g_snap.cursor.bonusCents = cursor["bonus_cents"].isNull() ? -1 : cursor["bonus_cents"].as<int>();
   g_snap.cursor.cycleEnd = jsonText(cursor["cycle_end"]);
   g_snap.cursor.plan = jsonText(cursor["plan"]);
+
+  g_snap.openrouter.ok = openrouter["ok"] | false;
+  g_snap.openrouter.error =
+      openrouter["error"].isNull() ? "" : String(openrouter["error"].as<const char*>());
+  g_snap.openrouter.percent = jsonFloatOrNeg(openrouter["percent"]);
+  g_snap.openrouter.limitCents =
+      openrouter["limit_cents"].isNull() ? -1 : openrouter["limit_cents"].as<int>();
+  g_snap.openrouter.usedCents =
+      openrouter["used_cents"].isNull() ? -1 : openrouter["used_cents"].as<int>();
+  g_snap.openrouter.remainingCents =
+      openrouter["remaining_cents"].isNull() ? -1 : openrouter["remaining_cents"].as<int>();
 
   if (g_snap.updatedAt.length() >= 16) {
     g_snap.statusLine = g_snap.updatedAt.substring(11, 16);
@@ -119,6 +136,8 @@ void usageClientFetch() {
     g_snap.claude.error = "sem Wi-Fi";
     g_snap.cursor.ok = false;
     g_snap.cursor.error = "sem Wi-Fi";
+    g_snap.openrouter.ok = false;
+    g_snap.openrouter.error = "sem Wi-Fi";
     usageClientLogSnapshot("wifi-down");
     g_lastFetchMs = millis();
     uiRefreshData();
@@ -153,6 +172,8 @@ void usageClientFetch() {
     g_snap.claude.error = "coletor HTTP " + String(code);
     g_snap.cursor.ok = false;
     g_snap.cursor.error = "coletor HTTP " + String(code);
+    g_snap.openrouter.ok = false;
+    g_snap.openrouter.error = "coletor HTTP " + String(code);
     http.end();
     usageClientLogSnapshot("http-erro");
     g_lastFetchMs = millis();

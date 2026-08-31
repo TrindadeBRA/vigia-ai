@@ -53,4 +53,6 @@ Firewall: permitir Python na porta **8787** para a rede local.
 
 ## Sem cache — cuidado com rate limit
 
-Todo `GET /usage` chama as duas APIs na hora (a pedido do usuário; v1 tinha cache de 5 min pra não martelar o endpoint do Claude). Cada GET no coletor = uma chamada real em `/api/oauth/usage`. Como a placa faz poll a cada `USAGE_POLL_MS` (padrão 15 s, ver [FIRMWARE.md](FIRMWARE.md)), isso significa uma chamada ao Claude a cada 15 s enquanto a placa estiver ligada — se aparecer `error` tipo `HTTP 429` no card do Claude, é rate limit; aumente `USAGE_POLL_MS` em `platformio.ini` pra aliviar.
+Todo `GET /usage` chama as duas APIs na hora (a pedido do usuário; v1 tinha cache de 5 min pra não martelar o endpoint do Claude). Cada GET no coletor = uma chamada real em `/api/oauth/usage`. Como a placa faz poll a cada `USAGE_POLL_MS` (padrão 60 s, ver [FIRMWARE.md](FIRMWARE.md)), isso significa uma chamada ao Claude a cada 60 s enquanto a placa estiver ligada.
+
+O 429 quase sempre é o Claude, não o Cursor. Endpoint sem número oficial; com `User-Agent: claude-code/<ver>` a comunidade trata **~180 s** como intervalo seguro — 60 s ainda pode estourar. Sem esse UA, o `Python-urllib` cai num bucket de ~5 requests e o 429 fica persistente. Provedor com `ok: false` (incluindo `HTTP 429`) agora imprime `ERRO claude:` / `ERRO cursor:` no terminal do coletor. Se continuar 429, aumente `USAGE_POLL_MS` em `platformio.ini`.

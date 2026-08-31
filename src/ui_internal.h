@@ -6,9 +6,12 @@
 // de navegação/toque) e ui_views.cpp (pintura de cada view). Não faz parte da
 // API pública de ui.h — main.cpp e input.cpp não incluem este header.
 
-extern int g_navTop;
 extern int g_headerH;
-extern int g_homeSplitY;
+extern int g_headerHomeX1;
+extern int g_headerInfoX0;
+extern int g_headerInfoX1;
+extern int g_homeSplitY1;
+extern int g_homeSplitY2;
 extern bool g_statusHasCal;
 extern bool g_statusHasRefresh;
 extern int g_btnCalY;
@@ -23,8 +26,8 @@ bool showFetchOkCheck();
 int headerDisplayKey(int secs, bool showCheck);
 
 void drawHeader();
-void drawNav();
 void paintHome();
 void paintClaude();
 void paintCursor();
+void paintOpenRouter();
 void paintStatus();

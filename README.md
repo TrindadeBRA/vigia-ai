@@ -15,7 +15,7 @@ Mac (collector/server.py :8787)
     GET /usage  →  JSON (percentuais, reset)
 
 ESP32 + ILI9488 + touch
-    Wi-Fi  →  GET /usage  →  abas Inicio / Claude / Cursor / Info
+    Wi-Fi  →  GET /usage  →  Inicio (cards) / detalhe / Info
 ```
 
 No simulador **Wokwi** a placa fala com o **mesmo coletor** do Mac, via Wi-Fi simulada + um gateway de rede local (`wokwigw`) — não é mock.
@@ -70,7 +70,7 @@ pio device monitor -b 115200
 
 Pinos da TFT, **touch** e ILI9486 vs 9488: [`docs/HARDWARE.md`](docs/HARDWARE.md) e [`docs/TOUCH.md`](docs/TOUCH.md).
 
-Ligue o XPT2046: `T_CS` no GPIO **21**, `T_IRQ` no **22**, CLK/MOSI/MISO iguais aos da tela. Na aba **Info**, use **Calibrar touch**.
+Ligue o XPT2046: `T_CS` no GPIO **21**, `T_IRQ` no **22**, CLK/MOSI/MISO iguais aos da tela. Na tela **Info**, use **Calibrar touch**.
 
 ## Simular (Wokwi)
 
@@ -88,7 +88,7 @@ pio run -e wokwi
 
 `Cmd+Shift+P` → **Wokwi: Start Simulator**. Tela 240×320 (ILI9341); a 3,5" física é 480×320. Detalhes do gateway: [`docs/FIRMWARE.md`](docs/FIRMWARE.md#rede-no-wokwi-wokwigw).
 
-O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, no serial, `n` `p` `0` `1` `2` `3`.
+O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** (Início ↔ Info) ou, no serial, `n` `p` `0` `1` `2` `3` `4`.
 
 ## Ambientes PlatformIO
 
@@ -110,7 +110,7 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, n
 | `src/main.cpp` | `setup()`/`loop()`, mock de boot |
 | `src/usage_client.cpp` | Wi-Fi, GET e parse do JSON de `/usage` |
 | `src/ui.cpp` | Controlador: navegação, toque, redesenho |
-| `src/ui_views.cpp` | Pintura das quatro views e abas |
+| `src/ui_views.cpp` | Pintura das views (sem barra inferior) |
 | `src/ui_format.cpp` | Widgets: barra, botão, formatação de texto |
 | `src/input.cpp` | Touch, botões, serial |
 | `src/secrets.h.example` | Wi-Fi e URL |
@@ -120,11 +120,13 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, n
 
 ## Tela (touch)
 
-- **Inicio:** dois cards; toque abre o detalhe
+- **Inicio:** três cards; Claude e Cursor com as duas barras principais; toque abre o detalhe
 - **Claude:** sessão 5h e semana (% usado / restante)
 - **Cursor:** ciclo do plano e dólares, se a API mandar
-- **Info:** rede, atualizar agora, calibrar touch
-- Deslize horizontal troca a aba; verde &lt; 70%, laranja &lt; 90%, vermelho no resto
+- **OpenRouter:** crédito da key
+- **Info:** rede, atualizar agora, calibrar touch (ícone **i** no header)
+- Header: **VIGIA AI** volta ao início; **i** abre Info; toque no meio/selo atualiza. Sem abas embaixo.
+- Deslize horizontal alterna Início ↔ Info; verde &lt; 70%, laranja &lt; 90%, vermelho no resto
 - Falha de um serviço aparece só naquele card
 
 Contrato do JSON: [`docs/CONTRATO_JSON.md`](docs/CONTRATO_JSON.md).

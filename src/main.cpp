@@ -45,6 +45,11 @@ static void applyMock() {
   g_snap.cursor.bonusCents = 0;
   g_snap.cursor.cycleEnd = "01/09";
   g_snap.cursor.plan = "pro";
+  g_snap.openrouter.ok = true;
+  g_snap.openrouter.percent = 66.6;
+  g_snap.openrouter.limitCents = 1000;
+  g_snap.openrouter.usedCents = 666;
+  g_snap.openrouter.remainingCents = 334;
   g_netLine = "simulador Wokwi";
   g_hasFetchedOk = true;
   g_lastFetchOkMs = millis();
@@ -118,6 +123,8 @@ void loop() {
     g_snap.claude.error = "aguardando Wi-Fi";
     g_snap.cursor.ok = false;
     g_snap.cursor.error = "aguardando Wi-Fi";
+    g_snap.openrouter.ok = false;
+    g_snap.openrouter.error = "aguardando Wi-Fi";
     uiRefreshData();
   }
   delay(20);

@@ -11,6 +11,9 @@ from http_util import http_json
 
 CLAUDE_USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 CLAUDE_BETA = "oauth-2025-04-20"
+# Sem este UA o endpoint aplica um bucket agressivo (Python-urllib ~5 reqs → 429
+# persistente). Com `claude-code/<ver>` a comunidade considera ~180 s seguro.
+CLAUDE_USER_AGENT = "claude-code/2.1"
 
 
 def claude_token_and_expiry() -> tuple[str | None, int | None, str | None]:
@@ -79,6 +82,7 @@ def fetch_claude() -> dict[str, Any]:
             "Authorization": f"Bearer {token}",
             "anthropic-beta": CLAUDE_BETA,
             "Accept": "application/json",
+            "User-Agent": CLAUDE_USER_AGENT,
         },
     )
     if not isinstance(data, dict):

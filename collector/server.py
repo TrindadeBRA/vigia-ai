@@ -14,6 +14,7 @@ from formatting import utc_now
 from http_util import load_dotenv
 from providers.claude import _claude_fail, fetch_claude
 from providers.cursor import _cursor_fail, fetch_cursor
+from providers.openrouter import _openrouter_fail, fetch_openrouter
 
 
 def _repo_root() -> Path:
@@ -42,6 +43,14 @@ def mock_payload() -> dict[str, Any]:
             "cycle_end": "01/09",
             "plan": "pro",
         },
+        "openrouter": {
+            "ok": True,
+            "error": None,
+            "percent": 66.6,
+            "limit_cents": 1000,
+            "used_cents": 666,
+            "remaining_cents": 334,
+        },
     }
 
 
@@ -50,6 +59,7 @@ def build_payload() -> dict[str, Any]:
         return mock_payload()
     claude: dict[str, Any]
     cursor: dict[str, Any]
+    openrouter: dict[str, Any]
     try:
         claude = fetch_claude()
     except Exception as exc:  # noqa: BLE001 — isolar provedor
@@ -58,7 +68,16 @@ def build_payload() -> dict[str, Any]:
         cursor = fetch_cursor()
     except Exception as exc:  # noqa: BLE001
         cursor = _cursor_fail(str(exc))
-    return {"updated_at": utc_now(), "claude": claude, "cursor": cursor}
+    try:
+        openrouter = fetch_openrouter()
+    except Exception as exc:  # noqa: BLE001
+        openrouter = _openrouter_fail(str(exc))
+    return {
+        "updated_at": utc_now(),
+        "claude": claude,
+        "cursor": cursor,
+        "openrouter": openrouter,
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -99,7 +118,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, {"ok": True})
             return
         if path == "/usage":
-            self._send(200, build_payload())
+            payload = build_payload()
+            for name in ("claude", "cursor"):
+                block = payload.get(name) or {}
+                if isinstance(block, dict) and not block.get("ok"):
+                    print(f"[{utc_now()}] ERRO {name}: {block.get('error')}")
+            self._send(200, payload)
             return
         self._send(404, {"ok": False, "error": "not found"})
 
@@ -118,7 +142,7 @@ class CollectorServer(ThreadingHTTPServer):
 
 def main() -> None:
     here = Path(__file__).resolve().parent
-    for name in (".env", ".env.claude", ".env.cursor"):
+    for name in (".env", ".env.claude", ".env.cursor", ".env.openrouter"):
         load_dotenv(here / name)
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT") or 8787)

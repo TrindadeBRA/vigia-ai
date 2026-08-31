@@ -150,3 +150,21 @@ void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor) {
     tft.drawLine(cx - r / 6, cy + r / 2 - 2 + dy, cx + r / 2, cy - r / 2 + 1 + dy, strokeColor);
   }
 }
+
+// Bitmap RGB565 pre-misturado com o fundo do card (ver assets/icons/gen_icons.py).
+// pushImage() manda os bytes do array quase crus pro SPI; sem swapBytes(true)
+// ele sai com os bytes de cada pixel trocados (RGB565 vira outra cor, dá o
+// efeito "ruido colorido" nos icones). Restaura false depois pra nao afetar
+// outros desenhos (fillRect/drawString etc. nao usam pushImage).
+void drawIcon(int x, int y, int w, int h, const uint16_t* data) {
+  tft.setSwapBytes(true);
+  tft.pushImage(x, y, w, h, data);
+  tft.setSwapBytes(false);
+}
+
+// Circulo com "i" (atalho Info no header).
+void drawInfoIcon(int cx, int cy, int r, uint16_t color) {
+  tft.drawCircle(cx, cy, r, color);
+  tft.fillCircle(cx, cy - r / 2, 1, color);
+  tft.fillRect(cx - 1, cy - r / 5, 2, r, color);
+}

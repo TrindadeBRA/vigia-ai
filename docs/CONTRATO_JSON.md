@@ -31,6 +31,14 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
     "bonus_cents": 0,
     "cycle_end": "2026-09-15T00:00:00Z",
     "plan": "pro"
+  },
+  "openrouter": {
+    "ok": true,
+    "error": null,
+    "percent": 66.6,
+    "limit_cents": 1000,
+    "used_cents": 666,
+    "remaining_cents": 334
   }
 }
 ```
@@ -44,6 +52,7 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | `updated_at` | string | sim |
 | `claude` | objeto | sim |
 | `cursor` | objeto | sim |
+| `openrouter` | objeto | sim |
 
 ### `claude`
 
@@ -69,6 +78,21 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | `bonus_cents` | number ou `null` | Crédito extra, se houver |
 | `cycle_end` | string ou `null` | Fim do ciclo de fatura |
 | `plan` | string ou `null` | Ex.: `pro`, `ultra` |
+
+### `openrouter`
+
+Vem de `/api/v1/credits` — saldo da **conta**, não da key individual (uma key
+recém-criada pode nunca ter sido usada diretamente e ainda assim a conta ter
+gasto real feito por outra key/app; ver `docs/APIS_OPENROUTER.md`).
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `ok` | bool | |
+| `error` | string ou `null` | |
+| `percent` | number ou `null` | `used_cents / limit_cents`; `null` se a conta não tem créditos comprados (`limit_cents` também `null`) |
+| `limit_cents` | number ou `null` | `total_credits` da conta em centavos de USD; `null` = nunca comprou crédito |
+| `used_cents` | number ou `null` | `total_usage` da conta (gasto total histórico), em centavos de USD |
+| `remaining_cents` | number ou `null` | `limit_cents - used_cents`, em centavos de USD |
 
 ## Outros endpoints
 

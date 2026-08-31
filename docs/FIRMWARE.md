@@ -59,7 +59,7 @@ Serial: SSID (não a senha), URL, HTTP status, erros de parse.
 
 No env `esp32dev`: `TOUCH_CS=21`, `SPI_TOUCH_FREQUENCY`. Ver [TOUCH.md](TOUCH.md).
 
-No Wokwi: sem painel resistivo — botões GPIO 5 (próxima) e 13 (anterior), ou FT6206 capacitivo da peça `board-ili9341-cap-touch`. Serial: `n` `p` `0-3` `r`.
+No Wokwi: sem painel resistivo — botões GPIO 5 (Info/Início) e 13 (Início/Info), ou FT6206 capacitivo da peça `board-ili9341-cap-touch`. Serial: `n` `p` `0-4` `r`.
 
 ## Bibliotecas
 
@@ -70,6 +70,6 @@ No Wokwi: sem painel resistivo — botões GPIO 5 (próxima) e 13 (anterior), ou
 
 ## Poll
 
-`USAGE_POLL_MS` (padrão 15000 nos dois envs). Primeira busca logo após o Wi-Fi associar (`src/usage_client.cpp`). O header mostra um selo amarelo com a contagem regressiva até o próximo poll, e um check verde por ~1,5 s quando um refresh dá certo (`src/ui_views.cpp`).
+`USAGE_POLL_MS` (padrão 60000 nos dois envs). Primeira busca logo após o Wi-Fi associar (`src/usage_client.cpp`). O header mostra um selo amarelo com a contagem regressiva até o próximo poll, e um check verde por ~1,5 s quando um refresh dá certo (`src/ui_views.cpp`).
 
 O coletor não cacheia mais: cada poll da placa dispara uma chamada real às APIs de Claude e Cursor. Ver aviso de rate limit em [COLETOR.md](COLETOR.md#sem-cache--cuidado-com-rate-limit) antes de baixar `USAGE_POLL_MS`.

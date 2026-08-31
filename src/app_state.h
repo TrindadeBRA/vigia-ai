@@ -7,8 +7,9 @@ enum View : uint8_t {
   VIEW_HOME = 0,
   VIEW_CLAUDE = 1,
   VIEW_CURSOR = 2,
-  VIEW_STATUS = 3,
-  VIEW_COUNT = 4
+  VIEW_OPENROUTER = 3,
+  VIEW_STATUS = 4,
+  VIEW_COUNT = 5
 };
 
 struct ClaudeUsage {
@@ -32,12 +33,22 @@ struct CursorUsage {
   String plan;
 };
 
+struct OpenRouterUsage {
+  bool ok = false;
+  String error;
+  float percent = -1;
+  int limitCents = -1;
+  int usedCents = -1;
+  int remainingCents = -1;
+};
+
 struct UsageSnapshot {
   bool httpOk = false;
   String statusLine;
   String updatedAt;
   ClaudeUsage claude;
   CursorUsage cursor;
+  OpenRouterUsage openrouter;
 };
 
 extern TFT_eSPI tft;

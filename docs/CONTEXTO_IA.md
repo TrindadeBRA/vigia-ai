@@ -9,6 +9,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [CONTRATO_JSON.md](CONTRATO_JSON.md) | Formato de `/usage` (não quebrar o firmware) |
 | [APIS_CLAUDE.md](APIS_CLAUDE.md) | OAuth usage da Anthropic |
 | [APIS_CURSOR.md](APIS_CURSOR.md) | Dashboard Connect RPC do Cursor |
+| [APIS_OPENROUTER.md](APIS_OPENROUTER.md) | Endpoint público de créditos da key OpenRouter |
 | [HARDWARE.md](HARDWARE.md) | Placa, pinos, drivers TFT |
 | [TOUCH.md](TOUCH.md) | Views, XPT2046, calibração, Wokwi |
 | [COLETOR.md](COLETOR.md) | Como rodar e autenticar o servidor local |
@@ -17,7 +18,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 ## O que é este projeto
 
-**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude** e **Cursor**, com **várias telas**. A placa **não** guarda tokens. Um **coletor Python no Mac** lê credenciais locais (ou `.env`), chama as APIs autenticadas e serve JSON na LAN. O firmware faz HTTP GET nesse JSON e desenha a UI.
+**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **Cursor** e **OpenRouter**, com **várias telas**. A placa **não** guarda tokens. Um **coletor Python no Mac** lê credenciais locais (ou `.env`), chama as APIs autenticadas e serve JSON na LAN. O firmware faz HTTP GET nesse JSON e desenha a UI.
 
 Idioma da UI e da documentação: **português (Brasil)**. Código (identificadores) em inglês.
 
@@ -26,7 +27,7 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 1. **Tokens nunca vão no firmware**, no `diagram.json`, nem em commit. Só `collector/.env` (gitignored) ou arquivos locais do Claude/Cursor.
 2. **Não altere o contrato JSON** sem atualizar `docs/CONTRATO_JSON.md` **e** o parser em `src/usage_client.cpp`.
 3. Endpoints de cota são **não oficiais**. Trate 401/429/HTML como falha de um provedor; o outro deve continuar `ok` se possível.
-4. **Coletor sem cache** (a pedido do usuário — dado sempre em tempo real): todo `GET /usage` chama as duas APIs na hora. Isso deixa o poll da placa (`USAGE_POLL_MS`, padrão 15 s) como o intervalo real de chamada ao Claude — o endpoint rate-limita se martelado; ver `docs/COLETOR.md#sem-cache--cuidado-com-rate-limit`. Não reintroduza cache sem o usuário pedir.
+4. **Coletor sem cache** (a pedido do usuário — dado sempre em tempo real): todo `GET /usage` chama as duas APIs na hora. Isso deixa o poll da placa (`USAGE_POLL_MS`, padrão 60 s) como o intervalo real de chamada ao Claude — o endpoint rate-limita se martelado; ver `docs/COLETOR.md#sem-cache--cuidado-com-rate-limit`. Não reintroduza cache sem o usuário pedir.
 5. Ambiente **Wokwi**: Wi-Fi simulada + coletor real via `wokwigw` (`docs/ARQUITETURA.md#fluxo-wokwi`), igual ao **esp32dev** (Wi-Fi + HTTP real). `MOCK_USAGE` existe no código mas nenhum env compila com ele hoje — não presumir dados fictícios no simulador.
 6. GPIO **2** é `TFT_DC`. Não usar como LED de heartbeat.
 7. Não commitar `.env`, `src/secrets.h` com senha real, nem dumps de `state.vscdb` / `.credentials.json`.
@@ -37,13 +38,13 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 
 ```
 collector/server.py        # HTTP :8787, wiring (sem cache)
-collector/providers/       # busca + parse: claude.py, cursor.py
+collector/providers/       # busca + parse: claude.py, cursor.py, openrouter.py
 collector/formatting.py    # datas (BRT) e percentuais/centavos compartilhados
 collector/cursor_state.py  # leitura do state.vscdb (server.py + gerar_env_cursor.py)
 src/main.cpp              # setup()/loop(), mock de boot
 src/usage_client.cpp       # Wi-Fi, GET, parse do JSON de /usage
 src/ui.cpp                # controlador: navegação, toque, redesenho
-src/ui_views.cpp           # pintura das 4 views + abas
+src/ui_views.cpp           # pintura das views (home, detalhes, info)
 src/ui_format.cpp          # widgets: barra, botão, formatação de texto
 src/input.cpp              # touch / botões / serial
 src/secrets.h.example
