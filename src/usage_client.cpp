@@ -88,6 +88,10 @@ static bool parseUsageJson(const String& body) {
   g_snap.claude.weeklyPercent = jsonFloatOrNeg(claude["weekly_percent"]);
   g_snap.claude.sessionResets = jsonText(claude["session_resets_at"]);
   g_snap.claude.weeklyResets = jsonText(claude["weekly_resets_at"]);
+  g_snap.claude.sonnetPercent = jsonFloatOrNeg(claude["sonnet_percent"]);
+  g_snap.claude.sonnetResets = jsonText(claude["sonnet_resets_at"]);
+  g_snap.claude.opusPercent = jsonFloatOrNeg(claude["opus_percent"]);
+  g_snap.claude.opusResets = jsonText(claude["opus_resets_at"]);
 
   g_snap.cursor.ok = cursor["ok"] | false;
   g_snap.cursor.error = cursor["error"].isNull() ? "" : String(cursor["error"].as<const char*>());
@@ -95,7 +99,13 @@ static bool parseUsageJson(const String& body) {
   g_snap.cursor.otherPercent = jsonFloatOrNeg(cursor["other_percent"]);
   g_snap.cursor.usedCents = cursor["used_cents"].isNull() ? -1 : cursor["used_cents"].as<int>();
   g_snap.cursor.limitCents = cursor["limit_cents"].isNull() ? -1 : cursor["limit_cents"].as<int>();
+  g_snap.cursor.remainingCents =
+      cursor["remaining_cents"].isNull() ? -1 : cursor["remaining_cents"].as<int>();
   g_snap.cursor.bonusCents = cursor["bonus_cents"].isNull() ? -1 : cursor["bonus_cents"].as<int>();
+  g_snap.cursor.requestsUsed =
+      cursor["requests_used"].isNull() ? -1 : cursor["requests_used"].as<int>();
+  g_snap.cursor.requestsLimit =
+      cursor["requests_limit"].isNull() ? -1 : cursor["requests_limit"].as<int>();
   g_snap.cursor.cycleEnd = jsonText(cursor["cycle_end"]);
   g_snap.cursor.plan = jsonText(cursor["plan"]);
 

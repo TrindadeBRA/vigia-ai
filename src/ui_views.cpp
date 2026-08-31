@@ -22,6 +22,13 @@ int g_btnCalY = 0;
 int g_btnRefY = 0;
 int g_btnH = 36;
 int g_lastHeaderKey = -1000000;
+int g_detailScroll = 0;
+int g_detailMaxScroll = 0;
+int g_arrowX = 0;
+int g_arrowUpY = 0;
+int g_arrowDownY = 0;
+int g_arrowS = 28;
+bool g_detailCanScroll = false;
 
 // Segundos ate o proximo refresh automatico, com base no mesmo relogio que
 // main.cpp usa pra decidir se ja e hora de buscar /usage. -1 quando nao ha
@@ -82,8 +89,13 @@ void drawHeader() {
   tft.fillRect(0, 0, W, g_headerH, COL_BG);
   tft.drawFastHLine(0, g_headerH - 1, W, COL_CARD_BORDER);
 
-  drawBrand(8, 8, 2);
-  g_headerHomeX1 = 8 + brandWidth(2) + 12;
+  int brandX = 8;
+  if (g_view != VIEW_HOME) {
+    drawBackChevron(14, g_headerH / 2, COL_TEXT_DIM);
+    brandX = 24;
+  }
+  drawBrand(brandX, 8, 2);
+  g_headerHomeX1 = brandX + brandWidth(2) + 12;
 
   int secs = countdownSeconds();
   bool showCheck = showFetchOkCheck();
@@ -109,6 +121,71 @@ void drawHeader() {
   drawCountdownBadge(secs);
 }
 
+static String withResta(float pct, const String& whenRaw) {
+  String s = "resta " + fmtRemain(pct);
+  if (whenRaw.length()) {
+    s += "  |  " + fmtWhen(whenRaw);
+  }
+  return s;
+}
+
+static String cursorPlanTitle() {
+  if (!g_snap.cursor.ok || !g_snap.cursor.plan.length()) {
+    return "Cursor";
+  }
+  return String("Cursor ") + g_snap.cursor.plan;
+}
+
+static String cursorOndemand() {
+  String s;
+  if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents >= 0) {
+    s = fmtUsdSite(g_snap.cursor.usedCents) + " / " + fmtUsdSite(g_snap.cursor.limitCents);
+  }
+  if (g_snap.cursor.bonusCents > 0) {
+    if (s.length()) {
+      s += "  ";
+    }
+    s += "bonus " + fmtUsdSite(g_snap.cursor.bonusCents);
+  }
+  return s;
+}
+
+static String openrouterRemain() {
+  if (g_snap.openrouter.limitCents >= 0) {
+    return "restam " + fmtUsdSite(g_snap.openrouter.remainingCents);
+  }
+  return "sem creditos comprados";
+}
+
+static String openrouterTotals() {
+  return fmtUsdSite(g_snap.openrouter.usedCents) + " de " + fmtUsdSite(g_snap.openrouter.limitCents);
+}
+
+static void paintHomeMetric(int x, int y, int w, const char* label, float pct, const String& sub,
+                            uint8_t font, int labelH, int barH) {
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT_DIM, COL_CARD);
+  tft.drawString(label, x, y, font);
+  tft.setTextDatum(TR_DATUM);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.drawString(fmtPct(pct), x + w, y, font);
+  drawBar(x, y + labelH, w, barH, pct);
+  if (!sub.length()) {
+    return;
+  }
+  String s = sub;
+  int maxCh = w / (font == 1 ? 6 : 8);
+  if (maxCh < 8) {
+    maxCh = 8;
+  }
+  if ((int)s.length() > maxCh) {
+    s = s.substring(0, maxCh);
+  }
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+  tft.drawString(s, x, y + labelH + 1 + barH + 1, font);
+}
+
 // Home em lista: 3 cards empilhados (Claude, Cursor, OpenRouter).
 static void paintHomeList() {
   const int W = tft.width();
@@ -122,24 +199,16 @@ static void paintHomeList() {
   g_homeSplitY2 = bodyTop + (cardH + gap) * 2 + gap / 2;
 
   const bool compact = cardH < 80;
+  const bool showSub = cardH >= 72;
   const int barH = compact ? 5 : 7;
   const uint8_t metricFont = compact ? 1 : 2;
   const int labelH = compact ? 8 : 16;
-  const int metricH = labelH + 1 + barH;
+  const int subH = showSub ? (compact ? 8 : 14) : 0;
+  const int metricH = labelH + 1 + barH + (subH ? 1 + subH : 0);
   const int titleH = ICON_CLAUDE_H;
-  const int titleToMetric = compact ? 8 : 12;
+  const int titleToMetric = compact ? 6 : 12;
   const int gapM = compact ? 2 : 6;
   const int innerPadY = compact ? 4 : 8;
-
-  auto paintHomeMetric = [&](int x, int y, int w, const char* label, float pct) {
-    tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(COL_TEXT_DIM, COL_CARD);
-    tft.drawString(label, x, y, metricFont);
-    tft.setTextDatum(TR_DATUM);
-    tft.setTextColor(COL_TEXT, COL_CARD);
-    tft.drawString(fmtPct(pct), x + w, y, metricFont);
-    drawBar(x, y + labelH, w, barH, pct);
-  };
 
   auto cardChrome = [&](const char* title, const uint16_t* icon, int top, int contentH) -> int {
     tft.fillRoundRect(pad, top, W - pad * 2, cardH, 8, COL_CARD);
@@ -164,7 +233,8 @@ static void paintHomeList() {
   };
 
   auto cardTwo = [&](const char* title, const uint16_t* icon, int top, bool ok, const String& err,
-                     const char* label1, float pct1, const char* label2, float pct2) {
+                     const char* label1, float pct1, const String& sub1, const char* label2,
+                     float pct2, const String& sub2) {
     const int contentH = titleH + titleToMetric + metricH + gapM + metricH;
     const int titleY = cardChrome(title, icon, top, contentH);
     if (!ok) {
@@ -174,12 +244,12 @@ static void paintHomeList() {
     const int barX = pad + 12;
     const int barW = W - pad * 2 - 24;
     int y = titleY + titleH + titleToMetric;
-    paintHomeMetric(barX, y, barW, label1, pct1);
-    paintHomeMetric(barX, y + metricH + gapM, barW, label2, pct2);
+    paintHomeMetric(barX, y, barW, label1, pct1, sub1, metricFont, labelH, barH);
+    paintHomeMetric(barX, y + metricH + gapM, barW, label2, pct2, sub2, metricFont, labelH, barH);
   };
 
   auto cardOne = [&](const char* title, const uint16_t* icon, int top, bool ok, const String& err,
-                     const char* label, float pct) {
+                     const char* label, float pct, const String& sub) {
     const int contentH = titleH + titleToMetric + metricH;
     const int titleY = cardChrome(title, icon, top, contentH);
     if (!ok) {
@@ -188,15 +258,46 @@ static void paintHomeList() {
     }
     const int barX = pad + 12;
     const int barW = W - pad * 2 - 24;
-    paintHomeMetric(barX, titleY + titleH + titleToMetric, barW, label, pct);
+    paintHomeMetric(barX, titleY + titleH + titleToMetric, barW, label, pct, sub, metricFont, labelH,
+                    barH);
   };
 
-  cardTwo("Claude", ICON_CLAUDE, bodyTop, g_snap.claude.ok, g_snap.claude.error, "Sessao 5h",
-          g_snap.claude.sessionPercent, "Limite semanal", g_snap.claude.weeklyPercent);
-  cardTwo("Cursor", ICON_CURSOR, bodyTop + cardH + gap, g_snap.cursor.ok, g_snap.cursor.error,
-          "Modelos Cursor", g_snap.cursor.percent, "Outros modelos", g_snap.cursor.otherPercent);
+  String c1 = compact ? "5h" : "Sessao 5h";
+  String c2 = compact ? "Semana" : "Limite semanal";
+  String cs1 = withResta(g_snap.claude.sessionPercent, g_snap.claude.sessionResets);
+  String cs2 = withResta(g_snap.claude.weeklyPercent, g_snap.claude.weeklyResets);
+  if (!showSub) {
+    if (g_snap.claude.sessionResets.length()) {
+      c1 += "  " + fmtWhen(g_snap.claude.sessionResets).substring(0, 5);
+    }
+    if (g_snap.claude.weeklyResets.length()) {
+      c2 += "  " + fmtWhen(g_snap.claude.weeklyResets).substring(0, 5);
+    }
+    cs1 = "";
+    cs2 = "";
+  }
+
+  String u1 = compact ? "Cursor" : "Modelos Cursor";
+  String u2 = compact ? "Outros" : "Outros modelos";
+  String us1 = showSub && g_snap.cursor.cycleEnd.length()
+                   ? (String(compact ? "" : "reset ") + fmtWhen(g_snap.cursor.cycleEnd))
+                   : "";
+  String us2 = showSub ? cursorOndemand() : "";
+  if (!showSub && g_snap.cursor.cycleEnd.length()) {
+    u1 += "  " + fmtWhen(g_snap.cursor.cycleEnd).substring(0, 5);
+  }
+
+  String oSub = showSub ? (openrouterRemain() + "  " + openrouterTotals()) : openrouterRemain();
+
+  cardTwo("Claude", ICON_CLAUDE, bodyTop, g_snap.claude.ok, g_snap.claude.error, c1.c_str(),
+          g_snap.claude.sessionPercent, cs1, c2.c_str(), g_snap.claude.weeklyPercent, cs2);
+  String curTitle = cursorPlanTitle();
+  cardTwo(curTitle.c_str(), ICON_CURSOR, bodyTop + cardH + gap, g_snap.cursor.ok,
+          g_snap.cursor.error, u1.c_str(), g_snap.cursor.percent, us1, u2.c_str(),
+          g_snap.cursor.otherPercent, us2);
   cardOne("OpenRouter", ICON_OPENROUTER, bodyTop + (cardH + gap) * 2, g_snap.openrouter.ok,
-          g_snap.openrouter.error, "Credito da key", g_snap.openrouter.percent);
+          g_snap.openrouter.error, compact ? "Creditos" : "Creditos da conta",
+          g_snap.openrouter.percent, oSub);
 }
 
 // Home em grade 2×2: Claude | Cursor / OpenRouter | Sistema.
@@ -213,10 +314,12 @@ static void paintHomeGrid() {
   g_homeSplitY = bodyTop + cardH + gap / 2;
 
   const bool compact = cardW < 180 || cardH < 110;
+  const bool showSub = cardH >= 72;
   const int barH = compact ? 5 : 7;
   const uint8_t metricFont = compact ? 1 : 2;
   const int labelH = compact ? 8 : 16;
-  const int metricH = labelH + 1 + barH;
+  const int subH = showSub ? (compact ? 8 : 14) : 0;
+  const int metricH = labelH + 1 + barH + (subH ? 1 + subH : 0);
   const int titleH = ICON_CLAUDE_H;
   const int titleToMetric = compact ? 6 : 10;
   const int gapM = compact ? 3 : 6;
@@ -225,16 +328,6 @@ static void paintHomeGrid() {
 
   auto cellX = [&](int col) { return pad + col * (cardW + gap); };
   auto cellY = [&](int row) { return bodyTop + row * (cardH + gap); };
-
-  auto paintHomeMetric = [&](int x, int y, int w, const char* label, float pct) {
-    tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(COL_TEXT_DIM, COL_CARD);
-    tft.drawString(label, x, y, metricFont);
-    tft.setTextDatum(TR_DATUM);
-    tft.setTextColor(COL_TEXT, COL_CARD);
-    tft.drawString(fmtPct(pct), x + w, y, metricFont);
-    drawBar(x, y + labelH, w, barH, pct);
-  };
 
   auto cardChrome = [&](int x, int y, const char* title, const uint16_t* icon, bool infoIcon,
                         int contentH) -> int {
@@ -265,8 +358,8 @@ static void paintHomeGrid() {
   };
 
   auto cardTwo = [&](int col, int row, const char* title, const uint16_t* icon, bool ok,
-                     const String& err, const char* label1, float pct1, const char* label2,
-                     float pct2) {
+                     const String& err, const char* label1, float pct1, const String& sub1,
+                     const char* label2, float pct2, const String& sub2) {
     const int x = cellX(col);
     const int y = cellY(row);
     const int contentH = titleH + titleToMetric + metricH + gapM + metricH;
@@ -278,12 +371,12 @@ static void paintHomeGrid() {
       return;
     }
     int my = titleY + titleH + titleToMetric;
-    paintHomeMetric(barX, my, barW, label1, pct1);
-    paintHomeMetric(barX, my + metricH + gapM, barW, label2, pct2);
+    paintHomeMetric(barX, my, barW, label1, pct1, sub1, metricFont, labelH, barH);
+    paintHomeMetric(barX, my + metricH + gapM, barW, label2, pct2, sub2, metricFont, labelH, barH);
   };
 
   auto cardOne = [&](int col, int row, const char* title, const uint16_t* icon, bool ok,
-                     const String& err, const char* label, float pct) {
+                     const String& err, const char* label, float pct, const String& sub) {
     const int x = cellX(col);
     const int y = cellY(row);
     const int contentH = titleH + titleToMetric + metricH;
@@ -294,7 +387,8 @@ static void paintHomeGrid() {
       drawError(barX, titleY + titleH + 4, err, COL_CARD);
       return;
     }
-    paintHomeMetric(barX, titleY + titleH + titleToMetric, barW, label, pct);
+    paintHomeMetric(barX, titleY + titleH + titleToMetric, barW, label, pct, sub, metricFont, labelH,
+                    barH);
   };
 
   auto cardInfo = [&](int col, int row) {
@@ -328,14 +422,26 @@ static void paintHomeGrid() {
     tft.drawString(when, tx, ly, metricFont);
   };
 
+  String curTitle = cursorPlanTitle();
+  String cs1 = withResta(g_snap.claude.sessionPercent, g_snap.claude.sessionResets);
+  String cs2 = withResta(g_snap.claude.weeklyPercent, g_snap.claude.weeklyResets);
+  String us1 = g_snap.cursor.cycleEnd.length()
+                   ? (String(compact ? "" : "reset ") + fmtWhen(g_snap.cursor.cycleEnd))
+                   : "";
+  String us2 = cursorOndemand();
+  String oSub = openrouterRemain();
+  if (showSub) {
+    oSub += "  " + openrouterTotals();
+  }
+
   cardTwo(0, 0, "Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error,
-          compact ? "5h" : "Sessao 5h", g_snap.claude.sessionPercent,
-          compact ? "Semana" : "Limite semanal", g_snap.claude.weeklyPercent);
-  cardTwo(1, 0, "Cursor", ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error,
-          compact ? "Cursor" : "Modelos Cursor", g_snap.cursor.percent,
-          compact ? "Outros" : "Outros modelos", g_snap.cursor.otherPercent);
+          compact ? "5h" : "Sessao 5h", g_snap.claude.sessionPercent, showSub ? cs1 : "",
+          compact ? "Semana" : "Limite semanal", g_snap.claude.weeklyPercent, showSub ? cs2 : "");
+  cardTwo(1, 0, curTitle.c_str(), ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error,
+          compact ? "Cursor" : "Modelos Cursor", g_snap.cursor.percent, showSub ? us1 : "",
+          compact ? "Outros" : "Outros modelos", g_snap.cursor.otherPercent, showSub ? us2 : "");
   cardOne(0, 1, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok, g_snap.openrouter.error,
-          compact ? "Credito" : "Credito da key", g_snap.openrouter.percent);
+          compact ? "Creditos" : "Creditos da conta", g_snap.openrouter.percent, oSub);
   cardInfo(1, 1);
 }
 
@@ -347,187 +453,211 @@ void paintHome() {
   }
 }
 
-// Deslocamentos de uma métrica (rótulo -> barra -> linha de resumo). Uma
-// função só, usada tanto pra desenhar (paintMetric) quanto pra medir a altura
-// total do bloco (metricBlockHeight) — evita que os dois se desalinhem.
-struct MetricLayout {
-  int toBar;
-  int barH;
-  int toSub;
-  int subH;
-};
+static int dX, dW, dClipTop, dClipH, dCursor;
 
-static MetricLayout metricLayout(bool compact) {
-  if (compact) {
-    return {16, 10, 5, 16};
+static int dScreenY() { return dClipTop + dCursor - g_detailScroll; }
+
+static bool dVisible(int h) {
+  int sy = dScreenY();
+  return sy + h > dClipTop && sy < dClipTop + dClipH;
+}
+
+static void dAdvance(int h) { dCursor += h; }
+
+static void dKv(const char* k, const String& v) {
+  if (!v.length()) {
+    return;
   }
-  return {26, 14, 5, 16};
-}
-
-static int metricBlockHeight(bool compact) {
-  MetricLayout lay = metricLayout(compact);
-  return lay.toBar + lay.barH + lay.toSub + lay.subH;
-}
-
-// Uma métrica dentro de um painel: rótulo + número em destaque à direita,
-// barra em pílula, e uma linha discreta com o que resta / data de reset.
-static void paintMetric(int x, int w, const char* title, int y, float used, const String& resetLabel,
-                         uint16_t bg, bool compact) {
-  MetricLayout lay = metricLayout(compact);
-
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_TEXT_DIM, bg);
-  tft.drawString(title, x, y, 2);
-  tft.setTextDatum(TR_DATUM);
-  tft.setTextColor(COL_TEXT, bg);
-  tft.drawString(fmtPct(used), x + w, y - (compact ? 2 : 6), compact ? 2 : 4);
-
-  const int barY = y + lay.toBar;
-  drawBar(x, barY, w, lay.barH, used);
-
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_TEXT_MUTED, bg);
-  String sub = "resta " + fmtRemain(used);
-  if (resetLabel.length()) {
-    sub += "  |  " + resetLabel;
+  const int h = 18;
+  if (dVisible(h)) {
+    int y = dScreenY();
+    tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+    tft.drawString(k, dX, y, 2);
+    tft.setTextDatum(TR_DATUM);
+    tft.setTextColor(COL_TEXT, COL_CARD);
+    String s = v;
+    if ((int)s.length() > 22) {
+      s = s.substring(0, 22);
+    }
+    tft.drawString(s, dX + dW, y, 2);
   }
-  tft.drawString(sub, x, barY + lay.barH + lay.toSub, 2);
+  dAdvance(h);
 }
 
-// Traço fino separando as duas métricas do mesmo painel — mesma cor da borda
-// do card, só pra marcar a divisão sem competir com o conteúdo.
-static void drawMetricDivider(int x, int y, int w) {
-  tft.drawFastHLine(x, y, w, COL_CARD_BORDER);
+static void dNote(const String& s) {
+  if (!s.length()) {
+    return;
+  }
+  const int h = 16;
+  if (dVisible(h)) {
+    tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+    String t = s;
+    if ((int)t.length() > 36) {
+      t = t.substring(0, 36);
+    }
+    tft.drawString(t, dX, dScreenY(), 2);
+  }
+  dAdvance(h);
 }
 
-// Título do painel (Claude/Cursor). Devolve o Y onde o conteúdo abaixo pode
-// começar.
-static int paintPanelTitle(int x, int y, const char* title, const uint16_t* icon, bool compact) {
-  const int titleH = compact ? 16 : 26;
-  drawIcon(x, y + (titleH - ICON_CLAUDE_H) / 2, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
+static void dBar(const char* title, float pct, const String& sub) {
+  const int h = 16 + 4 + 10 + 4 + 16 + 8;
+  if (dVisible(h)) {
+    int y = dScreenY();
+    tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(COL_TEXT_DIM, COL_CARD);
+    tft.drawString(title, dX, y, 2);
+    tft.setTextDatum(TR_DATUM);
+    tft.setTextColor(COL_TEXT, COL_CARD);
+    tft.drawString(fmtPct(pct), dX + dW, y, 2);
+    drawBar(dX, y + 18, dW, 10, pct);
+    if (sub.length()) {
+      tft.setTextDatum(TL_DATUM);
+      tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+      String s = sub;
+      if ((int)s.length() > 34) {
+        s = s.substring(0, 34);
+      }
+      tft.drawString(s, dX, y + 32, 2);
+    }
+  }
+  dAdvance(h);
+}
+
+static void dGap() { dAdvance(8); }
+
+static bool paintDetailChrome(const char* title, const uint16_t* icon, bool ok, const String& err) {
+  const int W = tft.width();
+  const int top = g_headerH + 8;
+  const int bottom = tft.height() - 8;
+  const int cardH = bottom - top;
+  tft.fillRoundRect(8, top, W - 16, cardH, 8, COL_CARD);
+  tft.drawRoundRect(8, top, W - 16, cardH, 8, COL_CARD_BORDER);
+
+  g_arrowS = 26;
+  g_arrowX = W - 16 - g_arrowS;
+  g_arrowUpY = top + 6;
+  g_arrowDownY = bottom - 8 - g_arrowS;
+
+  const int titleY = top + 8;
+  drawIcon(20, titleY, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.drawString(title, x + ICON_CLAUDE_W + 6, y, compact ? 2 : 4);
-  const int lineY = y + (compact ? 16 : 30);
-  return lineY + (compact ? 8 : 12);
+  tft.drawString(title, 20 + ICON_CLAUDE_W + 6, titleY + (ICON_CLAUDE_H - 16) / 2, 2);
+
+  dClipTop = titleY + ICON_CLAUDE_H + 8;
+  dX = 20;
+  dW = g_arrowX - dX - 6;
+  dClipH = (bottom - 8) - dClipTop;
+  dCursor = 0;
+
+  if (!ok) {
+    drawError(dX, dClipTop, err, COL_CARD);
+    g_detailCanScroll = false;
+    g_detailMaxScroll = 0;
+    return false;
+  }
+  tft.setViewport(dX, dClipTop, dW, dClipH, false);
+  return true;
 }
 
-// Posiciona as duas métricas de um painel dentro do espaço vertical
-// disponível (contentTop..bottom), com um divisor entre elas. Quando sobra
-// espaço (placa física, cards maiores), centraliza o bloco em vez de deixar
-// tudo colado no topo ou espremido embaixo — era isso que fazia a segunda
-// métrica quase encostar na primeira nos telões menores (Wokwi).
-static void paintTwoMetrics(int padX, int innerW, int contentTop, int bottom, bool compact,
-                             const char* title1, float pct1, const String& reset1, const char* title2,
-                             float pct2, const String& reset2) {
-  const int blockH = metricBlockHeight(compact);
-  const int dividerGap = compact ? 12 : 20;
-  const int contentH = blockH * 2 + dividerGap;
-  const int available = bottom - contentTop;
-  const int extra = available > contentH ? (available - contentH) : 0;
-  const int slotY1 = contentTop + extra / 2;
-  const int dividerY = slotY1 + blockH + dividerGap / 2;
-  const int slotY2 = slotY1 + blockH + dividerGap;
-
-  paintMetric(padX, innerW, title1, slotY1, pct1, reset1, COL_CARD, compact);
-  drawMetricDivider(padX, dividerY, innerW);
-  paintMetric(padX, innerW, title2, slotY2, pct2, reset2, COL_CARD, compact);
+static void paintDetailFinish() {
+  tft.resetViewport();
+  g_detailMaxScroll = dCursor - dClipH;
+  if (g_detailMaxScroll < 0) {
+    g_detailMaxScroll = 0;
+  }
+  if (g_detailScroll > g_detailMaxScroll) {
+    g_detailScroll = g_detailMaxScroll;
+  }
+  g_detailCanScroll = g_detailMaxScroll > 0;
+  if (g_detailCanScroll) {
+    int cx = g_arrowX + g_arrowS / 2;
+    drawScrollChevron(cx, g_arrowUpY + g_arrowS / 2, true, g_detailScroll > 0);
+    drawScrollChevron(cx, g_arrowDownY + g_arrowS / 2, false, g_detailScroll < g_detailMaxScroll);
+  }
 }
 
 void paintClaude() {
-  const int W = tft.width();
-  const int top = g_headerH + 8;
-  const int bottom = tft.height() - 8;
-  const int cardH = bottom - top;
-  tft.fillRoundRect(8, top, W - 16, cardH, 8, COL_CARD);
-  tft.drawRoundRect(8, top, W - 16, cardH, 8, COL_CARD_BORDER);
-
-  const int padX = 20;
-  const int innerW = W - 16 - padX * 2;
-  const bool compact = cardH < 170;
-
-  const int contentTop = paintPanelTitle(padX, top + 8, "Claude", ICON_CLAUDE, compact);
-
-  if (!g_snap.claude.ok) {
-    drawError(padX, contentTop + 6, g_snap.claude.error, COL_CARD);
+  if (!paintDetailChrome("Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error)) {
     return;
   }
-
-  String r1 = g_snap.claude.sessionResets.length() ? fmtWhen(g_snap.claude.sessionResets) : "";
-  String r2 = g_snap.claude.weeklyResets.length() ? fmtWhen(g_snap.claude.weeklyResets) : "";
-  paintTwoMetrics(padX, innerW, contentTop, bottom, compact, "Janela de 5 horas",
-                  g_snap.claude.sessionPercent, r1, "Limite semanal", g_snap.claude.weeklyPercent, r2);
+  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dGap();
+  dBar("Janela de 5 horas", g_snap.claude.sessionPercent,
+       withResta(g_snap.claude.sessionPercent, g_snap.claude.sessionResets));
+  dKv("usado", fmtPct(g_snap.claude.sessionPercent));
+  dKv("resta", fmtRemain(g_snap.claude.sessionPercent));
+  dKv("reset", g_snap.claude.sessionResets.length() ? fmtWhen(g_snap.claude.sessionResets) : "");
+  dGap();
+  dBar("Limite semanal", g_snap.claude.weeklyPercent,
+       withResta(g_snap.claude.weeklyPercent, g_snap.claude.weeklyResets));
+  dKv("usado", fmtPct(g_snap.claude.weeklyPercent));
+  dKv("resta", fmtRemain(g_snap.claude.weeklyPercent));
+  dKv("reset", g_snap.claude.weeklyResets.length() ? fmtWhen(g_snap.claude.weeklyResets) : "");
+  if (g_snap.claude.sonnetPercent >= 0) {
+    dGap();
+    dBar("Sonnet (semana)", g_snap.claude.sonnetPercent,
+         withResta(g_snap.claude.sonnetPercent, g_snap.claude.sonnetResets));
+    dKv("reset", g_snap.claude.sonnetResets.length() ? fmtWhen(g_snap.claude.sonnetResets) : "");
+  }
+  if (g_snap.claude.opusPercent >= 0) {
+    dGap();
+    dBar("Opus (semana)", g_snap.claude.opusPercent,
+         withResta(g_snap.claude.opusPercent, g_snap.claude.opusResets));
+    dKv("reset", g_snap.claude.opusResets.length() ? fmtWhen(g_snap.claude.opusResets) : "");
+  }
+  paintDetailFinish();
 }
 
 void paintCursor() {
-  const int W = tft.width();
-  const int top = g_headerH + 8;
-  const int bottom = tft.height() - 8;
-  const int cardH = bottom - top;
-  tft.fillRoundRect(8, top, W - 16, cardH, 8, COL_CARD);
-  tft.drawRoundRect(8, top, W - 16, cardH, 8, COL_CARD_BORDER);
-
-  const int padX = 20;
-  const int innerW = W - 16 - padX * 2;
-  const bool compact = cardH < 170;
-
-  const int contentTop = paintPanelTitle(padX, top + 8, "Cursor", ICON_CURSOR, compact);
-
-  if (!g_snap.cursor.ok) {
-    drawError(padX, contentTop + 6, g_snap.cursor.error, COL_CARD);
+  String curTitle = cursorPlanTitle();
+  if (!paintDetailChrome(curTitle.c_str(), ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error)) {
     return;
   }
-
-  String reset = g_snap.cursor.cycleEnd.length() ? ("reset " + fmtWhen(g_snap.cursor.cycleEnd)) : "";
-  String ondemand;
-  if (g_snap.cursor.usedCents >= 0 && g_snap.cursor.limitCents >= 0) {
-    ondemand = "On-demand " + fmtUsdSite(g_snap.cursor.usedCents) + " / " +
-               fmtUsdSite(g_snap.cursor.limitCents);
+  dKv("plano", g_snap.cursor.plan);
+  dKv("ciclo", g_snap.cursor.cycleEnd.length() ? fmtWhen(g_snap.cursor.cycleEnd) : "");
+  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dGap();
+  dBar("Modelos Cursor", g_snap.cursor.percent, withResta(g_snap.cursor.percent, ""));
+  dKv("usado", fmtPct(g_snap.cursor.percent));
+  dKv("resta", fmtRemain(g_snap.cursor.percent));
+  dGap();
+  dBar("Outros modelos", g_snap.cursor.otherPercent, withResta(g_snap.cursor.otherPercent, ""));
+  dKv("usado", fmtPct(g_snap.cursor.otherPercent));
+  dKv("resta", fmtRemain(g_snap.cursor.otherPercent));
+  dGap();
+  dNote("On-demand (USD)");
+  dKv("usado", g_snap.cursor.usedCents >= 0 ? fmtUsdSite(g_snap.cursor.usedCents) : "");
+  dKv("teto", g_snap.cursor.limitCents >= 0 ? fmtUsdSite(g_snap.cursor.limitCents) : "");
+  dKv("resta", g_snap.cursor.remainingCents >= 0 ? fmtUsdSite(g_snap.cursor.remainingCents) : "");
+  dKv("bonus", g_snap.cursor.bonusCents > 0 ? fmtUsdSite(g_snap.cursor.bonusCents) : "");
+  if (g_snap.cursor.requestsUsed >= 0 && g_snap.cursor.requestsLimit > 0) {
+    dGap();
+    dNote("Pedidos (legado)");
+    dKv("usados", String(g_snap.cursor.requestsUsed));
+    dKv("limite", String(g_snap.cursor.requestsLimit));
   }
-  float p2 = g_snap.cursor.otherPercent >= 0 ? g_snap.cursor.otherPercent : -1;
-  paintTwoMetrics(padX, innerW, contentTop, bottom, compact, "Modelos Cursor", g_snap.cursor.percent,
-                  reset, "Outros modelos", p2, ondemand);
+  paintDetailFinish();
 }
 
-// Uma métrica só (créditos da conta), diferente de Claude/Cursor que sempre
-// têm duas — a API do OpenRouter (/credits, nível de conta, não por key) só
-// devolve total comprado + total gasto.
 void paintOpenRouter() {
-  const int W = tft.width();
-  const int top = g_headerH + 8;
-  const int bottom = tft.height() - 8;
-  const int cardH = bottom - top;
-  tft.fillRoundRect(8, top, W - 16, cardH, 8, COL_CARD);
-  tft.drawRoundRect(8, top, W - 16, cardH, 8, COL_CARD_BORDER);
-
-  const int padX = 20;
-  const int innerW = W - 16 - padX * 2;
-  const bool compact = cardH < 170;
-
-  const int contentTop = paintPanelTitle(padX, top + 8, "OpenRouter", ICON_OPENROUTER, compact);
-
-  if (!g_snap.openrouter.ok) {
-    drawError(padX, contentTop + 6, g_snap.openrouter.error, COL_CARD);
+  if (!paintDetailChrome("OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok,
+                         g_snap.openrouter.error)) {
     return;
   }
-
-  String remain = g_snap.openrouter.limitCents >= 0
-                      ? ("restam " + fmtUsdSite(g_snap.openrouter.remainingCents))
-                      : "sem creditos comprados";
-
-  const MetricLayout lay = metricLayout(compact);
-  const int blockH = metricBlockHeight(compact);
-  const int available = bottom - contentTop;
-  const int extra = available > blockH ? (available - blockH) : 0;
-  const int slotY = contentTop + extra / 2;
-  paintMetric(padX, innerW, "Creditos da conta", slotY, g_snap.openrouter.percent, remain, COL_CARD,
-              compact);
-
-  String totals = fmtUsdSite(g_snap.openrouter.usedCents) + " usado de " +
-                   fmtUsdSite(g_snap.openrouter.limitCents);
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-  tft.drawString(totals, padX, slotY + lay.toBar + lay.barH + lay.toSub + lay.subH + 8, 2);
+  dNote("Creditos da conta (todas as keys)");
+  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dGap();
+  dBar("Creditos", g_snap.openrouter.percent, openrouterRemain());
+  dKv("usado", g_snap.openrouter.usedCents >= 0 ? fmtUsdSite(g_snap.openrouter.usedCents) : "");
+  dKv("resta", g_snap.openrouter.remainingCents >= 0 ? fmtUsdSite(g_snap.openrouter.remainingCents)
+                                                    : "");
+  dKv("teto", g_snap.openrouter.limitCents >= 0 ? fmtUsdSite(g_snap.openrouter.limitCents) : "");
+  dKv("percentual", fmtPct(g_snap.openrouter.percent));
+  paintDetailFinish();
 }
 
 void paintStatus() {

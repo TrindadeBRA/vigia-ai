@@ -174,6 +174,21 @@ void drawInfoIcon(int cx, int cy, int r, uint16_t color) {
   tft.fillRect(cx - 1, cy - r / 5, 2, r, color);
 }
 
+void drawScrollChevron(int cx, int cy, bool up, bool enabled) {
+  uint16_t c = enabled ? COL_ACCENT : COL_TEXT_MUTED;
+  const int r = 7;
+  if (up) {
+    tft.fillTriangle(cx, cy - r, cx - r, cy + r / 2, cx + r, cy + r / 2, c);
+  } else {
+    tft.fillTriangle(cx, cy + r, cx - r, cy - r / 2, cx + r, cy - r / 2, c);
+  }
+}
+
+void drawBackChevron(int cx, int cy, uint16_t color) {
+  const int r = 6;
+  tft.fillTriangle(cx - r, cy, cx + r / 2, cy - r, cx + r / 2, cy + r, color);
+}
+
 int brandWidth(uint8_t font) {
   return tft.textWidth("VIGIA", font) + tft.textWidth(" AI", font);
 }

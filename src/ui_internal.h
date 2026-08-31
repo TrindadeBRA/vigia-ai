@@ -24,6 +24,13 @@ extern int g_layoutBtnY;
 extern int g_layoutBtnH;
 extern int g_layoutMidX;
 extern int g_lastHeaderKey;
+extern int g_detailScroll;
+extern int g_detailMaxScroll;
+extern int g_arrowX;
+extern int g_arrowUpY;
+extern int g_arrowDownY;
+extern int g_arrowS;
+extern bool g_detailCanScroll;
 
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
 // selo do header deve mostrar o check verde de sucesso em vez do contador.

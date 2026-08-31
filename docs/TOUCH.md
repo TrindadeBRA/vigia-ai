@@ -9,16 +9,18 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 | Tela | Conteúdo |
 | --- | --- |
 | Inicio | Lista (3 cards) ou grade 2×2; escolhe em **Info → Início**. Toque no card abre o detalhe |
-| Claude | Sessão 5h e semana, % usado e restante |
-| Cursor | Ciclo do plano, dólares se existirem |
-| OpenRouter | Crédito da key |
+| Claude | Janelas 5h, semana, Sonnet/Opus se existirem; usado/resta/reset. **Setas** à direita se precisar de scroll |
+| Cursor | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). Setas de scroll |
+| OpenRouter | Créditos da conta: barra, usado, resta, teto. Setas de scroll |
 | Info | Rede, layout da home (**Lista** / **Grade**), **Atualizar**, **Calibrar** |
 
-Navegação no **header**: título **VIGIA AI** volta ao início; ícone **i** abre Info. Não há atalho no header para os detalhes — só tocando o card na home. O selo/área livre do header pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
+Navegação no **header**: título **VIGIA AI** volta ao início; fora da home, um chevron **‹** à esquerda do logo faz o mesmo (breadcrumb). Ícone **i** abre Info. Não há atalho no header para os detalhes — só tocando o card na home. O selo/área livre do header pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
+
+Nas telas internas (Claude / Cursor / OpenRouter): se o conteúdo não couber, aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`. Home e Info não têm esse scroll.
 
 Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`4`.
 
-Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `l` lista, `g` grade, `r` refresh, `c` calibrar (só hardware).
+Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `l` lista, `g` grade, `u`/`d` scroll no detalhe, `r` refresh, `c` calibrar (só hardware).
 
 A escolha Lista/Grade fica na NVS (namespace `ui`, chave `home`), igual à calibração do toque — sobrevive a reboot.
 

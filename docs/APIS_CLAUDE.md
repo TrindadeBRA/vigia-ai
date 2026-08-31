@@ -54,5 +54,6 @@ O coletor **não cacheia**: cada `GET /usage` = uma chamada real. A placa polla 
 
 - **Sessão** ← `five_hour` / `kind=session`
 - **Semana** ← `seven_day` / weekly all-models
+- **Sonnet / Opus (semana)** ← `seven_day_sonnet` / `seven_day_opus` (ou `limits[].kind` contendo sonnet/opus), se o plano mandar
 
-Janelas extra (Sonnet/Opus) existem em alguns planos; v1 não desenha barras separadas.
+A tela **interna** lista usado, restante e reset de cada janela. Se o conteúdo passar da altura, setas à direita (e deslize vertical / serial `u` `d`) fazem scroll.

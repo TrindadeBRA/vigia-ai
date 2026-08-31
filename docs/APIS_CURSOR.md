@@ -35,7 +35,7 @@ Campos úteis (nomes podem mudar; ver `parse_cursor_dashboard` em `collector/ser
 
 - `planUsage.autoPercentUsed` (ou `totalPercentUsed`) → "Cursor Models" no dashboard, vira `percent` no `/usage`
 - `planUsage.apiPercentUsed` → "Other Models" no dashboard, vira `other_percent` no `/usage`
-- `spendLimitUsage.individualLimit` / `individualRemaining` (centavos, USD) → `limit_cents` / `used_cents`
+- `spendLimitUsage.individualLimit` / `individualRemaining` (centavos, USD) → `limit_cents` / `remaining_cents` (`used_cents` = limite − restante)
 - `billingCycleEnd` (ou `planUsage.endDate`) → `cycle_end`
 
 ## Fallback
@@ -45,7 +45,7 @@ GET https://api2.cursor.sh/auth/usage
 Authorization: Bearer <accessToken>
 ```
 
-Contadores por modelo (`numRequests` / `maxRequestUsage`) — mais comum em Enterprise. O coletor usa se `planUsage` vier vazio.
+Contadores por modelo (`numRequests` / `maxRequestUsage`) — mais comum em Enterprise. O coletor usa se `planUsage` vier vazio; nesse caso manda `requests_used` / `requests_limit` no JSON.
 
 ## Alternativa (não usada no v1)
 
@@ -53,4 +53,4 @@ Dashboard web: cookie `WorkosCursorSessionToken` + `Origin: https://cursor.com`.
 
 ## O que a tela mostra
 
-Uma barra: **percentual do plano no ciclo**, e se existir, `US$ usado / limite` a partir dos centavos.
+Na home: barras de Cursor Models e Other Models. Na tela **interna**: plano, ciclo, as duas barras (usado/resta), on-demand (usado / teto / resta / bônus) e, no fallback legado, pedidos. Scroll com setas se não couber.

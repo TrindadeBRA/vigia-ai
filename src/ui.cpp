@@ -64,6 +64,29 @@ void uiSetView(View v) {
     return;
   }
   g_view = v;
+  g_detailScroll = 0;
+  uiPaint();
+}
+
+static bool isDetailView() {
+  return g_view == VIEW_CLAUDE || g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER;
+}
+
+void uiDetailScrollBy(int dy) {
+  if (!isDetailView()) {
+    return;
+  }
+  int next = g_detailScroll + dy;
+  if (next < 0) {
+    next = 0;
+  }
+  if (next > g_detailMaxScroll) {
+    next = g_detailMaxScroll;
+  }
+  if (next == g_detailScroll) {
+    return;
+  }
+  g_detailScroll = next;
   uiPaint();
 }
 
@@ -117,6 +140,14 @@ void uiHandleSwipe(int16_t dx) {
   }
 }
 
+void uiHandleVerticalSwipe(int16_t dy) {
+  if (!isDetailView()) {
+    return;
+  }
+  // Dedo pra cima (dy negativo) revela o que está abaixo.
+  uiDetailScrollBy(dy > 0 ? -48 : 48);
+}
+
 void uiHandleTap(int16_t x, int16_t y) {
   const int W = tft.width();
   x = constrain(x, 0, W - 1);
@@ -132,6 +163,17 @@ void uiHandleTap(int16_t x, int16_t y) {
     }
     g_requestRefresh = true;
     return;
+  }
+  if (isDetailView() && g_detailCanScroll && x >= g_arrowX) {
+    int s = g_arrowS > 0 ? g_arrowS : 28;
+    if (y >= g_arrowUpY && y <= g_arrowUpY + s) {
+      uiDetailScrollBy(-48);
+      return;
+    }
+    if (y >= g_arrowDownY && y <= g_arrowDownY + s) {
+      uiDetailScrollBy(48);
+      return;
+    }
   }
   if (g_view == VIEW_HOME) {
     if (g_homeLayout == HOME_LAYOUT_GRID) {

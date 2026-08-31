@@ -46,14 +46,15 @@ Não commitar senha real. Ver `.gitignore`.
 
 ## Comandos
 
-Atalho na raiz do repo (`./dev-pio.sh` — o coletor/gateway continuam no `./dev-wokwi.sh`):
+Helper na raiz do repo (`./dev.sh` pergunta Wokwi ou placa). O `./dev-wokwi.sh` continua sendo só coletor + gateway:
 
 ```bash
-./dev-pio.sh wokwi      # pio run -e wokwi
-./dev-pio.sh placa      # pio run -e esp32dev
-./dev-pio.sh upload     # pio run -e esp32dev -t upload
-./dev-pio.sh monitor    # pio device monitor -b 115200
-./dev-pio.sh flash      # upload + monitor
+./dev.sh                # helper: pergunta o fluxo
+./dev.sh wokwi          # pio run -e wokwi
+./dev.sh placa          # pio run -e esp32dev
+./dev.sh upload         # pio run -e esp32dev -t upload
+./dev.sh monitor        # pio device monitor -b 115200
+./dev.sh flash          # upload + monitor
 ```
 
 Equivalente na mão:
@@ -71,7 +72,7 @@ Serial: SSID (não a senha), URL, HTTP status, erros de parse.
 
 No env `esp32dev`: `TOUCH_CS=21`, `SPI_TOUCH_FREQUENCY`. Ver [TOUCH.md](TOUCH.md).
 
-No Wokwi: sem painel resistivo — botões GPIO 5 (Info/Início) e 13 (Início/Info), ou FT6206 capacitivo da peça `board-ili9341-cap-touch`. Serial: `n` `p` `0-4` `l` `g` `r`.
+No Wokwi: sem painel resistivo — botões GPIO 5 (Info/Início) e 13 (Início/Info), ou FT6206 capacitivo da peça `board-ili9341-cap-touch`. Serial: `n` `p` `0-4` `l` `g` `u` `d` `r`.
 
 ## Bibliotecas
 

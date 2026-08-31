@@ -1,6 +1,6 @@
 # Contrato JSON — `GET /usage`
 
-O firmware **depende** deste formato. Mudança = atualizar este doc e `src/main.cpp`.
+O firmware **depende** deste formato. Mudança = atualizar este doc **e** o parser em `src/usage_client.cpp`.
 
 `Content-Type: application/json; charset=utf-8`
 
@@ -19,7 +19,11 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
     "session_percent": 42.0,
     "session_resets_at": "2026-08-31T04:00:00Z",
     "weekly_percent": 18.5,
-    "weekly_resets_at": "2026-09-04T03:00:00Z"
+    "weekly_resets_at": "2026-09-04T03:00:00Z",
+    "sonnet_percent": 55.0,
+    "sonnet_resets_at": "2026-09-04T03:00:00Z",
+    "opus_percent": 12.0,
+    "opus_resets_at": "2026-09-04T03:00:00Z"
   },
   "cursor": {
     "ok": true,
@@ -28,9 +32,12 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
     "other_percent": 12.0,
     "used_cents": 700,
     "limit_cents": 2000,
+    "remaining_cents": 1300,
     "bonus_cents": 0,
     "cycle_end": "2026-09-15T00:00:00Z",
-    "plan": "pro"
+    "plan": "pro",
+    "requests_used": null,
+    "requests_limit": null
   },
   "openrouter": {
     "ok": true,
@@ -62,8 +69,12 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | `error` | string ou `null` | Mensagem curta para a tela / curl |
 | `session_percent` | number ou `null` | Janela ~5 h |
 | `session_resets_at` | string ou `null` | |
-| `weekly_percent` | number ou `null` | Janela ~7 d |
+| `weekly_percent` | number ou `null` | Janela ~7 d (todos os modelos) |
 | `weekly_resets_at` | string ou `null` | |
+| `sonnet_percent` | number ou `null` | Limite semanal só Sonnet, se o plano tiver |
+| `sonnet_resets_at` | string ou `null` | |
+| `opus_percent` | number ou `null` | Limite semanal só Opus, se o plano tiver |
+| `opus_resets_at` | string ou `null` | |
 
 ### `cursor`
 
@@ -75,9 +86,12 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | `other_percent` | number ou `null` | "Other Models" no dashboard (api), segunda barra na tela |
 | `used_cents` | number ou `null` | Gasto on-demand em centavos de USD |
 | `limit_cents` | number ou `null` | Teto on-demand incluso em centavos de USD |
+| `remaining_cents` | number ou `null` | On-demand ainda disponível |
 | `bonus_cents` | number ou `null` | Crédito extra, se houver |
 | `cycle_end` | string ou `null` | Fim do ciclo de fatura |
 | `plan` | string ou `null` | Ex.: `pro`, `ultra` |
+| `requests_used` | number ou `null` | Só no fallback legado `auth/usage` |
+| `requests_limit` | number ou `null` | Só no fallback legado `auth/usage` |
 
 ### `openrouter`
 

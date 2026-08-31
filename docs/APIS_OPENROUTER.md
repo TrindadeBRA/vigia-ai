@@ -30,4 +30,4 @@ Authorization: Bearer <OPENROUTER_API_KEY>
 
 ## O que a tela mostra
 
-Uma barra com o percentual de crédito da conta já gasto, e abaixo o valor absoluto (`usado $X / $Y`).
+Na home: uma barra com o percentual da conta já gasto. Na tela **interna**: barra, usado, resta, teto e o aviso de que o saldo é da conta (todas as keys). Scroll com setas se não couber.

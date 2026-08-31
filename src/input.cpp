@@ -60,6 +60,10 @@ static void onPointer(bool down, uint16_t x, uint16_t y) {
         uiHandleSwipe(dx);
         g_didTap = true;
         g_lastTapMs = now;
+      } else if (abs(dy) > 40 && abs(dy) > abs(dx) + 8) {
+        uiHandleVerticalSwipe(dy);
+        g_didTap = true;
+        g_lastTapMs = now;
       }
     }
     return;
@@ -252,6 +256,10 @@ static void handleSerial() {
       uiSetHomeLayout(HOME_LAYOUT_LIST);
     } else if (c == 'g' || c == 'G') {
       uiSetHomeLayout(HOME_LAYOUT_GRID);
+    } else if (c == 'u' || c == 'U') {
+      uiDetailScrollBy(-48);
+    } else if (c == 'd' || c == 'D') {
+      uiDetailScrollBy(48);
     }
   }
 }

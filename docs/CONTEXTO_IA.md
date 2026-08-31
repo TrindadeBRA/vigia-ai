@@ -55,8 +55,8 @@ diagram.json
 ## Como validar
 
 - Coletor: `python3 collector/server.py` e `curl -s http://127.0.0.1:8787/usage`
-- Firmware simulado: `./dev-wokwi.sh` (sobe coletor + `wokwigw`), `./dev-pio.sh wokwi`, depois Wokwi Simulator
-- Hardware: `src/secrets.h` preenchido, `./dev-pio.sh flash` (ou `upload`)
+- Firmware simulado: `./dev.sh` (Wokwi: compila + sobe coletor/`wokwigw`), depois Wokwi Simulator
+- Hardware: `src/secrets.h` preenchido, `./dev.sh` e escolha placa → gravar
 
 ## Tom
 

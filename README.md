@@ -64,7 +64,7 @@ cp src/secrets.h.example src/secrets.h
 Edite SSID, senha e `USAGE_URL` (`http://SEU_IP:8787/usage`). `src/secrets.h` está no `.gitignore`.
 
 ```bash
-./dev-pio.sh flash      # upload + serial (ou: upload / placa / monitor)
+./dev.sh                # helper: pergunta Wokwi ou placa
 ```
 
 Equivalente: `pio run -e esp32dev -t upload` e `pio device monitor -b 115200`.
@@ -84,7 +84,7 @@ O simulador precisa do coletor **e** de um gateway de rede local rodando (senão
 Sobe os dois juntos (`Ctrl+C` encerra). Depois:
 
 ```bash
-./dev-pio.sh wokwi
+./dev.sh                # escolha Wokwi no helper
 ```
 
 `Cmd+Shift+P` → **Wokwi: Start Simulator**. Tela 240×320 (ILI9341); a 3,5" física é 480×320. Detalhes do gateway: [`docs/FIRMWARE.md`](docs/FIRMWARE.md#rede-no-wokwi-wokwigw).
@@ -117,15 +117,15 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** (Iní
 | `src/secrets.h.example` | Wi-Fi e URL |
 | `docs/` | Plano, APIs, touch, contexto de IA |
 | `diagram.json` | Circuito Wokwi (+ botões) |
+| `dev.sh` | Helper: pergunta Wokwi ou placa e dispara o fluxo |
 | `dev-wokwi.sh` | Sobe coletor + `wokwigw` juntos pro simulador |
-| `dev-pio.sh` | Compila / grava firmware (`wokwi`, `placa`, `upload`, `flash`) |
 
 ## Tela (touch)
 
 - **Inicio:** três cards; Claude e Cursor com as duas barras principais; toque abre o detalhe
-- **Claude:** sessão 5h e semana (% usado / restante)
-- **Cursor:** ciclo do plano e dólares, se a API mandar
-- **OpenRouter:** crédito da key
+- **Claude:** sessão 5h, semana, Sonnet/Opus se o plano tiver; detalhe com scroll
+- **Cursor:** plano, ciclo, duas barras, on-demand; detalhe com scroll
+- **OpenRouter:** créditos da conta; detalhe com scroll
 - **Info:** rede, atualizar agora, calibrar touch (ícone **i** no header)
 - Header: **VIGIA AI** volta ao início; **i** abre Info; toque no meio/selo atualiza. Sem abas embaixo.
 - Deslize horizontal alterna Início ↔ Info; verde &lt; 70%, laranja &lt; 90%, vermelho no resto

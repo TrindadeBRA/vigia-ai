@@ -59,9 +59,12 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
         "other_percent": other_percent,
         "used_cents": ondemand_used,
         "limit_cents": ondemand_limit,
+        "remaining_cents": ondemand_remain,
         "bonus_cents": 0,
         "cycle_end": cycle_end,
         "plan": (plan or data.get("membershipType") or "").strip() or None,
+        "requests_used": None,
+        "requests_limit": None,
     }
 
 
@@ -92,6 +95,7 @@ def parse_cursor_auth_usage(data: dict[str, Any], plan: str | None) -> dict[str,
         "other_percent": None,
         "used_cents": None,
         "limit_cents": None,
+        "remaining_cents": None,
         "bonus_cents": None,
         "cycle_end": None,
         "plan": plan,
@@ -108,9 +112,12 @@ def _cursor_fail(msg: str) -> dict[str, Any]:
         "other_percent": None,
         "used_cents": None,
         "limit_cents": None,
+        "remaining_cents": None,
         "bonus_cents": None,
         "cycle_end": None,
         "plan": None,
+        "requests_used": None,
+        "requests_limit": None,
     }
 
 

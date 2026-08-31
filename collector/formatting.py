@@ -30,6 +30,14 @@ def utc_now() -> str:
     return iso_brt()
 
 
+def pick(*values: Any) -> Any:
+    """Primeiro valor que não é None. 0 e 0.0 contam (não use `or` em percentuais)."""
+    for v in values:
+        if v is not None:
+            return v
+    return None
+
+
 def as_percent(value: Any) -> float | None:
     if value is None:
         return None

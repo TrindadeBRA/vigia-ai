@@ -40,13 +40,13 @@ curl -s http://127.0.0.1:8787/usage | python3 -m json.tool   # conferir
 Firmware (PlatformIO):
 ```bash
 cp src/secrets.h.example src/secrets.h   # preencher Wi-Fi + USAGE_URL; gitignored
-./dev-pio.sh flash                       # upload + serial (placa real)
+./dev.sh                                 # helper: Wokwi ou placa
 ```
 
 Simulador Wokwi (coletor de verdade sobre Wi-Fi simulada, não é mock):
 ```bash
 ./dev-wokwi.sh          # sobe o coletor + wokwigw (gateway de rede local) juntos
-./dev-pio.sh wokwi      # pio run -e wokwi
+./dev.sh                # escolha Wokwi no helper
 # depois Cmd+Shift+P -> "Wokwi: Start Simulator"
 # sem painel resistivo no Wokwi: use os botões Prev/Next ou as teclas seriais n/p/0/1/2/3
 ```

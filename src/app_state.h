@@ -19,6 +19,10 @@ struct ClaudeUsage {
   String sessionResets;
   float weeklyPercent = -1;
   String weeklyResets;
+  float sonnetPercent = -1;
+  String sonnetResets;
+  float opusPercent = -1;
+  String opusResets;
 };
 
 struct CursorUsage {
@@ -28,7 +32,10 @@ struct CursorUsage {
   float otherPercent = -1;
   int usedCents = -1;
   int limitCents = -1;
+  int remainingCents = -1;
   int bonusCents = -1;
+  int requestsUsed = -1;
+  int requestsLimit = -1;
   String cycleEnd;
   String plan;
 };
