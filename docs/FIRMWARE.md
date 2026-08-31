@@ -5,7 +5,26 @@
 | Env | Driver | Rede | Uso |
 | --- | --- | --- | --- |
 | `esp32dev` | ILI9488 | Wi-Fi + GET | Placa real |
-| `wokwi` | ILI9341 + `MOCK_USAGE` | Não | Layout no simulador |
+| `wokwi` | ILI9341 | Wi-Fi simulada (`WOKWI_SIM`) + GET via `wokwigw` | Simulador |
+
+`MOCK_USAGE` existe no código (`src/main.cpp`) mas nenhum dos dois envs define essa flag hoje — os dois falam com um coletor de verdade.
+
+## Rede no Wokwi (`wokwigw`)
+
+O simulador só alcança `collector/server.py` no Mac com um gateway de rede local rodando — sem ele, `host.wokwi.internal` (o `USAGE_URL` do env `wokwi`) não resolve pra lugar nenhum e o card mostra `coletor HTTP -1`.
+
+```bash
+./dev-wokwi.sh
+```
+
+Sobe o coletor **e** o `.tools/wokwigw` juntos (`Ctrl+C` encerra os dois). Pra rodar na mão:
+
+```bash
+cd collector && python3 server.py &
+.tools/wokwigw    # ou so `wokwigw` se ~/bin estiver no PATH
+```
+
+`wokwi.toml` já aponta pro gateway (`[net] gateway = "ws://localhost:9011"`) — não mexer nisso sem trocar o binário/porta junto. Detalhes de por que o Wokwi precisa disso: [ARQUITETURA.md](ARQUITETURA.md#fluxo-wokwi).
 
 ## Segredos Wi-Fi
 
@@ -40,7 +59,7 @@ Serial: SSID (não a senha), URL, HTTP status, erros de parse.
 
 No env `esp32dev`: `TOUCH_CS=21`, `SPI_TOUCH_FREQUENCY`. Ver [TOUCH.md](TOUCH.md).
 
-No Wokwi: `MOCK_USAGE`, botões GPIO 5 (próxima) e 13 (anterior). Serial: `n` `p` `0-3` `r`.
+No Wokwi: sem painel resistivo — botões GPIO 5 (próxima) e 13 (anterior), ou FT6206 capacitivo da peça `board-ili9341-cap-touch`. Serial: `n` `p` `0-3` `r`.
 
 ## Bibliotecas
 
@@ -51,4 +70,6 @@ No Wokwi: `MOCK_USAGE`, botões GPIO 5 (próxima) e 13 (anterior). Serial: `n` `
 
 ## Poll
 
-`USAGE_POLL_MS` (padrão 300000). Primeira busca logo após o Wi-Fi associar.
+`USAGE_POLL_MS` (padrão 15000 nos dois envs). Primeira busca logo após o Wi-Fi associar. O header mostra um selo amarelo com a contagem regressiva até o próximo poll, e um check verde por ~1,5 s quando um refresh dá certo (`src/ui.cpp`).
+
+Poll curto não significa dado mais fresco: o coletor cacheia por `CACHE_TTL_SECONDS` (padrão 300 s, ver [COLETOR.md](COLETOR.md)), então a placa só está checando com mais frequência se o cache já virou.

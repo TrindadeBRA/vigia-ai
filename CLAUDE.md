@@ -43,12 +43,14 @@ pio run -e esp32dev -t upload
 pio device monitor -b 115200
 ```
 
-Wokwi simulator (mock data, no Wi-Fi):
+Wokwi simulator (real collector over simulated Wi-Fi, not mock data):
 ```bash
+./dev-wokwi.sh          # starts the collector + wokwigw (local network gateway) together
 pio run -e wokwi
 # then Cmd+Shift+P -> "Wokwi: Start Simulator"
 # no resistive touch in Wokwi: use Prev/Next buttons or serial keys n/p/0/1/2/3
 ```
+Without `wokwigw` running, `host.wokwi.internal` (the simulator's `USAGE_URL`) can't reach the collector and cards show `coletor HTTP -1`. See `docs/FIRMWARE.md#rede-no-wokwi-wokwigw`.
 
 `pio run` with no `-e` builds both `esp32dev` and `wokwi`.
 
@@ -64,7 +66,7 @@ Three pieces, one firmware sketch:
 `platformio.ini` builds the *same* `src/main.cpp` sketch into two environments distinguished only by `build_flags`:
 
 - `esp32dev` — real 3.5" board, ILI9488 320×480, real Wi-Fi + HTTP to the collector.
-- `wokwi` — ILI9341 240×320, `MOCK_USAGE` fixed data, no network (Wokwi can't reliably reach the Mac collector).
+- `wokwi` — ILI9341 240×320, simulated Wi-Fi (`WOKWI_SIM`) that reaches the same real collector through `wokwigw`, a local network gateway (`wokwi.toml` → `ws://localhost:9011`; binary at `.tools/wokwigw`). `MOCK_USAGE` still exists in `src/main.cpp` as a fallback path but no env currently builds with it — don't assume the simulator shows fake data.
 
 Tokens exist only on the Mac (official app files or `collector/.env`, both gitignored). The board and the LAN JSON never carry a Bearer token — only computed percentages and dates. Do not add auth to the collector or expose port 8787 outside the LAN without being asked; that's a deliberate v1 decision (see `docs/DECISOES.md`).
 

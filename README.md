@@ -18,7 +18,7 @@ ESP32 + ILI9488 + touch
     Wi-Fi  →  GET /usage  →  abas Inicio / Claude / Cursor / Info
 ```
 
-No simulador **Wokwi** a tela usa dados **mock** (sem Wi-Fi), para validar o layout.
+No simulador **Wokwi** a placa fala com o **mesmo coletor** do Mac, via Wi-Fi simulada + um gateway de rede local (`wokwigw`) — não é mock.
 
 ## O que você precisa
 
@@ -74,11 +74,19 @@ Ligue o XPT2046: `T_CS` no GPIO **21**, `T_IRQ` no **22**, CLK/MOSI/MISO iguais 
 
 ## Simular (Wokwi)
 
+O simulador precisa do coletor **e** de um gateway de rede local rodando (senão os cards mostram `coletor HTTP -1`):
+
+```bash
+./dev-wokwi.sh
+```
+
+Sobe os dois juntos (`Ctrl+C` encerra). Depois:
+
 ```bash
 pio run -e wokwi
 ```
 
-`Cmd+Shift+P` → **Wokwi: Start Simulator**. Tela 240×320 (ILI9341); a 3,5" física é 480×320.
+`Cmd+Shift+P` → **Wokwi: Start Simulator**. Tela 240×320 (ILI9341); a 3,5" física é 480×320. Detalhes do gateway: [`docs/FIRMWARE.md`](docs/FIRMWARE.md#rede-no-wokwi-wokwigw).
 
 O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, no serial, `n` `p` `0` `1` `2` `3`.
 
@@ -87,7 +95,7 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, n
 | Ambiente | Uso | Driver | Rede |
 | --- | --- | --- | --- |
 | `esp32dev` | Placa real 3,5" | ILI9488 320×480 | Wi-Fi + coletor |
-| `wokwi` | Simulador | ILI9341 240×320 | Dados mock |
+| `wokwi` | Simulador | ILI9341 240×320 | Wi-Fi simulada + coletor via `wokwigw` |
 
 `pio run` gera os dois. TFT_eSPI só via `build_flags` (`USER_SETUP_LOADED=1`).
 
@@ -102,6 +110,7 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, n
 | `src/secrets.h.example` | Wi-Fi e URL |
 | `docs/` | Plano, APIs, touch, contexto de IA |
 | `diagram.json` | Circuito Wokwi (+ botões) |
+| `dev-wokwi.sh` | Sobe coletor + `wokwigw` juntos pro simulador |
 
 ## Tela (touch)
 

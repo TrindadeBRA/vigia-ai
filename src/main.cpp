@@ -39,7 +39,10 @@ bool g_requestRefresh = false;
 bool g_requestCalibrate = false;
 String g_netLine = "";
 
-static uint32_t g_lastFetchMs = 0;
+uint32_t g_lastFetchMs = 0;
+uint32_t g_pollMs = USAGE_POLL_MS;
+bool g_hasFetchedOk = false;
+uint32_t g_lastFetchOkMs = 0;
 static bool g_wifiOnce = false;
 static uint32_t g_wifiRetryMs = 0;
 static bool g_wifiLogged = false;
@@ -62,6 +65,8 @@ static void applyMock() {
   g_snap.cursor.cycleEnd = "01/09";
   g_snap.cursor.plan = "pro";
   g_netLine = "simulador Wokwi";
+  g_hasFetchedOk = true;
+  g_lastFetchOkMs = millis();
 }
 
 static void logSnapshot(const char* why) {
@@ -147,6 +152,7 @@ static void updateNetLine() {
 }
 
 static void fetchUsage() {
+  g_lastFetchMs = millis();
   updateNetLine();
   Serial.println("coletor: buscando /usage");
   if (WiFi.status() != WL_CONNECTED) {
@@ -157,7 +163,7 @@ static void fetchUsage() {
     g_snap.cursor.ok = false;
     g_snap.cursor.error = "sem Wi-Fi";
     logSnapshot("wifi-down");
-    uiPaint();
+    uiRefreshData();
     return;
   }
 
@@ -175,7 +181,7 @@ static void fetchUsage() {
     g_snap.claude.ok = false;
     g_snap.claude.error = "USAGE_URL";
     logSnapshot("url");
-    uiPaint();
+    uiRefreshData();
     return;
   }
 
@@ -190,7 +196,7 @@ static void fetchUsage() {
     g_snap.cursor.error = "coletor HTTP " + String(code);
     http.end();
     logSnapshot("http-erro");
-    uiPaint();
+    uiRefreshData();
     return;
   }
 
@@ -198,8 +204,12 @@ static void fetchUsage() {
   http.end();
   Serial.printf("coletor: corpo %d bytes\n", body.length());
   g_snap.httpOk = parseUsageJson(body);
+  if (g_snap.httpOk) {
+    g_hasFetchedOk = true;
+    g_lastFetchOkMs = millis();
+  }
   logSnapshot(g_snap.httpOk ? "ok" : "parse");
-  uiPaint();
+  uiRefreshData();
 }
 
 static void ensureWifi() {
@@ -271,11 +281,13 @@ void setup() {
   inputBegin();
   g_lastFetchMs = 0;
   ensureWifi();
+  uiPaint();
 #endif
 }
 
 void loop() {
   inputPoll();
+  uiTickClock();
 
 #ifdef MOCK_USAGE
   if (g_requestRefresh) {
@@ -289,7 +301,7 @@ void loop() {
 #else
   ensureWifi();
   uint32_t now = millis();
-  bool due = (g_lastFetchMs == 0) || (now - g_lastFetchMs >= (uint32_t)USAGE_POLL_MS);
+  bool due = (g_lastFetchMs == 0) || (now - g_lastFetchMs >= g_pollMs);
   if (g_requestRefresh) {
     Serial.println("refresh pedido (tela/serial r)");
     due = true;
@@ -297,7 +309,6 @@ void loop() {
   }
   if (WiFi.status() == WL_CONNECTED && due) {
     fetchUsage();
-    g_lastFetchMs = millis();
   } else if (WiFi.status() != WL_CONNECTED && now - g_lastFetchMs > 5000) {
     Serial.printf("aguardando Wi-Fi (status=%d)\n", (int)WiFi.status());
     g_lastFetchMs = now;
@@ -307,7 +318,7 @@ void loop() {
     g_snap.cursor.ok = false;
     g_snap.cursor.error = "aguardando Wi-Fi";
     updateNetLine();
-    uiPaint();
+    uiRefreshData();
   }
   delay(20);
 #endif

@@ -21,7 +21,9 @@ curl -s http://127.0.0.1:8787/health
 curl -s http://127.0.0.1:8787/usage | python3 -m json.tool
 ```
 
-Na ESP32, `USAGE_URL` deve ser o **IP LAN do Mac**, não `127.0.0.1`.
+No Wokwi, `./dev-wokwi.sh` (raiz do repo) já sobe o coletor **e** o gateway de rede (`wokwigw`) juntos — ver [FIRMWARE.md](FIRMWARE.md#rede-no-wokwi-wokwigw).
+
+Na ESP32 física, `USAGE_URL` deve ser o **IP LAN do Mac**, não `127.0.0.1`.
 
 ```bash
 # macOS: IP na interface ativa (exemplo)

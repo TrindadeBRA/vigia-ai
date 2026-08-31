@@ -46,3 +46,7 @@ extern View g_view;
 extern bool g_requestRefresh;
 extern bool g_requestCalibrate;
 extern String g_netLine;
+extern uint32_t g_lastFetchMs;
+extern uint32_t g_pollMs;
+extern bool g_hasFetchedOk;
+extern uint32_t g_lastFetchOkMs;

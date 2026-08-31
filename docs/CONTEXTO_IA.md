@@ -27,7 +27,7 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 2. **Não altere o contrato JSON** sem atualizar `docs/CONTRATO_JSON.md` **e** o parser em `src/main.cpp`.
 3. Endpoints de cota são **não oficiais**. Trate 401/429/HTML como falha de um provedor; o outro deve continuar `ok` se possível.
 4. Cache **≥ 5 minutos** no coletor para Claude (`/api/oauth/usage` rate-limita).
-5. Ambiente **Wokwi** (`MOCK_USAGE`): UI com dados fictícios, **sem Wi-Fi**. Ambiente **esp32dev**: Wi-Fi + HTTP real.
+5. Ambiente **Wokwi**: Wi-Fi simulada + coletor real via `wokwigw` (`docs/ARQUITETURA.md#fluxo-wokwi`), igual ao **esp32dev** (Wi-Fi + HTTP real). `MOCK_USAGE` existe no código mas nenhum env compila com ele hoje — não presumir dados fictícios no simulador.
 6. GPIO **2** é `TFT_DC`. Não usar como LED de heartbeat.
 7. Não commitar `.env`, `src/secrets.h` com senha real, nem dumps de `state.vscdb` / `.credentials.json`.
 8. Touch: XPT2046 no hardware (`TOUCH_CS`); Wokwi usa FT6206 no `board-ili9341-cap-touch` (I2C 21/22) e botões GPIO 13/5. Não trocar o controlador da placa real.
@@ -48,7 +48,7 @@ diagram.json
 ## Como validar
 
 - Coletor: `python3 collector/server.py` e `curl -s http://127.0.0.1:8787/usage`
-- Firmware simulado: `pio run -e wokwi` e Wokwi Simulator
+- Firmware simulado: `./dev-wokwi.sh` (sobe coletor + `wokwigw`), `pio run -e wokwi`, depois Wokwi Simulator
 - Hardware: `src/secrets.h` preenchido, `pio run -e esp32dev -t upload`
 
 ## Tom

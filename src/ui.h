@@ -16,9 +16,12 @@ constexpr uint16_t COL_ACCENT = 0xC50B;      // acento bronze (destaque, aba ati
 constexpr uint16_t COL_GOOD = 0x8DF2;        // verde-sálvia (uso baixo)
 constexpr uint16_t COL_WARN = 0xE52B;        // âmbar (uso alto)
 constexpr uint16_t COL_BAD = 0xDB6D;         // terracota (uso crítico)
+constexpr uint16_t COL_BADGE_YELLOW = 0xEDC4; // selo de contagem regressiva no header
 
 void uiInit();
 void uiPaint();
+void uiRefreshData();
+void uiTickClock();
 void uiNext();
 void uiPrev();
 void uiSetView(View v);

@@ -6,14 +6,27 @@
 | --- | --- | --- |
 | Coletor | Mac (Python 3, stdlib) | Lê tokens, chama Anthropic/Cursor, cache, HTTP JSON |
 | Firmware | ESP32 | Wi-Fi, GET, desenho TFT |
-| Wokwi | Simulador | Mesmo sketch com `MOCK_USAGE`, sem rede |
+| Wokwi | Simulador | Mesmo sketch, Wi-Fi simulada real (`WOKWI_SIM`) até o coletor no Mac |
+| wokwigw | Gateway local (Mac) | Ponte entre a rede Wi-Fi simulada do Wokwi e a LAN real, porta 9011 |
 
 ## Fluxo (hardware)
 
 1. Usuário inicia `python3 collector/server.py` no Mac (mesma LAN da ESP32).
 2. Coletor, no máximo a cada `CACHE_TTL_SECONDS` (padrão 300), busca cotas.
 3. ESP32 conecta no Wi-Fi, faz GET em `USAGE_URL`, parseia JSON, redesenha.
-4. Poll a cada `USAGE_POLL_MS` (padrão 5 min). Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
+4. Poll a cada `USAGE_POLL_MS` (padrão 15 s). Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
+
+Poll rápido (15 s) só faz a placa checar com mais frequência — o dado em si só muda a cada `CACHE_TTL_SECONDS` porque é o coletor quem cacheia, não a placa.
+
+## Fluxo (Wokwi)
+
+O simulador roda a **mesma** lógica de rede do hardware (`WOKWI_SIM`, não `MOCK_USAGE` — esse define existe no código mas não é usado por nenhum env hoje). Para o ESP32 simulado alcançar o coletor no Mac:
+
+1. `wokwi.toml` aponta `[net] gateway = "ws://localhost:9011"` — sem isso o simulador usaria a rede simulada padrão da Wokwi (sem saída pra LAN local).
+2. `.tools/wokwigw` (binário do [Wokwi IoT Gateway](https://github.com/wokwi/wokwigw)) precisa estar rodando, escutando em `ws://localhost:9011`.
+3. Com o gateway de pé, `host.wokwi.internal` dentro do simulador resolve para o `localhost` do Mac — por isso `USAGE_URL` do env `wokwi` é `http://host.wokwi.internal:8787/usage`.
+
+`./dev-wokwi.sh` na raiz do repo sobe o coletor **e** o `wokwigw` juntos (ver [FIRMWARE.md](FIRMWARE.md)).
 
 ## Confiança e rede
 
@@ -33,4 +46,4 @@
 `platformio.ini` define flags. `src/main.cpp` é único:
 
 - `esp32dev`: ILI9488 320×480, Wi-Fi real
-- `wokwi`: ILI9341 240×320, `MOCK_USAGE` (dados fixos)
+- `wokwi`: ILI9341 240×320, Wi-Fi simulada + coletor real via `wokwigw`

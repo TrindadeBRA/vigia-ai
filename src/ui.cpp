@@ -135,6 +135,69 @@ static void drawBar(int x, int y, int w, int h, float pct) {
   tft.fillRoundRect(x, y, fill, h, r, barColor(pct));
 }
 
+// Segundos ate o proximo refresh automatico, com base no mesmo relogio que
+// main.cpp usa pra decidir se ja e hora de buscar /usage. -1 quando nao ha
+// polling ativo (g_pollMs == 0).
+static int countdownSeconds() {
+  if (g_pollMs == 0) {
+    return -1;
+  }
+  uint32_t elapsed = millis() - g_lastFetchMs;
+  uint32_t remainMs = (elapsed < g_pollMs) ? (g_pollMs - elapsed) : 0;
+  return (int)((remainMs + 999) / 1000);
+}
+
+static const uint32_t FETCH_OK_FLASH_MS = 1500;
+
+static bool showFetchOkCheck() {
+  return g_hasFetchedOk && (millis() - g_lastFetchOkMs < FETCH_OK_FLASH_MS);
+}
+
+// -2 = mostrando o check de sucesso (estado proprio, nao depende do segundo);
+// caso contrario, o proprio valor do contador. Usado pra saber quando o
+// header precisa ser redesenhado.
+static int headerDisplayKey(int secs, bool showCheck) {
+  return showCheck ? -2 : secs;
+}
+
+static int g_lastHeaderKey = -1000000;
+
+static void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor) {
+  for (int dy = 0; dy <= 1; dy++) {
+    tft.drawLine(cx - r / 2, cy + dy, cx - r / 6, cy + r / 2 - 2 + dy, strokeColor);
+    tft.drawLine(cx - r / 6, cy + r / 2 - 2 + dy, cx + r / 2, cy - r / 2 + 1 + dy, strokeColor);
+  }
+}
+
+// Selo circular no canto do header: enquanto espera o proximo refresh mostra
+// a contagem regressiva em um circulo amarelo; nos ~1.5s apos um refresh
+// bem-sucedido, mostra um check verde no lugar do numero.
+static void drawCountdownBadge(int secs) {
+  const int W = tft.width();
+  const int r = 11;
+  const int cx = W - 8 - r;
+  const int cy = g_headerH / 2;
+  bool showCheck = showFetchOkCheck();
+
+  if (secs < 0 && !showCheck) {
+    return;
+  }
+
+  uint16_t bg = showCheck ? COL_GOOD : COL_BADGE_YELLOW;
+  tft.fillCircle(cx, cy, r, bg);
+  tft.drawCircle(cx, cy, r, COL_BG);
+
+  if (showCheck) {
+    drawCheckIcon(cx, cy, r, COL_BG);
+  } else {
+    char buf[4];
+    snprintf(buf, sizeof(buf), "%d", secs > 99 ? 99 : secs);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(COL_BG, bg);
+    tft.drawString(buf, cx, cy + 1, 2);
+  }
+}
+
 static void drawHeader() {
   const int W = tft.width();
   tft.fillRect(0, 0, W, g_headerH, COL_BG);
@@ -147,10 +210,17 @@ static void drawHeader() {
   tft.setTextColor(COL_ACCENT, COL_BG);
   tft.drawString("-IA", 8 + wControl, 8, 2);
 
+  int secs = countdownSeconds();
+  bool showCheck = showFetchOkCheck();
+  g_lastHeaderKey = headerDisplayKey(secs, showCheck);
+
+  const int badgeSpace = secs >= 0 || showCheck ? 34 : 0;
+  String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 10) : "---";
   tft.setTextDatum(TR_DATUM);
   tft.setTextColor(COL_TEXT_DIM, COL_BG);
-  String right = g_snap.statusLine.length() ? g_snap.statusLine : "---";
-  tft.drawString(right.substring(0, 18), W - 8, 8, 2);
+  tft.drawString(right, W - 8 - badgeSpace, 8, 2);
+
+  drawCountdownBadge(secs);
 }
 
 static const char* navLabel(uint8_t i) {
@@ -439,6 +509,16 @@ void uiInit() {
   g_view = VIEW_HOME;
 }
 
+// Redesenha so o header quando o contador (ou o check de sucesso) muda,
+// sem repintar a tela inteira — chamado a cada volta do loop() em main.cpp.
+void uiTickClock() {
+  int key = headerDisplayKey(countdownSeconds(), showFetchOkCheck());
+  if (key == g_lastHeaderKey) {
+    return;
+  }
+  drawHeader();
+}
+
 void uiSetView(View v) {
   if (v >= VIEW_COUNT) {
     return;
@@ -455,8 +535,12 @@ void uiPrev() {
   uiSetView((View)((g_view + VIEW_COUNT - 1) % VIEW_COUNT));
 }
 
-void uiPaint() {
-  tft.fillScreen(COL_BG);
+// Redesenha header, nav e a view atual sem limpar a tela inteira primeiro.
+// Cada elemento ja preenche seu proprio fundo antes de desenhar por cima, e a
+// geometria de um mesmo view nao muda entre chamadas — por isso e seguro
+// pra atualizacoes periodicas de dado (refresh automatico/manual) e evita o
+// "pisca" de um fillScreen a cada poucos segundos.
+void uiRefreshData() {
   drawHeader();
   drawNav();
   switch (g_view) {
@@ -473,6 +557,14 @@ void uiPaint() {
       paintHome();
       break;
   }
+}
+
+// Troca de view / boot / pos-calibracao: limpa a tela inteira antes, porque
+// views diferentes ocupam areas levemente diferentes (ex.: 2 cards vs 1) e um
+// residuo da tela anterior poderia ficar visivel sem o fillScreen.
+void uiPaint() {
+  tft.fillScreen(COL_BG);
+  uiRefreshData();
 }
 
 void uiHandleSwipe(int16_t dx) {

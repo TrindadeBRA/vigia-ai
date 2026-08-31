@@ -25,8 +25,10 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
     "ok": true,
     "error": null,
     "percent": 35.0,
+    "other_percent": 12.0,
     "used_cents": 700,
     "limit_cents": 2000,
+    "bonus_cents": 0,
     "cycle_end": "2026-09-15T00:00:00Z",
     "plan": "pro"
   }
@@ -60,9 +62,11 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | --- | --- | --- |
 | `ok` | bool | |
 | `error` | string ou `null` | |
-| `percent` | number ou `null` | Uso do plano no ciclo (0–100) |
-| `used_cents` | number ou `null` | Gasto em centavos de USD |
-| `limit_cents` | number ou `null` | Teto incluso em centavos |
+| `percent` | number ou `null` | "Cursor Models" no dashboard (auto), uso do plano no ciclo (0–100) |
+| `other_percent` | number ou `null` | "Other Models" no dashboard (api), segunda barra na tela |
+| `used_cents` | number ou `null` | Gasto on-demand em centavos de USD |
+| `limit_cents` | number ou `null` | Teto on-demand incluso em centavos de USD |
+| `bonus_cents` | number ou `null` | Crédito extra, se houver |
 | `cycle_end` | string ou `null` | Fim do ciclo de fatura |
 | `plan` | string ou `null` | Ex.: `pro`, `ultra` |
 

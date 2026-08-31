@@ -17,7 +17,7 @@ Mostrar na TFT 3,5" (ESP32) o **uso restante do ciclo** das assinaturas Claude e
 | --- | --- | --- |
 | 0 | Feito (antes) | Hello World TFT, dois envs PlatformIO, Wokwi |
 | 1 | Feito neste plano | Coletor Python: tokens locais / `.env`, `GET /usage` |
-| 2 | Feito neste plano | Firmware: mock no Wokwi; Wi-Fi + barras no hardware |
+| 2 | Feito neste plano | Firmware: Wi-Fi + barras no hardware e no Wokwi (via `wokwigw`) |
 | 3 | Feito | Touch XPT2046, 4 views, calibração NVS; Wokwi com botões |
 | 4 | Depois, se pedir | Mais provedores, NTP, auto-IP |
 
@@ -36,7 +36,7 @@ A placa só conhece Wi-Fi e a URL do coletor (`USAGE_URL`).
 - [x] JSON único com `claude` e `cursor`, cada um com `ok` / `error`
 - [x] Segredos fora do git (`.env`, `secrets.h`)
 - [x] Tela com duas barras (Claude sessão+semana; Cursor plano)
-- [x] Wokwi mostra o layout sem rede
+- [x] Wokwi fala com o coletor de verdade via `wokwigw` (`./dev-wokwi.sh`)
 - [x] README + `docs/` para humanos e agentes
 - [ ] Hardware físico conferido pelo usuário (precisa da placa ligada e do coletor no Mac)
 

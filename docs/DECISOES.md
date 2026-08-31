@@ -16,9 +16,9 @@ Mesma fonte do CLI/IDE. HTML do dashboard quebra mais. Risco: contrato não ofic
 
 Firmware pequeno: um GET, um parse. Provedor com `ok: false` não derruba o HTTP.
 
-## Mock no Wokwi
+## Wokwi fala com o coletor de verdade (via `wokwigw`)
 
-Wokwi não alcança o coletor do Mac de forma confiável no fluxo atual. Mock garante que o layout da UI evolui sem placa.
+Tentativa inicial era mock (`MOCK_USAGE`) porque o Wokwi não alcançava o coletor do Mac de forma confiável. Resolvido com o [Wokwi IoT Gateway](https://github.com/wokwi/wokwigw) local (`wokwi.toml` → `ws://localhost:9011`, ver [ARQUITETURA.md](ARQUITETURA.md#fluxo-wokwi)) — o simulador usa a mesma Wi-Fi simulada do hardware e fala com `collector/server.py` de verdade. `MOCK_USAGE` ainda existe no código como fallback caso o gateway não esteja disponível, mas nenhum env compila com ele hoje.
 
 ## GPIO 2 sem blink
 
@@ -34,7 +34,7 @@ Um CS extra (GPIO 21) evita biblioteca à parte. Calibração na NVS, não no sk
 
 ## Wokwi com toque capacitivo (não é o hardware)
 
-A placa real é XPT2046 (SPI, `T_CS` 21). O Wokwi não tem XPT2046; usa `board-ili9341-cap-touch` (FT6206 I2C) só para clicar no simulador. O caminho de código é `MOCK_USAGE`.
+A placa real é XPT2046 (SPI, `T_CS` 21). O Wokwi não tem XPT2046; usa `board-ili9341-cap-touch` (FT6206 I2C) só para clicar no simulador. O caminho de código é `WOKWI_SIM` (`src/input.cpp`), não `MOCK_USAGE` — os dados continuam vindo do coletor de verdade.
 
 ## Sem autenticação no coletor (v1)
 
