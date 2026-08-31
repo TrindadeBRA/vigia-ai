@@ -18,4 +18,4 @@ Claude and Cursor usage endpoints are **not** public contracts. Treat 401/429 as
 
 ## Rate limits
 
-There is **no cache**. Each `GET /usage` hits the upstream APIs. The Claude OAuth usage endpoint rate-limits if hammered; keep `USAGE_POLL_MS` around 60–180 s.
+There is **one** upstream cycle on the collector (`USAGE_INTERVAL_S`, default 60 s) pushed to all SSE clients. `GET /usage` forces an extra cycle. The Claude OAuth usage endpoint rate-limits if hammered; keep the interval around 60–180 s.

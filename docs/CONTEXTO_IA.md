@@ -21,7 +21,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 ## O que é este projeto
 
-**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **Cursor**, **OpenRouter** e **DeepSeek**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. O firmware faz HTTP GET nesse JSON. O frontend React é o painel (`/`) e o mostrador (`/display`).
+**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **Cursor**, **OpenRouter** e **DeepSeek**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. Firmware e `/display` escutam `GET /events` (SSE). `GET /usage` é o mesmo JSON, na hora. O frontend React é o painel (`/`) e o mostrador (`/display`).
 
 Idioma da UI e da documentação: **português (Brasil)**. Código (identificadores) em inglês.
 
@@ -30,7 +30,7 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 1. **Tokens nunca vão no firmware**, no `diagram.json`, nem em commit. Só `backend/data/config.json` (gitignored) ou arquivos locais do Claude/Cursor.
 2. **Não altere o contrato JSON** sem atualizar `docs/CONTRATO_JSON.md`, os modelos Pydantic em `backend/app/schemas.py` **e** o parser em `firmware/src/usage_client.cpp`.
 3. Endpoints de cota são **não oficiais**. Trate 401/429/HTML como falha de um provedor; o outro deve continuar `ok` se possível.
-4. **Coletor sem cache**: todo `GET /usage` chama as APIs na hora. O poll da placa (`USAGE_POLL_MS`, padrão 60 s) é o intervalo real. Não reintroduza cache sem o usuário pedir.
+4. **Um ciclo de APIs no coletor**: o hub consulta os provedores a cada `USAGE_INTERVAL_S` (padrão 60 s) e empurra o JSON por `GET /events` (SSE). `GET /usage` força um ciclo extra e avisa os inscritos. Não volte ao poll por cliente (placa + cada aba de `/display`).
 5. Ambiente **Wokwi**: Wi-Fi simulada + coletor real via `wokwigw`. Mock só como flag no painel.
 6. GPIO **2** é `TFT_DC`. Não usar como LED de heartbeat.
 7. Não commitar `backend/data/config.json`, `firmware/src/secrets.h` com senha real, nem dumps de `state.vscdb` / `.credentials.json`.
@@ -45,7 +45,7 @@ backend/app/schemas.py        contrato OpenAPI
 backend/app/providers/        claude, cursor, openrouter, deepseek
 backend/app/local/            Keychain, credentials, state.vscdb
 frontend/src/pages/Panel.tsx   configuração
-frontend/src/pages/Display.tsx mostrador (GET /usage)
+frontend/src/pages/Display.tsx mostrador (SSE GET /events)
 firmware/src/                  sketch ESP32
 firmware/platformio.ini
 ./dev                          único script
@@ -55,5 +55,5 @@ firmware/platformio.ini
 
 - `./dev up` — painel em http://127.0.0.1:5173/ ; Swagger em http://127.0.0.1:8787/docs
 - `./dev test`
-- `./dev sim` e Wokwi: Start Simulator
+- `./dev wokwi` e Wokwi: Start Simulator
 - Hardware: `firmware/src/secrets.h` + `./dev firmware flash`

@@ -61,6 +61,8 @@ static const UiStrings kPt = {
     "sem dados",
     "Toque os cantos",
     "Nenhum provedor configurado. Preencha no painel do coletor.",
+    "Aguardando Wi-Fi. No Wokwi rode ./dev wokwi",
+    "Aguardando o coletor...",
 };
 
 static const UiStrings kEn = {
@@ -122,6 +124,8 @@ static const UiStrings kEn = {
     "no data",
     "Tap the corners",
     "No provider configured. Fill one in on the collector panel.",
+    "Waiting for Wi-Fi. On Wokwi run ./dev wokwi",
+    "Waiting for the collector...",
 };
 
 static const UiStrings kEs = {
@@ -182,7 +186,9 @@ static const UiStrings kEs = {
     "Consumo de IAs en tiempo real",
     "sin datos",
     "Toca las esquinas",
-    "Ningun proveedor configurado. Complétalo en el panel del colector.",
+    "Ningun proveedor configurado. Completalo en el panel del colector.",
+    "Esperando Wi-Fi. En Wokwi use ./dev wokwi",
+    "Esperando al colector...",
 };
 
 const UiStrings& uiTr() {

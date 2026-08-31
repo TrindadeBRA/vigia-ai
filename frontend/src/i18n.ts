@@ -54,7 +54,7 @@ type Strings = {
   errorsCount: (n: number) => string;
   agoNow: string;
   agoSecs: (s: number) => string;
-  autoNote: (s: number) => string;
+  autoNote: () => string;
   fetchFail: string;
   now: string;
   closeSettings: string;
@@ -109,7 +109,7 @@ export const STR: Record<Lang, Strings> = {
     errorsCount: (n) => (n === 1 ? "1 provedor com erro" : `${n} provedores com erro`),
     agoNow: "agora mesmo",
     agoSecs: (s) => `atualizado há ${s}s`,
-    autoNote: (s) => `Atualiza sozinho a cada ${s}s. Toque para forçar agora.`,
+    autoNote: () => "Ao vivo (SSE). Toque para forçar uma consulta agora.",
     fetchFail: "Não foi possível falar com o coletor.",
     now: "Agora",
     closeSettings: "Fechar",
@@ -162,7 +162,7 @@ export const STR: Record<Lang, Strings> = {
     errorsCount: (n) => (n === 1 ? "1 provider failing" : `${n} providers failing`),
     agoNow: "just now",
     agoSecs: (s) => `updated ${s}s ago`,
-    autoNote: (s) => `Auto-refreshes every ${s}s. Tap to force now.`,
+    autoNote: () => "Live (SSE). Tap to force a fetch now.",
     fetchFail: "Could not reach the collector.",
     now: "Now",
     closeSettings: "Close",
@@ -215,7 +215,7 @@ export const STR: Record<Lang, Strings> = {
     errorsCount: (n) => (n === 1 ? "1 proveedor con error" : `${n} proveedores con error`),
     agoNow: "recién",
     agoSecs: (s) => `actualizado hace ${s}s`,
-    autoNote: (s) => `Se actualiza solo cada ${s}s. Toca para forzar ahora.`,
+    autoNote: () => "En vivo (SSE). Toca para forzar una consulta ahora.",
     fetchFail: "No se pudo contactar al colector.",
     now: "Ahora",
     closeSettings: "Cerrar",

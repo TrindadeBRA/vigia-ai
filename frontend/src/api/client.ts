@@ -6,6 +6,29 @@ export async function fetchUsage(): Promise<UsagePayload> {
   return res.json() as Promise<UsagePayload>;
 }
 
+/** Stream SSE do contrato JSON. O browser reconecta sozinho. */
+export function openUsageEvents(onPayload: (data: UsagePayload) => void, onFail: () => void): () => void {
+  const es = new EventSource("/events");
+  const onUsage = (ev: MessageEvent<string>) => {
+    try {
+      onPayload(JSON.parse(ev.data) as UsagePayload);
+    } catch {
+      onFail();
+    }
+  };
+  es.addEventListener("usage", onUsage as EventListener);
+  es.onmessage = onUsage;
+  es.onerror = () => {
+    if (es.readyState === EventSource.CLOSED) onFail();
+  };
+  return () => {
+    es.removeEventListener("usage", onUsage as EventListener);
+    es.onmessage = null;
+    es.onerror = null;
+    es.close();
+  };
+}
+
 export async function fetchConfig(): Promise<ConfigPublic> {
   const res = await fetch("/api/config", { cache: "no-store" });
   if (!res.ok) throw new Error(`config HTTP ${res.status}`);

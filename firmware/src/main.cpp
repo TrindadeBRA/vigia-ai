@@ -39,10 +39,10 @@ void setup() {
   uiShowSplash();
 
 #ifdef WOKWI_SIM
-  Serial.println("=== VIGIA AI Wokwi (coletor real) ===");
-  Serial.println("Wi-Fi Wokwi-GUEST -> http://host.wokwi.internal:8787/usage");
+  Serial.println("=== VIGIA AI Wokwi (coletor real, SSE) ===");
+  Serial.println("Wi-Fi Wokwi-GUEST -> http://host.wokwi.internal:8787/events");
 #else
-  Serial.println("=== VIGIA AI hardware ===");
+  Serial.println("=== VIGIA AI hardware (SSE) ===");
 #endif
   inputBegin();
   g_lastFetchMs = 0;
@@ -57,15 +57,14 @@ void loop() {
 
   usageClientEnsureWifi();
   uint32_t now = millis();
-  bool due = (g_lastFetchMs == 0) || (now - g_lastFetchMs >= g_pollMs);
-  if (g_requestRefresh) {
-    Serial.println("refresh pedido (tela/serial r)");
-    due = true;
-    g_requestRefresh = false;
-  }
-  if (WiFi.status() == WL_CONNECTED && due) {
-    usageClientFetch();
-  } else if (WiFi.status() != WL_CONNECTED && now - g_lastFetchMs > 5000) {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (g_requestRefresh) {
+      Serial.println("refresh pedido (tela/serial r)");
+      g_requestRefresh = false;
+      usageClientFetch();
+    }
+    usageClientPoll();
+  } else if (now - g_lastFetchMs > 5000) {
     Serial.printf("aguardando Wi-Fi (status=%d)\n", (int)WiFi.status());
     g_lastFetchMs = now;
     g_snap.statusLine = "Wi-Fi";

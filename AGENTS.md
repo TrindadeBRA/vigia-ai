@@ -4,4 +4,4 @@ Leia **[`docs/CONTEXTO_IA.md`](docs/CONTEXTO_IA.md)** antes de alterar o reposit
 
 Reescrita / estrutura alvo: [`docs/REESCRITA.md`](docs/REESCRITA.md).
 
-Comandos: `./dev up`, `./dev test`, `./dev sim`, `./dev firmware flash`.
+Comandos: `./dev up`, `./dev test`, `./dev wokwi`, `./dev firmware flash`.

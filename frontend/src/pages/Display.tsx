@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type SVGProps } from "react";
-import { fetchUsage } from "../api/client";
+import { fetchUsage, openUsageEvents } from "../api/client";
 import type { CreditsAccount, CursorAccount, ClaudeAccount, UsagePayload } from "../api/types";
 import { FETCH_OK_FLASH_MS, POLL_MS, barColor, barGlow, clamp, fmtClock, fmtPct, fmtRemain, fmtUsd, fmtWhen, prefersReducedMotion } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
@@ -569,7 +569,7 @@ function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetch
         </div>
         <div className="section-title">{t.refreshSection}</div>
         <button className="btn-primary" onClick={onRefresh}>{refreshing ? "…" : t.refreshNow}</button>
-        <div className="status-note">{t.autoNote(POLL_MS / 1000)}</div>
+        <div className="status-note">{t.autoNote()}</div>
         {fetchFailed ? <div className="fetch-fail-note">{t.fetchFail}</div> : null}
       </div>
     </>
@@ -610,23 +610,36 @@ export default function Display() {
     setRefreshing(true);
     try {
       const json = await fetchUsage();
-      setData(json);
-      setFetchFailed(false);
-      setOkFlashAt(Date.now());
-      const serverMs = Date.parse(json.updated_at);
-      if (!Number.isNaN(serverMs)) setDriftMs(serverMs - Date.now());
+      applyPayload(json);
     } catch {
       setFetchFailed(true);
     } finally {
       setRefreshing(false);
-      setNextFetchAt(Date.now() + POLL_MS);
     }
   }
 
+  function applyPayload(json: UsagePayload) {
+    setData(json);
+    setFetchFailed(false);
+    setOkFlashAt(Date.now());
+    const serverMs = Date.parse(json.updated_at);
+    if (!Number.isNaN(serverMs)) setDriftMs(serverMs - Date.now());
+    setNextFetchAt(Date.now() + POLL_MS);
+  }
+
   useEffect(() => {
-    void loadUsage();
-    const id = setInterval(() => void loadUsage(), POLL_MS);
-    return () => clearInterval(id);
+    let got = false;
+    const stop = openUsageEvents((json) => {
+      got = true;
+      applyPayload(json);
+    }, () => setFetchFailed(true));
+    const watchdog = window.setTimeout(() => {
+      if (!got) setFetchFailed(true);
+    }, 12000);
+    return () => {
+      window.clearTimeout(watchdog);
+      stop();
+    };
   }, []);
 
   useEffect(() => {

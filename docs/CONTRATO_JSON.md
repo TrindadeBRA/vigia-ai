@@ -2,7 +2,9 @@
 
 O firmware **depende** deste formato. Mudança = atualizar este doc, os modelos em `backend/app/schemas.py` **e** o parser em `firmware/src/usage_client.cpp`.
 
-`Content-Type: application/json; charset=utf-8`
+O JSON viaja em `GET /usage` (uma vez) e em `GET /events` (SSE, `event: usage`). O payload é o mesmo.
+
+`Content-Type` em `/usage`: `application/json; charset=utf-8`. Em `/events`: `text/event-stream` (`event: usage` + `data:` o JSON).
 
 **v2**: cada provedor (`claude`, `cursor`, `openrouter`, `deepseek`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
 
@@ -170,7 +172,10 @@ Vem de `GET /user/balance` — saldo da conta dessa key; ver `docs/APIS_DEEPSEEK
 | Método | Caminho | Corpo |
 | --- | --- | --- |
 | GET | `/health` | `{"ok":true}` |
-| GET | `/usage` | contrato acima |
+| GET | `/usage` | contrato acima — consulta as APIs **na hora** e avisa os clientes SSE |
+| GET | `/events` | `text/event-stream`. `event: usage` + `data:` o mesmo JSON. Comentários `: ping` ~15 s. |
+
+A placa e `/display` **escutam** `/events`. O `USAGE_URL` no `secrets.h` continua `http://IP:8787/usage`; o firmware troca o path por `/events`. `GET /usage` permanece para `curl`, o botão “atualizar” e o Swagger.
 
 ## Erro parcial
 

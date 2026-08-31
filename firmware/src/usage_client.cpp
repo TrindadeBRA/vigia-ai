@@ -212,9 +212,176 @@ static void updateNetLine() {
   }
 }
 
+static String usageEventsUrl() {
+  String u = USAGE_URL;
+  if (u.endsWith("/usage")) {
+    u.remove(u.length() - 6);
+    u += "/events";
+    return u;
+  }
+  if (u.endsWith("/events")) {
+    return u;
+  }
+  if (!u.endsWith("/")) {
+    u += "/";
+  }
+  u += "events";
+  return u;
+}
+
+static HTTPClient g_http;
+static WiFiClient* g_stream = nullptr;
+static bool g_sseOpen = false;
+static String g_sseLine;
+static String g_sseData;
+static uint32_t g_sseLastByteMs = 0;
+static uint32_t g_sseRetryAt = 0;
+static uint32_t g_sseRetryWait = 2000;
+
+#ifndef USAGE_POLL_MS
+#define USAGE_POLL_MS 60000
+#endif
+#ifndef SSE_IDLE_MS
+#define SSE_IDLE_MS (USAGE_POLL_MS + 30000)
+#endif
+
+static void sseClose() {
+  g_stream = nullptr;
+  if (g_sseOpen) {
+    g_http.end();
+    g_sseOpen = false;
+  }
+  g_sseLine = "";
+  g_sseData = "";
+}
+
+static void sseHandleLine(const String& raw) {
+  String line = raw;
+  if (line.endsWith("\r")) {
+    line.remove(line.length() - 1);
+  }
+  if (line.length() == 0) {
+    if (g_sseData.length()) {
+      Serial.printf("coletor SSE: %d bytes\n", g_sseData.length());
+      g_snap.httpOk = parseUsageJson(g_sseData);
+      if (g_snap.httpOk) {
+        g_hasFetchedOk = true;
+        g_lastFetchOkMs = millis();
+      }
+      usageClientLogSnapshot(g_snap.httpOk ? "sse-ok" : "sse-parse");
+      g_lastFetchMs = millis();
+      uiRefreshData();
+      g_sseData = "";
+    }
+    return;
+  }
+  if (line[0] == ':') {
+    return;
+  }
+  if (line.startsWith("data:")) {
+    String chunk = line.substring(5);
+    if (chunk.startsWith(" ")) {
+      chunk.remove(0, 1);
+    }
+    if (g_sseData.length()) {
+      g_sseData += "\n";
+    }
+    g_sseData += chunk;
+  }
+}
+
+static void sseOpen() {
+  sseClose();
+  if (WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+  String url = usageEventsUrl();
+  Serial.printf("coletor SSE: conectando %s\n", url.c_str());
+#ifdef WOKWI_SIM
+  g_http.setTimeout(20000);
+  g_http.setConnectTimeout(15000);
+#else
+  g_http.setTimeout(30000);
+  g_http.setConnectTimeout(5000);
+#endif
+  if (!g_http.begin(url)) {
+    Serial.println("coletor SSE: http.begin falhou");
+    g_snap.statusLine = "URL";
+    markAllAccountsFailed("USAGE_URL");
+    g_lastFetchMs = millis();
+    uiRefreshData();
+    return;
+  }
+  g_http.addHeader("Accept", "text/event-stream");
+  g_http.addHeader("Cache-Control", "no-cache");
+  g_http.useHTTP10(true);
+  int code = g_http.GET();
+  Serial.printf("coletor SSE GET -> HTTP %d\n", code);
+  if (code != 200) {
+    g_snap.httpOk = false;
+    g_snap.statusLine = "HTTP " + String(code);
+    markAllAccountsFailed(("coletor HTTP " + String(code)).c_str());
+    g_http.end();
+    g_lastFetchMs = millis();
+    uiRefreshData();
+    return;
+  }
+  g_stream = g_http.getStreamPtr();
+  g_sseOpen = true;
+  g_sseLastByteMs = millis();
+  g_sseRetryWait = 2000;
+}
+
+void usageClientPoll() {
+  uint32_t now = millis();
+  if (!g_sseOpen) {
+    if (now < g_sseRetryAt) {
+      return;
+    }
+    sseOpen();
+    if (!g_sseOpen) {
+      g_sseRetryAt = now + g_sseRetryWait;
+      if (g_sseRetryWait < 30000) {
+        g_sseRetryWait *= 2;
+      }
+    }
+    return;
+  }
+  if (!g_http.connected() || g_stream == nullptr) {
+    Serial.println("coletor SSE: caiu, reconecta");
+    sseClose();
+    g_sseRetryAt = now + g_sseRetryWait;
+    return;
+  }
+  if (now - g_sseLastByteMs > SSE_IDLE_MS) {
+    Serial.println("coletor SSE: silêncio demais, reconecta");
+    sseClose();
+    g_sseRetryAt = now + 1000;
+    return;
+  }
+  int n = 0;
+  while (g_stream->available() && n < 512) {
+    char c = (char)g_stream->read();
+    g_sseLastByteMs = now;
+    n++;
+    if (c == '\n') {
+      sseHandleLine(g_sseLine);
+      g_sseLine = "";
+    } else {
+      g_sseLine += c;
+      if (g_sseLine.length() > 12000) {
+        Serial.println("coletor SSE: linha enorme, descarta");
+        sseClose();
+        g_sseRetryAt = now + 2000;
+        return;
+      }
+    }
+  }
+}
+
 void usageClientFetch() {
   updateNetLine();
-  Serial.println("coletor: buscando /usage");
+  Serial.println("coletor: GET /usage (refresh)");
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("coletor: sem Wi-Fi, aborta GET");
     g_snap.statusLine = "Wi-Fi";
@@ -225,6 +392,7 @@ void usageClientFetch() {
     return;
   }
 
+  sseClose();
   HTTPClient http;
 #ifdef WOKWI_SIM
   http.setTimeout(20000);

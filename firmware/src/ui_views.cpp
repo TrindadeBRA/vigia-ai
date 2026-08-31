@@ -84,9 +84,8 @@ int g_acctPagerRightX1 = 0;
 int g_acctPagerY = 0;
 int g_acctPagerH = 0;
 
-// Segundos ate o proximo refresh automatico, com base no mesmo relogio que
-// main.cpp usa pra decidir se ja e hora de buscar /usage. -1 quando nao ha
-// polling ativo (g_pollMs == 0).
+// Segundos ate o proximo ciclo do coletor (USAGE_INTERVAL), a partir do
+// ultimo evento SSE / GET /usage. -1 quando g_pollMs == 0.
 int countdownSeconds() {
   if (g_pollMs == 0) {
     return -1;
@@ -574,6 +573,16 @@ static void paintHomeMetric(int x, int y, int w, const char* label, float pct, c
   tft.drawString(s, x, y + labelH + 1 + barH + 1, font);
 }
 
+static const char* emptyProvidersMsg() {
+  if (!g_hasFetchedOk) {
+    if (g_snap.statusLine == "Wi-Fi") {
+      return uiTr().waitingWifi;
+    }
+    return uiTr().waitingCollector;
+  }
+  return uiTr().noProviders;
+}
+
 // Home em lista: um card empilhado por *tipo* de provedor com pelo menos uma
 // conta (0 a 4) — não um card por conta. Provedor com mais de uma conta
 // mostra a que mais precisa de atencao (claudeWorstIdx() etc.), com "+N" no
@@ -600,7 +609,7 @@ static void paintHomeList() {
 
   g_homeCardCount = 0;
   if (n == 0) {
-    drawErrorWrapped(pad, bodyTop, cardW, uiTr().noProviders, COL_BG, 2);
+    drawErrorWrapped(pad, bodyTop, cardW, emptyProvidersMsg(), COL_BG, 2);
     return;
   }
 
@@ -805,7 +814,7 @@ static void paintHomeGrid() {
 
   g_homeCardCount = 0;
   if (n == 0) {
-    drawErrorWrapped(pad, bodyTop, W - padInner * 2, uiTr().noProviders, COL_BG, 2);
+    drawErrorWrapped(pad, bodyTop, W - padInner * 2, emptyProvidersMsg(), COL_BG, 2);
     return;
   }
 
@@ -1511,7 +1520,7 @@ void paintNow() {
   const bool showDeepSeek = g_snap.deepseekCount > 0;
   const int n = (int)showClaude + (int)showCursor + (int)showOpenRouter + (int)showDeepSeek;
   if (n == 0) {
-    drawErrorWrapped(pad, bodyTop, rowW, uiTr().noProviders, COL_BG, 2);
+    drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
     return;
   }
 

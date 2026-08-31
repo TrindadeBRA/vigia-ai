@@ -5,7 +5,7 @@ Vite + React + TypeScript em `frontend/`.
 | Rota | Papel |
 | --- | --- |
 | `/` | Painel de contas, mock, `secrets.h` |
-| `/display` | Réplica das telas da placa — lê só `GET /usage` |
+| `/display` | Réplica das telas da placa — escuta `GET /events` (SSE); o botão de atualizar chama `GET /usage` |
 
 Em desenvolvimento o Vite (`:5173`) faz proxy para o FastAPI (`:8787`). Em produção o backend serve `frontend/dist`.
 

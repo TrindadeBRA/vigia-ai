@@ -12,11 +12,9 @@
 ## Fluxo (hardware)
 
 1. Usuário inicia `./dev-collector.sh` no Mac (mesma LAN da ESP32) e, se quiser, abre o painel em `http://IP:8787/`.
-2. Coletor busca as duas APIs a cada `GET /usage` — sem cache (dado sempre em tempo real; ver aviso de rate limit em [COLETOR.md](COLETOR.md#sem-cache--cuidado-com-rate-limit)).
-3. ESP32 conecta no Wi-Fi, faz GET em `USAGE_URL`, parseia JSON, redesenha.
-4. Poll a cada `USAGE_POLL_MS` (padrão 60 s). Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
-
-Sem cache no coletor, o intervalo de poll da placa (`USAGE_POLL_MS`) é também o intervalo real de chamadas às APIs — 60 s de poll = uma chamada ao Claude a cada 60 s.
+2. Coletor consulta as APIs a cada ciclo do hub (`USAGE_INTERVAL_S`, padrão 60 s) e empurra o JSON por `GET /events`. `GET /usage` força um ciclo.
+3. ESP32 conecta no Wi-Fi, abre SSE em `/events` (a partir de `USAGE_URL`), parseia JSON, redesenha.
+4. O intervalo real das APIs é o ciclo do coletor, não o poll de cada cliente. Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
 
 ## Fluxo (Wokwi)
 

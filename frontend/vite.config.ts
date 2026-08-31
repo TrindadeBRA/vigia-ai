@@ -8,6 +8,11 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       "/usage": "http://127.0.0.1:8787",
+      "/events": {
+        target: "http://127.0.0.1:8787",
+        timeout: 0,
+        proxyTimeout: 0,
+      },
       "/api": "http://127.0.0.1:8787",
       "/health": "http://127.0.0.1:8787",
       "/docs": "http://127.0.0.1:8787",

@@ -1,4 +1,4 @@
-"""Monta o JSON de GET /usage (sem cache — cada GET chama as APIs)."""
+"""Monta o JSON de GET /usage (cada chamada consulta as APIs na hora)."""
 
 from __future__ import annotations
 

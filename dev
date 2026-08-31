@@ -18,9 +18,10 @@ uso: ./dev <comando>
   ./dev up              backend FastAPI + frontend Vite
   ./dev up --docker     Compose na raiz
   ./dev down            encerra o que este script deixou em :8787 / :5173
-  ./dev sim             up + wokwigw + pio run -e wokwi
+  ./dev wokwi           coletor + gateway Wokwi + compila o firmware simulado
+                     (atalhos: simulador, sim)
   ./dev firmware build  compila a placa (esp32dev)
-  ./dev firmware wokwi  compila o simulador
+  ./dev firmware wokwi  só compila o env wokwi (não sobe o gateway)
   ./dev firmware flash  grava na ESP32
   ./dev firmware monitor
   ./dev test            pytest + tsc
@@ -218,18 +219,36 @@ cmd_up() {
 }
 
 cmd_sim() {
-  require_port_free "$BACKEND_PORT" "backend"
   trap cleanup INT TERM EXIT
   ensure_wokwigw
+  echo "== gateway wokwigw :9011 =="
+  if nc -z 127.0.0.1 9011 2>/dev/null; then
+    echo "gateway ja esta em :9011"
+  else
+    "$WOKWIGW_BIN" --listenPort 9011 &
+    PIDS+=("$!")
+    local i
+    for i in $(seq 1 20); do
+      if nc -z 127.0.0.1 9011 2>/dev/null; then
+        break
+      fi
+      sleep 0.15
+    done
+  fi
   echo "== compilando firmware wokwi =="
   run_pio run -e wokwi
-  run_backend
-  echo "== gateway wokwigw :9011 =="
-  "$WOKWIGW_BIN" &
-  PIDS+=("$!")
+  if curl -sf -o /dev/null "http://127.0.0.1:${BACKEND_PORT}/health"; then
+    echo "== backend ja esta em :${BACKEND_PORT} (reusa o ./dev up) =="
+  else
+    require_port_free "$BACKEND_PORT" "backend"
+    run_backend
+  fi
   echo ""
-  echo "agora: Cmd+Shift+P → Wokwi: Start Simulator"
-  echo "Ctrl+C encerra backend + gateway."
+  echo "1. Se o simulador já estiver aberto: pare (Stop) e inicie de novo."
+  echo "2. Cmd+Shift+P → Wokwi: Start Simulator"
+  echo "3. Neste terminal deve aparecer: Client connected"
+  echo "   se não aparecer, o Wokwi não está usando o gateway."
+  echo "Ctrl+C encerra o gateway (e o backend, se este script o tiver subido)."
   wait
 }
 
@@ -254,7 +273,7 @@ case "$1" in
   -h|--help|help) usage ;;
   up) shift; cmd_up "$@" ;;
   down) cmd_down ;;
-  sim) cmd_sim ;;
+  wokwi|simulador|sim) cmd_sim ;;
   test) cmd_test ;;
   lint) cmd_lint ;;
   firmware)

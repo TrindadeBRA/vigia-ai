@@ -1,8 +1,10 @@
-"""Coletor de cotas — FastAPI. Serve GET /usage (ESP32) e o painel React."""
+"""Coletor de cotas — FastAPI. Serve GET /usage, GET /events (SSE) e o painel React."""
 
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -13,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app import __version__
 from app.config import frontend_dist
+from app.hub import UsageHub
 from app.netutil import lan_ipv4
 from app.routers.config import router as config_router
 from app.routers.usage import router as usage_router
@@ -20,13 +23,30 @@ from app.store import load
 
 
 class CloseConnectionMiddleware(BaseHTTPMiddleware):
-    """A ESP32 (e o Wokwi) às vezes reseta keep-alive HTTP/1.1. Fecha cada resposta."""
+    """Fecha HTTP/1.1 nas respostas curtas (ESP32). O stream SSE precisa ficar aberto."""
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
         response: Response = await call_next(request)
+        path = request.url.path.rstrip("/")
+        if path.endswith("/events"):
+            response.headers["Content-Type"] = "text/event-stream"
+            response.headers["Connection"] = "keep-alive"
+            response.headers["Cache-Control"] = "no-cache"
+            return response
         response.headers["Connection"] = "close"
         response.headers["Cache-Control"] = "no-store"
         return response
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    hub = UsageHub()
+    app.state.hub = hub
+    await hub.start()
+    try:
+        yield
+    finally:
+        await hub.stop()
 
 
 def create_app() -> FastAPI:
@@ -38,13 +58,35 @@ def create_app() -> FastAPI:
         title="Vigia AI",
         version=__version__,
         description=(
-            "Coletor local de cotas (Claude, Cursor, OpenRouter, DeepSeek). "
-            "Tokens ficam neste computador. A placa só lê `GET /usage`. "
-            "Não exponha esta porta na internet."
+            "Coletor local de cotas (**Claude**, **Cursor**, **OpenRouter**, **DeepSeek**). "
+            "Tokens ficam neste computador — a placa e o browser **nunca** os recebem.\n\n"
+            "- **GET /events** — SSE: `Content-Type: text/event-stream`, `Connection: keep-alive`. "
+            "Firmware e `/display`.\n"
+            "- **GET /usage** — o mesmo JSON, na hora; avisa quem está no stream.\n"
+            "- **GET /docs** — este Swagger (OpenAPI em `/openapi.json`).\n\n"
+            "LAN only. **Não exponha a porta 8787 na internet.**"
         ),
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
+        lifespan=lifespan,
+        openapi_tags=[
+            {
+                "name": "usage",
+                "description": (
+                    "Cotas na LAN. `GET /events` é o canal ao vivo; "
+                    "`GET /usage` força um ciclo e devolve o snapshot. "
+                    "Contrato: `UsagePayload` (sem Bearer)."
+                ),
+            },
+            {
+                "name": "config",
+                "description": (
+                    "Painel. `GET /api/config` não devolve tokens — só sufixo. "
+                    "`GET /api/secrets.h` gera o header da ESP32 (SSID/senha você preenche)."
+                ),
+            },
+        ],
     )
     app.state.listen_host = host
     app.state.listen_port = port
@@ -98,6 +140,7 @@ def main() -> None:
         print(f"painel     http://{item}:{port}/{label}")
         print(f"mostrador  http://{item}:{port}/display{label}")
         print(f"usage      http://{item}:{port}/usage{label}")
+        print(f"events     http://{item}:{port}/events{label}")
         print(f"swagger    http://{item}:{port}/docs{label}")
     print(f"repo {Path(__file__).resolve().parent.parent.parent}")
     uvicorn.run(

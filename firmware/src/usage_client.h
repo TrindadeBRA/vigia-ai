@@ -1,9 +1,11 @@
 #pragma once
 
-// Cliente de rede: conecta ao Wi-Fi e busca/parseia o JSON de /usage do
-// coletor (docs/CONTRATO_JSON.md).
+// Cliente de rede: Wi-Fi + SSE `GET /events` (JSON do contrato em docs/CONTRATO_JSON.md).
+// `USAGE_URL` continua apontando para `/usage`; o firmware troca o path por `/events`.
+// `usageClientFetch` (GET /usage) só no refresh manual.
 void usageClientEnsureWifi();
 void usageClientFetch();
+void usageClientPoll();
 
 // Log de diagnóstico do snapshot atual (g_snap).
 void usageClientLogSnapshot(const char* why);

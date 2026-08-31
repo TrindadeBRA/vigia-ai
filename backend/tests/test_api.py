@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -10,15 +11,17 @@ from app.store import default_config, save
 
 
 @pytest.fixture()
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     monkeypatch.setenv("COLLECTOR_DATA", str(tmp_path))
     monkeypatch.setenv("HOST", "127.0.0.1")
     monkeypatch.setenv("PORT", "8787")
+    monkeypatch.setenv("USAGE_INTERVAL_S", "60")
     cfg = default_config()
     cfg["mock"] = True
     save(cfg)
     app = create_app()
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def test_health(client: TestClient) -> None:
@@ -61,4 +64,25 @@ def test_openapi_available(client: TestClient) -> None:
     assert r.status_code == 200
     spec = r.json()
     assert "/usage" in spec["paths"]
+    assert "/events" in spec["paths"]
+    events = spec["paths"]["/events"]["get"]
+    assert events["operationId"] == "get_events"
+    assert "text/event-stream" in events["responses"]["200"]["content"]
+    headers = events["responses"]["200"]["headers"]
+    assert "Connection" in headers
+    assert "Content-Type" in headers
+    assert "UsagePayload" in spec["components"]["schemas"]
+    tag_names = {t["name"] for t in spec["tags"]}
+    assert tag_names >= {"usage", "config"}
     assert "/api/config" in spec["paths"]
+
+
+def test_sse_frame_matches_usage_contract(client: TestClient) -> None:
+    from app.hub import format_sse
+
+    body = client.get("/usage").json()
+    frame = format_sse(body)
+    assert frame.startswith("event: usage\n")
+    assert "data: {" in frame
+    assert '"claude"' in frame
+    assert frame.endswith("\n\n")

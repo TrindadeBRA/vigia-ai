@@ -60,6 +60,8 @@ struct UiStrings {
   const char* noData;
   const char* tapCorners;
   const char* noProviders;
+  const char* waitingWifi;
+  const char* waitingCollector;
 };
 
 const UiStrings& uiTr();

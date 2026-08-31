@@ -56,7 +56,7 @@ A Anthropic **não publica** um número para este endpoint. Relatos da comunidad
 - Com esse User-Agent: intervalo de **~180 s** é o que as ferramentas da comunidade consideram seguro. Poll a cada 60 s ainda pode 429.
 - O limite é **por access token**, não por conta. Relatos de ~5 reqs no bucket “errado” antes do 429.
 
-O coletor **não cacheia**: cada `GET /usage` = uma chamada real. A placa polla a cada `USAGE_POLL_MS` (padrão 60 s). Se aparecer `HTTP 429` no card (e no terminal do coletor), aumente o poll em `platformio.ini`.
+O coletor faz **um ciclo** de APIs (`USAGE_INTERVAL_S`, padrão 60 s) e empurra o JSON por SSE. `GET /usage` força um ciclo extra. Se aparecer `HTTP 429` no card, aumente o intervalo (`USAGE_INTERVAL_S=180`).
 
 ## O que a tela mostra
 

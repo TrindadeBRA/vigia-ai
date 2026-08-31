@@ -275,13 +275,26 @@ def _listen(request: Request) -> tuple[str, int]:
     return str(request.app.state.listen_host), int(request.app.state.listen_port)
 
 
-@router.get("/config", response_model=ConfigPublic, summary="Status do coletor (sem tokens)")
+@router.get(
+    "/config",
+    response_model=ConfigPublic,
+    summary="Status do coletor (sem tokens)",
+    description=(
+        "IPs LAN, mock, contas visíveis e sufixo das keys coladas. "
+        "**Nunca** devolve Bearer, JWT nem API key completa."
+    ),
+)
 def get_config(request: Request) -> ConfigPublic:
     host, port = _listen(request)
     return config_public(host, port)
 
 
-@router.post("/config", response_model=ConfigSaveResult, summary="Grava mock, labels, hidden, porta, tokens colados")
+@router.post(
+    "/config",
+    response_model=ConfigSaveResult,
+    summary="Grava mock, labels, hidden, porta, tokens colados",
+    description="Corpo `ConfigPatch`. Segredos só entram; a resposta não os ecoa.",
+)
 def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
     _host, listen_port = _listen(request)
     restart = False
@@ -328,7 +341,12 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
     return ConfigSaveResult(ok=True, restart_needed_for_port=restart)
 
 
-@router.post("/config/account", response_model=AddAccountResult, summary="Adiciona conta extra")
+@router.post(
+    "/config/account",
+    response_model=AddAccountResult,
+    summary="Adiciona conta extra",
+    description="Uma assinatura a mais no mesmo provedor. O token/key fica só no `config.json` gitignored.",
+)
 def add_account(body: AddAccountBody) -> AddAccountResult:
     secret = (body.token or body.key or "").strip()
     if body.provider == "openrouter":
@@ -354,7 +372,12 @@ def add_account(body: AddAccountBody) -> AddAccountResult:
     return AddAccountResult(ok=True, id=account_id)
 
 
-@router.delete("/config/account/{provider}/{account_id}", response_model=OkResult, summary="Remove conta extra")
+@router.delete(
+    "/config/account/{provider}/{account_id}",
+    response_model=OkResult,
+    summary="Remove conta extra",
+    description="Não apaga a conta local (Keychain / state.vscdb / primeira key).",
+)
 def delete_account(provider: str, account_id: str) -> OkResult:
     if provider not in ("claude", "cursor", "openrouter", "deepseek"):
         return OkResult(ok=False, error="provider inválido")
@@ -369,7 +392,12 @@ def delete_account(provider: str, account_id: str) -> OkResult:
     return OkResult(ok=True)
 
 
-@router.delete("/config/secret/{name}", response_model=OkResult, summary="Apaga token/key colado")
+@router.delete(
+    "/config/secret/{name}",
+    response_model=OkResult,
+    summary="Apaga token/key colado",
+    description="Apaga só o *paste* do painel. Não mexe no login do Claude Code nem do Cursor.",
+)
 def clear_secret(name: str) -> OkResult:
     mapping = {
         "claude": "claude",
@@ -396,7 +424,21 @@ def clear_secret(name: str) -> OkResult:
     return OkResult(ok=True, cleared=name)
 
 
-@router.get("/secrets.h", response_class=PlainTextResponse, summary="Arquivo secrets.h para a ESP32")
+@router.get(
+    "/secrets.h",
+    response_class=PlainTextResponse,
+    summary="Arquivo secrets.h para a ESP32",
+    description=(
+        "Gera `USAGE_URL` com o IP LAN. O firmware escuta SSE em `/events` "
+        "(troca o path `/usage` → `/events`). Preencha SSID e senha Wi-Fi no arquivo."
+    ),
+    responses={
+        200: {
+            "content": {"text/plain": {"schema": {"type": "string"}}},
+            "description": "Texto C para `firmware/src/secrets.h`.",
+        }
+    },
+)
 def download_secrets(request: Request) -> PlainTextResponse:
     host, port = _listen(request)
     pub = config_public(host, port)

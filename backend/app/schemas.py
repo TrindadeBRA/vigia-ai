@@ -1,25 +1,94 @@
-"""Modelos Pydantic = contrato OpenAPI (`GET /usage` e painel)."""
+"""Modelos Pydantic = contrato OpenAPI (`GET /usage`, `GET /events` e painel)."""
 
 from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 ProviderId = Literal["claude", "cursor", "openrouter", "deepseek"]
+
+USAGE_EXAMPLE = {
+    "updated_at": "2026-08-31T14:00:00-03:00",
+    "claude": [
+        {
+            "id": "local",
+            "label": "Pessoal",
+            "ok": True,
+            "error": None,
+            "session_percent": 42.0,
+            "session_resets_at": "31/08 18h00",
+            "weekly_percent": 18.5,
+            "weekly_resets_at": "04/09 03h00",
+            "sonnet_percent": None,
+            "sonnet_resets_at": None,
+            "opus_percent": None,
+            "opus_resets_at": None,
+        }
+    ],
+    "cursor": [
+        {
+            "id": "local",
+            "label": "Pessoal",
+            "ok": True,
+            "error": None,
+            "percent": 35.0,
+            "other_percent": 12.0,
+            "used_cents": 700,
+            "limit_cents": 2000,
+            "remaining_cents": 1300,
+            "bonus_cents": 0,
+            "cycle_end": "15/09",
+            "plan": "pro",
+            "requests_used": None,
+            "requests_limit": None,
+        }
+    ],
+    "openrouter": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "percent": 66.6,
+            "limit_cents": 1000,
+            "used_cents": 666,
+            "remaining_cents": 334,
+        }
+    ],
+    "deepseek": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "percent": 25.0,
+            "limit_cents": 1000,
+            "used_cents": 250,
+            "remaining_cents": 750,
+        }
+    ],
+}
+
+SSE_WIRE_EXAMPLE = (
+    ": connected\n\n"
+    "event: usage\n"
+    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"cursor":[],"openrouter":[],"deepseek":[]}\n\n'
+    ": ping\n\n"
+)
 
 
 class AccountBase(BaseModel):
     id: str = Field(description="Chave estável de UI, não é segredo.")
     label: str = Field(default="", description="Apelido opcional. Vazio = só o nome do provedor.")
-    ok: bool
-    error: str | None = None
+    ok: bool = Field(description="False se esta conta falhou; as outras seguem no mesmo JSON.")
+    error: str | None = Field(default=None, description="Mensagem curta quando ok é false.")
 
 
 class ClaudeAccount(AccountBase):
-    session_percent: float | None = None
+    session_percent: float | None = Field(default=None, description="0–100, janela de 5 h.")
     session_resets_at: str | None = None
-    weekly_percent: float | None = None
+    weekly_percent: float | None = Field(default=None, description="0–100, limite semanal.")
     weekly_resets_at: str | None = None
     sonnet_percent: float | None = None
     sonnet_resets_at: str | None = None
@@ -48,9 +117,11 @@ class CreditsAccount(AccountBase):
 
 
 class UsagePayload(BaseModel):
-    """Contrato da placa e do mostrador web. HTTP 200 mesmo com contas `ok: false`."""
+    """Contrato da placa e do mostrador. Mesmo JSON em GET /usage e no evento SSE `usage`."""
 
-    updated_at: str
+    model_config = ConfigDict(json_schema_extra={"example": USAGE_EXAMPLE})
+
+    updated_at: str = Field(description="ISO-8601 com offset, ou o instante do ciclo no coletor.")
     claude: list[ClaudeAccount]
     cursor: list[CursorAccount]
     openrouter: list[CreditsAccount]
@@ -59,12 +130,13 @@ class UsagePayload(BaseModel):
 
 class HealthPayload(BaseModel):
     ok: bool = True
-    version: str
-    panel: str = "/"
-    display: str = "/display"
-    usage: str = "/usage"
-    docs: str = "/docs"
-    listen: dict[str, str | int]
+    version: str = Field(description="Versão do coletor.")
+    panel: str = Field(default="/", description="Painel React.")
+    display: str = Field(default="/display", description="Mostrador web.")
+    usage: str = Field(default="/usage", description="JSON na hora (força um ciclo de APIs).")
+    events: str = Field(default="/events", description="Stream SSE (firmware e /display).")
+    docs: str = Field(default="/docs", description="Swagger UI.")
+    listen: dict[str, str | int] = Field(description="host e port em que o Uvicorn está escutando.")
 
 
 class AccountPublic(BaseModel):
