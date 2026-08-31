@@ -7,9 +7,22 @@
 // API pública de ui.h — main.cpp e input.cpp não incluem este header.
 
 extern int g_headerH;
+extern int g_contentX;
+extern int g_contentY;
+extern int g_contentW;
+extern int g_contentH;
+extern int g_hdrX0;
+extern int g_hdrY0;
+extern int g_hdrX1;
+extern int g_hdrY1;
+extern int g_headerHomeX0;
+extern int g_headerHomeY0;
 extern int g_headerHomeX1;
+extern int g_headerHomeY1;
 extern int g_headerInfoX0;
+extern int g_headerInfoY0;
 extern int g_headerInfoX1;
+extern int g_headerInfoY1;
 extern int g_homeSplitX;
 extern int g_homeSplitY;
 extern int g_homeSplitY1;
@@ -31,6 +44,10 @@ extern int g_langBtnY;
 extern int g_langBtnH;
 extern int g_langSplit1;
 extern int g_langSplit2;
+extern int g_edgeRow1Y;
+extern int g_edgeRow2Y;
+extern int g_edgeMidX;
+extern int g_edgeBtnH;
 extern int g_lastHeaderKey;
 extern int g_detailScroll;
 extern int g_detailMaxScroll;
@@ -50,6 +67,7 @@ int countdownSeconds();
 bool showFetchOkCheck();
 int headerDisplayKey(int secs, bool showCheck);
 
+void layoutContent();
 void drawHeader();
 void paintHome();
 void paintClaude();

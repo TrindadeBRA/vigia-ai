@@ -6,10 +6,23 @@
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_openrouter.h"
 
-int g_headerH = 32;
+int g_headerH = 40;
+int g_contentX = 40;
+int g_contentY = 0;
+int g_contentW = 280;
+int g_contentH = 240;
+int g_hdrX0 = 0;
+int g_hdrY0 = 0;
+int g_hdrX1 = 40;
+int g_hdrY1 = 240;
+int g_headerHomeX0 = 0;
+int g_headerHomeY0 = 0;
 int g_headerHomeX1 = 80;
+int g_headerHomeY1 = 32;
 int g_headerInfoX0 = 0;
+int g_headerInfoY0 = 0;
 int g_headerInfoX1 = 0;
+int g_headerInfoY1 = 0;
 int g_homeSplitX = 0;
 int g_homeSplitY = 0;
 int g_homeSplitY1 = 0;
@@ -25,6 +38,10 @@ int g_langBtnY = 0;
 int g_langBtnH = 28;
 int g_langSplit1 = 0;
 int g_langSplit2 = 0;
+int g_edgeRow1Y = 0;
+int g_edgeRow2Y = 0;
+int g_edgeMidX = 0;
+int g_edgeBtnH = 28;
 bool g_statusHasCal = false;
 bool g_statusHasRefresh = false;
 int g_btnCalY = 0;
@@ -71,11 +88,8 @@ int headerDisplayKey(int secs, bool showCheck) {
 // Selo circular no canto do header: enquanto espera o proximo refresh mostra
 // a contagem regressiva em um circulo amarelo; nos ~1.5s apos um refresh
 // bem-sucedido, mostra um check verde no lugar do numero.
-static void drawCountdownBadge(int secs) {
-  const int W = tft.width();
+static void drawCountdownBadgeAt(int cx, int cy, int secs) {
   const int r = 11;
-  const int cx = W - 8 - r;
-  const int cy = g_headerH / 2;
   bool showCheck = showFetchOkCheck();
 
   if (secs < 0 && !showCheck) {
@@ -97,41 +111,142 @@ static void drawCountdownBadge(int secs) {
   }
 }
 
-void drawHeader() {
+void layoutContent() {
   const int W = tft.width();
-  tft.fillRect(0, 0, W, g_headerH, COL_BG);
-  tft.drawFastHLine(0, g_headerH - 1, W, COL_CARD_BORDER);
-
-  int brandX = 8;
-  if (g_view != VIEW_HOME) {
-    drawBackChevron(14, g_headerH / 2, COL_TEXT_DIM);
-    brandX = 24;
+  const int H = tft.height();
+  const HeaderEdge edge = uiHeaderEdge();
+  const bool vert = (edge == HEADER_LEFT || edge == HEADER_RIGHT);
+  g_headerH = vert ? 40 : 32;
+  if (edge == HEADER_LEFT) {
+    g_hdrX0 = 0;
+    g_hdrY0 = 0;
+    g_hdrX1 = g_headerH;
+    g_hdrY1 = H;
+    g_contentX = g_headerH;
+    g_contentY = 0;
+    g_contentW = W - g_headerH;
+    g_contentH = H;
+  } else if (edge == HEADER_RIGHT) {
+    g_hdrX0 = W - g_headerH;
+    g_hdrY0 = 0;
+    g_hdrX1 = W;
+    g_hdrY1 = H;
+    g_contentX = 0;
+    g_contentY = 0;
+    g_contentW = W - g_headerH;
+    g_contentH = H;
+  } else if (edge == HEADER_BOTTOM) {
+    g_hdrX0 = 0;
+    g_hdrY0 = H - g_headerH;
+    g_hdrX1 = W;
+    g_hdrY1 = H;
+    g_contentX = 0;
+    g_contentY = 0;
+    g_contentW = W;
+    g_contentH = H - g_headerH;
+  } else {
+    g_hdrX0 = 0;
+    g_hdrY0 = 0;
+    g_hdrX1 = W;
+    g_hdrY1 = g_headerH;
+    g_contentX = 0;
+    g_contentY = g_headerH;
+    g_contentW = W;
+    g_contentH = H - g_headerH;
   }
-  drawBrand(brandX, 8, 2);
-  g_headerHomeX1 = brandX + brandWidth(2) + 12;
+}
+
+static void drawBrandStack(int cx, int y) {
+  tft.setTextDatum(TC_DATUM);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString("VIGIA", cx, y, 1);
+  tft.setTextColor(COL_ACCENT, COL_BG);
+  tft.drawString("AI", cx, y + 10, 1);
+}
+
+void drawHeader() {
+  layoutContent();
+  const int W = tft.width();
+  const int H = tft.height();
+  const HeaderEdge edge = uiHeaderEdge();
+  const bool vert = (edge == HEADER_LEFT || edge == HEADER_RIGHT);
+
+  tft.fillRect(g_hdrX0, g_hdrY0, g_hdrX1 - g_hdrX0, g_hdrY1 - g_hdrY0, COL_BG);
+  if (vert) {
+    int vx = (edge == HEADER_LEFT) ? (g_hdrX1 - 1) : g_hdrX0;
+    tft.drawFastVLine(vx, 0, H, COL_CARD_BORDER);
+  } else {
+    int hy = (edge == HEADER_TOP) ? (g_hdrY1 - 1) : g_hdrY0;
+    tft.drawFastHLine(0, hy, W, COL_CARD_BORDER);
+  }
 
   int secs = countdownSeconds();
   bool showCheck = showFetchOkCheck();
   g_lastHeaderKey = headerDisplayKey(secs, showCheck);
-
-  const int r = 11;
-  const int badgeCx = W - 8 - r;
   const bool showBadge = secs >= 0 || showCheck;
-
+  const int r = 11;
   const int infoR = 9;
-  const int infoCx = showBadge ? badgeCx - r - 10 - infoR : W - 8 - infoR;
-  const int infoCy = g_headerH / 2;
   uint16_t infoCol = (g_view == VIEW_STATUS) ? COL_ACCENT : COL_TEXT_MUTED;
-  drawInfoIcon(infoCx, infoCy, infoR, infoCol);
-  g_headerInfoX0 = infoCx - infoR - 8;
-  g_headerInfoX1 = infoCx + infoR + 8;
 
-  String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 10) : "---";
-  tft.setTextDatum(TR_DATUM);
+  if (!vert) {
+    const int barY = g_hdrY0;
+    const int midY = barY + g_headerH / 2;
+    int brandX = g_hdrX0 + 8;
+    if (g_view != VIEW_HOME) {
+      drawBackChevron(g_hdrX0 + 14, midY, COL_TEXT_DIM);
+      brandX = g_hdrX0 + 24;
+    }
+    drawBrand(brandX, barY + 8, 2);
+    g_headerHomeX0 = g_hdrX0;
+    g_headerHomeY0 = g_hdrY0;
+    g_headerHomeX1 = brandX + brandWidth(2) + 12;
+    g_headerHomeY1 = g_hdrY1;
+
+    const int badgeCx = g_hdrX1 - 8 - r;
+    const int infoCx = showBadge ? badgeCx - r - 10 - infoR : g_hdrX1 - 8 - infoR;
+    drawInfoIcon(infoCx, midY, infoR, infoCol);
+    g_headerInfoX0 = infoCx - infoR - 8;
+    g_headerInfoY0 = g_hdrY0;
+    g_headerInfoX1 = infoCx + infoR + 8;
+    g_headerInfoY1 = g_hdrY1;
+
+    String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 10) : "---";
+    tft.setTextDatum(TR_DATUM);
+    tft.setTextColor(COL_TEXT_DIM, COL_BG);
+    tft.drawString(right, g_headerInfoX0 - 4, barY + 8, 2);
+    if (showBadge) {
+      drawCountdownBadgeAt(badgeCx, midY, secs);
+    }
+    return;
+  }
+
+  const int cx = (g_hdrX0 + g_hdrX1) / 2;
+  int y = 8;
+  if (g_view != VIEW_HOME) {
+    drawBackChevron(cx, y + 6, COL_TEXT_DIM);
+    y += 18;
+  }
+  drawBrandStack(cx, y);
+  g_headerHomeX0 = g_hdrX0;
+  g_headerHomeY0 = g_hdrY0;
+  g_headerHomeX1 = g_hdrX1;
+  g_headerHomeY1 = y + 28;
+
+  String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 5) : "---";
+  tft.setTextDatum(TC_DATUM);
   tft.setTextColor(COL_TEXT_DIM, COL_BG);
-  tft.drawString(right, g_headerInfoX0 - 4, 8, 2);
+  tft.drawString(right, cx, y + 30, 1);
 
-  drawCountdownBadge(secs);
+  const int badgeCy = H - 8 - r;
+  const int infoCy = showBadge ? badgeCy - r - 12 - infoR : H - 8 - infoR;
+  drawInfoIcon(cx, infoCy, infoR, infoCol);
+  g_headerInfoX0 = g_hdrX0;
+  g_headerInfoY0 = infoCy - infoR - 8;
+  g_headerInfoX1 = g_hdrX1;
+  g_headerInfoY1 = infoCy + infoR + 8;
+  if (showBadge) {
+    drawCountdownBadgeAt(cx, badgeCy, secs);
+  }
 }
 
 static String withResta(float pct, const String& whenRaw) {
@@ -202,12 +317,15 @@ static void paintHomeMetric(int x, int y, int w, const char* label, float pct, c
 
 // Home em lista: 3 cards empilhados (Claude, Cursor, OpenRouter).
 static void paintHomeList() {
-  const int W = tft.width();
-  const int H = tft.height();
-  const int bodyTop = g_headerH + 6;
+  layoutContent();
+  const int x0 = g_contentX;
+  const int W = g_contentW;
+  const int H = g_contentH;
+  const int bodyTop = g_contentY + 6;
   const int gap = (H < 280) ? 6 : 10;
-  const int bodyH = H - bodyTop - 6;
-  const int pad = 10;
+  const int bodyH = H - 12;
+  const int pad = x0 + 8;
+  const int cardW = W - 16;
   const int cardH = (bodyH - gap * 2) / 3;
   g_homeSplitY1 = bodyTop + cardH + gap / 2;
   g_homeSplitY2 = bodyTop + (cardH + gap) * 2 + gap / 2;
@@ -225,8 +343,8 @@ static void paintHomeList() {
   const int innerPadY = compact ? 4 : 8;
 
   auto cardChrome = [&](const char* title, const uint16_t* icon, int top, int contentH) -> int {
-    tft.fillRoundRect(pad, top, W - pad * 2, cardH, 8, COL_CARD);
-    tft.drawRoundRect(pad, top, W - pad * 2, cardH, 8, COL_CARD_BORDER);
+    tft.fillRoundRect(pad, top, cardW, cardH, 8, COL_CARD);
+    tft.drawRoundRect(pad, top, cardW, cardH, 8, COL_CARD_BORDER);
     int padY = innerPadY;
     int avail = cardH - padY * 2;
     if (avail < contentH) {
@@ -240,7 +358,7 @@ static void paintHomeList() {
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(COL_TEXT, COL_CARD);
     tft.drawString(title, pad + 12 + ICON_CLAUDE_W + 6, textY, 2);
-    drawFwdChevron(W - pad - 16, textY + 8, COL_TEXT_DIM);
+    drawFwdChevron(pad + cardW - 16, textY + 8, COL_TEXT_DIM);
     return titleY;
   };
 
@@ -254,7 +372,7 @@ static void paintHomeList() {
       return;
     }
     const int barX = pad + 12;
-    const int barW = W - pad * 2 - 24;
+    const int barW = cardW - 24;
     int y = titleY + titleH + titleToMetric;
     paintHomeMetric(barX, y, barW, label1, pct1, sub1, metricFont, labelH, barH);
     paintHomeMetric(barX, y + metricH + gapM, barW, label2, pct2, sub2, metricFont, labelH, barH);
@@ -269,7 +387,7 @@ static void paintHomeList() {
       return;
     }
     const int barX = pad + 12;
-    const int barW = W - pad * 2 - 24;
+    const int barW = cardW - 24;
     paintHomeMetric(barX, titleY + titleH + titleToMetric, barW, label, pct, sub, metricFont, labelH,
                     barH);
   };
@@ -315,14 +433,17 @@ static void paintHomeList() {
 
 // Home em grade 2×2: Claude | Cursor / OpenRouter | Sistema.
 static void paintHomeGrid() {
-  const int W = tft.width();
-  const int H = tft.height();
-  const int bodyTop = g_headerH + 6;
-  const int pad = (W < 360) ? 8 : 10;
+  layoutContent();
+  const int x0 = g_contentX;
+  const int W = g_contentW;
+  const int H = g_contentH;
+  const int bodyTop = g_contentY + 6;
+  const int padInner = (W < 360) ? 8 : 10;
   const int gap = (H < 280) ? 6 : 8;
-  const int bodyH = H - bodyTop - 6;
-  const int cardW = (W - pad * 2 - gap) / 2;
+  const int bodyH = H - 12;
+  const int cardW = (W - padInner * 2 - gap) / 2;
   const int cardH = (bodyH - gap) / 2;
+  const int pad = x0 + padInner;
   g_homeSplitX = pad + cardW + gap / 2;
   g_homeSplitY = bodyTop + cardH + gap / 2;
 
@@ -551,30 +672,33 @@ static void dSection(const char* title) {
 }
 
 static void beginScrollCard(const char* title, const uint16_t* icon) {
-  const int W = tft.width();
-  const int top = g_headerH + 8;
-  const int bottom = tft.height() - 8;
-  const int cardH = bottom - top;
-  tft.fillRoundRect(8, top, W - 16, cardH, 8, COL_CARD);
-  tft.drawRoundRect(8, top, W - 16, cardH, 8, COL_CARD_BORDER);
+  layoutContent();
+  const int x0 = g_contentX + 8;
+  const int top = g_contentY + 8;
+  const int cardW = g_contentW - 16;
+  const int cardH = g_contentH - 16;
+  const int bottom = top + cardH;
+  tft.fillRoundRect(x0, top, cardW, cardH, 8, COL_CARD);
+  tft.drawRoundRect(x0, top, cardW, cardH, 8, COL_CARD_BORDER);
 
   g_arrowS = 26;
-  g_arrowX = W - 16 - g_arrowS;
+  g_arrowX = x0 + cardW - 8 - g_arrowS;
   g_arrowUpY = top + 6;
   g_arrowDownY = bottom - 8 - g_arrowS;
 
   const int titleY = top + 8;
+  const int iconX = x0 + 12;
   if (icon) {
-    drawIcon(20, titleY, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
+    drawIcon(iconX, titleY, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
   } else {
-    drawInfoIcon(20 + ICON_CLAUDE_W / 2, titleY + ICON_CLAUDE_H / 2, 8, COL_ACCENT);
+    drawInfoIcon(iconX + ICON_CLAUDE_W / 2, titleY + ICON_CLAUDE_H / 2, 8, COL_ACCENT);
   }
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.drawString(title, 20 + ICON_CLAUDE_W + 6, titleY + (ICON_CLAUDE_H - 16) / 2, 2);
+  tft.drawString(title, iconX + ICON_CLAUDE_W + 6, titleY + (ICON_CLAUDE_H - 16) / 2, 2);
 
   dClipTop = titleY + ICON_CLAUDE_H + 8;
-  dX = 20;
+  dX = iconX;
   dW = g_arrowX - dX - 6;
   dClipH = (bottom - 8) - dClipTop;
   dCursor = 0;
@@ -749,6 +873,26 @@ void paintStatus() {
     drawChoiceButton(dX, y, btn3W, g_btnH, "PT", lang == LANG_PT);
     drawChoiceButton(dX + btn3W + gap3, y, btn3W, g_btnH, "EN", lang == LANG_EN);
     drawChoiceButton(dX + 2 * (btn3W + gap3), y, btn3W, g_btnH, "ES", lang == LANG_ES);
+  }
+  dAdvance(g_btnH + 8);
+
+  dSection(t.headerSection);
+  g_edgeBtnH = g_btnH;
+  g_edgeMidX = g_layoutMidX;
+  g_edgeRow1Y = dCursor;
+  if (dVisible(g_btnH)) {
+    int y = dScreenY();
+    HeaderEdge e = uiHeaderEdge();
+    drawChoiceButton(dX, y, btn2W, g_btnH, t.edgeLeft, e == HEADER_LEFT);
+    drawChoiceButton(dX + btn2W + gapBtn, y, btn2W, g_btnH, t.edgeTop, e == HEADER_TOP);
+  }
+  dAdvance(g_btnH + 6);
+  g_edgeRow2Y = dCursor;
+  if (dVisible(g_btnH)) {
+    int y = dScreenY();
+    HeaderEdge e = uiHeaderEdge();
+    drawChoiceButton(dX, y, btn2W, g_btnH, t.edgeRight, e == HEADER_RIGHT);
+    drawChoiceButton(dX + btn2W + gapBtn, y, btn2W, g_btnH, t.edgeBottom, e == HEADER_BOTTOM);
   }
   dAdvance(g_btnH + 8);
 

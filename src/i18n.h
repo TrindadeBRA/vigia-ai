@@ -47,6 +47,11 @@ struct UiStrings {
   const char* light;
   const char* contrast;
   const char* langSection;
+  const char* headerSection;
+  const char* edgeLeft;
+  const char* edgeTop;
+  const char* edgeRight;
+  const char* edgeBottom;
   const char* refreshSection;
   const char* refreshNow;
   const char* calibrate;

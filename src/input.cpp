@@ -265,6 +265,8 @@ static void handleSerial() {
       uiSetTheme((UiTheme)(((uint8_t)uiTheme() + 1) % 3));
     } else if (c == 'i' || c == 'I') {
       uiSetLang((UiLang)(((uint8_t)uiLang() + 1) % 3));
+    } else if (c == 'h' || c == 'H') {
+      uiSetHeaderEdge((HeaderEdge)(((uint8_t)uiHeaderEdge() + 1) % 4));
     }
   }
 }

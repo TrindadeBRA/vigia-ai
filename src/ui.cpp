@@ -8,6 +8,7 @@ View g_view = VIEW_HOME;
 HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
 static UiTheme g_theme = THEME_DARK;
 static UiLang g_lang = LANG_PT;
+static HeaderEdge g_headerEdge = HEADER_LEFT;
 
 uint16_t COL_BG = 0x10A3;
 uint16_t COL_CARD = 0x1904;
@@ -81,6 +82,7 @@ static void loadUiPrefs() {
   uint8_t home = prefs.getUChar("home", (uint8_t)HOME_LAYOUT_LIST);
   uint8_t theme = prefs.getUChar("theme", (uint8_t)THEME_DARK);
   uint8_t lang = prefs.getUChar("lang", (uint8_t)LANG_PT);
+  uint8_t edge = prefs.getUChar("edge", (uint8_t)HEADER_LEFT);
   prefs.end();
   if (home > (uint8_t)HOME_LAYOUT_GRID) {
     home = (uint8_t)HOME_LAYOUT_LIST;
@@ -91,9 +93,13 @@ static void loadUiPrefs() {
   if (lang > (uint8_t)LANG_ES) {
     lang = (uint8_t)LANG_PT;
   }
+  if (edge > (uint8_t)HEADER_BOTTOM) {
+    edge = (uint8_t)HEADER_LEFT;
+  }
   g_homeLayout = (HomeLayout)home;
   applyTheme((UiTheme)theme);
   g_lang = (UiLang)lang;
+  g_headerEdge = (HeaderEdge)edge;
 }
 
 static void saveUiPref(const char* key, uint8_t value) {
@@ -147,6 +153,20 @@ void uiSetLang(UiLang lang) {
   }
   g_lang = lang;
   saveUiPref("lang", (uint8_t)g_lang);
+  uiPaint();
+}
+
+HeaderEdge uiHeaderEdge() { return g_headerEdge; }
+
+void uiSetHeaderEdge(HeaderEdge edge) {
+  if (edge > HEADER_BOTTOM) {
+    return;
+  }
+  if (edge == g_headerEdge) {
+    return;
+  }
+  g_headerEdge = edge;
+  saveUiPref("edge", (uint8_t)g_headerEdge);
   uiPaint();
 }
 
@@ -257,12 +277,12 @@ void uiHandleTap(int16_t x, int16_t y) {
   const int W = tft.width();
   x = constrain(x, 0, W - 1);
   y = constrain(y, 0, tft.height() - 1);
-  if (y < g_headerH) {
-    if (x < g_headerHomeX1) {
+  if (x >= g_hdrX0 && x < g_hdrX1 && y >= g_hdrY0 && y < g_hdrY1) {
+    if (x >= g_headerHomeX0 && x < g_headerHomeX1 && y >= g_headerHomeY0 && y < g_headerHomeY1) {
       uiSetView(VIEW_HOME);
       return;
     }
-    if (x >= g_headerInfoX0 && x <= g_headerInfoX1) {
+    if (x >= g_headerInfoX0 && x < g_headerInfoX1 && y >= g_headerInfoY0 && y < g_headerInfoY1) {
       uiSetView(VIEW_STATUS);
       return;
     }
@@ -333,6 +353,14 @@ void uiHandleTap(int16_t x, int16_t y) {
       } else {
         uiSetLang(LANG_ES);
       }
+      return;
+    }
+    if (inRow(g_edgeRow1Y, g_edgeBtnH)) {
+      uiSetHeaderEdge(x < g_edgeMidX ? HEADER_LEFT : HEADER_TOP);
+      return;
+    }
+    if (inRow(g_edgeRow2Y, g_edgeBtnH)) {
+      uiSetHeaderEdge(x < g_edgeMidX ? HEADER_RIGHT : HEADER_BOTTOM);
       return;
     }
     if (g_statusHasRefresh && inRow(g_btnRefY, g_btnH)) {
