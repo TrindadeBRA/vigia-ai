@@ -60,6 +60,7 @@ static const UiStrings kPt = {
     "Consumo em tempo real das IAs",
     "sem dados",
     "Toque os cantos",
+    "Nenhum provedor configurado. Preencha no painel do coletor.",
 };
 
 static const UiStrings kEn = {
@@ -120,6 +121,7 @@ static const UiStrings kEn = {
     "Real-time AI usage",
     "no data",
     "Tap the corners",
+    "No provider configured. Fill one in on the collector panel.",
 };
 
 static const UiStrings kEs = {
@@ -180,6 +182,7 @@ static const UiStrings kEs = {
     "Consumo de IAs en tiempo real",
     "sin datos",
     "Toca las esquinas",
+    "Ningun proveedor configurado. Complétalo en el panel del colector.",
 };
 
 const UiStrings& uiTr() {

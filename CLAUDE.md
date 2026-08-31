@@ -4,7 +4,7 @@ Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar neste repositó
 
 ## O que é isto
 
-**Vigia AI**: um painel de mesa — ESP32 + tela touch TFT 3,5" mostra as cotas de uso das assinaturas Claude, Cursor e OpenRouter, em várias telas (início, detalhe Claude, detalhe Cursor, detalhe OpenRouter, info). A placa nunca guarda tokens. Um **coletor Python no Mac** lê credenciais locais (ou o que você gravar no painel, em `collector/data/config.json`), chama as APIs autenticadas das assinaturas, e serve um resumo em JSON na LAN. O firmware só faz um HTTP GET nesse JSON e desenha a UI.
+**Vigia AI**: um painel de mesa — ESP32 + tela touch TFT 3,5" mostra as cotas de uso das assinaturas Claude, Cursor, OpenRouter e DeepSeek, em várias telas (início, detalhe Claude, detalhe Cursor, detalhe OpenRouter, detalhe DeepSeek, info). A placa nunca guarda tokens. Um **coletor Python no Mac** lê credenciais locais (ou o que você gravar no painel, em `collector/data/config.json`), chama as APIs autenticadas das assinaturas, e serve um resumo em JSON na LAN. O firmware só faz um HTTP GET nesse JSON e desenha a UI.
 
 Idioma da UI e da documentação: **português (Brasil)**. Identificadores de código são em inglês.
 

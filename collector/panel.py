@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from claude_oauth import claude_token_candidates, credentials_path, env_claude_token, last_keychain_error
-from cursor_state import cursor_token_candidates, env_cursor_token, jwt_expired
+from cursor_state import cursor_missing_hint, cursor_token_candidates, env_cursor_token, jwt_expired
 from docker_ctl import docker_status
+from providers.deepseek import clean_deepseek_key
 from providers.openrouter import clean_openrouter_key
 from store import KEYS as ALLOWED_KEYS
 from store import apply as apply_store
@@ -24,6 +25,7 @@ _SECRET_KEYS = {
     "CLAUDE_CODE_OAUTH_TOKEN",
     "CURSOR_ACCESS_TOKEN",
     "OPENROUTER_API_KEY",
+    "DEEPSEEK_API_KEY",
 }
 
 
@@ -171,7 +173,7 @@ def _cursor_card() -> dict[str, Any]:
         }
     return {
         "source": "missing",
-        "label": "Nenhum login encontrado — abra o Cursor neste Mac",
+        "label": cursor_missing_hint() + " — ou cole o token abaixo",
         "configured": False,
         "suffix": None,
         "mode": "need_local",
@@ -180,6 +182,25 @@ def _cursor_card() -> dict[str, Any]:
 
 def _openrouter_card() -> dict[str, Any]:
     token = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if token:
+        return {
+            "source": "env",
+            "label": "Key salva neste coletor",
+            "configured": True,
+            "suffix": _suffix(token),
+            "mode": "paste",
+        }
+    return {
+        "source": "missing",
+        "label": "Nenhuma key configurada",
+        "configured": False,
+        "suffix": None,
+        "mode": "need_paste",
+    }
+
+
+def _deepseek_card() -> dict[str, Any]:
+    token = os.environ.get("DEEPSEEK_API_KEY", "").strip()
     if token:
         return {
             "source": "env",
@@ -209,6 +230,12 @@ def config_payload(listen_host: str, listen_port: int) -> dict[str, Any]:
     usage_local = f"http://127.0.0.1:{port}/usage"
     usage_lan = f"http://{ips[0]}:{port}/usage" if ips else usage_local
     secrets_h = f'#define USAGE_URL "{usage_lan}"'
+    secrets_h_file = (
+        "#pragma once\n\n"
+        "#define WIFI_SSID \"SUA_REDE\"\n"
+        "#define WIFI_PASSWORD \"SUA_SENHA\"\n"
+        f'#define USAGE_URL "{usage_lan}"\n'
+    )
     env_port = (os.environ.get("PORT") or "").strip()
     restart = bool(env_port) and env_port != str(listen_port)
     return {
@@ -222,6 +249,7 @@ def config_payload(listen_host: str, listen_port: int) -> dict[str, Any]:
             "usage_lan": usage_lan,
             "usage_local": usage_local,
             "secrets_h": secrets_h,
+            "secrets_h_file": secrets_h_file,
             "board_ok": bool(ips),
         },
         "lan_ips": ips,
@@ -231,6 +259,7 @@ def config_payload(listen_host: str, listen_port: int) -> dict[str, Any]:
             "claude": _claude_card(),
             "cursor": _cursor_card(),
             "openrouter": _openrouter_card(),
+            "deepseek": _deepseek_card(),
         },
         "docker": docker_status(),
         "fields": {
@@ -272,6 +301,11 @@ def save_config(body: dict[str, Any]) -> dict[str, Any]:
             if not cleaned:
                 return {"ok": False, "error": "API key OpenRouter inválida; cole só a chave sk-or-..."}
             val = cleaned
+        if key == "DEEPSEEK_API_KEY" and val:
+            cleaned_ds = clean_deepseek_key(val)
+            if not cleaned_ds:
+                return {"ok": False, "error": "API key DeepSeek inválida; cole só a chave sk-..."}
+            val = cleaned_ds
         updates[key] = val
     if not updates:
         return {"ok": True, "changed": [], "note": "nada para gravar"}

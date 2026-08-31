@@ -11,12 +11,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from claude_oauth import claude_token_candidates
+from cursor_state import cursor_token_candidates
 from docker_ctl import docker_down, docker_up
 from formatting import utc_now
 from store import apply as apply_store
 from panel import WEB_DIR, clear_secret, config_payload, reload_env, save_config
 from providers.claude import _claude_fail, fetch_claude
 from providers.cursor import _cursor_fail, fetch_cursor
+from providers.deepseek import _deepseek_fail, fetch_deepseek
 from providers.openrouter import _openrouter_fail, fetch_openrouter
 
 LISTEN_HOST = "0.0.0.0"
@@ -33,6 +36,7 @@ def mock_payload() -> dict[str, Any]:
         "claude": {
             "ok": True,
             "error": None,
+            "configured": True,
             "session_percent": 42.0,
             "session_resets_at": utc_now(),
             "weekly_percent": 18.0,
@@ -41,6 +45,7 @@ def mock_payload() -> dict[str, Any]:
         "cursor": {
             "ok": True,
             "error": None,
+            "configured": True,
             "percent": 70.0,
             "other_percent": 73.0,
             "used_cents": 0,
@@ -52,11 +57,36 @@ def mock_payload() -> dict[str, Any]:
         "openrouter": {
             "ok": True,
             "error": None,
+            "configured": True,
             "percent": 66.6,
             "limit_cents": 1000,
             "used_cents": 666,
             "remaining_cents": 334,
         },
+        "deepseek": {
+            "ok": True,
+            "error": None,
+            "configured": True,
+            "percent": 25.0,
+            "limit_cents": 1000,
+            "used_cents": 250,
+            "remaining_cents": 750,
+        },
+    }
+
+
+def _is_configured() -> dict[str, bool]:
+    """Provedor foi preenchido pelo usuario (painel ou credencial local)?
+
+    Distinto de `ok`: um provedor configurado pode falhar (rede, token
+    expirado) e ainda assim deve aparecer na tela, com erro. So um provedor
+    nunca preenchido fica de fora — o usuario controla o que quer listar.
+    """
+    return {
+        "claude": bool(claude_token_candidates()),
+        "cursor": bool(cursor_token_candidates()),
+        "openrouter": bool(os.environ.get("OPENROUTER_API_KEY", "").strip()),
+        "deepseek": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()),
     }
 
 
@@ -67,6 +97,7 @@ def build_payload() -> dict[str, Any]:
     claude: dict[str, Any]
     cursor: dict[str, Any]
     openrouter: dict[str, Any]
+    deepseek: dict[str, Any]
     try:
         claude = fetch_claude()
     except Exception as exc:  # noqa: BLE001 — isolar provedor
@@ -79,11 +110,21 @@ def build_payload() -> dict[str, Any]:
         openrouter = fetch_openrouter()
     except Exception as exc:  # noqa: BLE001
         openrouter = _openrouter_fail(str(exc))
+    try:
+        deepseek = fetch_deepseek()
+    except Exception as exc:  # noqa: BLE001
+        deepseek = _deepseek_fail(str(exc))
+    configured = _is_configured()
+    claude["configured"] = configured["claude"]
+    cursor["configured"] = configured["cursor"]
+    openrouter["configured"] = configured["openrouter"]
+    deepseek["configured"] = configured["deepseek"]
     return {
         "updated_at": utc_now(),
         "claude": claude,
         "cursor": cursor,
         "openrouter": openrouter,
+        "deepseek": deepseek,
     }
 
 
@@ -204,7 +245,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/usage":
             payload = build_payload()
-            for name in ("claude", "cursor", "openrouter"):
+            for name in ("claude", "cursor", "openrouter", "deepseek"):
                 block = payload.get(name) or {}
                 if isinstance(block, dict) and not block.get("ok"):
                     print(f"[{utc_now()}] ERRO {name}: {block.get('error')}")

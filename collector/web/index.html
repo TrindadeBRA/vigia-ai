@@ -6,10 +6,25 @@
   <title>Vigia AI — coletor</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // Mesma paleta do tema Escuro (padrão) do firmware — ver applyTheme()
+    // em src/ui.cpp e o acento vermelho padrão (ACCENT_RED) em accentRgb().
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: { sans: ["ui-sans-serif", "system-ui", "sans-serif"] },
+          colors: {
+            canvas: "#101418",  // COL_BG
+            panel: "#182021",    // COL_CARD
+            edge: "#393c42",     // COL_CARD_BORDER
+            surface: "#292c31",  // COL_TRACK
+            ink: "#f7f3ef",      // COL_TEXT
+            ink2: "#adaeb5",     // COL_TEXT_DIM
+            ink3: "#6b6d73",     // COL_TEXT_MUTED
+            accent: "#e73831",   // COL_ACCENT (ACCENT_RED)
+            good: "#8cbe94",     // COL_GOOD
+            warn: "#e7a65a",     // COL_WARN
+            bad: "#de6d6b",      // COL_BAD
+          },
         },
       },
     };
@@ -19,50 +34,48 @@
     summary { list-style: none; }
   </style>
 </head>
-<body class="min-h-full bg-slate-950 text-slate-100 antialiased">
+<body class="min-h-full bg-canvas text-ink antialiased">
   <main class="mx-auto max-w-3xl px-4 py-10 pb-20 sm:px-6">
     <header>
-      <p class="text-xs font-semibold uppercase tracking-wider text-sky-400">Vigia AI</p>
+      <p class="text-xs font-semibold uppercase tracking-wider text-accent">Vigia AI</p>
       <h1 class="mt-1 text-2xl font-semibold tracking-tight">Painel do coletor</h1>
-      <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
-        Roda neste Mac e publica as cotas de Claude, Cursor e OpenRouter na sua rede local.
+      <p class="mt-3 max-w-2xl text-sm leading-relaxed text-ink2">
+        Roda neste Mac e publica as cotas de Claude, Cursor, OpenRouter e DeepSeek na sua rede local.
         A placa ESP32 só lê esse JSON — nunca vê tokens.
       </p>
     </header>
 
     <!-- URL da placa -->
-    <section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">
-      <h2 class="text-base font-semibold">Endereço para a placa</h2>
-      <p class="mt-1 text-sm text-slate-400">
-        Cole em <code class="text-slate-300">USAGE_URL</code>, no <code class="text-slate-300">src/secrets.h</code>.
+    <section class="mt-8 rounded-2xl border border-edge bg-panel p-5">
+      <h2 class="text-base font-semibold">Arquivo para a placa</h2>
+      <p class="mt-1 text-sm text-ink2">
+        Baixe o <code class="text-ink2">secrets.h</code> pronto e mova para <code class="text-ink2">src/</code> — só falta preencher o Wi-Fi.
       </p>
-      <div class="mt-4 flex items-center gap-2">
-        <p id="url-board" class="flex-1 truncate rounded-lg bg-slate-950 px-4 py-3 font-mono text-sm text-sky-300">…</p>
-        <button type="button" id="copy-usage" class="shrink-0 rounded-lg bg-sky-600 px-3 py-3 text-sm font-semibold text-white hover:bg-sky-500">Copiar</button>
+      <div class="mt-4">
+        <button type="button" id="download-secrets" class="w-full rounded-lg bg-accent px-3 py-3 text-sm font-semibold text-white hover:bg-accent/90">Baixar secrets.h</button>
       </div>
-      <p id="board-warn" class="mt-2 hidden text-xs text-amber-400">Nenhum IP de Wi-Fi encontrado neste Mac — confira a rede antes de gravar a placa.</p>
+      <p id="board-warn" class="mt-2 hidden text-xs text-warn">Nenhum IP de Wi-Fi encontrado neste Mac — confira a rede antes de gravar a placa.</p>
 
       <details class="mt-4">
-        <summary class="cursor-pointer text-xs font-medium text-slate-500 hover:text-slate-300">Mais detalhes</summary>
-        <div class="mt-3 space-y-3 border-l border-slate-800 pl-3">
-          <p class="text-xs text-slate-500">Só neste Mac: <code id="url-local" class="text-slate-400">…</code></p>
+        <summary class="cursor-pointer text-xs font-medium text-ink3 hover:text-ink2">Mais detalhes</summary>
+        <div class="mt-3 space-y-4 border-l border-edge pl-3">
           <div>
-            <p class="text-xs text-slate-500">Linha pronta para o <code class="text-slate-400">secrets.h</code>:</p>
-            <div class="mt-1 flex items-center gap-2">
-              <pre id="secrets-line" class="flex-1 overflow-x-auto rounded-lg bg-slate-950 px-3 py-2 text-xs text-slate-300"></pre>
-              <button type="button" id="copy-define" class="shrink-0 rounded-lg border border-slate-600 px-2.5 py-2 text-xs text-slate-200 hover:bg-slate-800">Copiar</button>
-            </div>
+            <p class="text-xs font-medium text-ink2">URL usada no arquivo</p>
+            <p class="mt-0.5 text-xs leading-relaxed text-ink3">
+              O IP da placa na sua rede Wi-Fi. É o endereço que foi gravado no <code class="text-ink2">USAGE_URL</code> do arquivo baixado — a ESP32 usa esse IP para achar o coletor na LAN.
+            </p>
+            <code id="url-board" class="mt-1 block truncate text-xs text-accent">…</code>
           </div>
         </div>
       </details>
-      <p id="copy-msg" class="mt-2 min-h-[1.25rem] text-xs text-emerald-400"></p>
+      <p id="copy-msg" class="mt-2 min-h-[1.25rem] text-xs text-good"></p>
     </section>
 
     <!-- Contas -->
     <section class="mt-6">
       <h2 class="text-base font-semibold">Contas</h2>
-      <div class="mt-3 grid gap-3">
-        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <div class="mt-3 grid grid-cols-1 gap-3">
+        <article class="rounded-2xl border border-edge bg-panel p-5">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <span id="claude-dot" class="h-2 w-2 rounded-full"></span>
@@ -70,20 +83,23 @@
             </div>
             <span id="claude-badge" class="text-xs font-medium"></span>
           </div>
-          <p class="mt-1 text-xs text-slate-500">Cota da assinatura (sessão de 5h e semana) — a mesma do Claude Code, não a key <code class="text-slate-400">sk-ant-…</code>.</p>
-          <p id="claude-status" class="mt-2 text-sm text-slate-300"></p>
-          <details class="mt-3">
-            <summary class="cursor-pointer text-xs font-medium text-sky-400 hover:text-sky-300">Colar token manualmente</summary>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">Só para Docker ou outro PC sem o Claude Code. Não cole o resultado de <code class="text-slate-400">claude setup-token</code>.</p>
-            <div class="mt-2 flex flex-wrap gap-2">
-              <input id="claude" type="password" autocomplete="off" placeholder="CLAUDE_OAUTH_TOKEN" class="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
-              <button type="button" id="save-claude" class="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-500">Salvar</button>
-              <button type="button" id="clear-claude" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Apagar token</button>
+          <p class="mt-1 text-xs text-ink3">Cota da assinatura (sessão de 5h e semana) — a mesma do Claude Code, não a key <code class="text-ink2">sk-ant-…</code>.</p>
+          <div class="mt-3">
+            <p class="text-xs leading-relaxed text-ink3">Só para Docker ou outro PC sem o Claude Code. Não cole o resultado de <code class="text-ink2">claude setup-token</code>.</p>
+            <div id="claude-fields-skel" class="mt-2 flex flex-wrap gap-2">
+              <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+              <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+              <span class="h-9 w-28 animate-pulse rounded-lg bg-surface"></span>
             </div>
-          </details>
+            <div id="claude-fields" class="mt-2 flex flex-wrap gap-2" style="display:none">
+              <input id="claude" type="password" autocomplete="off" placeholder="CLAUDE_OAUTH_TOKEN" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
+              <button type="button" id="save-claude" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
+              <button type="button" id="clear-claude" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar token</button>
+            </div>
+          </div>
         </article>
 
-        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <article class="rounded-2xl border border-edge bg-panel p-5">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <span id="cursor-dot" class="h-2 w-2 rounded-full"></span>
@@ -91,20 +107,37 @@
             </div>
             <span id="cursor-badge" class="text-xs font-medium"></span>
           </div>
-          <p class="mt-1 text-xs text-slate-500">% do plano (Cursor Models e Other Models). Sem API key oficial — lê o login salvo pelo app.</p>
-          <p id="cursor-status" class="mt-2 text-sm text-slate-300"></p>
-          <details class="mt-3">
-            <summary class="cursor-pointer text-xs font-medium text-sky-400 hover:text-sky-300">Colar token manualmente</summary>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">Só se o Cursor não estiver instalado neste PC. É um token de sessão, não uma API key — expira com o tempo.</p>
-            <div class="mt-2 flex flex-wrap gap-2">
-              <input id="cursor" type="password" autocomplete="off" placeholder="CURSOR_ACCESS_TOKEN" class="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
-              <button type="button" id="save-cursor" class="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-500">Salvar</button>
-              <button type="button" id="clear-cursor" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Apagar token</button>
+          <p class="mt-1 text-xs text-ink3">% do plano (Cursor Models e Other Models). Sem API key oficial — lê o login salvo pelo app.</p>
+          <div class="mt-3">
+            <p class="text-xs leading-relaxed text-ink3">
+              <strong class="text-ink2">Tente primeiro:</strong> no Cursor, Settings → Account → sair e entrar de novo,
+              depois clique em "Testar agora" acima. Se continuar faltando, rode isto no Terminal (Cursor aberto e logado —
+              ele mesmo avisa se der erro) e cole o resultado abaixo:
+            </p>
+            <div class="relative mt-2">
+              <pre id="cursor-cmd" class="overflow-x-auto rounded-lg bg-canvas px-3 py-2 pr-16 text-xs text-ink2">(db="$HOME/Library/Application Support/Cursor/User/globalStorage/state.vscdb"
+[ -f "$db" ] || { echo "Erro: Cursor não parece instalado neste Mac."; exit 1; }
+tmp=$(mktemp) && cp "$db" "$tmp" || { echo "Erro: não consegui copiar o banco (permissão?)."; exit 1; }
+val=$(sqlite3 "$tmp" "SELECT value FROM ItemTable WHERE key='cursorAuth/accessToken'" 2>&1)
+rm -f "$tmp"
+[ -n "$val" ] && echo "$val" || echo "Vazio — a conta não guarda sessão nessa tabela, refaça sign-out/sign-in no Cursor.")</pre>
+              <button type="button" id="copy-cursor-cmd" class="absolute right-2 top-2 rounded-md border border-edge bg-panel px-2 py-1 text-[11px] font-medium text-ink2 hover:bg-surface">Copiar</button>
             </div>
-          </details>
+            <p class="mt-2 text-xs leading-relaxed text-ink3">O script copia o banco antes de ler (evita "database is locked") e já avisa no terminal se algo der errado. É um token de sessão, não uma API key — expira com o tempo.</p>
+            <div id="cursor-fields-skel" class="mt-2 flex flex-wrap gap-2">
+              <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+              <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+              <span class="h-9 w-28 animate-pulse rounded-lg bg-surface"></span>
+            </div>
+            <div id="cursor-fields" class="mt-2 flex flex-wrap gap-2" style="display:none">
+              <input id="cursor" type="password" autocomplete="off" placeholder="CURSOR_ACCESS_TOKEN" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
+              <button type="button" id="save-cursor" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
+              <button type="button" id="clear-cursor" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar token</button>
+            </div>
+          </div>
         </article>
 
-        <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <article class="rounded-2xl border border-edge bg-panel p-5">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <span id="or-dot" class="h-2 w-2 rounded-full"></span>
@@ -112,63 +145,88 @@
             </div>
             <span id="or-badge" class="text-xs font-medium"></span>
           </div>
-          <p class="mt-1 text-xs text-slate-500">Créditos da conta. Crie a key em <a class="text-sky-400 underline" href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">openrouter.ai/settings/keys</a>.</p>
-          <p id="or-status" class="mt-2 text-sm text-slate-300"></p>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <input id="or" type="password" autocomplete="off" placeholder="sk-or-…" class="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
-            <button type="button" id="save-or" class="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-500">Salvar</button>
-            <button type="button" id="clear-or" class="rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Apagar key</button>
+          <p class="mt-1 text-xs text-ink3">Créditos da conta. Crie a key em <a class="text-accent underline" href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">openrouter.ai/settings/keys</a>.</p>
+          <div id="or-fields-skel" class="mt-3 flex flex-wrap gap-2">
+            <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-24 animate-pulse rounded-lg bg-surface"></span>
+          </div>
+          <div id="or-fields" class="mt-3 flex flex-wrap gap-2" style="display:none">
+            <input id="or" type="password" autocomplete="off" placeholder="sk-or-…" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
+            <button type="button" id="save-or" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
+            <button type="button" id="clear-or" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar key</button>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-edge bg-panel p-5">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span id="deepseek-dot" class="h-2 w-2 rounded-full"></span>
+              <h3 class="font-semibold">DeepSeek</h3>
+            </div>
+            <span id="deepseek-badge" class="text-xs font-medium"></span>
+          </div>
+          <p class="mt-1 text-xs text-ink3">Saldo da conta. Crie a key em <a class="text-accent underline" href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer">platform.deepseek.com/api_keys</a>.</p>
+          <div id="deepseek-fields-skel" class="mt-3 flex flex-wrap gap-2">
+            <span class="h-9 min-w-0 flex-1 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-16 animate-pulse rounded-lg bg-surface"></span>
+            <span class="h-9 w-24 animate-pulse rounded-lg bg-surface"></span>
+          </div>
+          <div id="deepseek-fields" class="mt-3 flex flex-wrap gap-2" style="display:none">
+            <input id="deepseek" type="password" autocomplete="off" placeholder="sk-…" class="min-w-0 flex-1 rounded-lg border border-edge bg-canvas px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" />
+            <button type="button" id="save-deepseek" class="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50">Salvar</button>
+            <button type="button" id="clear-deepseek" class="rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Apagar key</button>
           </div>
         </article>
       </div>
     </section>
 
     <!-- Testar -->
-    <section class="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+    <section class="mt-6 rounded-2xl border border-edge bg-panel p-5">
       <h2 class="text-base font-semibold">Testar agora</h2>
-      <p class="mt-1 text-sm text-slate-400">Busca as três cotas uma vez, sem esperar o próximo ciclo da placa.</p>
-      <button type="button" id="test" class="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Buscar cotas agora</button>
-      <div id="test-out" class="mt-4 grid gap-2 sm:grid-cols-3"></div>
+      <p class="mt-1 text-sm text-ink2">Busca as quatro cotas uma vez, sem esperar o próximo ciclo da placa.</p>
+      <button type="button" id="test" class="mt-3 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent/90">Buscar cotas agora</button>
+      <div id="test-out" class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"></div>
     </section>
 
     <!-- Avançado -->
-    <details class="mt-6 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
-      <summary class="cursor-pointer text-sm font-medium text-slate-300">Avançado — Docker, porta e mock</summary>
+    <details class="mt-6 rounded-2xl border border-edge bg-panel/50 p-5">
+      <summary class="cursor-pointer text-sm font-medium text-ink2">Avançado — Docker, porta e mock</summary>
 
       <div class="mt-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h3 class="text-sm font-semibold">Docker</h3>
-          <span id="docker-badge" class="rounded-full border border-slate-700 px-2.5 py-0.5 text-xs text-slate-400">…</span>
+          <span id="docker-badge" class="rounded-full border border-edge px-2.5 py-0.5 text-xs text-ink2">…</span>
         </div>
-        <p class="mt-1 text-xs text-slate-500">Opcional — o coletor local em Python já lê o Keychain e o Cursor deste Mac.</p>
-        <p id="docker-hint" class="mt-2 text-sm text-slate-300"></p>
+        <p class="mt-1 text-xs text-ink3">Opcional — o coletor local em Python já lê o Keychain e o Cursor deste Mac.</p>
+        <p id="docker-hint" class="mt-2 text-sm text-ink2"></p>
         <div class="mt-3 flex flex-wrap gap-2">
-          <button type="button" id="docker-up" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-40">Iniciar Docker</button>
-          <button type="button" id="docker-down" class="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-40">Parar Docker</button>
+          <button type="button" id="docker-up" class="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-40">Iniciar Docker</button>
+          <button type="button" id="docker-down" class="rounded-lg border border-edge px-3 py-2 text-sm hover:bg-surface disabled:opacity-40">Parar Docker</button>
         </div>
-        <p id="docker-msg" class="mt-2 min-h-[1.25rem] text-xs text-slate-500"></p>
+        <p id="docker-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
       </div>
 
-      <div class="mt-6 border-t border-slate-800 pt-4">
+      <div class="mt-6 border-t border-edge pt-4">
         <h3 class="text-sm font-semibold">Servidor</h3>
-        <p class="mt-1 text-xs text-slate-500">
-          <code class="text-slate-400">HOST 0.0.0.0</code> deixa a ESP32 alcançar este Mac pela Wi-Fi;
-          <code class="text-slate-400">127.0.0.1</code> só funciona neste computador. Mudar a porta exige reiniciar o coletor.
+        <p class="mt-1 text-xs text-ink3">
+          <code class="text-ink2">HOST 0.0.0.0</code> deixa a ESP32 alcançar este Mac pela Wi-Fi;
+          <code class="text-ink2">127.0.0.1</code> só funciona neste computador. Mudar a porta exige reiniciar o coletor.
         </p>
         <div class="mt-3 grid gap-3 sm:grid-cols-2">
-          <label class="text-xs text-slate-500">Porta
-            <input id="port" type="number" min="1" max="65535" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+          <label class="text-xs text-ink3">Porta
+            <input id="port" type="number" min="1" max="65535" class="mt-1 w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink" />
           </label>
-          <label class="text-xs text-slate-500">Bind HOST
-            <input id="host" type="text" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+          <label class="text-xs text-ink3">Bind HOST
+            <input id="host" type="text" class="mt-1 w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink" />
           </label>
         </div>
-        <label class="mt-3 flex items-center gap-2 text-sm text-slate-300">
-          <input id="mock" type="checkbox" class="rounded border-slate-600" />
+        <label class="mt-3 flex items-center gap-2 text-sm text-ink2">
+          <input id="mock" type="checkbox" class="rounded border-edge accent-accent" />
           Modo mock — dados de exemplo, sem chamar as APIs
         </label>
-        <button type="button" id="save-server" class="mt-3 rounded-lg border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">Salvar</button>
-        <p id="server-msg" class="mt-2 min-h-[1.25rem] text-xs text-slate-500"></p>
+        <button type="button" id="save-server" class="mt-3 rounded-lg border border-edge px-3 py-1.5 text-sm hover:bg-surface">Salvar</button>
+        <p id="server-msg" class="mt-2 min-h-[1.25rem] text-xs text-ink3"></p>
       </div>
     </details>
   </main>
@@ -176,17 +234,17 @@
   <script>
     const $ = (id) => document.getElementById(id);
     let usageLan = "";
-    let secretsH = "";
+    let secretsHFile = "";
 
     const DOT = {
-      ok: "bg-emerald-500",
-      warn: "bg-amber-500",
-      missing: "bg-rose-500",
+      ok: "bg-good",
+      warn: "bg-warn",
+      missing: "bg-bad",
     };
     const BADGE = {
-      ok: "text-emerald-400",
-      warn: "text-amber-400",
-      missing: "text-rose-400",
+      ok: "text-good",
+      warn: "text-warn",
+      missing: "text-bad",
     };
     const BADGE_TEXT = {
       ok: "Conectado",
@@ -194,13 +252,21 @@
       missing: "Falta configurar",
     };
 
+    const MASKED_VALUE = "•".repeat(24);
+
     function fillProv(prefix, p) {
       const state = p.configured ? "ok" : p.source === "expired" ? "warn" : "missing";
       $(prefix + "-dot").className = "h-2 w-2 rounded-full " + DOT[state];
       $(prefix + "-badge").className = "text-xs font-medium " + BADGE[state];
       $(prefix + "-badge").textContent = BADGE_TEXT[state];
-      const extra = p.suffix ? ` (…${p.suffix})` : "";
-      $(prefix + "-status").textContent = p.label + extra;
+      const input = $(prefix);
+      const saveBtn = $("save-" + prefix);
+      input.disabled = p.configured;
+      saveBtn.disabled = p.configured;
+      input.value = p.configured ? MASKED_VALUE : "";
+
+      $(prefix + "-fields-skel").style.display = "none";
+      $(prefix + "-fields").style.display = "flex";
     }
 
     function fillDocker(d) {
@@ -226,10 +292,8 @@
       const r = await fetch("/api/config");
       const d = await r.json();
       usageLan = d.urls.usage_lan;
-      secretsH = d.urls.secrets_h;
+      secretsHFile = d.urls.secrets_h_file;
       $("url-board").textContent = usageLan;
-      $("url-local").textContent = d.urls.usage_local || "";
-      $("secrets-line").textContent = secretsH;
       const warn = $("board-warn");
       warn.classList.toggle("hidden", !!d.urls.board_ok);
       $("port").value = d.port_file || d.listen.port;
@@ -238,6 +302,7 @@
       fillProv("claude", d.providers.claude);
       fillProv("cursor", d.providers.cursor);
       fillProv("or", d.providers.openrouter);
+      fillProv("deepseek", d.providers.deepseek);
       fillDocker(d);
     }
 
@@ -257,13 +322,18 @@
       });
       return r.json();
     }
-    async function copyText(text, msg) {
-      await navigator.clipboard.writeText(text);
-      $("copy-msg").textContent = msg;
-    }
-
-    $("copy-usage").onclick = () => copyText(usageLan, "Copiado — cole em USAGE_URL no secrets.h.");
-    $("copy-define").onclick = () => copyText(secretsH, "Copiado — cole no secrets.h.");
+    $("download-secrets").onclick = () => {
+      const blob = new Blob([secretsHFile], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "secrets.h";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      $("copy-msg").textContent = "Baixado — mova para src/secrets.h e preencha o Wi-Fi.";
+    };
 
     async function dockerAction(action) {
       const msg = $("docker-msg");
@@ -317,10 +387,29 @@
       await load();
     };
     $("clear-or").onclick = async () => { await postClear("OPENROUTER_API_KEY"); await load(); };
+    $("save-deepseek").onclick = async () => {
+      const v = $("deepseek").value.trim();
+      if (!v) return;
+      await postConfig({ DEEPSEEK_API_KEY: v });
+      $("deepseek").value = "";
+      await load();
+    };
+    $("clear-deepseek").onclick = async () => { await postClear("DEEPSEEK_API_KEY"); await load(); };
+
+    $("copy-cursor-cmd").onclick = async () => {
+      const btn = $("copy-cursor-cmd");
+      try {
+        await navigator.clipboard.writeText($("cursor-cmd").textContent);
+        btn.textContent = "Copiado!";
+      } catch {
+        btn.textContent = "Falhou";
+      }
+      setTimeout(() => { btn.textContent = "Copiar"; }, 1500);
+    };
 
     $("test").onclick = async () => {
       const box = $("test-out");
-      box.innerHTML = `<p class="text-sm text-slate-500">Consultando…</p>`;
+      box.innerHTML = `<p class="text-sm text-ink3">Consultando…</p>`;
       const r = await fetch("/usage");
       const d = await r.json();
       const card = (name, title) => {
@@ -333,12 +422,12 @@
                 ? `modelos ${b.percent ?? "—"}% · outros ${b.other_percent ?? "—"}%`
                 : `${b.percent ?? "—"}% da conta`)
           : (b.error || "falhou");
-        return `<div class="rounded-xl border ${ok ? "border-emerald-900 bg-emerald-950/40" : "border-rose-900 bg-rose-950/40"} p-3">
+        return `<div class="rounded-xl border ${ok ? "border-good/30 bg-good/10" : "border-bad/30 bg-bad/10"} p-3">
           <p class="text-sm font-medium">${title}</p>
-          <p class="mt-1 text-xs ${ok ? "text-emerald-200" : "text-rose-200"}">${detail}</p>
+          <p class="mt-1 text-xs ${ok ? "text-good" : "text-bad"}">${detail}</p>
         </div>`;
       };
-      box.innerHTML = card("claude", "Claude") + card("cursor", "Cursor") + card("openrouter", "OpenRouter");
+      box.innerHTML = card("claude", "Claude") + card("cursor", "Cursor") + card("openrouter", "OpenRouter") + card("deepseek", "DeepSeek");
     };
 
     load().catch((e) => { $("docker-hint").textContent = String(e); });

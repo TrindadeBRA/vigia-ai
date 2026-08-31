@@ -16,6 +16,7 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
   "claude": {
     "ok": true,
     "error": null,
+    "configured": true,
     "session_percent": 42.0,
     "session_resets_at": "2026-08-31T04:00:00Z",
     "weekly_percent": 18.5,
@@ -28,6 +29,7 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
   "cursor": {
     "ok": true,
     "error": null,
+    "configured": true,
     "percent": 35.0,
     "other_percent": 12.0,
     "used_cents": 700,
@@ -42,10 +44,20 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
   "openrouter": {
     "ok": true,
     "error": null,
+    "configured": true,
     "percent": 66.6,
     "limit_cents": 1000,
     "used_cents": 666,
     "remaining_cents": 334
+  },
+  "deepseek": {
+    "ok": true,
+    "error": null,
+    "configured": true,
+    "percent": 25.0,
+    "limit_cents": 1000,
+    "used_cents": 250,
+    "remaining_cents": 750
   }
 }
 ```
@@ -60,6 +72,7 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | `claude` | objeto | sim |
 | `cursor` | objeto | sim |
 | `openrouter` | objeto | sim |
+| `deepseek` | objeto | sim |
 
 ### `claude`
 
@@ -67,6 +80,7 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | --- | --- | --- |
 | `ok` | bool | `false` se não deu para obter cota |
 | `error` | string ou `null` | Mensagem curta para a tela / curl |
+| `configured` | bool | `false` se o usuário nunca preencheu este provedor (sem credencial local nem key colada no painel) — o firmware não desenha o card. Distinto de `ok`: um provedor `configured=true` pode falhar (`ok=false`) e o card continua aparecendo, com erro |
 | `session_percent` | number ou `null` | Janela ~5 h |
 | `session_resets_at` | string ou `null` | |
 | `weekly_percent` | number ou `null` | Janela ~7 d (todos os modelos) |
@@ -82,6 +96,7 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | --- | --- | --- |
 | `ok` | bool | |
 | `error` | string ou `null` | |
+| `configured` | bool | ver descrição em `claude.configured` acima |
 | `percent` | number ou `null` | "Cursor Models" no dashboard (auto), uso do plano no ciclo (0–100) |
 | `other_percent` | number ou `null` | "Other Models" no dashboard (api), segunda barra na tela |
 | `used_cents` | number ou `null` | Gasto on-demand em centavos de USD |
@@ -103,10 +118,25 @@ gasto real feito por outra key/app; ver `docs/APIS_OPENROUTER.md`).
 | --- | --- | --- |
 | `ok` | bool | |
 | `error` | string ou `null` | |
+| `configured` | bool | ver descrição em `claude.configured` acima |
 | `percent` | number ou `null` | `used_cents / limit_cents`; `null` se a conta não tem créditos comprados (`limit_cents` também `null`) |
 | `limit_cents` | number ou `null` | `total_credits` da conta em centavos de USD; `null` = nunca comprou crédito |
 | `used_cents` | number ou `null` | `total_usage` da conta (gasto total histórico), em centavos de USD |
 | `remaining_cents` | number ou `null` | `limit_cents - used_cents`, em centavos de USD |
+
+### `deepseek`
+
+Vem de `GET /user/balance` — saldo da conta; ver `docs/APIS_DEEPSEEK.md`.
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `ok` | bool | |
+| `error` | string ou `null` | |
+| `configured` | bool | ver descrição em `claude.configured` acima |
+| `percent` | number ou `null` | `used_cents / limit_cents`; `null` se a conta nunca recebeu crédito (`limit_cents` também `null`) |
+| `limit_cents` | number ou `null` | `granted_balance + topped_up_balance` da conta em centavos de USD |
+| `used_cents` | number ou `null` | `limit_cents - remaining_cents` |
+| `remaining_cents` | number ou `null` | `total_balance` da conta em centavos de USD |
 
 ## Outros endpoints
 
@@ -120,3 +150,15 @@ gasto real feito por outra key/app; ver `docs/APIS_OPENROUTER.md`).
 Se só o Claude falhar: `claude.ok=false`, `cursor` preenchido. HTTP **200**. A tela mostra erro só no card que falhou.
 
 HTTP 5xx só se o processo do coletor quebrar de fato.
+
+## Provedor não configurado
+
+`configured=false` significa que o usuário nunca preencheu aquele provedor —
+nenhuma credencial local encontrada e nenhuma key colada no painel
+(`collector/data/config.json`). O firmware **não desenha o card** desse
+provedor em nenhuma tela (Início lista/grade, Agora); o usuário controla o
+que quer listar simplesmente preenchendo ou não cada provedor no painel.
+
+Isso é diferente de `ok=false`: um provedor `configured=true` que falha
+(rede fora do ar, token expirado, rate limit) continua com o card visível,
+mostrando o erro — só o `configured=false` remove o card.

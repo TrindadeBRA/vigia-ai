@@ -59,6 +59,7 @@ struct UiStrings {
   const char* splashSub;
   const char* noData;
   const char* tapCorners;
+  const char* noProviders;
 };
 
 const UiStrings& uiTr();

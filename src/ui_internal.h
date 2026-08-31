@@ -27,10 +27,16 @@ extern int g_headerClockX0;
 extern int g_headerClockY0;
 extern int g_headerClockX1;
 extern int g_headerClockY1;
-extern int g_homeSplitX;
-extern int g_homeSplitY;
-extern int g_homeSplitY1;
-extern int g_homeSplitY2;
+// Retangulos de toque dos cards da Início, preenchidos por paintHomeList()/
+// paintHomeGrid() a cada pintura — só os provedores com `configured=true`
+// entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta
+// lista em vez de assumir 4 posições fixas.
+extern View g_homeCardView[4];
+extern int g_homeCardX[4];
+extern int g_homeCardY[4];
+extern int g_homeCardW[4];
+extern int g_homeCardH[4];
+extern int g_homeCardCount;
 extern HomeLayout g_homeLayout;
 extern bool g_statusHasCal;
 extern bool g_statusHasRefresh;
@@ -82,6 +88,7 @@ void paintHome();
 void paintClaude();
 void paintCursor();
 void paintOpenRouter();
+void paintDeepSeek();
 void paintStatus();
 void paintNow();
 void paintNowClock();

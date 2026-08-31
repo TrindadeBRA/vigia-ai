@@ -82,11 +82,23 @@ def cursor_token_candidates() -> list[tuple[str, str, str | None]]:
     return found
 
 
+def cursor_missing_hint() -> str:
+    """Mensagem curta quando não há candidato de token (nem vscdb, nem colado).
+
+    Cursor recente pode não gravar mais `cursorAuth/accessToken` em
+    state.vscdb para toda conta (ex.: login via SSO/Team) mesmo com o app
+    aberto e logado — por isso a dica não é só "abra o Cursor".
+    """
+    db = state_db_path()
+    if db.is_file():
+        return "cursorAuth/accessToken ausente — saia e entre de novo na conta no Cursor"
+    return f"Cursor não encontrado neste Mac (sem {db})"
+
+
 def cursor_token_and_plan() -> tuple[str | None, str | None, str | None]:
     cands = cursor_token_candidates()
     if not cands:
-        db = state_db_path()
-        return None, None, f"sem JWT Cursor (abra o Cursor neste Mac): {db}"
+        return None, None, cursor_missing_hint()
     _src, token, plan = cands[0]
     return token, plan, None
 

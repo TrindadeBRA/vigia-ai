@@ -10,6 +10,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [APIS_CLAUDE.md](APIS_CLAUDE.md) | OAuth usage da Anthropic |
 | [APIS_CURSOR.md](APIS_CURSOR.md) | Dashboard Connect RPC do Cursor |
 | [APIS_OPENROUTER.md](APIS_OPENROUTER.md) | Endpoint público de créditos da key OpenRouter |
+| [APIS_DEEPSEEK.md](APIS_DEEPSEEK.md) | Endpoint público de saldo da key DeepSeek |
 | [HARDWARE.md](HARDWARE.md) | Placa, pinos, drivers TFT |
 | [TOUCH.md](TOUCH.md) | Views, XPT2046, calibração, Wokwi |
 | [COLETOR.md](COLETOR.md) | Como rodar e autenticar o servidor local |
@@ -18,7 +19,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 ## O que é este projeto
 
-**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **Cursor** e **OpenRouter**, com **várias telas**. A placa **não** guarda tokens. Um **coletor Python no Mac** lê credenciais locais (ou `collector/data/config.json` gravado pelo painel), chama as APIs autenticadas e serve JSON na LAN. O firmware faz HTTP GET nesse JSON e desenha a UI.
+**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **Cursor**, **OpenRouter** e **DeepSeek**, com **várias telas**. A placa **não** guarda tokens. Um **coletor Python no Mac** lê credenciais locais (ou `collector/data/config.json` gravado pelo painel), chama as APIs autenticadas e serve JSON na LAN. O firmware faz HTTP GET nesse JSON e desenha a UI.
 
 Idioma da UI e da documentação: **português (Brasil)**. Código (identificadores) em inglês.
 
@@ -42,7 +43,7 @@ collector/panel.py         # GET/POST /api/config (grava data/config.json, sem d
 collector/store.py         # persistência JSON (volume Docker em /app/data)
 collector/web/index.html   # UI do painel
 collector/start.sh         # python local ou `docker`
-collector/providers/       # busca + parse: claude.py, cursor.py, openrouter.py
+collector/providers/       # busca + parse: claude.py, cursor.py, openrouter.py, deepseek.py
 collector/formatting.py    # datas (BRT) e percentuais/centavos compartilhados
 collector/cursor_state.py  # leitura do state.vscdb + JWT exp (painel e provedor)
 src/main.cpp              # setup()/loop(), mock de boot

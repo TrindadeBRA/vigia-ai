@@ -8,13 +8,15 @@ enum View : uint8_t {
   VIEW_CLAUDE = 1,
   VIEW_CURSOR = 2,
   VIEW_OPENROUTER = 3,
-  VIEW_STATUS = 4,
-  VIEW_NOW = 5,
-  VIEW_COUNT = 6
+  VIEW_DEEPSEEK = 4,
+  VIEW_STATUS = 5,
+  VIEW_NOW = 6,
+  VIEW_COUNT = 7
 };
 
 struct ClaudeUsage {
   bool ok = false;
+  bool configured = true;
   String error;
   float sessionPercent = -1;
   String sessionResets;
@@ -28,6 +30,7 @@ struct ClaudeUsage {
 
 struct CursorUsage {
   bool ok = false;
+  bool configured = true;
   String error;
   float percent = -1;
   float otherPercent = -1;
@@ -43,6 +46,17 @@ struct CursorUsage {
 
 struct OpenRouterUsage {
   bool ok = false;
+  bool configured = true;
+  String error;
+  float percent = -1;
+  int limitCents = -1;
+  int usedCents = -1;
+  int remainingCents = -1;
+};
+
+struct DeepSeekUsage {
+  bool ok = false;
+  bool configured = true;
   String error;
   float percent = -1;
   int limitCents = -1;
@@ -57,6 +71,7 @@ struct UsageSnapshot {
   ClaudeUsage claude;
   CursorUsage cursor;
   OpenRouterUsage openrouter;
+  DeepSeekUsage deepseek;
 };
 
 extern TFT_eSPI tft;

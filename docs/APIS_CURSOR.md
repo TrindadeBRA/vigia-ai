@@ -22,6 +22,8 @@ Outras chaves úteis: `cursorAuth/cachedEmail`, `cursorAuth/stripeMembershipType
 
 Ordem: **`state.vscdb` primeiro**, depois `CURSOR_ACCESS_TOKEN` colado no painel. Se o JWT local estiver expirado ou a API devolver 401, o coletor tenta o token colado. No Mac com o app aberto, deixe o campo vazio.
 
+**`cursorAuth/accessToken` pode não existir mesmo com o Cursor aberto e logado** — visto em contas SSO/Team e após updates do app; a linha some de `ItemTable` inteira (nem `cursorAuth/stripeMembershipType` aparece). Não é bug do coletor. Primeiro passo: no Cursor, Settings → Account → sair e entrar de novo na conta, o que costuma regravar a chave local; depois teste `/usage` de novo. Só use o token colado no painel se isso não resolver.
+
 Plano B: `CURSOR_ACCESS_TOKEN` no painel — Docker / outro PC. Não rode `gerar_env_cursor.py` para copiar o JWT para JSON.
 
 Docker: monte o `globalStorage` (somente leitura) com `compose.credentials.yaml` — ver [COLETOR.md](COLETOR.md#docker-e-credenciais-do-host). Colar JWT continua sendo fallback.

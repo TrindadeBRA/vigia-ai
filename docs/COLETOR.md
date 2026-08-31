@@ -24,7 +24,7 @@ cd collector
 
 Abra **http://127.0.0.1:8787/** — painel para portas, URL da ESP32 e status do login. `GET /usage` continua sendo o contrato da placa.
 
-No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter: cole a key no painel (`data/config.json`, gitignored).
+No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter e DeepSeek: cole a key de cada um no painel (`data/config.json`, gitignored).
 
 O container **não** lê o Keychain do macOS. Prefira Python local neste Mac; no Docker, monte arquivos do host (abaixo) ou cole token só como plano B (`claude setup-token` **não** serve).
 
@@ -61,7 +61,7 @@ Não use `python3 gerar_env_claude.py` / `gerar_env_cursor.py` — copiam segred
 
 | Arquivo | Uso |
 | --- | --- |
-| `data/config.json` | Gitignored; painel; volume `./data` no Docker (OpenRouter e plano B) |
+| `data/config.json` | Gitignored; painel; volume `./data` no Docker (OpenRouter, DeepSeek e plano B) |
 | Painel `http://IP:8787/` | HOST, PORT, status da fonte real (keychain / arquivo / vscdb / paste) |
 | `./start.sh` / `./dev-collector.sh` | Sobe o coletor; `docker` usa `compose.yaml` |
 

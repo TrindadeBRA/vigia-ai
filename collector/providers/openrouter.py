@@ -6,7 +6,7 @@ import os
 import re
 from typing import Any
 
-from formatting import as_percent
+from formatting import ratio_percent
 from http_util import http_json
 
 # Key real: sk-or-v1- + hex. Paste do painel às vezes vem "Nome — sk-or-v1-..."
@@ -73,7 +73,7 @@ def parse_openrouter_payload(data: dict[str, Any]) -> dict[str, Any]:
     if limit_cents is not None:
         remaining_cents = max(0, limit_cents - used_cents)
         if limit_cents > 0:
-            percent = as_percent((used_cents / limit_cents) * 100.0)
+            percent = ratio_percent(used_cents, limit_cents)
 
     return {
         "ok": True,

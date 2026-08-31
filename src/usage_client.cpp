@@ -35,6 +35,9 @@ void usageClientLogSnapshot(const char* why) {
   Serial.printf("  openrouter ok=%d pct=%.0f err=%s\n", g_snap.openrouter.ok ? 1 : 0,
                 g_snap.openrouter.percent,
                 g_snap.openrouter.error.length() ? g_snap.openrouter.error.c_str() : "-");
+  Serial.printf("  deepseek ok=%d pct=%.0f err=%s\n", g_snap.deepseek.ok ? 1 : 0,
+                g_snap.deepseek.percent,
+                g_snap.deepseek.error.length() ? g_snap.deepseek.error.c_str() : "-");
 }
 
 #ifndef MOCK_USAGE
@@ -74,6 +77,8 @@ static bool parseUsageJson(const String& body) {
     g_snap.cursor.error = err.c_str();
     g_snap.openrouter.ok = false;
     g_snap.openrouter.error = err.c_str();
+    g_snap.deepseek.ok = false;
+    g_snap.deepseek.error = err.c_str();
     return false;
   }
 
@@ -81,8 +86,10 @@ static bool parseUsageJson(const String& body) {
   JsonObjectConst claude = doc["claude"];
   JsonObjectConst cursor = doc["cursor"];
   JsonObjectConst openrouter = doc["openrouter"];
+  JsonObjectConst deepseek = doc["deepseek"];
 
   g_snap.claude.ok = claude["ok"] | false;
+  g_snap.claude.configured = claude["configured"] | true;
   g_snap.claude.error = claude["error"].isNull() ? "" : String(claude["error"].as<const char*>());
   g_snap.claude.sessionPercent = jsonFloatOrNeg(claude["session_percent"]);
   g_snap.claude.weeklyPercent = jsonFloatOrNeg(claude["weekly_percent"]);
@@ -94,6 +101,7 @@ static bool parseUsageJson(const String& body) {
   g_snap.claude.opusResets = jsonText(claude["opus_resets_at"]);
 
   g_snap.cursor.ok = cursor["ok"] | false;
+  g_snap.cursor.configured = cursor["configured"] | true;
   g_snap.cursor.error = cursor["error"].isNull() ? "" : String(cursor["error"].as<const char*>());
   g_snap.cursor.percent = jsonFloatOrNeg(cursor["percent"]);
   g_snap.cursor.otherPercent = jsonFloatOrNeg(cursor["other_percent"]);
@@ -110,6 +118,7 @@ static bool parseUsageJson(const String& body) {
   g_snap.cursor.plan = jsonText(cursor["plan"]);
 
   g_snap.openrouter.ok = openrouter["ok"] | false;
+  g_snap.openrouter.configured = openrouter["configured"] | true;
   g_snap.openrouter.error =
       openrouter["error"].isNull() ? "" : String(openrouter["error"].as<const char*>());
   g_snap.openrouter.percent = jsonFloatOrNeg(openrouter["percent"]);
@@ -119,6 +128,18 @@ static bool parseUsageJson(const String& body) {
       openrouter["used_cents"].isNull() ? -1 : openrouter["used_cents"].as<int>();
   g_snap.openrouter.remainingCents =
       openrouter["remaining_cents"].isNull() ? -1 : openrouter["remaining_cents"].as<int>();
+
+  g_snap.deepseek.ok = deepseek["ok"] | false;
+  g_snap.deepseek.configured = deepseek["configured"] | true;
+  g_snap.deepseek.error =
+      deepseek["error"].isNull() ? "" : String(deepseek["error"].as<const char*>());
+  g_snap.deepseek.percent = jsonFloatOrNeg(deepseek["percent"]);
+  g_snap.deepseek.limitCents =
+      deepseek["limit_cents"].isNull() ? -1 : deepseek["limit_cents"].as<int>();
+  g_snap.deepseek.usedCents =
+      deepseek["used_cents"].isNull() ? -1 : deepseek["used_cents"].as<int>();
+  g_snap.deepseek.remainingCents =
+      deepseek["remaining_cents"].isNull() ? -1 : deepseek["remaining_cents"].as<int>();
 
   if (g_snap.updatedAt.length() >= 16) {
     g_snap.statusLine = g_snap.updatedAt.substring(11, 16);
@@ -148,6 +169,8 @@ void usageClientFetch() {
     g_snap.cursor.error = "sem Wi-Fi";
     g_snap.openrouter.ok = false;
     g_snap.openrouter.error = "sem Wi-Fi";
+    g_snap.deepseek.ok = false;
+    g_snap.deepseek.error = "sem Wi-Fi";
     usageClientLogSnapshot("wifi-down");
     g_lastFetchMs = millis();
     uiRefreshData();
@@ -184,6 +207,8 @@ void usageClientFetch() {
     g_snap.cursor.error = "coletor HTTP " + String(code);
     g_snap.openrouter.ok = false;
     g_snap.openrouter.error = "coletor HTTP " + String(code);
+    g_snap.deepseek.ok = false;
+    g_snap.deepseek.error = "coletor HTTP " + String(code);
     http.end();
     usageClientLogSnapshot("http-erro");
     g_lastFetchMs = millis();

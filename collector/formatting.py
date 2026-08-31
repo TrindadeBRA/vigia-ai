@@ -54,6 +54,24 @@ def as_percent(value: Any) -> float | None:
     return round(n, 1)
 
 
+def ratio_percent(numerator: float, denominator: float) -> float | None:
+    """Percentual 0-100 a partir de uma razão que o próprio chamador já calculou
+    (numerator/denominator), sem a ambiguidade 0-1 vs 0-100 do `as_percent`.
+
+    Não use `as_percent(x * 100.0)` para isso: se x*100.0 cair em 0-1.5 (ex.: 0,5%
+    de uso), `as_percent` acha que é fração 0-1 e multiplica de novo por 100,
+    virando 50%.
+    """
+    if not denominator:
+        return None
+    pct = (numerator / denominator) * 100.0
+    if pct < 0:
+        pct = 0.0
+    if pct > 100:
+        pct = 100.0
+    return round(pct, 1)
+
+
 def tela_data_utc(dt: datetime) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)

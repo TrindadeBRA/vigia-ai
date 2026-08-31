@@ -255,7 +255,7 @@ void uiSetView(View v) {
 
 static bool viewHasScroll() {
   return g_view == VIEW_CLAUDE || g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER ||
-         g_view == VIEW_STATUS;
+         g_view == VIEW_DEEPSEEK || g_view == VIEW_STATUS;
 }
 
 void uiDetailScrollBy(int dy) {
@@ -304,6 +304,9 @@ void uiRefreshData() {
       break;
     case VIEW_OPENROUTER:
       paintOpenRouter();
+      break;
+    case VIEW_DEEPSEEK:
+      paintDeepSeek();
       break;
     case VIEW_STATUS:
       paintStatus();
@@ -379,24 +382,12 @@ void uiHandleTap(int16_t x, int16_t y) {
     }
   }
   if (g_view == VIEW_HOME) {
-    if (g_homeLayout == HOME_LAYOUT_GRID) {
-      bool left = x < g_homeSplitX;
-      bool top = y < g_homeSplitY;
-      if (top && left) {
-        uiSetView(VIEW_CLAUDE);
-      } else if (top) {
-        uiSetView(VIEW_CURSOR);
-      } else if (left) {
-        uiSetView(VIEW_OPENROUTER);
-      } else {
-        uiSetView(VIEW_STATUS);
+    for (int i = 0; i < g_homeCardCount; i++) {
+      if (x >= g_homeCardX[i] && x < g_homeCardX[i] + g_homeCardW[i] && y >= g_homeCardY[i] &&
+          y < g_homeCardY[i] + g_homeCardH[i]) {
+        uiSetView(g_homeCardView[i]);
+        return;
       }
-    } else if (y < g_homeSplitY1) {
-      uiSetView(VIEW_CLAUDE);
-    } else if (y < g_homeSplitY2) {
-      uiSetView(VIEW_CURSOR);
-    } else {
-      uiSetView(VIEW_OPENROUTER);
     }
     return;
   }

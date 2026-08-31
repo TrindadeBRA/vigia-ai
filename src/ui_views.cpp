@@ -5,6 +5,7 @@
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_openrouter.h"
+#include "assets/icons/icon_deepseek.h"
 
 int g_headerH = 40;
 int g_contentX = 40;
@@ -27,10 +28,12 @@ int g_headerClockX0 = 0;
 int g_headerClockY0 = 0;
 int g_headerClockX1 = 0;
 int g_headerClockY1 = 0;
-int g_homeSplitX = 0;
-int g_homeSplitY = 0;
-int g_homeSplitY1 = 0;
-int g_homeSplitY2 = 0;
+View g_homeCardView[4] = {VIEW_CLAUDE, VIEW_CURSOR, VIEW_OPENROUTER, VIEW_DEEPSEEK};
+int g_homeCardX[4] = {0, 0, 0, 0};
+int g_homeCardY[4] = {0, 0, 0, 0};
+int g_homeCardW[4] = {0, 0, 0, 0};
+int g_homeCardH[4] = {0, 0, 0, 0};
+int g_homeCardCount = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;
 int g_layoutMidX = 0;
@@ -311,6 +314,16 @@ static String openrouterTotals() {
          fmtUsdSite(g_snap.openrouter.limitCents);
 }
 
+// A DeepSeek so devolve saldo atual (sem teto/limite historico — ver
+// docs/APIS_DEEPSEEK.md), entao limitCents fica sempre -1 por design; o que
+// importa aqui e remainingCents mesmo.
+static String deepseekRemain() {
+  if (g_snap.deepseek.remainingCents >= 0) {
+    return String(uiTr().remainMoney) + fmtUsdSite(g_snap.deepseek.remainingCents);
+  }
+  return String(uiTr().noCredits);
+}
+
 static void paintHomeMetric(int x, int y, int w, const char* label, float pct, const String& sub,
                             uint8_t font, int labelH, int barH) {
   tft.setTextDatum(TL_DATUM);
@@ -336,7 +349,9 @@ static void paintHomeMetric(int x, int y, int w, const char* label, float pct, c
   tft.drawString(s, x, y + labelH + 1 + barH + 1, font);
 }
 
-// Home em lista: 3 cards empilhados (Claude, Cursor, OpenRouter).
+// Home em lista: um card empilhado por provedor configurado (0 a 4).
+// Provedores nunca preenchidos no painel (`configured=false`) não entram na
+// lista — o card nem é desenhado nem responde a toque.
 static void paintHomeList() {
   layoutContent();
   const int x0 = g_contentX;
@@ -347,9 +362,20 @@ static void paintHomeList() {
   const int bodyH = H - 12;
   const int pad = x0 + 8;
   const int cardW = W - 16;
-  const int cardH = (bodyH - gap * 2) / 3;
-  g_homeSplitY1 = bodyTop + cardH + gap / 2;
-  g_homeSplitY2 = bodyTop + (cardH + gap) * 2 + gap / 2;
+
+  const bool showClaude = g_snap.claude.configured;
+  const bool showCursor = g_snap.cursor.configured;
+  const bool showOpenRouter = g_snap.openrouter.configured;
+  const bool showDeepSeek = g_snap.deepseek.configured;
+  const int n = (int)showClaude + (int)showCursor + (int)showOpenRouter + (int)showDeepSeek;
+
+  g_homeCardCount = 0;
+  if (n == 0) {
+    drawErrorWrapped(pad, bodyTop, cardW, uiTr().noProviders, COL_BG, 2);
+    return;
+  }
+
+  const int cardH = (bodyH - gap * (n - 1)) / n;
 
   const bool compact = cardH < 80;
   const bool showSub = cardH >= 72;
@@ -383,9 +409,19 @@ static void paintHomeList() {
     return titleY;
   };
 
-  auto cardTwo = [&](const char* title, const uint16_t* icon, int top, bool ok, const String& err,
-                     const char* label1, float pct1, const String& sub1, const char* label2,
-                     float pct2, const String& sub2) {
+  auto registerCard = [&](View view, int top) {
+    g_homeCardView[g_homeCardCount] = view;
+    g_homeCardX[g_homeCardCount] = pad;
+    g_homeCardY[g_homeCardCount] = top;
+    g_homeCardW[g_homeCardCount] = cardW;
+    g_homeCardH[g_homeCardCount] = cardH;
+    g_homeCardCount++;
+  };
+
+  auto cardTwo = [&](View view, const char* title, const uint16_t* icon, int top, bool ok,
+                     const String& err, const char* label1, float pct1, const String& sub1,
+                     const char* label2, float pct2, const String& sub2) {
+    registerCard(view, top);
     const int contentH = titleH + titleToMetric + metricH + gapM + metricH;
     const int titleY = cardChrome(title, icon, top, contentH);
     if (!ok) {
@@ -401,8 +437,9 @@ static void paintHomeList() {
     paintHomeMetric(barX, y + metricH + gapM, barW, label2, pct2, sub2, metricFont, labelH, barH);
   };
 
-  auto cardOne = [&](const char* title, const uint16_t* icon, int top, bool ok, const String& err,
-                     const char* label, float pct, const String& sub) {
+  auto cardOne = [&](View view, const char* title, const uint16_t* icon, int top, bool ok,
+                     const String& err, const char* label, float pct, const String& sub) {
+    registerCard(view, top);
     const int contentH = titleH + titleToMetric + metricH;
     const int titleY = cardChrome(title, icon, top, contentH);
     if (!ok) {
@@ -444,36 +481,107 @@ static void paintHomeList() {
   }
 
   String oSub = showSub ? (openrouterRemain() + "  " + openrouterTotals()) : openrouterRemain();
+  String dSub = deepseekRemain();
 
-  cardTwo("Claude", ICON_CLAUDE, bodyTop, g_snap.claude.ok, g_snap.claude.error, c1.c_str(),
-          g_snap.claude.sessionPercent, cs1, c2.c_str(), g_snap.claude.weeklyPercent, cs2);
-  String curTitle = cursorPlanTitle();
-  cardTwo(curTitle.c_str(), ICON_CURSOR, bodyTop + cardH + gap, g_snap.cursor.ok,
-          g_snap.cursor.error, u1.c_str(), g_snap.cursor.percent, us1, u2.c_str(),
-          g_snap.cursor.otherPercent, us2);
-  cardOne("OpenRouter", ICON_OPENROUTER, bodyTop + (cardH + gap) * 2, g_snap.openrouter.ok,
-          g_snap.openrouter.error, compact ? t.credits : t.accountCredits,
-          g_snap.openrouter.percent, oSub);
+  int slot = 0;
+  auto nextTop = [&]() { return bodyTop + slot * (cardH + gap); };
+  if (showClaude) {
+    cardTwo(VIEW_CLAUDE, "Claude", ICON_CLAUDE, nextTop(), g_snap.claude.ok, g_snap.claude.error,
+            c1.c_str(), g_snap.claude.sessionPercent, cs1, c2.c_str(), g_snap.claude.weeklyPercent,
+            cs2);
+    slot++;
+  }
+  if (showCursor) {
+    String curTitle = cursorPlanTitle();
+    cardTwo(VIEW_CURSOR, curTitle.c_str(), ICON_CURSOR, nextTop(), g_snap.cursor.ok,
+            g_snap.cursor.error, u1.c_str(), g_snap.cursor.percent, us1, u2.c_str(),
+            g_snap.cursor.otherPercent, us2);
+    slot++;
+  }
+  if (showOpenRouter) {
+    cardOne(VIEW_OPENROUTER, "OpenRouter", ICON_OPENROUTER, nextTop(), g_snap.openrouter.ok,
+            g_snap.openrouter.error, compact ? t.credits : t.accountCredits,
+            g_snap.openrouter.percent, oSub);
+    slot++;
+  }
+  if (showDeepSeek) {
+    cardOne(VIEW_DEEPSEEK, "DeepSeek", ICON_DEEPSEEK, nextTop(), g_snap.deepseek.ok,
+            g_snap.deepseek.error, compact ? t.credits : t.accountCredits, g_snap.deepseek.percent,
+            dSub);
+    slot++;
+  }
 }
 
-// Home em grade 2×2: Claude | Cursor / OpenRouter | Sistema.
+struct HomeGridRect {
+  int x, y, w, h;
+};
+
+// Reflui 1..4 cards num grid: 1 = celula unica; 2 = duas colunas; 3 = duas
+// em cima + uma ocupando a linha toda embaixo; 4 = 2x2 classico (igual ao
+// layout de sempre quando os 4 provedores estao configurados).
+static void computeHomeGridRects(int n, int bx, int by, int bw, int bh, int gap,
+                                 HomeGridRect out[4]) {
+  if (n <= 1) {
+    out[0] = {bx, by, bw, bh};
+    return;
+  }
+  if (n == 2) {
+    const int colW = (bw - gap) / 2;
+    out[0] = {bx, by, colW, bh};
+    out[1] = {bx + colW + gap, by, bw - colW - gap, bh};
+    return;
+  }
+  const int rowH = (bh - gap) / 2;
+  const int colW = (bw - gap) / 2;
+  const int row2H = bh - rowH - gap;
+  out[0] = {bx, by, colW, rowH};
+  out[1] = {bx + colW + gap, by, bw - colW - gap, rowH};
+  if (n == 3) {
+    out[2] = {bx, by + rowH + gap, bw, row2H};
+    return;
+  }
+  out[2] = {bx, by + rowH + gap, colW, row2H};
+  out[3] = {bx + colW + gap, by + rowH + gap, bw - colW - gap, row2H};
+}
+
+// Home em grade: 1 a 4 cards, um por provedor configurado. Com os 4
+// preenchidos fica 2x2 (Claude | Cursor / OpenRouter | DeepSeek), igual de
+// sempre; com menos, os cards restantes se reajustam para preencher o
+// espaco (ver computeHomeGridRects).
 static void paintHomeGrid() {
   layoutContent();
-  const int x0 = g_contentX;
   const int W = g_contentW;
   const int H = g_contentH;
   const int bodyTop = g_contentY + 6;
   const int padInner = (W < 360) ? 8 : 10;
   const int gap = (H < 280) ? 6 : 8;
   const int bodyH = H - 12;
-  const int cardW = (W - padInner * 2 - gap) / 2;
-  const int cardH = (bodyH - gap) / 2;
-  const int pad = x0 + padInner;
-  g_homeSplitX = pad + cardW + gap / 2;
-  g_homeSplitY = bodyTop + cardH + gap / 2;
+  const int pad = g_contentX + padInner;
 
-  const bool compact = cardW < 180 || cardH < 110;
-  const bool showSub = cardH >= 72;
+  const bool showClaude = g_snap.claude.configured;
+  const bool showCursor = g_snap.cursor.configured;
+  const bool showOpenRouter = g_snap.openrouter.configured;
+  const bool showDeepSeek = g_snap.deepseek.configured;
+  const int n = (int)showClaude + (int)showCursor + (int)showOpenRouter + (int)showDeepSeek;
+
+  g_homeCardCount = 0;
+  if (n == 0) {
+    drawErrorWrapped(pad, bodyTop, W - padInner * 2, uiTr().noProviders, COL_BG, 2);
+    return;
+  }
+
+  HomeGridRect rects[4];
+  computeHomeGridRects(n, pad, bodyTop, W - padInner * 2, bodyH, gap, rects);
+
+  int minW = rects[0].w;
+  int minH = rects[0].h;
+  for (int i = 1; i < n; i++) {
+    minW = min(minW, rects[i].w);
+    minH = min(minH, rects[i].h);
+  }
+
+  const bool compact = minW < 180 || minH < 110;
+  const bool showSub = minH >= 72;
   const int barH = compact ? 5 : 7;
   const uint8_t metricFont = compact ? 1 : 2;
   const int labelH = compact ? 8 : 16;
@@ -485,47 +593,48 @@ static void paintHomeGrid() {
   const int innerPadY = compact ? 4 : 8;
   const int innerPadX = compact ? 8 : 12;
 
-  auto cellX = [&](int col) { return pad + col * (cardW + gap); };
-  auto cellY = [&](int row) { return bodyTop + row * (cardH + gap); };
+  auto registerCard = [&](View view, const HomeGridRect& r) {
+    g_homeCardView[g_homeCardCount] = view;
+    g_homeCardX[g_homeCardCount] = r.x;
+    g_homeCardY[g_homeCardCount] = r.y;
+    g_homeCardW[g_homeCardCount] = r.w;
+    g_homeCardH[g_homeCardCount] = r.h;
+    g_homeCardCount++;
+  };
 
-  auto cardChrome = [&](int x, int y, const char* title, const uint16_t* icon, bool infoIcon,
+  auto cardChrome = [&](int x, int y, int w, int h, const char* title, const uint16_t* icon,
                         int contentH) -> int {
-    tft.fillRoundRect(x, y, cardW, cardH, 8, COL_CARD);
-    tft.drawRoundRect(x, y, cardW, cardH, 8, COL_CARD_BORDER);
+    tft.fillRoundRect(x, y, w, h, 8, COL_CARD);
+    tft.drawRoundRect(x, y, w, h, 8, COL_CARD_BORDER);
     int padY = innerPadY;
-    int avail = cardH - padY * 2;
+    int avail = h - padY * 2;
     if (avail < contentH) {
       padY = 0;
-      avail = cardH;
+      avail = h;
     }
     const int extra = avail > contentH ? (avail - contentH) : 0;
     const int titleY = y + padY + extra / 2;
     const int iconX = x + innerPadX;
-    if (infoIcon) {
-      drawInfoIcon(iconX + ICON_CLAUDE_W / 2, titleY + titleH / 2, 8, COL_ACCENT);
-    } else {
-      drawIcon(iconX, titleY, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
-    }
+    drawIcon(iconX, titleY, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
     const int textY = titleY + (titleH - 16) / 2;
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(COL_TEXT, COL_CARD);
     tft.drawString(title, iconX + ICON_CLAUDE_W + 6, textY, 2);
-    drawFwdChevron(x + cardW - innerPadX - 4, textY + 8, COL_TEXT_DIM);
+    drawFwdChevron(x + w - innerPadX - 4, textY + 8, COL_TEXT_DIM);
     return titleY;
   };
 
-  auto cardTwo = [&](int col, int row, const char* title, const uint16_t* icon, bool ok,
-                     const String& err, const char* label1, float pct1, const String& sub1,
-                     const char* label2, float pct2, const String& sub2) {
-    const int x = cellX(col);
-    const int y = cellY(row);
+  auto cardTwo = [&](View view, const HomeGridRect& r, const char* title, const uint16_t* icon,
+                     bool ok, const String& err, const char* label1, float pct1,
+                     const String& sub1, const char* label2, float pct2, const String& sub2) {
+    registerCard(view, r);
     const int contentH = titleH + titleToMetric + metricH + gapM + metricH;
-    const int titleY = cardChrome(x, y, title, icon, false, contentH);
-    const int barX = x + innerPadX;
-    const int barW = cardW - innerPadX * 2;
+    const int titleY = cardChrome(r.x, r.y, r.w, r.h, title, icon, contentH);
+    const int barX = r.x + innerPadX;
+    const int barW = r.w - innerPadX * 2;
     if (!ok) {
       const int errY = titleY + titleH + 4;
-      const int errMaxH = (y + cardH - 8) - errY;
+      const int errMaxH = (r.y + r.h - 8) - errY;
       drawErrorWrapped(barX, errY, barW, err, COL_CARD, 1, errMaxH);
       return;
     }
@@ -534,53 +643,21 @@ static void paintHomeGrid() {
     paintHomeMetric(barX, my + metricH + gapM, barW, label2, pct2, sub2, metricFont, labelH, barH);
   };
 
-  auto cardOne = [&](int col, int row, const char* title, const uint16_t* icon, bool ok,
-                     const String& err, const char* label, float pct, const String& sub) {
-    const int x = cellX(col);
-    const int y = cellY(row);
+  auto cardOne = [&](View view, const HomeGridRect& r, const char* title, const uint16_t* icon,
+                     bool ok, const String& err, const char* label, float pct, const String& sub) {
+    registerCard(view, r);
     const int contentH = titleH + titleToMetric + metricH;
-    const int titleY = cardChrome(x, y, title, icon, false, contentH);
-    const int barX = x + innerPadX;
-    const int barW = cardW - innerPadX * 2;
+    const int titleY = cardChrome(r.x, r.y, r.w, r.h, title, icon, contentH);
+    const int barX = r.x + innerPadX;
+    const int barW = r.w - innerPadX * 2;
     if (!ok) {
       const int errY = titleY + titleH + 4;
-      const int errMaxH = (y + cardH - 8) - errY;
+      const int errMaxH = (r.y + r.h - 8) - errY;
       drawErrorWrapped(barX, errY, barW, err, COL_CARD, 1, errMaxH);
       return;
     }
     paintHomeMetric(barX, titleY + titleH + titleToMetric, barW, label, pct, sub, metricFont, labelH,
                     barH);
-  };
-
-  auto cardInfo = [&](int col, int row) {
-    const int x = cellX(col);
-    const int y = cellY(row);
-    const int lineH = compact ? 10 : 16;
-    const int contentH = titleH + titleToMetric + lineH * 4 + 4;
-    const int titleY = cardChrome(x, y, uiTr().system, nullptr, true, contentH);
-    const int tx = x + innerPadX;
-    int ly = titleY + titleH + titleToMetric;
-    const int maxChars = compact ? 16 : 22;
-    tft.setTextDatum(TL_DATUM);
-    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-    tft.drawString(uiTr().networkUpper, tx, ly, metricFont);
-    ly += lineH;
-    tft.setTextColor(COL_TEXT, COL_CARD);
-    String net = g_netLine.length() ? g_netLine : "---";
-    if ((int)net.length() > maxChars) {
-      net = net.substring(0, maxChars);
-    }
-    tft.drawString(net, tx, ly, metricFont);
-    ly += lineH + 4;
-    tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-    tft.drawString(uiTr().updatedUpper, tx, ly, metricFont);
-    ly += lineH;
-    tft.setTextColor(COL_TEXT, COL_CARD);
-    String when = g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine;
-    if ((int)when.length() > maxChars) {
-      when = when.substring(0, maxChars);
-    }
-    tft.drawString(when, tx, ly, metricFont);
   };
 
   const UiStrings& t = uiTr();
@@ -595,19 +672,54 @@ static void paintHomeGrid() {
   if (showSub) {
     oSub += "  " + openrouterTotals();
   }
+  String dSub = deepseekRemain();
 
-  cardTwo(0, 0, "Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error,
-          compact ? t.session5hShort : t.session5h, g_snap.claude.sessionPercent, showSub ? cs1 : "",
-          compact ? t.week : t.weekLimit, g_snap.claude.weeklyPercent, showSub ? cs2 : "");
-  cardTwo(1, 0, curTitle.c_str(), ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error,
-          compact ? t.cursorModelsShort : t.cursorModels, g_snap.cursor.percent, showSub ? us1 : "",
-          compact ? t.otherShort : t.otherModels, g_snap.cursor.otherPercent, showSub ? us2 : "");
-  cardOne(0, 1, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok, g_snap.openrouter.error,
-          compact ? t.credits : t.accountCredits, g_snap.openrouter.percent, oSub);
-  cardInfo(1, 1);
+  int slot = 0;
+  if (showClaude) {
+    cardTwo(VIEW_CLAUDE, rects[slot], "Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error,
+            compact ? t.session5hShort : t.session5h, g_snap.claude.sessionPercent,
+            showSub ? cs1 : "", compact ? t.week : t.weekLimit, g_snap.claude.weeklyPercent,
+            showSub ? cs2 : "");
+    slot++;
+  }
+  if (showCursor) {
+    cardTwo(VIEW_CURSOR, rects[slot], curTitle.c_str(), ICON_CURSOR, g_snap.cursor.ok,
+            g_snap.cursor.error, compact ? t.cursorModelsShort : t.cursorModels,
+            g_snap.cursor.percent, showSub ? us1 : "", compact ? t.otherShort : t.otherModels,
+            g_snap.cursor.otherPercent, showSub ? us2 : "");
+    slot++;
+  }
+  if (showOpenRouter) {
+    cardOne(VIEW_OPENROUTER, rects[slot], "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok,
+            g_snap.openrouter.error, compact ? t.credits : t.accountCredits,
+            g_snap.openrouter.percent, oSub);
+    slot++;
+  }
+  if (showDeepSeek) {
+    cardOne(VIEW_DEEPSEEK, rects[slot], "DeepSeek", ICON_DEEPSEEK, g_snap.deepseek.ok,
+            g_snap.deepseek.error, compact ? t.credits : t.accountCredits, g_snap.deepseek.percent,
+            dSub);
+    slot++;
+  }
 }
 
+// paintHomeList()/paintHomeGrid() só desenham os N cards configurados, e o
+// refresh periódico de dados (uiRefreshData) não faz fillScreen — por
+// desenho, pra não piscar a tela a cada poll. Se o conjunto de provedores
+// configurados muda entre duas pinturas (ex.: usuário apaga uma key no
+// painel), o reflow muda de forma e uma área que antes tinha card passa a
+// não ser mais desenhada, deixando resíduo da pintura anterior visível.
+// Por isso: limpa a área de conteúdo só quando esse conjunto muda.
+static int g_lastHomeConfigMask = -1;
+
 void paintHome() {
+  const int mask = (g_snap.claude.configured ? 1 : 0) | (g_snap.cursor.configured ? 2 : 0) |
+                    (g_snap.openrouter.configured ? 4 : 0) | (g_snap.deepseek.configured ? 8 : 0);
+  if (mask != g_lastHomeConfigMask) {
+    layoutContent();
+    tft.fillRect(g_contentX, g_contentY, g_contentW, g_contentH, COL_BG);
+    g_lastHomeConfigMask = mask;
+  }
   if (g_homeLayout == HOME_LAYOUT_GRID) {
     paintHomeGrid();
   } else {
@@ -851,6 +963,21 @@ void paintOpenRouter() {
   paintDetailFinish();
 }
 
+void paintDeepSeek() {
+  const UiStrings& t = uiTr();
+  if (!paintDetailChrome("DeepSeek", ICON_DEEPSEEK, g_snap.deepseek.ok, g_snap.deepseek.error)) {
+    return;
+  }
+  dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dGap();
+  dBar(t.credits, g_snap.deepseek.percent, deepseekRemain());
+  dKv(t.used, g_snap.deepseek.usedCents >= 0 ? fmtUsdSite(g_snap.deepseek.usedCents) : "");
+  dKv(t.left, g_snap.deepseek.remainingCents >= 0 ? fmtUsdSite(g_snap.deepseek.remainingCents) : "");
+  dKv(t.cap, g_snap.deepseek.limitCents >= 0 ? fmtUsdSite(g_snap.deepseek.limitCents) : "");
+  dKv(t.percent, fmtPct(g_snap.deepseek.percent));
+  paintDetailFinish();
+}
+
 void paintStatus() {
   const bool compact = tft.height() < 280;
   g_btnH = compact ? 28 : 36;
@@ -1062,7 +1189,18 @@ void paintNow() {
   const int gap = 4;
   const int pad = 8;
   const int rowW = W - pad * 2;
-  const int rowH = (bodyH - gap * 2) / 3;
+
+  const bool showClaude = g_snap.claude.configured;
+  const bool showCursor = g_snap.cursor.configured;
+  const bool showOpenRouter = g_snap.openrouter.configured;
+  const bool showDeepSeek = g_snap.deepseek.configured;
+  const int n = (int)showClaude + (int)showCursor + (int)showOpenRouter + (int)showDeepSeek;
+  if (n == 0) {
+    drawErrorWrapped(pad, bodyTop, rowW, uiTr().noProviders, COL_BG, 2);
+    return;
+  }
+
+  const int rowH = (bodyH - gap * (n - 1)) / n;
   const bool compact = rowH < 64;
   const uint8_t metricFont = 1;
   const int labelH = 10;
@@ -1107,13 +1245,25 @@ void paintNow() {
   String us1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(g_snap.cursor.percent));
   String us2 = compact ? String() : cursorOndemand();
   String os1 = compact ? String() : openrouterRemain();
+  String ds1 = compact ? String() : deepseekRemain();
 
-  row(0, "Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error, t.session5hShort,
-      g_snap.claude.sessionPercent, cs1, true, t.week, g_snap.claude.weeklyPercent, cs2);
-  row(1, "Cursor", ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error, t.cursorModelsShort,
-      g_snap.cursor.percent, us1, true, t.otherShort, g_snap.cursor.otherPercent, us2);
-  row(2, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok, g_snap.openrouter.error, t.credits,
-      g_snap.openrouter.percent, os1, false, "", -1, "");
+  int slot = 0;
+  if (showClaude) {
+    row(slot++, "Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error, t.session5hShort,
+        g_snap.claude.sessionPercent, cs1, true, t.week, g_snap.claude.weeklyPercent, cs2);
+  }
+  if (showCursor) {
+    row(slot++, "Cursor", ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error, t.cursorModelsShort,
+        g_snap.cursor.percent, us1, true, t.otherShort, g_snap.cursor.otherPercent, us2);
+  }
+  if (showOpenRouter) {
+    row(slot++, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok, g_snap.openrouter.error,
+        t.credits, g_snap.openrouter.percent, os1, false, "", -1, "");
+  }
+  if (showDeepSeek) {
+    row(slot++, "DeepSeek", ICON_DEEPSEEK, g_snap.deepseek.ok, g_snap.deepseek.error, t.credits,
+        g_snap.deepseek.percent, ds1, false, "", -1, "");
+  }
 }
 
 static void splashDelay(uint32_t ms) {

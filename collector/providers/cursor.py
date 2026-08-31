@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from cursor_state import cursor_token_and_plan, cursor_token_candidates, jwt_expired
-from formatting import as_percent, cycle_end_label, money_cents
+from formatting import as_percent, cycle_end_label, money_cents, ratio_percent
 from http_util import http_json
 
 CURSOR_USAGE_URL = (
@@ -70,7 +70,7 @@ def parse_cursor_auth_usage(data: dict[str, Any], plan: str | None) -> dict[str,
                 continue
             if m_i <= 0:
                 continue
-            pct = as_percent((n_i / m_i) * 100.0)
+            pct = ratio_percent(n_i, m_i)
             if best_pct is None or (pct is not None and pct > best_pct):
                 best_pct, used, limit = pct, n_i, m_i
     ok = best_pct is not None
