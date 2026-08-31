@@ -8,17 +8,19 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 
 | Tela | Conteúdo |
 | --- | --- |
-| Inicio | Claude (sessão 5h + semana), Cursor (modelos + outros), OpenRouter; toque no card abre o detalhe |
+| Inicio | Lista (3 cards) ou grade 2×2; escolhe em **Info → Início**. Toque no card abre o detalhe |
 | Claude | Sessão 5h e semana, % usado e restante |
 | Cursor | Ciclo do plano, dólares se existirem |
 | OpenRouter | Crédito da key |
-| Info | Rede, última atualização, **Atualizar**, **Calibrar** |
+| Info | Rede, layout da home (**Lista** / **Grade**), **Atualizar**, **Calibrar** |
 
 Navegação no **header**: título **VIGIA AI** volta ao início; ícone **i** abre Info. Não há atalho no header para os detalhes — só tocando o card na home. O selo/área livre do header pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
 
 Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`4`.
 
-Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `r` refresh, `c` calibrar (só hardware).
+Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `l` lista, `g` grade, `r` refresh, `c` calibrar (só hardware).
+
+A escolha Lista/Grade fica na NVS (namespace `ui`, chave `home`), igual à calibração do toque — sobrevive a reboot.
 
 ## Ligação típica (XPT2046)
 

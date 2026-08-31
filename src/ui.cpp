@@ -2,10 +2,48 @@
 
 #include "ui_internal.h"
 
+#include <Preferences.h>
+
 View g_view = VIEW_HOME;
+HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
+
+static void loadHomeLayout() {
+  Preferences prefs;
+  if (!prefs.begin("ui", true)) {
+    return;
+  }
+  uint8_t v = prefs.getUChar("home", (uint8_t)HOME_LAYOUT_LIST);
+  prefs.end();
+  if (v > (uint8_t)HOME_LAYOUT_GRID) {
+    v = (uint8_t)HOME_LAYOUT_LIST;
+  }
+  g_homeLayout = (HomeLayout)v;
+}
+
+static void saveHomeLayout() {
+  Preferences prefs;
+  if (!prefs.begin("ui", false)) {
+    return;
+  }
+  prefs.putUChar("home", (uint8_t)g_homeLayout);
+  prefs.end();
+}
 
 void uiInit() {
   g_view = VIEW_HOME;
+  loadHomeLayout();
+}
+
+void uiSetHomeLayout(HomeLayout layout) {
+  if (layout > HOME_LAYOUT_GRID) {
+    return;
+  }
+  if (layout == g_homeLayout) {
+    return;
+  }
+  g_homeLayout = layout;
+  saveHomeLayout();
+  uiPaint();
 }
 
 // Redesenha so o header quando o contador (ou o check de sucesso) muda,
@@ -96,7 +134,19 @@ void uiHandleTap(int16_t x, int16_t y) {
     return;
   }
   if (g_view == VIEW_HOME) {
-    if (y < g_homeSplitY1) {
+    if (g_homeLayout == HOME_LAYOUT_GRID) {
+      bool left = x < g_homeSplitX;
+      bool top = y < g_homeSplitY;
+      if (top && left) {
+        uiSetView(VIEW_CLAUDE);
+      } else if (top) {
+        uiSetView(VIEW_CURSOR);
+      } else if (left) {
+        uiSetView(VIEW_OPENROUTER);
+      } else {
+        uiSetView(VIEW_STATUS);
+      }
+    } else if (y < g_homeSplitY1) {
       uiSetView(VIEW_CLAUDE);
     } else if (y < g_homeSplitY2) {
       uiSetView(VIEW_CURSOR);
@@ -109,6 +159,10 @@ void uiHandleTap(int16_t x, int16_t y) {
     auto inBtn = [&](int by) {
       return y >= by && y <= by + g_btnH && x >= 12 && x <= W - 12;
     };
+    if (y >= g_layoutBtnY && y <= g_layoutBtnY + g_layoutBtnH) {
+      uiSetHomeLayout(x < g_layoutMidX ? HOME_LAYOUT_LIST : HOME_LAYOUT_GRID);
+      return;
+    }
     if (g_statusHasRefresh && inBtn(g_btnRefY)) {
       g_requestRefresh = true;
       return;

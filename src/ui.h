@@ -17,12 +17,16 @@ constexpr uint16_t COL_WARN = 0xE52B;        // âmbar (uso alto)
 constexpr uint16_t COL_BAD = 0xDB6D;         // terracota (uso crítico)
 constexpr uint16_t COL_BADGE_YELLOW = 0xEDC4; // selo de contagem regressiva no header
 
+enum HomeLayout : uint8_t { HOME_LAYOUT_LIST = 0, HOME_LAYOUT_GRID = 1 };
+
 void uiInit();
+void uiShowSplash();
 void uiPaint();
 void uiRefreshData();
 void uiTickClock();
 void uiNext();
 void uiPrev();
 void uiSetView(View v);
+void uiSetHomeLayout(HomeLayout layout);
 void uiHandleTap(int16_t x, int16_t y);
 void uiHandleSwipe(int16_t dx);

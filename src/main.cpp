@@ -66,6 +66,8 @@ void setup() {
   Serial.printf("tft %dx%d rot=%d\n", tft.width(), tft.height(), (int)TFT_ROTATION);
   uiInit();
 
+  uiShowSplash();
+
 #ifdef MOCK_USAGE
   applyMock();
   inputBegin();
@@ -81,9 +83,6 @@ void setup() {
 #else
   Serial.println("=== VIGIA AI hardware ===");
 #endif
-  tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(COL_ACCENT, COL_BG);
-  tft.drawString("VIGIA AI", tft.width() / 2, tft.height() / 2, 4);
   inputBegin();
   g_lastFetchMs = 0;
   usageClientEnsureWifi();

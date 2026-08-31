@@ -46,6 +46,18 @@ Não commitar senha real. Ver `.gitignore`.
 
 ## Comandos
 
+Atalho na raiz do repo (`./dev-pio.sh` — o coletor/gateway continuam no `./dev-wokwi.sh`):
+
+```bash
+./dev-pio.sh wokwi      # pio run -e wokwi
+./dev-pio.sh placa      # pio run -e esp32dev
+./dev-pio.sh upload     # pio run -e esp32dev -t upload
+./dev-pio.sh monitor    # pio device monitor -b 115200
+./dev-pio.sh flash      # upload + monitor
+```
+
+Equivalente na mão:
+
 ```bash
 pio run -e wokwi
 pio run -e esp32dev
@@ -59,14 +71,14 @@ Serial: SSID (não a senha), URL, HTTP status, erros de parse.
 
 No env `esp32dev`: `TOUCH_CS=21`, `SPI_TOUCH_FREQUENCY`. Ver [TOUCH.md](TOUCH.md).
 
-No Wokwi: sem painel resistivo — botões GPIO 5 (Info/Início) e 13 (Início/Info), ou FT6206 capacitivo da peça `board-ili9341-cap-touch`. Serial: `n` `p` `0-4` `r`.
+No Wokwi: sem painel resistivo — botões GPIO 5 (Info/Início) e 13 (Início/Info), ou FT6206 capacitivo da peça `board-ili9341-cap-touch`. Serial: `n` `p` `0-4` `l` `g` `r`.
 
 ## Bibliotecas
 
 - `TFT_eSPI` — tela e XPT2046 (quando `TOUCH_CS` está definido)
 - `ArduinoJson` — parse do `/usage`
 - `WiFi` / `HTTPClient` — core ESP32 Arduino
-- `Preferences` — calibração do toque (NVS)
+- `Preferences` — calibração do toque e layout da home (NVS)
 
 ## Poll
 

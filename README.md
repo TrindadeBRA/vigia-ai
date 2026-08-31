@@ -64,9 +64,10 @@ cp src/secrets.h.example src/secrets.h
 Edite SSID, senha e `USAGE_URL` (`http://SEU_IP:8787/usage`). `src/secrets.h` está no `.gitignore`.
 
 ```bash
-pio run -e esp32dev -t upload
-pio device monitor -b 115200
+./dev-pio.sh flash      # upload + serial (ou: upload / placa / monitor)
 ```
+
+Equivalente: `pio run -e esp32dev -t upload` e `pio device monitor -b 115200`.
 
 Pinos da TFT, **touch** e ILI9486 vs 9488: [`docs/HARDWARE.md`](docs/HARDWARE.md) e [`docs/TOUCH.md`](docs/TOUCH.md).
 
@@ -83,7 +84,7 @@ O simulador precisa do coletor **e** de um gateway de rede local rodando (senão
 Sobe os dois juntos (`Ctrl+C` encerra). Depois:
 
 ```bash
-pio run -e wokwi
+./dev-pio.sh wokwi
 ```
 
 `Cmd+Shift+P` → **Wokwi: Start Simulator**. Tela 240×320 (ILI9341); a 3,5" física é 480×320. Detalhes do gateway: [`docs/FIRMWARE.md`](docs/FIRMWARE.md#rede-no-wokwi-wokwigw).
@@ -117,6 +118,7 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** (Iní
 | `docs/` | Plano, APIs, touch, contexto de IA |
 | `diagram.json` | Circuito Wokwi (+ botões) |
 | `dev-wokwi.sh` | Sobe coletor + `wokwigw` juntos pro simulador |
+| `dev-pio.sh` | Compila / grava firmware (`wokwi`, `placa`, `upload`, `flash`) |
 
 ## Tela (touch)
 

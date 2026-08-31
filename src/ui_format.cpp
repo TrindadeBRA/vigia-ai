@@ -135,13 +135,18 @@ void drawError(int x, int y, const String& err, uint16_t bg) {
 
 // Botão contornado (borda em acento, fundo do card) — mais discreto que um
 // bloco solido, condizente com a paleta neutra.
-void drawButton(int y, int h, const char* label) {
-  const int W = tft.width();
-  tft.fillRoundRect(12, y, W - 24, h, 8, COL_CARD);
-  tft.drawRoundRect(12, y, W - 24, h, 8, COL_ACCENT);
+void drawChoiceButton(int x, int y, int w, int h, const char* label, bool selected) {
+  uint16_t border = selected ? COL_ACCENT : COL_CARD_BORDER;
+  uint16_t fg = selected ? COL_ACCENT : COL_TEXT_DIM;
+  tft.fillRoundRect(x, y, w, h, 8, COL_CARD);
+  tft.drawRoundRect(x, y, w, h, 8, border);
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(COL_ACCENT, COL_CARD);
-  tft.drawString(label, W / 2, y + h / 2, 2);
+  tft.setTextColor(fg, COL_CARD);
+  tft.drawString(label, x + w / 2, y + h / 2, 2);
+}
+
+void drawButton(int y, int h, const char* label) {
+  drawChoiceButton(12, y, tft.width() - 24, h, label, true);
 }
 
 void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor) {
@@ -167,4 +172,16 @@ void drawInfoIcon(int cx, int cy, int r, uint16_t color) {
   tft.drawCircle(cx, cy, r, color);
   tft.fillCircle(cx, cy - r / 2, 1, color);
   tft.fillRect(cx - 1, cy - r / 5, 2, r, color);
+}
+
+int brandWidth(uint8_t font) {
+  return tft.textWidth("VIGIA", font) + tft.textWidth(" AI", font);
+}
+
+void drawBrand(int x, int y, uint8_t font) {
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString("VIGIA", x, y, font);
+  tft.setTextColor(COL_ACCENT, COL_BG);
+  tft.drawString(" AI", x + tft.textWidth("VIGIA", font), y, font);
 }

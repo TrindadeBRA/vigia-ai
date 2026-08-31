@@ -10,13 +10,19 @@ extern int g_headerH;
 extern int g_headerHomeX1;
 extern int g_headerInfoX0;
 extern int g_headerInfoX1;
+extern int g_homeSplitX;
+extern int g_homeSplitY;
 extern int g_homeSplitY1;
 extern int g_homeSplitY2;
+extern HomeLayout g_homeLayout;
 extern bool g_statusHasCal;
 extern bool g_statusHasRefresh;
 extern int g_btnCalY;
 extern int g_btnRefY;
 extern int g_btnH;
+extern int g_layoutBtnY;
+extern int g_layoutBtnH;
+extern int g_layoutMidX;
 extern int g_lastHeaderKey;
 
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o

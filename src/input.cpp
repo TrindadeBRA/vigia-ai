@@ -248,6 +248,10 @@ static void handleSerial() {
       g_requestRefresh = true;
     } else if (c == 'c' || c == 'C') {
       g_requestCalibrate = true;
+    } else if (c == 'l' || c == 'L') {
+      uiSetHomeLayout(HOME_LAYOUT_LIST);
+    } else if (c == 'g' || c == 'G') {
+      uiSetHomeLayout(HOME_LAYOUT_GRID);
     }
   }
 }
