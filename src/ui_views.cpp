@@ -448,6 +448,38 @@ static void drawTitleWithLabel(int x, int y, int maxW, const String& name, const
   tft.drawString(s, x + nameW + sepW, ly, 1);
 }
 
+// Altura ocupada por drawStackedTitle() com (ou sem) apelido — usado pra
+// centralizar o bloco de texto antes de desenhar (ver paintNow).
+static int stackedTitleHeight(bool hasLabel) {
+  return hasLabel ? (tft.fontHeight(2) + 1 + tft.fontHeight(1)) : tft.fontHeight(2);
+}
+
+// Nome numa linha e, se houver apelido, o apelido/sufixo numa segunda linha
+// logo abaixo (fonte menor, cor apagada) — cada linha usa maxW inteiro pra
+// si (não dividem espaço como em drawTitleWithLabel), pra caber em colunas
+// bem estreitas (ex.: título na tela Agora, só ~80px de largura).
+static void drawStackedTitle(int x, int y, int maxW, const String& name, const String& suffix) {
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  String n = name;
+  while (n.length() && tft.textWidth(n, 2) > maxW) {
+    n.remove(n.length() - 1);
+  }
+  tft.drawString(n, x, y, 2);
+  if (!suffix.length()) {
+    return;
+  }
+  String s = suffix;
+  while (s.length() && tft.textWidth(s, 1) > maxW) {
+    s.remove(s.length() - 1);
+  }
+  if (!s.length()) {
+    return;
+  }
+  tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
+  tft.drawString(s, x, y + tft.fontHeight(2) + 1, 1);
+}
+
 static String cursorOndemand(const CursorAccount& c) {
   String s;
   if (c.usedCents >= 0 && c.limitCents >= 0) {
@@ -1404,8 +1436,17 @@ static void paintNowMetric(int x, int y, int w, const char* label, float pct, co
   tft.drawString(sub, x, y + labelH + 1 + barH, font);
 }
 
+// Selo de contagem no canto superior direito, igual ao do header — a tela
+// Agora não tem barra (ver drawHeader()), mas o usuário ainda quer ver
+// quanto falta pro próximo refresh automático aqui também.
+static void drawNowBadge() {
+  const int r = 11;
+  drawCountdownBadgeAt(tft.width() - 8 - r, 8 + r, countdownSeconds());
+}
+
 void paintNowClock() {
   drawNowTime();
+  drawNowBadge();
 }
 
 void paintNow() {
@@ -1416,6 +1457,7 @@ void paintNow() {
   g_nowTimeFont = nowTimeFont(W);
   g_nowTimeY = (H >= 300) ? 16 : 8;
   drawNowTime();
+  drawNowBadge();
 
   int year = 0, mo = 0, dd = 0, hh = 0, mi = 0, ss = 0;
   bool ok = wallClockNow(year, mo, dd, hh, mi, ss);
@@ -1465,8 +1507,14 @@ void paintNow() {
     tft.drawRoundRect(x, y, rowW, rowH, 8, COL_CARD_BORDER);
     const int iy = y + (rowH - ICON_CLAUDE_H) / 2;
     drawIcon(x + inner, iy, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
+    // Coluna do título é estreita aqui (~leftW-textX px) — nome e apelido não
+    // cabem lado a lado, então o apelido vai numa segunda linha, menor e
+    // apagado, embaixo do nome (drawStackedTitle), o bloco centralizado com
+    // o ícone.
     const int textX = x + inner + ICON_CLAUDE_W + 6;
-    drawTitleWithLabel(textX, iy + (ICON_CLAUDE_H - 16) / 2, x + leftW - textX - 4, title, suffix);
+    const int iconCenterY = iy + ICON_CLAUDE_H / 2;
+    const int stackH = stackedTitleHeight(suffix.length() > 0);
+    drawStackedTitle(textX, iconCenterY - stackH / 2, x + leftW - textX - 4, title, suffix);
 
     const int mx0 = x + leftW;
     const int mwAll = x + rowW - inner - mx0;

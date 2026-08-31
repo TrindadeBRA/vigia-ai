@@ -28,6 +28,11 @@ KEYS = (
     # Apelido opcional da conta local (Keychain/state.vscdb). "" = sem apelido.
     "CLAUDE_LOCAL_LABEL",
     "CURSOR_LOCAL_LABEL",
+    # Apelido opcional da primeira key (OPENROUTER_API_KEY/DEEPSEEK_API_KEY) —
+    # não tem conta "local" pra essas duas, mas a primeira key merece apelido
+    # igual às demais.
+    "OPENROUTER_LEGACY_LABEL",
+    "DEEPSEEK_LEGACY_LABEL",
     # Contas extras por provedor: string JSON com lista de
     # {"id","label","token"} (Claude/Cursor) ou {"id","label","key"}
     # (OpenRouter/DeepSeek). Ver get_accounts()/set_accounts() abaixo.
