@@ -13,6 +13,7 @@
     --shadow: rgba(0, 0, 0, .5); --glow: rgba(230, 57, 49, .14); --bg-translucent: rgba(16, 20, 25, .82);
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sidebar-w: 264px;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -20,6 +21,7 @@
   body {
     background: var(--bg); color: var(--text); font-family: var(--font-sans);
     min-height: 100vh; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -28,47 +30,46 @@
     }
   }
   .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  button { font: inherit; }
 
   #root { min-height: 100vh; }
-  .shell {
-    min-height: 100vh; display: flex; flex-direction: column;
-    background: radial-gradient(900px 320px at 50% -10%, var(--glow), transparent 60%), var(--bg);
-  }
-  .shell.flat { background: var(--bg); }
+  .shell { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
 
-  .view-fade { animation: fadeIn .22s ease both; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .view-fade { animation: fadeIn .18s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* ---------- header ---------- */
-  .header {
-    position: sticky; top: 0; z-index: 10;
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
     display: flex; align-items: center; gap: 4px;
-    height: 56px; padding: 0 10px;
+    height: 56px; padding: 0 12px; flex: none;
     background: var(--bg-translucent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
-    box-shadow: 0 1px 0 var(--card-border), 0 14px 28px -22px var(--shadow);
+    box-shadow: 0 1px 0 var(--card-border);
   }
-  .flat .header { background: var(--bg); backdrop-filter: none; box-shadow: 0 1px 0 var(--card-border); }
-  .header .spacer { flex: 1; }
-  .chevron-btn, .icon-btn {
+  .flat .topbar { background: var(--bg); backdrop-filter: none; }
+  .topbar .spacer { flex: 1; }
+  .icon-btn {
     background: none; border: none; cursor: pointer; color: var(--text-dim);
     display: flex; align-items: center; justify-content: center;
     width: 34px; height: 34px; border-radius: 9px; flex: none;
     transition: background-color .15s ease, color .15s ease;
   }
-  .chevron-btn:hover, .icon-btn:hover { background: var(--chip); color: var(--text); }
+  .icon-btn:hover { background: var(--chip); color: var(--text); }
+  .icon-btn.on { color: var(--accent); }
+  .menu-btn { display: none; }
   .brand-btn {
     background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 9px;
-    padding: 4px 6px; border-radius: 9px; color: var(--text); font: inherit;
+    padding: 4px 6px; border-radius: 9px; color: var(--text);
     transition: background-color .15s ease;
   }
   .brand-btn:hover { background: var(--chip); }
   .eye {
-    width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 1px solid var(--text-dim);
+    width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid var(--text-dim);
     box-shadow: 0 2px 5px var(--shadow); position: relative; flex: none;
   }
   .flat .eye { box-shadow: none; }
   .eye .pupil {
-    position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
+    position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--accent);
     top: 50%; left: 50%; box-shadow: 0 0 7px var(--glow);
   }
   .flat .eye .pupil { box-shadow: none; }
@@ -76,39 +77,60 @@
   .brand { font-weight: 800; letter-spacing: .2px; font-size: 15px; white-space: nowrap; }
   .brand .ai { color: var(--accent); }
   .clock-btn {
-    background: none; border: none; cursor: pointer; font: inherit;
+    background: none; border: none; cursor: pointer;
     display: flex; align-items: center; gap: 7px;
-    font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap;
+    font-size: 14.5px; font-weight: 600; color: var(--text); white-space: nowrap;
     padding: 7px 10px; border-radius: 9px; transition: background-color .15s ease;
   }
   .clock-btn:hover { background: var(--chip); }
   .clock-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); flex: none; box-shadow: 0 0 5px var(--good); }
   .flat .clock-dot { box-shadow: none; }
 
-  .badge-ring { width: 28px; height: 28px; border-radius: 50%; padding: 3px; flex: none; margin-left: 2px; }
+  .badge-ring { width: 26px; height: 26px; border-radius: 50%; padding: 3px; flex: none; margin-left: 2px; }
   .badge-inner {
     width: 100%; height: 100%; border-radius: 50%; background: var(--bg);
     display: flex; align-items: center; justify-content: center; color: var(--text); font-size: 10px; font-weight: 700;
   }
-  .flat .badge-inner { background: var(--bg); }
 
-  /* ---------- content shell ---------- */
-  .content { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 16px 14px 40px; }
-
-  .status-strip {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 2px 4px 16px; font-size: 12.5px; color: var(--text-dim);
+  /* ---------- shell body: sidebar + content ---------- */
+  .shell-body { flex: 1; display: flex; min-height: 0; }
+  .sidebar {
+    width: var(--sidebar-w); flex: none; border-right: 1px solid var(--card-border);
+    padding: 12px 8px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 1px;
   }
-  .status-strip .who { display: flex; align-items: center; gap: 7px; }
-  .status-strip .who-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
-  .status-strip .who-dot.ok { background: var(--good); box-shadow: 0 0 5px var(--good); }
-  .status-strip .who-dot.bad { background: var(--bad); box-shadow: 0 0 5px var(--bad); }
-  .flat .status-strip .who-dot { box-shadow: none; }
+  .side-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 8px 9px; border-radius: 9px; border: none; background: none; color: var(--text-dim);
+    font-size: 13.5px; cursor: pointer; transition: background-color .15s ease, color .15s ease;
+  }
+  .side-item:hover { background: var(--chip); color: var(--text); }
+  .side-item.active { background: var(--chip); color: var(--text); box-shadow: inset 0 0 0 1px var(--card-border), inset 2px 0 0 var(--accent); }
+  .side-section-title {
+    margin: 16px 9px 5px; font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--text-muted); font-weight: 700;
+  }
+  .side-empty { padding: 6px 9px; font-size: 12.5px; color: var(--text-muted); }
+  .icon-chip.side-account-icon { width: 22px; height: 22px; border-radius: 7px; flex: none; }
+  .side-account-icon img { width: 13px; height: 13px; object-fit: contain; }
+  .side-account-text { flex: 1; min-width: 0; }
+  .side-account-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .side-account-label { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .side-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .side-dot.ok { background: var(--good); }
+  .side-dot.bad { background: var(--bad); }
+  .scrim { position: fixed; inset: 56px 0 0 0; background: rgba(0, 0, 0, .45); z-index: 25; }
 
-  /* ---------- provider cards ---------- */
-  /* Genérico: N cards (uma por conta, não por tipo de provedor) sem teto de 4. */
-  .home-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-  .home-list { display: flex; flex-direction: column; gap: 12px; }
+  .content-area { flex: 1; min-width: 0; overflow-y: auto; padding: 24px 28px 64px; }
+
+  /* ---------- overview ---------- */
+  .overview-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; max-width: 1320px; }
+  .overview-head h1 { font-size: 21px; font-weight: 750; margin: 0; letter-spacing: -.2px; }
+  .overview-stat { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim); }
+  .overview-stat .who-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .overview-stat .who-dot.ok { background: var(--good); box-shadow: 0 0 5px var(--good); }
+  .overview-stat .who-dot.bad { background: var(--bad); box-shadow: 0 0 5px var(--bad); }
+  .flat .overview-stat .who-dot { box-shadow: none; }
+  .overview-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(266px, 1fr)); max-width: 1320px; }
 
   .card {
     background: var(--card); border: 1px solid var(--card-border); border-radius: 16px;
@@ -123,14 +145,14 @@
 
   .card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
   .icon-chip {
-    width: 36px; height: 36px; border-radius: 11px; background: var(--chip); flex: none;
+    width: 34px; height: 34px; border-radius: 10px; background: var(--chip); flex: none;
     display: flex; align-items: center; justify-content: center;
     box-shadow: inset 0 0 0 1px var(--card-border);
   }
-  .icon-img { width: 20px; height: 20px; object-fit: contain; }
+  .icon-img { width: 19px; height: 19px; object-fit: contain; }
   .card-title-wrap { flex: 1; min-width: 0; }
-  .card-title { font-weight: 650; font-size: 15px; display: flex; align-items: center; gap: 7px; min-width: 0; }
-  .card-title span.txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card-title { font-weight: 650; font-size: 14.5px; display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .card-title .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .card-label {
     margin-top: 2px; font-size: 11.5px; font-weight: 500; color: var(--text-muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -142,11 +164,11 @@
 
   .metric { margin-top: 12px; }
   .metric:first-child { margin-top: 0; }
-  .metric-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 6px; }
+  .metric-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; margin-bottom: 6px; }
   .metric-top .label { color: var(--text-dim); }
-  .metric-top .val { font-weight: 700; font-size: 14.5px; }
+  .metric-top .val { font-weight: 700; font-size: 14px; }
   .metric-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; }
-  .metric-plain { font-weight: 700; font-size: 16px; }
+  .metric-plain { font-weight: 700; font-size: 15px; }
 
   .bar-track { height: 7px; border-radius: 5px; background: var(--track); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .28); overflow: hidden; }
   .flat .bar-track { box-shadow: none; }
@@ -156,13 +178,17 @@
   .error-text { color: var(--bad); font-size: 13px; line-height: 1.55; }
   .empty-note { color: var(--text-muted); font-size: 14px; text-align: center; padding: 48px 20px; }
 
-  /* ---------- detail views ---------- */
-  .detail-card {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 16px;
-    padding: 18px; max-height: calc(100vh - 108px); overflow-y: auto;
+  /* ---------- account page ---------- */
+  .account-page { max-width: 620px; }
+  .account-header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .account-header .icon-chip { width: 42px; height: 42px; border-radius: 13px; }
+  .account-header .icon-img { width: 23px; height: 23px; }
+  .account-title { font-size: 19px; font-weight: 750; letter-spacing: -.1px; }
+  .account-card {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; padding: 18px;
     box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 12px 26px -20px var(--shadow);
   }
-  .flat .detail-card { box-shadow: none; }
+  .flat .account-card { box-shadow: none; }
   .kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--track); }
   .kv:last-child { border-bottom: none; }
   .kv .k { color: var(--text-muted); }
@@ -176,8 +202,21 @@
   .detail-bar .metric-sub { font-size: 12.5px; margin-top: 8px; }
   .detail-plain-val { font-size: 22px; font-weight: 750; margin: 6px 0 2px; }
 
-  /* ---------- status / settings ---------- */
-  .section-title { color: var(--text-muted); font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase; margin: 22px 0 9px; font-weight: 650; }
+  /* ---------- settings drawer ---------- */
+  .settings-scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 40; }
+  .settings-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; max-width: 88vw; z-index: 41;
+    background: var(--card); border-left: 1px solid var(--card-border);
+    padding: 16px 18px 24px; overflow-y: auto;
+    box-shadow: -16px 0 40px rgba(0, 0, 0, .35);
+    animation: slideIn .18s ease both;
+  }
+  .flat .settings-drawer { box-shadow: none; }
+  @keyframes slideIn { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .settings-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .settings-head h2 { font-size: 16px; font-weight: 750; margin: 0; }
+
+  .section-title { color: var(--text-muted); font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase; margin: 20px 0 9px; font-weight: 650; }
   .section-title:first-child { margin-top: 0; }
   .segmented {
     display: flex; gap: 3px; padding: 3px; background: var(--chip); border: 1px solid var(--card-border);
@@ -185,7 +224,7 @@
   }
   .segmented button {
     flex: 1; padding: 9px 6px; border-radius: 9px; border: none; background: transparent;
-    color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    color: var(--text-dim); font-size: 13px; font-weight: 600; cursor: pointer;
     transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
   }
   .segmented button:hover { color: var(--text); }
@@ -197,16 +236,15 @@
 
   .swatch-row { display: flex; gap: 9px; flex-wrap: wrap; }
   .swatch {
-    width: 34px; height: 34px; border-radius: 10px; border: 2px solid transparent; cursor: pointer;
-    padding: 0; font: inherit;
-    display: flex; align-items: center; justify-content: center; transition: transform .12s ease, border-color .15s ease;
+    width: 32px; height: 32px; border-radius: 10px; border: 2px solid transparent; cursor: pointer;
+    padding: 0; display: flex; align-items: center; justify-content: center; transition: transform .12s ease, border-color .15s ease;
   }
   .swatch:hover { transform: translateY(-1px); }
   .swatch.active { border-color: var(--text); }
 
   .btn-primary {
     width: 100%; padding: 13px; border-radius: 12px; border: none;
-    background: var(--accent); color: var(--accent-ink); font: inherit; font-size: 14.5px; font-weight: 700;
+    background: var(--accent); color: var(--accent-ink); font-size: 14.5px; font-weight: 700;
     cursor: pointer; box-shadow: 0 12px 22px -12px var(--glow); transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
   }
   .btn-primary:hover { transform: translateY(-1px); }
@@ -215,7 +253,7 @@
   .status-note { color: var(--text-muted); font-size: 12px; margin-top: 12px; line-height: 1.55; }
   .fetch-fail-note { color: var(--bad); font-size: 12px; margin-top: 6px; }
 
-  /* ---------- now view (fullscreen clock) ---------- */
+  /* ---------- now view (fullscreen clock) — untouched design ---------- */
   .now-view {
     min-height: 100vh; width: 100%; cursor: pointer;
     background: radial-gradient(900px 420px at 50% 30%, var(--glow), transparent 65%), var(--bg);
@@ -229,6 +267,15 @@
   .flat .now-clock { text-shadow: none; }
   .now-date { color: var(--text-dim); font-size: 14px; margin: 6px 0 26px; text-transform: capitalize; letter-spacing: .2px; }
   .now-rows { width: 100%; max-width: 480px; }
+  .status-strip {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 2px 4px 16px; font-size: 12.5px; color: var(--text-dim);
+  }
+  .status-strip .who { display: flex; align-items: center; gap: 7px; }
+  .status-strip .who-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .status-strip .who-dot.ok { background: var(--good); box-shadow: 0 0 5px var(--good); }
+  .status-strip .who-dot.bad { background: var(--bad); box-shadow: 0 0 5px var(--bad); }
+  .flat .status-strip .who-dot { box-shadow: none; }
   .now-row {
     background: var(--card); border: 1px solid var(--card-border); border-radius: 13px;
     padding: 12px 14px; margin-bottom: 9px;
@@ -244,6 +291,21 @@
   .now-metric-top .label { color: var(--text-dim); }
   .now-metric-top .val { font-weight: 700; }
   .now-metric-plain { font-weight: 700; font-size: 13.5px; }
+
+  /* ---------- responsive: collapse sidebar to an off-canvas drawer ---------- */
+  @media (max-width: 860px) {
+    .menu-btn { display: flex; }
+    .sidebar {
+      position: fixed; top: 56px; left: 0; bottom: 0; z-index: 30; width: 82vw; max-width: 320px;
+      background: var(--bg); transform: translateX(-100%); transition: transform .2s ease;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .content-area { padding: 18px 16px 64px; }
+    .overview-head h1 { font-size: 19px; }
+  }
+  @media (min-width: 861px) {
+    .scrim { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -256,9 +318,10 @@ const h = React.createElement;
 const { useState, useEffect, useRef } = React;
 
 // Paletas e cores de acento — mesmos valores RGB565 do firmware (src/ui.cpp),
-// convertidos para hex, para o mostrador web ficar visualmente identico.
-// chip/shadow sao tokens novos so do mostrador web (profundidade/elevacao);
-// nao existem no firmware (TFT nao tem sombra/gradiente).
+// convertidos para hex, pra manter a mesma preferência de tema entre o
+// mostrador web e a placa. O LAYOUT abaixo já não segue o firmware — é um
+// dashboard de verdade (barra lateral + conteúdo), não uma réplica de tela
+// pequena.
 const PALETTES = {
   dark: { bg: "#101419", card: "#192021", cardBorder: "#3a3d42", track: "#292d31", chip: "#212a2c",
           text: "#f7f3ef", textDim: "#adaeb5", textMuted: "#6b6d73",
@@ -289,6 +352,7 @@ const WEEKDAYS = {
 
 const STR = {
   pt: {
+    overview: "Visão geral", accounts: "Contas", settings: "Configurações",
     session5h: "Sessão 5h", week: "Semana", weekLimit: "Limite semanal",
     cursorModels: "Modelos Cursor", otherModels: "Outros modelos",
     credits: "Créditos", accountCredits: "Créditos da conta",
@@ -299,7 +363,6 @@ const STR = {
     plan: "plano", cycle: "ciclo", ondemand: "On-demand (USD)", cap: "teto", bonus: "bônus",
     requestsLegacy: "Pedidos (legado)", usedCount: "usados", limit: "limite",
     allKeysNote: "Créditos da conta (todas as keys)", percent: "percentual",
-    homeSection: "Início", list: "Lista", grid: "Grade",
     themeSection: "Tema", dark: "Escuro", light: "Claro", contrast: "Contraste",
     accentSection: "Cor", langSection: "Idioma",
     refreshSection: "Dados de uso", refreshNow: "Atualizar consumo",
@@ -308,9 +371,10 @@ const STR = {
     agoNow: "agora mesmo", agoSecs: (s) => `atualizado há ${s}s`,
     autoNote: (s) => `Atualiza sozinho a cada ${s}s. Toque para forçar agora.`,
     fetchFail: "Não foi possível falar com o coletor.",
-    back: "Voltar", info: "Info", now: "Agora",
+    now: "Agora", closeSettings: "Fechar",
   },
   en: {
+    overview: "Overview", accounts: "Accounts", settings: "Settings",
     session5h: "5h session", week: "Week", weekLimit: "Weekly limit",
     cursorModels: "Cursor models", otherModels: "Other models",
     credits: "Credits", accountCredits: "Account credits",
@@ -321,7 +385,6 @@ const STR = {
     plan: "plan", cycle: "cycle", ondemand: "On-demand (USD)", cap: "cap", bonus: "bonus",
     requestsLegacy: "Requests (legacy)", usedCount: "used", limit: "limit",
     allKeysNote: "Account credits (all keys)", percent: "percent",
-    homeSection: "Home", list: "List", grid: "Grid",
     themeSection: "Theme", dark: "Dark", light: "Light", contrast: "Contrast",
     accentSection: "Color", langSection: "Language",
     refreshSection: "Usage data", refreshNow: "Fetch usage now",
@@ -330,9 +393,10 @@ const STR = {
     agoNow: "just now", agoSecs: (s) => `updated ${s}s ago`,
     autoNote: (s) => `Auto-refreshes every ${s}s. Tap to force now.`,
     fetchFail: "Could not reach the collector.",
-    back: "Back", info: "Info", now: "Now",
+    now: "Now", closeSettings: "Close",
   },
   es: {
+    overview: "Resumen", accounts: "Cuentas", settings: "Configuración",
     session5h: "Sesión 5h", week: "Semana", weekLimit: "Límite semanal",
     cursorModels: "Modelos Cursor", otherModels: "Otros modelos",
     credits: "Créditos", accountCredits: "Créditos de la cuenta",
@@ -343,7 +407,6 @@ const STR = {
     plan: "plan", cycle: "ciclo", ondemand: "On-demand (USD)", cap: "tope", bonus: "bono",
     requestsLegacy: "Pedidos (legado)", usedCount: "usados", limit: "límite",
     allKeysNote: "Créditos de la cuenta (todas las keys)", percent: "porcentaje",
-    homeSection: "Inicio", list: "Lista", grid: "Cuadrícula",
     themeSection: "Tema", dark: "Oscuro", light: "Claro", contrast: "Contraste",
     accentSection: "Color", langSection: "Idioma",
     refreshSection: "Datos de uso", refreshNow: "Actualizar consumo",
@@ -352,7 +415,7 @@ const STR = {
     agoNow: "recién", agoSecs: (s) => `actualizado hace ${s}s`,
     autoNote: (s) => `Se actualiza solo cada ${s}s. Toca para forzar ahora.`,
     fetchFail: "No se pudo contactar al colector.",
-    back: "Volver", info: "Info", now: "Ahora",
+    now: "Ahora", closeSettings: "Cerrar",
   },
 };
 
@@ -412,9 +475,9 @@ function usePrefs() {
   const [prefs, setPrefs] = useState(() => {
     try {
       const raw = localStorage.getItem("vigia_display_prefs");
-      if (raw) return { theme: "dark", accent: 0, lang: "pt", homeLayout: "list", ...JSON.parse(raw) };
+      if (raw) return { theme: "dark", accent: 0, lang: "pt", ...JSON.parse(raw) };
     } catch (e) {}
-    return { theme: "dark", accent: 0, lang: "pt", homeLayout: "list" };
+    return { theme: "dark", accent: 0, lang: "pt" };
   });
   useEffect(() => {
     try { localStorage.setItem("vigia_display_prefs", JSON.stringify(prefs)); } catch (e) {}
@@ -448,14 +511,29 @@ function Svg({ d, size, viewBox, stroke, fill, className, children }) {
     fill: fill || "none", xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true",
   }, children || (d ? h("path", { d, stroke: stroke || "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" }) : null));
 }
-function ChevronLeft(props) { return h(Svg, { ...props, d: "M15 6l-6 6 6 6" }); }
-function ChevronRight(props) { return h(Svg, { ...props, d: "M9 6l6 6-6 6" }); }
 function CheckIcon(props) { return h(Svg, { ...props, d: "M5 13l4 4L19 7" }); }
-function InfoIcon({ className, size }) {
-  return h(Svg, { className, size },
-    h("circle", { cx: 12, cy: 12, r: 8.5, stroke: "currentColor", strokeWidth: 2 }),
-    h("circle", { cx: 12, cy: 8.2, r: 1.15, fill: "currentColor" }),
-    h("path", { d: "M12 11v5.2", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }));
+function CloseIcon(props) { return h(Svg, { ...props, d: "M6 6l12 12M18 6L6 18" }); }
+function MenuIcon(props) {
+  return h(Svg, { ...props },
+    h("line", { x1: 4, y1: 7, x2: 20, y2: 7, stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }),
+    h("line", { x1: 4, y1: 12, x2: 20, y2: 12, stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }),
+    h("line", { x1: 4, y1: 17, x2: 20, y2: 17, stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }));
+}
+function SettingsIcon(props) {
+  return h(Svg, { ...props },
+    h("line", { x1: 4, y1: 6, x2: 20, y2: 6, stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }),
+    h("circle", { cx: 9, cy: 6, r: 2, fill: "var(--bg)", stroke: "currentColor", strokeWidth: 2 }),
+    h("line", { x1: 4, y1: 12, x2: 20, y2: 12, stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }),
+    h("circle", { cx: 15, cy: 12, r: 2, fill: "var(--bg)", stroke: "currentColor", strokeWidth: 2 }),
+    h("line", { x1: 4, y1: 18, x2: 20, y2: 18, stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }),
+    h("circle", { cx: 11, cy: 18, r: 2, fill: "var(--bg)", stroke: "currentColor", strokeWidth: 2 }));
+}
+function GridIcon(props) {
+  return h(Svg, { ...props },
+    h("rect", { x: 4, y: 4, width: 7, height: 7, rx: 1.6, stroke: "currentColor", strokeWidth: 2 }),
+    h("rect", { x: 13, y: 4, width: 7, height: 7, rx: 1.6, stroke: "currentColor", strokeWidth: 2 }),
+    h("rect", { x: 4, y: 13, width: 7, height: 7, rx: 1.6, stroke: "currentColor", strokeWidth: 2 }),
+    h("rect", { x: 13, y: 13, width: 7, height: 7, rx: 1.6, stroke: "currentColor", strokeWidth: 2 }));
 }
 
 function Eye({ size }) {
@@ -514,10 +592,8 @@ function Icon({ id }) {
   return h("div", { className: "icon-chip" }, h("img", { className: "icon-img", src: PROVIDER_ICON[id], alt: id, draggable: false }));
 }
 
-// Monta os dados de cada provedor configurado uma vez só; Home (cards) e
-// NowView (linhas compactas da tela cheia do relogio) renderizam o mesmo
-// array de forma diferente — igual ao firmware, que reusa os mesmos campos
-// em paintHome*/paintNow.
+// Monta uma entrada por conta configurada (não por tipo de provedor) — usada
+// pela Início/Agora/barra lateral, todas de forma diferente.
 function buildProviders(data, t) {
   const list = [];
   for (const c of data.claude || []) {
@@ -568,15 +644,14 @@ function buildProviders(data, t) {
 }
 
 function ProviderCard({ p, pal, onOpen }) {
-  return h("div", { className: "card", onClick: onOpen },
+  return h("div", { className: "card view-fade", onClick: onOpen },
     h("div", { className: "card-head" },
       h(Icon, { id: p.provider }),
       h("div", { className: "card-title-wrap" },
         h("div", { className: "card-title" },
           h("span", { className: "txt" }, p.title),
           h("span", { className: "status-dot " + (p.ok ? "ok" : "bad") })),
-        p.label ? h("div", { className: "card-label" }, p.label) : null),
-      h(ChevronRight, { size: 17, className: "chev" })),
+        p.label ? h("div", { className: "card-label" }, p.label) : null)),
     !p.ok ? h("div", { className: "error-text" }, p.error || "") :
       h(React.Fragment, null, p.metrics.map((m, i) => h(MetricRow, { key: i, ...m, pal }))));
 }
@@ -592,17 +667,40 @@ function StatusStrip({ providers, okFlashAt, now, t }) {
     h("div", { className: "num" }, agoText));
 }
 
-function Home({ data, prefs, t, pal, now, okFlashAt, onOpen }) {
-  const providers = buildProviders(data, t);
-  if (providers.length === 0) {
-    return h("div", { className: "empty-note" }, t.noProviders);
-  }
-  const cards = providers.map((p) => h(ProviderCard, { key: p.id, p, pal, onOpen: () => onOpen(p.id) }));
+// ---------- barra lateral (nav persistente no desktop, gaveta no mobile) ----------
+function Sidebar({ providers, section, selectedId, open, onOverview, onSelect, onClose, t }) {
+  return h("nav", { className: "sidebar" + (open ? " open" : "") },
+    h("button", {
+      className: "side-item" + (section === "overview" ? " active" : ""),
+      onClick: () => { onOverview(); onClose(); },
+    }, h(GridIcon, { size: 16 }), t.overview),
+    h("div", { className: "side-section-title" }, t.accounts),
+    providers.length === 0 ? h("div", { className: "side-empty" }, t.noProviders) :
+      providers.map((p) => h("button", {
+        key: p.id,
+        className: "side-item" + (section === "account" && selectedId === p.id ? " active" : ""),
+        onClick: () => { onSelect(p.id); onClose(); },
+      },
+        h("div", { className: "icon-chip side-account-icon" }, h("img", { src: PROVIDER_ICON[p.provider], alt: p.provider, draggable: false })),
+        h("div", { className: "side-account-text" },
+          h("div", { className: "side-account-name" }, p.title),
+          p.label ? h("div", { className: "side-account-label" }, p.label) : null),
+        h("span", { className: "side-dot " + (p.ok ? "ok" : "bad") }))));
+}
+
+// ---------- visão geral (grid responsivo, painel principal por padrão) ----------
+function Overview({ providers, okFlashAt, now, t, pal, onOpen }) {
   return h(React.Fragment, null,
-    h(StatusStrip, { providers, okFlashAt, now, t }),
-    prefs.homeLayout === "grid"
-      ? h("div", { className: "home-grid" }, cards)
-      : h("div", { className: "home-list" }, cards));
+    h("div", { className: "overview-head" },
+      h("h1", null, t.overview),
+      h("div", { className: "overview-stat" },
+        h("span", { className: "who-dot " + (providers.some((p) => !p.ok) ? "bad" : "ok") }),
+        h("span", null, providers.filter((p) => !p.ok).length
+          ? t.errorsCount(providers.filter((p) => !p.ok).length) : t.allOk),
+        h("span", { className: "num" }, okFlashAt ? "· " + (Math.max(0, Math.round((now - okFlashAt) / 1000)) < 3 ? t.agoNow : t.agoSecs(Math.max(0, Math.round((now - okFlashAt) / 1000)))) : ""))),
+    providers.length === 0 ? h("div", { className: "empty-note" }, t.noProviders) :
+      h("div", { className: "overview-grid" }, providers.map((p) =>
+        h(ProviderCard, { key: p.id, p, pal, onOpen: () => onOpen(p.id) }))));
 }
 
 function NowRow({ p, pal }) {
@@ -622,8 +720,9 @@ function NowRow({ p, pal }) {
           : h("div", { className: "now-metric-plain num" }, m.sub || "--")))));
 }
 
-// Tela cheia de relogio (equivalente a VIEW_NOW no firmware, aberta ao tocar
-// no relogio do header) — qualquer toque fecha e volta pra Início, igual la.
+// Tela cheia de relógio — a única parte da versão anterior (espelhada do
+// firmware) que o usuário pediu pra manter como está. Não mexi na lógica
+// nem no visual daqui.
 function NowView({ data, prefs, t, pal, nowMs, okFlashAt, onClose }) {
   const [clockNow, setClockNow] = useState(new Date());
   useEffect(() => {
@@ -664,19 +763,10 @@ function Kv({ k, v }) {
   return h("div", { className: "kv" }, h("span", { className: "k" }, k), h("span", { className: "v num" }, v));
 }
 
-function DetailShell({ id, title, label, ok, error, children, t }) {
-  return h("div", { className: "detail-card" },
-    h("div", { className: "card-head" },
-      h(Icon, { id }),
-      h("div", { className: "card-title-wrap" },
-        h("div", { className: "card-title" }, h("span", { className: "txt" }, title)),
-        label ? h("div", { className: "card-label" }, label) : null)),
-    !ok ? h("div", { className: "error-text" }, error || t.noData) : children);
-}
-
-function ClaudeDetail({ data, account, t, pal }) {
+// ---------- conteúdo de cada provedor (sem cabeçalho — AccountPage cuida disso) ----------
+function ClaudeBody({ data, account, t, pal }) {
   const c = account || {};
-  return h(DetailShell, { id: "claude", title: "Claude", label: c.label, ok: c.ok, error: c.error, t },
+  return h(React.Fragment, null,
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
     h(DetailBar, { label: t.window5h, pct: c.session_percent, pal,
       sub: t.remainingPrefix + fmtRemain(c.session_percent) + (c.session_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.session_resets_at) : "") }),
@@ -696,10 +786,9 @@ function ClaudeDetail({ data, account, t, pal }) {
     c.opus_percent != null ? h(Kv, { k: t.reset, v: fmtWhen(c.opus_resets_at) }) : null);
 }
 
-function CursorDetail({ data, account, t, pal }) {
+function CursorBody({ data, account, t, pal }) {
   const c = account || {};
-  const base = c.plan ? `Cursor ${c.plan}` : "Cursor";
-  return h(DetailShell, { id: "cursor", title: base, label: c.label, ok: c.ok, error: c.error, t },
+  return h(React.Fragment, null,
     h(Kv, { k: t.plan, v: c.plan }),
     h(Kv, { k: t.cycle, v: fmtWhen(c.cycle_end) }),
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
@@ -719,10 +808,10 @@ function CursorDetail({ data, account, t, pal }) {
     (c.requests_used != null && c.requests_limit > 0) ? h(Kv, { k: t.limit, v: String(c.requests_limit) }) : null);
 }
 
-function OpenRouterDetail({ data, account, t, pal }) {
+function OpenRouterBody({ data, account, t, pal }) {
   const o = account || {};
   const remain = o.limit_cents != null ? (t.remainMoney + fmtUsd(o.remaining_cents)) : t.noCredits;
-  return h(DetailShell, { id: "openrouter", title: "OpenRouter", label: o.label, ok: o.ok, error: o.error, t },
+  return h(React.Fragment, null,
     h("div", { className: "note" }, t.allKeysNote),
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
     h(DetailBar, { label: t.credits, pct: o.percent, pal, sub: remain }),
@@ -732,46 +821,70 @@ function OpenRouterDetail({ data, account, t, pal }) {
     h(Kv, { k: t.percent, v: fmtPct(o.percent) }));
 }
 
-function DeepSeekDetail({ data, account, t, pal }) {
+function DeepSeekBody({ data, account, t, pal }) {
   const d = account || {};
   const remain = d.remaining_cents != null ? (t.remainMoney + fmtUsd(d.remaining_cents)) : t.noCredits;
-  return h(DetailShell, { id: "deepseek", title: "DeepSeek", label: d.label, ok: d.ok, error: d.error, t },
+  return h(React.Fragment, null,
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
     h(DetailBar, { label: t.credits, pct: d.percent, pal, sub: remain }));
 }
 
-function StatusView({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed }) {
+const DETAIL_BODIES = {
+  claude: ClaudeBody, cursor: CursorBody, openrouter: OpenRouterBody, deepseek: DeepSeekBody,
+};
+
+// ---------- página de uma conta (cabeçalho + corpo específico do provedor) ----------
+function AccountPage({ meta, account, data, t, pal }) {
+  const Body = DETAIL_BODIES[meta.provider];
+  return h("div", { className: "account-page view-fade" },
+    h("div", { className: "account-header" },
+      h(Icon, { id: meta.provider }),
+      h("div", null,
+        h("div", { className: "account-title" }, meta.title),
+        meta.label ? h("div", { className: "card-label" }, meta.label) : null)),
+    h("div", { className: "account-card" },
+      !meta.ok ? h("div", { className: "error-text" }, meta.error || t.noData) :
+        h(Body, { data, account, t, pal })));
+}
+
+// ---------- gaveta de configurações (sobreposta, não navega pra outra tela) ----------
+function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed, onClose }) {
   const themeRow = ["dark", "light", "contrast"].map((k) =>
     h("button", { key: k, className: prefs.theme === k ? "active" : "", onClick: () => setPrefs((p) => ({ ...p, theme: k })) }, t[k]));
   const langRow = [["pt", "PT"], ["en", "EN"], ["es", "ES"]].map(([k, label]) =>
     h("button", { key: k, className: prefs.lang === k ? "active" : "", onClick: () => setPrefs((p) => ({ ...p, lang: k })) }, label));
-  const layoutRow = [["list", t.list], ["grid", t.grid]].map(([k, label]) =>
-    h("button", { key: k, className: prefs.homeLayout === k ? "active" : "", onClick: () => setPrefs((p) => ({ ...p, homeLayout: k })) }, label));
   const accents = ACCENTS[prefs.theme];
 
-  return h("div", { className: "detail-card" },
-    h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
-    h("div", { className: "section-title" }, t.homeSection),
-    h("div", { className: "segmented" }, layoutRow),
-    h("div", { className: "section-title" }, t.themeSection),
-    h("div", { className: "segmented" }, themeRow),
-    h("div", { className: "section-title" }, t.accentSection),
-    h("div", { className: "swatch-row" }, accents.map((c, i) => h("button", {
-      key: i, className: "swatch" + (prefs.accent === i ? " active" : ""), "aria-label": t.accentSection + " " + (i + 1),
-      style: { background: c }, onClick: () => setPrefs((p) => ({ ...p, accent: i })),
-    }, prefs.accent === i ? h(CheckIcon, { size: 15, stroke: inverseOn(c) }) : null))),
-    h("div", { className: "section-title" }, t.langSection),
-    h("div", { className: "segmented" }, langRow),
-    h("div", { className: "section-title" }, t.refreshSection),
-    h("button", { className: "btn-primary", onClick: onRefresh }, refreshing ? "…" : t.refreshNow),
-    h("div", { className: "status-note" }, t.autoNote(POLL_MS / 1000)),
-    fetchFailed ? h("div", { className: "fetch-fail-note" }, t.fetchFail) : null);
+  return h(React.Fragment, null,
+    h("div", { className: "settings-scrim", onClick: onClose }),
+    h("div", { className: "settings-drawer" },
+      h("div", { className: "settings-head" },
+        h("h2", null, t.settings),
+        h("button", { className: "icon-btn", onClick: onClose, title: t.closeSettings }, h(CloseIcon, { size: 18 }))),
+      h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
+      h("div", { className: "section-title" }, t.themeSection),
+      h("div", { className: "segmented" }, themeRow),
+      h("div", { className: "section-title" }, t.accentSection),
+      h("div", { className: "swatch-row" }, accents.map((c, i) => h("button", {
+        key: i, className: "swatch" + (prefs.accent === i ? " active" : ""), "aria-label": t.accentSection + " " + (i + 1),
+        style: { background: c }, onClick: () => setPrefs((p) => ({ ...p, accent: i })),
+      }, prefs.accent === i ? h(CheckIcon, { size: 14, stroke: inverseOn(c) }) : null))),
+      h("div", { className: "section-title" }, t.langSection),
+      h("div", { className: "segmented" }, langRow),
+      h("div", { className: "section-title" }, t.refreshSection),
+      h("button", { className: "btn-primary", onClick: onRefresh }, refreshing ? "…" : t.refreshNow),
+      h("div", { className: "status-note" }, t.autoNote(POLL_MS / 1000)),
+      fetchFailed ? h("div", { className: "fetch-fail-note" }, t.fetchFail) : null));
 }
 
 function App() {
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState(null);
-  const [view, setView] = useState("home");
+  const [section, setSection] = useState("overview"); // "overview" | "account"
+  const [selectedId, setSelectedId] = useState(null);
+  const [nowOpen, setNowOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [nextFetchAt, setNextFetchAt] = useState(Date.now() + POLL_MS);
   const [okFlashAt, setOkFlashAt] = useState(0);
   const [now, setNow] = useState(Date.now());
@@ -816,70 +929,75 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
-  // Se a conta aberta no detalhe sumir (removida no painel, ou coletor
-  // reiniciado sem ela) entre um refresh e outro, volta pra Início.
+  // Se a conta selecionada sumir (removida no painel, ou coletor reiniciado
+  // sem ela) entre um refresh e outro, volta pra Visão geral.
   useEffect(() => {
-    if (!data || view === "home" || view === "status" || view === "now") return;
-    const idx = view.indexOf(":");
-    if (idx <= 0) {
-      setView("home");
-      return;
-    }
-    const provider = view.slice(0, idx);
-    const accountId = view.slice(idx + 1);
-    const list = data[provider] || [];
-    if (!list.some((a) => a.id === accountId)) setView("home");
-  }, [data, view]);
+    if (!data || section !== "account") return;
+    const providers = buildProviders(data, t);
+    if (!providers.some((p) => p.id === selectedId)) setSection("overview");
+  }, [data, section, selectedId]);
 
   if (!data) {
     return h("div", { className: shellClass },
-      h("div", { className: "header" },
-        h("div", { className: "eye", style: { width: 30, height: 30 } }, h("div", { className: "pupil" })),
+      h("div", { className: "topbar" },
+        h("div", { className: "eye", style: { width: 28, height: 28 } }, h("div", { className: "pupil" })),
         h("div", { className: "brand" }, "VIGIA", h("span", { className: "ai" }, " AI"))),
-      h("div", { className: "content" },
+      h("div", { className: "content-area" },
         h("div", { className: "empty-note" }, fetchFailed ? t.fetchFail : "…")));
   }
 
-  if (view === "now") {
-    return h("div", { className: shellClass }, h(NowView, { data, prefs, t, pal, nowMs: now, okFlashAt, onClose: () => setView("home") }));
+  if (nowOpen) {
+    return h("div", { className: shellClass },
+      h(NowView, { data, prefs, t, pal, nowMs: now, okFlashAt, onClose: () => setNowOpen(false) }));
   }
 
+  const providers = buildProviders(data, t);
   const showCheck = okFlashAt && (now - okFlashAt < FETCH_OK_FLASH_MS);
   const secsLeft = showCheck ? null : Math.max(0, Math.ceil((nextFetchAt - now) / 1000));
 
-  const detailComponents = {
-    claude: ClaudeDetail, cursor: CursorDetail, openrouter: OpenRouterDetail, deepseek: DeepSeekDetail,
-  };
-  const isHome = view === "home";
-  const isStatus = view === "status";
-  let DetailComp = null;
-  let detailAccount = null;
-  if (!isHome && !isStatus) {
-    const idx = view.indexOf(":");
-    if (idx > 0) {
-      const provider = view.slice(0, idx);
-      const accountId = view.slice(idx + 1);
-      detailAccount = (data[provider] || []).find((a) => a.id === accountId) || null;
-      DetailComp = detailComponents[provider] || null;
+  let meta = null;
+  let rawAccount = null;
+  if (section === "account") {
+    meta = providers.find((p) => p.id === selectedId) || null;
+    if (meta) {
+      const idx = meta.id.indexOf(":");
+      const accountId = meta.id.slice(idx + 1);
+      rawAccount = (data[meta.provider] || []).find((a) => a.id === accountId) || null;
     }
   }
 
   return h("div", { className: shellClass },
-    h("div", { className: "header" },
-      !isHome ? h("button", { className: "chevron-btn", onClick: () => setView("home"), title: t.back }, h(ChevronLeft, { size: 19 })) : null,
-      h("button", { className: "brand-btn", onClick: () => setView("home") },
-        h(Eye, { size: 30 }),
+    h("div", { className: "topbar" },
+      h("button", { className: "icon-btn menu-btn", onClick: () => setSidebarOpen(true) }, h(MenuIcon, { size: 19 })),
+      h("button", { className: "brand-btn", onClick: () => setSection("overview") },
+        h(Eye, { size: 28 }),
         h("div", { className: "brand" }, "VIGIA", h("span", { className: "ai" }, " AI"))),
       h("div", { className: "spacer" }),
-      h("button", { className: "clock-btn num", onClick: () => setView("now"), title: t.now },
+      h("button", { className: "clock-btn num", onClick: () => setNowOpen(true), title: t.now },
         h("span", { className: "clock-dot" }), fmtClock(now + driftMs)),
-      h("button", { className: "icon-btn", onClick: () => setView("status"), title: t.info,
-        style: { color: isStatus ? "var(--accent)" : "var(--text-dim)" } }, h(InfoIcon, { size: 20 })),
+      h("button", {
+        className: "icon-btn" + (settingsOpen ? " on" : ""), onClick: () => setSettingsOpen((v) => !v), title: t.settings,
+      }, h(SettingsIcon, { size: 19 })),
       h(Badge, { secs: secsLeft, total: POLL_MS / 1000, showCheck, pal })),
-    h("div", { className: "content view-fade", key: view },
-      isHome ? h(Home, { data, prefs, t, pal, now, okFlashAt, onOpen: setView }) : null,
-      isStatus ? h(StatusView, { prefs, setPrefs, t, onRefresh: fetchUsage, data, refreshing, fetchFailed }) : null,
-      (DetailComp && detailAccount) ? h(DetailComp, { data, account: detailAccount, t, pal }) : null));
+    h("div", { className: "shell-body" },
+      sidebarOpen ? h("div", { className: "scrim", onClick: () => setSidebarOpen(false) }) : null,
+      h(Sidebar, {
+        providers, section, selectedId, open: sidebarOpen, t,
+        onOverview: () => setSection("overview"),
+        onSelect: (id) => { setSection("account"); setSelectedId(id); },
+        onClose: () => setSidebarOpen(false),
+      }),
+      h("main", { className: "content-area" },
+        section === "overview"
+          ? h(Overview, { providers, okFlashAt, now, t, pal, onOpen: (id) => { setSection("account"); setSelectedId(id); } })
+          : null,
+        section === "account" && meta
+          ? h(AccountPage, { key: meta.id, meta, account: rawAccount, data, t, pal })
+          : null)),
+    settingsOpen ? h(SettingsDrawer, {
+      prefs, setPrefs, t, onRefresh: fetchUsage, data, refreshing, fetchFailed,
+      onClose: () => setSettingsOpen(false),
+    }) : null);
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(App));
