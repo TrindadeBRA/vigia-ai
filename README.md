@@ -76,24 +76,20 @@ Telas reais do firmware (touch XPT2046, tema **Escuro** com destaque vermelho). 
 <tr>
 <th align="center">Detalhe — Claude</th>
 <th align="center">Detalhe — Cursor</th>
+<th align="center">Detalhe — OpenRouter</th>
 </tr>
 <tr>
 <td><img src="docs/assets/firmware/display-detail-claude.png" width="240" alt="Detalhe da sessão e limite semanal do Claude"></td>
 <td><img src="docs/assets/firmware/display-detail-cursor.png" width="240" alt="Detalhe do plano Cursor com modelos e outros modelos"></td>
-</tr>
-<tr>
-<th align="center">Detalhe — OpenRouter</th>
-<th align="center">Detalhes empilhados</th>
-</tr>
-<tr>
 <td><img src="docs/assets/firmware/display-detail-openrouter.png" width="240" alt="Créditos restantes na OpenRouter"></td>
-<td><img src="docs/assets/firmware/display-detail-claude-cursor.png" width="240" alt="Rolagem mostrando Claude e Cursor em sequência"></td>
 </tr>
 <tr>
+<th align="center">Detalhes empilhados</th>
 <th align="center">Sistema — rede e QR</th>
 <th align="center">Sistema — tema e cor</th>
 </tr>
 <tr>
+<td><img src="docs/assets/firmware/display-detail-claude-cursor.png" width="240" alt="Rolagem mostrando Claude e Cursor em sequência"></td>
 <td><img src="docs/assets/firmware/display-settings-network.png" width="240" alt="Tela de sistema com IP, painel e QR code"></td>
 <td><img src="docs/assets/firmware/display-settings-theme.png" width="240" alt="Seleção de layout, tema claro/escuro/contraste e cor de destaque"></td>
 </tr>
