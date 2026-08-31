@@ -322,6 +322,14 @@ void drawInfoIcon(int cx, int cy, int r, uint16_t color) {
   tft.fillRect(cx - 1, cy - r / 5, 2, r, color);
 }
 
+// Relógio analógico (atalho Agora no meio da barra). Ponteiros ~10:10.
+void drawClockIcon(int cx, int cy, int r, uint16_t color) {
+  tft.drawCircle(cx, cy, r, color);
+  tft.drawLine(cx, cy, cx - r / 3, cy - r / 2, color);
+  tft.drawLine(cx, cy, cx + r / 2, cy - r / 3, color);
+  tft.fillCircle(cx, cy, 1, color);
+}
+
 void drawScrollChevron(int cx, int cy, bool up, bool enabled) {
   uint16_t c = enabled ? COL_ACCENT : COL_TEXT_MUTED;
   const int r = 7;

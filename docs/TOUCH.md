@@ -17,7 +17,7 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 | Info | Rede, URL/QR do painel na LAN, layout da home (**Lista** / **Grade**), **tema** (Escuro / Claro / Contraste), **cor** (7 tons, padrao vermelho), **idioma** (PT / EN / ES, padrão pt-BR), **Atualizar**, **Calibrar**. **Setas** à direita se precisar de scroll |
 | Relogio | Hora com segundos, data e resumo dos provedores (mesma regra de "pior conta" da Início). **Sem barra**. Toque em qualquer lugar volta ao inicio |
 
-Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O **horario** da barra abre a tela Relogio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
+Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O **horário** e o **ícone de relógio** no meio da barra abrem a tela Relogio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
 
 Nas telas internas (Claude / GPT / Cursor / OpenRouter / Info) e na **Início** (lista ou grade) se os cards não couberem: aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`.
 

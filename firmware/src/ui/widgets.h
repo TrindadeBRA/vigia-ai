@@ -24,6 +24,7 @@ void drawChoiceButton(int x, int y, int w, int h, const char* label, bool select
 void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor);
 void drawIcon(int x, int y, int w, int h, const uint16_t* data);
 void drawInfoIcon(int cx, int cy, int r, uint16_t color);
+void drawClockIcon(int cx, int cy, int r, uint16_t color);
 void drawScrollChevron(int cx, int cy, bool up, bool enabled);
 void drawBackChevron(int cx, int cy, uint16_t color);
 void drawFwdChevron(int cx, int cy, uint16_t color);

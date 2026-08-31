@@ -21,6 +21,9 @@ int g_headerClockX0 = 0;
 int g_headerClockY0 = 0;
 int g_headerClockX1 = 0;
 int g_headerClockY1 = 0;
+int g_clockIconCx = 0;
+int g_clockIconCy = 0;
+int g_clockIconR = 0;
 int g_eyeCx = 0;
 int g_eyeCy = 0;
 int g_eyeR = 0;
@@ -308,8 +311,30 @@ void layoutContent() {
   }
 }
 
+// Relógio no vão livre da barra (entre marca/horário e o "i"). Sem espaço, some.
+static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint16_t color) {
+  const int clockR = 9;
+  const int pad = 8;
+  const int need = (clockR + pad) * 2;
+  g_clockIconR = 0;
+  if (gap1 - gap0 < need) {
+    return;
+  }
+  const int mid = (gap0 + gap1) / 2;
+  if (vert) {
+    g_clockIconCx = along;
+    g_clockIconCy = mid;
+  } else {
+    g_clockIconCx = mid;
+    g_clockIconCy = along;
+  }
+  g_clockIconR = clockR;
+  drawClockIcon(g_clockIconCx, g_clockIconCy, clockR, color);
+}
+
 void drawHeader() {
   layoutContent();
+  g_clockIconR = 0;
   const int W = tft.width();
   const int H = tft.height();
   const HeaderEdge edge = uiHeaderEdge();
@@ -331,6 +356,7 @@ void drawHeader() {
   const int r = 11;
   const int infoR = 9;
   uint16_t infoCol = (g_view == VIEW_STATUS) ? COL_ACCENT : COL_TEXT_MUTED;
+  uint16_t clockCol = COL_TEXT_MUTED;
 
   if (!vert) {
     const int barY = g_hdrY0;
@@ -370,6 +396,7 @@ void drawHeader() {
     tft.setTextDatum(TR_DATUM);
     tft.setTextColor(COL_TEXT, COL_BG);
     tft.drawString(right, g_headerInfoX0 - 4, barY + 8, 2);
+    drawHeaderClockButton(g_headerHomeX1, g_headerClockX0, midY, false, clockCol);
     if (showBadge) {
       drawCountdownBadgeAt(badgeCx, midY, secs);
     }
@@ -409,6 +436,7 @@ void drawHeader() {
   g_headerInfoY0 = infoCy - infoR - 8;
   g_headerInfoX1 = g_hdrX1;
   g_headerInfoY1 = infoCy + infoR + 8;
+  drawHeaderClockButton(g_headerClockY1, g_headerInfoY0, cx, true, clockCol);
   if (showBadge) {
     drawCountdownBadgeAt(cx, badgeCy, secs);
   }

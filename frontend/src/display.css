@@ -56,17 +56,18 @@
     transition: background-color .15s ease;
   }
   .brand-btn:hover { background: var(--chip); }
-  .eye {
-    width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid var(--text-dim);
-    box-shadow: 0 2px 5px var(--shadow); position: relative; flex: none;
-  }
-  .flat .eye { box-shadow: none; }
-  .eye .pupil {
-    position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--accent);
-    top: 50%; left: 50%; box-shadow: 0 0 7px var(--glow);
-  }
-  .flat .eye .pupil { box-shadow: none; }
-  .eye .pupil::after { content: ""; position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; top: 20%; left: 20%; }
+  .eye-mark { display: block; flex: none; overflow: visible; filter: drop-shadow(0 2px 4px var(--shadow)); }
+  .eye-mark .eye-white { fill: #fff; }
+  .eye-mark .eye-ring { fill: none; stroke: var(--text-dim); stroke-width: 2.5; }
+  .eye-mark .eye-iris { filter: drop-shadow(0 0 4px var(--glow)); }
+  .eye-mark .iris-disc { fill: var(--accent); }
+  .eye-mark .iris-core { fill: rgba(0, 0, 0, .55); }
+  .eye-mark .iris-spec { fill: #fff; opacity: .92; }
+  .eye-mark .iris-spec.sm { opacity: .45; }
+  .eye-mark .eye-lid { fill: var(--bg); stroke: var(--text-dim); stroke-width: 2.5; }
+  .flat .eye-mark, .flat .eye-mark .eye-iris { filter: none; }
+  .brand-btn .eye-mark { transition: transform .18s ease; }
+  .brand-btn:hover .eye-mark { transform: scale(1.08); }
   .brand { font-weight: 800; letter-spacing: .2px; font-size: 15px; white-space: nowrap; }
   .brand .ai { color: var(--accent); }
   .clock-btn {

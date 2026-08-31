@@ -28,6 +28,11 @@ extern int g_headerClockX0;
 extern int g_headerClockY0;
 extern int g_headerClockX1;
 extern int g_headerClockY1;
+// Ícone de relógio no meio da barra (mesmo destino do horário: VIEW_NOW).
+// g_clockIconR == 0 → não desenhado (vão curto demais).
+extern int g_clockIconCx;
+extern int g_clockIconCy;
+extern int g_clockIconR;
 // Geometria do olho da marca no header, preenchida por drawHeader() a cada
 // pintura — uiTickEye() usa pra saber onde redesenhar só a pupila animada.
 extern int g_eyeCx;

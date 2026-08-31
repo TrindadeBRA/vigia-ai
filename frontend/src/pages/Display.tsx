@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { CreditsAccount, CursorAccount, ClaudeAccount, GptAccount, UsagePayload } from "../api/types";
+import { Logo } from "../components/Logo";
 import { CheckIcon, ClockIcon, CloseIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
-import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs, prefersReducedMotion } from "../format";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import type { ConfigOutlet } from "./config/ConfigPage";
@@ -40,40 +41,6 @@ function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
     }
   }, [prefs]);
   return [prefs, (fn) => setPrefs(fn)];
-}
-
-function Eye({ size }: { size: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (prefersReducedMotion()) return;
-    let raf: number | null = null;
-    let target = { x: 0, y: 0 };
-    let gaze = { x: 0, y: 0 };
-    let nextMoveAt = 0;
-    const maxGaze = Math.max(1, (size * 0.6) / 2 - 2);
-    function tick(now: number) {
-      if (now >= nextMoveAt) {
-        target.x = (Math.random() * 2 - 1) * maxGaze;
-        target.y = (Math.random() * 2 - 1) * maxGaze;
-        nextMoveAt = now + 900 + Math.random() * 1700;
-      }
-      gaze.x += (target.x - gaze.x) * 0.08;
-      gaze.y += (target.y - gaze.y) * 0.08;
-      if (ref.current) {
-        ref.current.style.transform = `translate(calc(-50% + ${gaze.x}px), calc(-50% + ${gaze.y}px))`;
-      }
-      raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [size]);
-  return (
-    <div className="eye" style={{ width: size, height: size }}>
-      <div className="pupil" ref={ref} />
-    </div>
-  );
 }
 
 function Badge({ secs, total, showCheck, pal }: { secs: number; total: number; showCheck: boolean; pal: Pal }) {
@@ -774,8 +741,7 @@ export default function Display() {
       <div className="topbar">
         <button className="icon-btn menu-btn" onClick={() => setSidebarOpen(true)}><MenuIcon size={19} /></button>
         <button className="brand-btn" onClick={goOverview}>
-          <Eye size={28} />
-          <div className="brand">VIGIA<span className="ai"> AI</span></div>
+          <Logo size={28} />
         </button>
         <div className="spacer" />
         <button className="clock-btn num" onClick={() => { if (data) setNowOpen(true); }} title={t.now}>
