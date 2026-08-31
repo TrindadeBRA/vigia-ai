@@ -1,73 +1,73 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar neste repositório.
 
-## What this is
+## O que é isto
 
-A desktop panel: ESP32 + 3.5" TFT touchscreen shows usage quotas for the Claude and Cursor subscriptions, across multiple screens (home, Claude detail, Cursor detail, info). The board never stores tokens. A Python collector running on the Mac reads local credentials (or a `.env`), calls the authenticated subscription APIs, and serves a JSON summary on the LAN. The firmware only does an HTTP GET on that JSON and draws the UI.
+Um painel de mesa: ESP32 + tela touch TFT 3,5" mostra as cotas de uso das assinaturas Claude e Cursor, em várias telas (início, detalhe Claude, detalhe Cursor, info). A placa nunca guarda tokens. Um coletor Python rodando no Mac lê credenciais locais (ou um `.env`), chama as APIs autenticadas das assinaturas, e serve um resumo em JSON na LAN. O firmware só faz um HTTP GET nesse JSON e desenha a UI.
 
-UI and documentation language is **Portuguese (Brazil)**. Code identifiers are in English.
+Idioma da UI e da documentação: **português (Brasil)**. Identificadores de código são em inglês.
 
-## Start here: `docs/`
+## Comece por aqui: `docs/`
 
-This repo's real documentation lives in `docs/`, written for both humans and AI agents. **Read `docs/CONTEXTO_IA.md` first** — it is the entry point for agents and lists the hard rules for generating code in this repo (token handling, JSON contract, cache TTLs, GPIO constraints, scope limits). Then go to the specific doc for the area you're touching:
+A documentação de verdade deste repo vive em `docs/`, escrita para humanos e para agentes de IA. **Leia `docs/CONTEXTO_IA.md` primeiro** — é o ponto de entrada para agentes e lista as regras obrigatórias para gerar código aqui (tratamento de tokens, contrato JSON, TTLs de cache, restrições de GPIO, limites de escopo). Depois vá para o doc específico da área que você está mexendo:
 
-| Doc | Covers |
+| Doc | Cobre |
 | --- | --- |
-| [docs/CONTEXTO_IA.md](docs/CONTEXTO_IA.md) | Agent entry point + rules for generated code — read before editing anything |
-| [docs/PLANO.md](docs/PLANO.md) | Scope, phases, what's already done |
-| [docs/ARQUITETURA.md](docs/ARQUITETURA.md) | Collector ↔ ESP32 ↔ APIs data flow and trust boundaries |
-| [docs/CONTRATO_JSON.md](docs/CONTRATO_JSON.md) | `GET /usage` JSON shape — do not break without updating both this doc and the firmware parser |
-| [docs/APIS_CLAUDE.md](docs/APIS_CLAUDE.md) | Anthropic OAuth usage endpoint (unofficial) |
-| [docs/APIS_CURSOR.md](docs/APIS_CURSOR.md) | Cursor Dashboard Connect RPC (unofficial) |
-| [docs/HARDWARE.md](docs/HARDWARE.md) | Board, pinout, TFT drivers |
-| [docs/TOUCH.md](docs/TOUCH.md) | Views, XPT2046 touch, calibration, Wokwi touch emulation |
-| [docs/COLETOR.md](docs/COLETOR.md) | Running/authenticating the local collector server |
-| [docs/FIRMWARE.md](docs/FIRMWARE.md) | PlatformIO environments, Wokwi, `secrets.h` |
-| [docs/DECISOES.md](docs/DECISOES.md) | Why the current choices were made (read before proposing an architecture change) |
+| [docs/CONTEXTO_IA.md](docs/CONTEXTO_IA.md) | Ponto de entrada para agentes + regras para código gerado — ler antes de editar qualquer coisa |
+| [docs/PLANO.md](docs/PLANO.md) | Escopo, fases, o que já está feito |
+| [docs/ARQUITETURA.md](docs/ARQUITETURA.md) | Fluxo de dados Coletor ↔ ESP32 ↔ APIs e limites de confiança |
+| [docs/CONTRATO_JSON.md](docs/CONTRATO_JSON.md) | Formato do `GET /usage` — não quebrar sem atualizar este doc **e** o parser do firmware |
+| [docs/APIS_CLAUDE.md](docs/APIS_CLAUDE.md) | Endpoint de uso OAuth da Anthropic (não oficial) |
+| [docs/APIS_CURSOR.md](docs/APIS_CURSOR.md) | Dashboard Connect RPC do Cursor (não oficial) |
+| [docs/HARDWARE.md](docs/HARDWARE.md) | Placa, pinagem, drivers de TFT |
+| [docs/TOUCH.md](docs/TOUCH.md) | Views, touch XPT2046, calibração, emulação de touch no Wokwi |
+| [docs/COLETOR.md](docs/COLETOR.md) | Rodar/autenticar o servidor coletor local |
+| [docs/FIRMWARE.md](docs/FIRMWARE.md) | Ambientes PlatformIO, Wokwi, `secrets.h` |
+| [docs/DECISOES.md](docs/DECISOES.md) | Por que as escolhas atuais foram feitas (ler antes de propor mudança de arquitetura) |
 
-## Commands
+## Comandos
 
-Collector (Mac, Python 3 stdlib only):
+Coletor (Mac, só stdlib do Python 3):
 ```bash
 cd collector
-cp .env.example .env    # optional, for token overrides
+cp .env.example .env    # opcional, para sobrescrever tokens
 python3 server.py
-curl -s http://127.0.0.1:8787/usage | python3 -m json.tool   # verify
+curl -s http://127.0.0.1:8787/usage | python3 -m json.tool   # conferir
 ```
 
 Firmware (PlatformIO):
 ```bash
-cp src/secrets.h.example src/secrets.h   # fill in Wi-Fi + USAGE_URL; gitignored
+cp src/secrets.h.example src/secrets.h   # preencher Wi-Fi + USAGE_URL; gitignored
 pio run -e esp32dev -t upload
 pio device monitor -b 115200
 ```
 
-Wokwi simulator (real collector over simulated Wi-Fi, not mock data):
+Simulador Wokwi (coletor de verdade sobre Wi-Fi simulada, não é mock):
 ```bash
-./dev-wokwi.sh          # starts the collector + wokwigw (local network gateway) together
+./dev-wokwi.sh          # sobe o coletor + wokwigw (gateway de rede local) juntos
 pio run -e wokwi
-# then Cmd+Shift+P -> "Wokwi: Start Simulator"
-# no resistive touch in Wokwi: use Prev/Next buttons or serial keys n/p/0/1/2/3
+# depois Cmd+Shift+P -> "Wokwi: Start Simulator"
+# sem painel resistivo no Wokwi: use os botões Prev/Next ou as teclas seriais n/p/0/1/2/3
 ```
-Without `wokwigw` running, `host.wokwi.internal` (the simulator's `USAGE_URL`) can't reach the collector and cards show `coletor HTTP -1`. See `docs/FIRMWARE.md#rede-no-wokwi-wokwigw`.
+Sem o `wokwigw` rodando, `host.wokwi.internal` (o `USAGE_URL` do simulador) não alcança o coletor e os cards mostram `coletor HTTP -1`. Ver `docs/FIRMWARE.md#rede-no-wokwi-wokwigw`.
 
-`pio run` with no `-e` builds both `esp32dev` and `wokwi`.
+`pio run` sem `-e` builda os dois ambientes (`esp32dev` e `wokwi`).
 
-## Architecture
+## Arquitetura
 
-Three pieces, one firmware sketch:
+Três peças, um único sketch de firmware:
 
-- **`collector/server.py`** — HTTP server on `:8787`. Reads Claude OAuth credentials (`~/.claude/.credentials.json`) and Cursor's local JWT (`~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`), or overrides from `collector/.env`. Calls each provider's internal (unofficial) usage endpoint, caches results (≥5 min — the Claude endpoint rate-limits), and serves one merged JSON at `/usage`. A failure in one provider must not take down the other; `ok: false` on that provider's object is the contract.
-- **`src/main.cpp`** — Wi-Fi connection, HTTP GET of `/usage`, JSON parsing (ArduinoJson), poll loop (`USAGE_POLL_MS`).
-- **`src/ui.cpp`** — the four views/tabs (Início, Claude, Cursor, Info) and their rendering (TFT_eSPI).
-- **`src/input.cpp`** — touch (XPT2046 on hardware), Prev/Next buttons (Wokwi), serial key input.
+- **`collector/server.py`** — servidor HTTP na porta `:8787`. Lê as credenciais OAuth do Claude (`~/.claude/.credentials.json`) e o JWT local do Cursor (`~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`), ou sobrescritas via `collector/.env`. Chama o endpoint de uso interno (não oficial) de cada provedor, cacheia os resultados (≥5 min — o endpoint do Claude rate-limita) e serve um único JSON combinado em `/usage`. Falha em um provedor não pode derrubar o outro; `ok: false` no objeto daquele provedor é o contrato.
+- **`src/main.cpp`** — conexão Wi-Fi, HTTP GET de `/usage`, parse do JSON (ArduinoJson), loop de poll (`USAGE_POLL_MS`).
+- **`src/ui.cpp`** — as quatro views/abas (Início, Claude, Cursor, Info) e sua renderização (TFT_eSPI).
+- **`src/input.cpp`** — touch (XPT2046 no hardware), botões Prev/Next (Wokwi), entrada por tecla serial.
 
-`platformio.ini` builds the *same* `src/main.cpp` sketch into two environments distinguished only by `build_flags`:
+O `platformio.ini` builda o *mesmo* sketch `src/main.cpp` em dois ambientes, diferenciados só por `build_flags`:
 
-- `esp32dev` — real 3.5" board, ILI9488 320×480, real Wi-Fi + HTTP to the collector.
-- `wokwi` — ILI9341 240×320, simulated Wi-Fi (`WOKWI_SIM`) that reaches the same real collector through `wokwigw`, a local network gateway (`wokwi.toml` → `ws://localhost:9011`; binary at `.tools/wokwigw`). `MOCK_USAGE` still exists in `src/main.cpp` as a fallback path but no env currently builds with it — don't assume the simulator shows fake data.
+- `esp32dev` — placa real 3,5", ILI9488 320×480, Wi-Fi real + HTTP pro coletor.
+- `wokwi` — ILI9341 240×320, Wi-Fi simulada (`WOKWI_SIM`) que alcança o mesmo coletor real através do `wokwigw`, um gateway de rede local (`wokwi.toml` → `ws://localhost:9011`; binário em `.tools/wokwigw`). `MOCK_USAGE` ainda existe em `src/main.cpp` como caminho de fallback, mas nenhum env compila com ele hoje — não presuma que o simulador mostra dados falsos.
 
-Tokens exist only on the Mac (official app files or `collector/.env`, both gitignored). The board and the LAN JSON never carry a Bearer token — only computed percentages and dates. Do not add auth to the collector or expose port 8787 outside the LAN without being asked; that's a deliberate v1 decision (see `docs/DECISOES.md`).
+Tokens existem só no Mac (arquivos oficiais dos apps ou `collector/.env`, ambos gitignored). A placa e o JSON na LAN nunca carregam um Bearer token — só percentuais e datas calculados. Não adicione autenticação ao coletor nem exponha a porta 8787 fora da LAN sem que peçam; é uma decisão deliberada da v1 (ver `docs/DECISOES.md`).
 
-The subscription usage endpoints used here are the same ones the Claude Code CLI and Cursor IDE use internally — they are **not** the paid metered API and are not a stable public contract. Treat 401/429/HTML responses as a provider-specific failure, not a crash.
+Os endpoints de uso das assinaturas usados aqui são os mesmos que o Claude Code CLI e a IDE do Cursor usam internamente — **não** são a API paga por token e não são um contrato público estável. Trate respostas 401/429/HTML como falha específica de um provedor, não como um crash.

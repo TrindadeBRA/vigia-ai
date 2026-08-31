@@ -152,7 +152,6 @@ static void updateNetLine() {
 }
 
 static void fetchUsage() {
-  g_lastFetchMs = millis();
   updateNetLine();
   Serial.println("coletor: buscando /usage");
   if (WiFi.status() != WL_CONNECTED) {
@@ -163,6 +162,7 @@ static void fetchUsage() {
     g_snap.cursor.ok = false;
     g_snap.cursor.error = "sem Wi-Fi";
     logSnapshot("wifi-down");
+    g_lastFetchMs = millis();
     uiRefreshData();
     return;
   }
@@ -181,6 +181,7 @@ static void fetchUsage() {
     g_snap.claude.ok = false;
     g_snap.claude.error = "USAGE_URL";
     logSnapshot("url");
+    g_lastFetchMs = millis();
     uiRefreshData();
     return;
   }
@@ -196,6 +197,7 @@ static void fetchUsage() {
     g_snap.cursor.error = "coletor HTTP " + String(code);
     http.end();
     logSnapshot("http-erro");
+    g_lastFetchMs = millis();
     uiRefreshData();
     return;
   }
@@ -209,6 +211,7 @@ static void fetchUsage() {
     g_lastFetchOkMs = millis();
   }
   logSnapshot(g_snap.httpOk ? "ok" : "parse");
+  g_lastFetchMs = millis();
   uiRefreshData();
 }
 
