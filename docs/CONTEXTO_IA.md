@@ -4,6 +4,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 | Arquivo | Quando usar |
 | --- | --- |
+| [SETUP.md](SETUP.md) | Instalar e rodar: quick start, comandos, placa, Wokwi, provedores |
 | [ARQUITETURA.md](ARQUITETURA.md) | Coletor ↔ ESP32 ↔ APIs |
 | [CONTRATO_JSON.md](CONTRATO_JSON.md) | Formato de `/usage` (não quebrar o firmware) |
 | [APIS_CLAUDE.md](APIS_CLAUDE.md) | OAuth usage da Anthropic |
