@@ -6,145 +6,240 @@
 <title>Vigia AI</title>
 <style>
   :root {
-    --bg: #101419; --card: #192021; --card-border: #3a3d42; --track: #292d31;
+    --bg: #101419; --card: #192021; --card-border: #3a3d42; --track: #292d31; --chip: #212a2c;
     --text: #f7f3ef; --text-dim: #adaeb5; --text-muted: #6b6d73;
-    --good: #8cbe94; --warn: #e6a65a; --bad: #de6d6b; --accent: #e63931; --accent-ink: #ffffff;
+    --good: #8cbe94; --warn: #e6a65a; --bad: #de6d6b;
+    --accent: #e63931; --accent-ink: #ffffff;
+    --shadow: rgba(0, 0, 0, .5); --glow: rgba(230, 57, 49, .14); --bg-translucent: rgba(16, 20, 25, .82);
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
   body {
-    background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    min-height: 100vh;
+    background: var(--bg); color: var(--text); font-family: var(--font-sans);
+    min-height: 100vh; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   }
-  #root { min-height: 100vh; display: flex; flex-direction: column; }
-  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important; scroll-behavior: auto !important;
+    }
+  }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+  #root { min-height: 100vh; }
+  .shell {
+    min-height: 100vh; display: flex; flex-direction: column;
+    background: radial-gradient(900px 320px at 50% -10%, var(--glow), transparent 60%), var(--bg);
+  }
+  .shell.flat { background: var(--bg); }
+
+  .view-fade { animation: fadeIn .22s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ---------- header ---------- */
   .header {
     position: sticky; top: 0; z-index: 10;
-    display: flex; align-items: center; gap: 10px;
-    height: 52px; padding: 0 14px;
-    background: var(--bg); border-bottom: 1px solid var(--card-border);
+    display: flex; align-items: center; gap: 4px;
+    height: 56px; padding: 0 10px;
+    background: var(--bg-translucent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: 0 1px 0 var(--card-border), 0 14px 28px -22px var(--shadow);
   }
+  .flat .header { background: var(--bg); backdrop-filter: none; box-shadow: 0 1px 0 var(--card-border); }
   .header .spacer { flex: 1; }
   .chevron-btn, .icon-btn {
     background: none; border: none; cursor: pointer; color: var(--text-dim);
     display: flex; align-items: center; justify-content: center;
-    padding: 6px; border-radius: 8px;
+    width: 34px; height: 34px; border-radius: 9px; flex: none;
+    transition: background-color .15s ease, color .15s ease;
   }
-  .chevron-btn:hover, .icon-btn:hover { background: var(--card); }
-  .brand-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 4px 2px; color: var(--text); font: inherit; }
-  .eye { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid var(--text-dim); position: relative; flex: none; }
-  .eye .pupil { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); top: 50%; left: 50%; }
+  .chevron-btn:hover, .icon-btn:hover { background: var(--chip); color: var(--text); }
+  .brand-btn {
+    background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 9px;
+    padding: 4px 6px; border-radius: 9px; color: var(--text); font: inherit;
+    transition: background-color .15s ease;
+  }
+  .brand-btn:hover { background: var(--chip); }
+  .eye {
+    width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 1px solid var(--text-dim);
+    box-shadow: 0 2px 5px var(--shadow); position: relative; flex: none;
+  }
+  .flat .eye { box-shadow: none; }
+  .eye .pupil {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
+    top: 50%; left: 50%; box-shadow: 0 0 7px var(--glow);
+  }
+  .flat .eye .pupil { box-shadow: none; }
   .eye .pupil::after { content: ""; position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; top: 20%; left: 20%; }
-  .brand { font-weight: 700; letter-spacing: .3px; font-size: 15px; white-space: nowrap; }
+  .brand { font-weight: 800; letter-spacing: .2px; font-size: 15px; white-space: nowrap; }
   .brand .ai { color: var(--accent); }
   .clock-btn {
     background: none; border: none; cursor: pointer; font: inherit;
-    display: flex; align-items: center; gap: 6px;
-    font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums;
-    color: var(--text); white-space: nowrap; padding: 6px 8px; border-radius: 8px;
+    display: flex; align-items: center; gap: 7px;
+    font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap;
+    padding: 7px 10px; border-radius: 9px; transition: background-color .15s ease;
   }
-  .clock-btn:hover { background: var(--card); }
-  .clock-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); flex: none; }
-  .badge {
-    width: 24px; height: 24px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; flex: none;
+  .clock-btn:hover { background: var(--chip); }
+  .clock-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); flex: none; box-shadow: 0 0 5px var(--good); }
+  .flat .clock-dot { box-shadow: none; }
+
+  .badge-ring { width: 28px; height: 28px; border-radius: 50%; padding: 3px; flex: none; margin-left: 2px; }
+  .badge-inner {
+    width: 100%; height: 100%; border-radius: 50%; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; color: var(--text); font-size: 10px; font-weight: 700;
   }
+  .flat .badge-inner { background: var(--bg); }
 
-  .content { flex: 1; width: 100%; max-width: 560px; margin: 0 auto; padding: 14px; }
+  /* ---------- content shell ---------- */
+  .content { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 16px 14px 40px; }
 
-  .home-grid { display: grid; gap: 10px; }
+  .status-strip {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 2px 4px 16px; font-size: 12.5px; color: var(--text-dim);
+  }
+  .status-strip .who { display: flex; align-items: center; gap: 7px; }
+  .status-strip .who-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .status-strip .who-dot.ok { background: var(--good); box-shadow: 0 0 5px var(--good); }
+  .status-strip .who-dot.bad { background: var(--bad); box-shadow: 0 0 5px var(--bad); }
+  .flat .status-strip .who-dot { box-shadow: none; }
+
+  /* ---------- provider cards ---------- */
+  .home-grid { display: grid; gap: 12px; }
   .home-grid.n-1 { grid-template-columns: 1fr; }
   .home-grid.n-2, .home-grid.n-3, .home-grid.n-4 { grid-template-columns: 1fr 1fr; }
   .home-grid.n-3 > .card:nth-child(3) { grid-column: 1 / -1; }
-  .home-list { display: flex; flex-direction: column; gap: 10px; }
+  .home-list { display: flex; flex-direction: column; gap: 12px; }
 
   .card {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
-    padding: 14px; cursor: pointer; transition: border-color .15s ease;
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 16px;
+    padding: 16px; cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 12px 26px -20px var(--shadow);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
   }
-  .card:hover { border-color: var(--accent); }
-  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .icon-img { width: 26px; height: 26px; flex: none; object-fit: contain; }
-  .card-title { font-weight: 600; flex: 1; font-size: 14px; }
-  .fwd { color: var(--text-dim); font-size: 14px; }
+  .card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 18px 34px -20px var(--shadow), 0 0 0 1px var(--glow); }
+  .card:active { transform: translateY(0); }
+  .flat .card { box-shadow: none; }
+  .flat .card:hover { transform: none; }
 
-  .metric { margin-top: 8px; }
+  .card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+  .icon-chip {
+    width: 36px; height: 36px; border-radius: 11px; background: var(--chip); flex: none;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 0 1px var(--card-border);
+  }
+  .icon-img { width: 20px; height: 20px; object-fit: contain; }
+  .card-title { font-weight: 650; flex: 1; font-size: 15px; display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .card-title span.txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+  .status-dot.ok { background: var(--good); }
+  .status-dot.bad { background: var(--bad); }
+  .chev { color: var(--text-dim); flex: none; }
+
+  .metric { margin-top: 12px; }
   .metric:first-child { margin-top: 0; }
-  .metric-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 4px; }
+  .metric-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 6px; }
   .metric-top .label { color: var(--text-dim); }
-  .metric-top .val { font-weight: 600; }
-  .metric-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-  .metric-plain { font-weight: 600; font-size: 14px; }
+  .metric-top .val { font-weight: 700; font-size: 14.5px; }
+  .metric-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 5px; }
+  .metric-plain { font-weight: 700; font-size: 16px; }
 
-  .bar-track { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; min-width: 8px; }
+  .bar-track { height: 7px; border-radius: 5px; background: var(--track); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .28); overflow: hidden; }
+  .flat .bar-track { box-shadow: none; }
+  .bar-fill { height: 100%; border-radius: 5px; min-width: 7px; background-image: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 65%); background-blend-mode: overlay; }
+  .flat .bar-fill { background-image: none; }
 
-  .error-text { color: var(--bad); font-size: 13px; line-height: 1.5; }
-  .empty-note { color: var(--text-muted); font-size: 14px; text-align: center; padding: 40px 20px; }
+  .error-text { color: var(--bad); font-size: 13px; line-height: 1.55; }
+  .empty-note { color: var(--text-muted); font-size: 14px; text-align: center; padding: 48px 20px; }
 
+  /* ---------- detail views ---------- */
   .detail-card {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
-    padding: 16px; max-height: calc(100vh - 100px); overflow-y: auto;
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 16px;
+    padding: 18px; max-height: calc(100vh - 108px); overflow-y: auto;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 12px 26px -20px var(--shadow);
   }
-  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 14px; border-bottom: 1px solid var(--track); }
+  .flat .detail-card { box-shadow: none; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--track); }
   .kv:last-child { border-bottom: none; }
   .kv .k { color: var(--text-muted); }
-  .kv .v { color: var(--text); text-align: right; }
-  .note { color: var(--text-muted); font-size: 13px; margin: 10px 0 4px; }
-  .detail-bar { margin: 14px 0; }
-  .detail-bar-top { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .kv .v { color: var(--text); text-align: right; font-weight: 550; }
+  .note { color: var(--text-muted); font-size: 12.5px; margin: 12px 0 4px; letter-spacing: .1px; }
+  .detail-bar { margin: 16px 0; }
+  .detail-bar-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; margin-bottom: 8px; }
   .detail-bar-top .label { color: var(--text-dim); }
-  .detail-bar-top .val { font-weight: 700; }
-  .detail-bar .metric-sub { font-size: 12px; margin-top: 6px; }
-  .detail-plain-val { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+  .detail-bar-top .val { font-weight: 750; font-size: 21px; }
+  .detail-bar .bar-track { height: 9px; }
+  .detail-bar .metric-sub { font-size: 12.5px; margin-top: 8px; }
+  .detail-plain-val { font-size: 22px; font-weight: 750; margin: 6px 0 2px; }
 
-  .section-title { color: var(--text-muted); font-size: 12px; letter-spacing: .5px; text-transform: uppercase; margin: 18px 0 8px; }
+  /* ---------- status / settings ---------- */
+  .section-title { color: var(--text-muted); font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase; margin: 22px 0 9px; font-weight: 650; }
   .section-title:first-child { margin-top: 0; }
-  .choice-row { display: flex; gap: 6px; }
-  .choice-btn {
-    flex: 1; padding: 9px 6px; border-radius: 8px; border: 1px solid var(--card-border);
-    background: var(--card); color: var(--text-dim); font-size: 13px; cursor: pointer;
+  .segmented {
+    display: flex; gap: 3px; padding: 3px; background: var(--chip); border: 1px solid var(--card-border);
+    border-radius: 12px;
   }
-  .choice-btn.active { border-color: var(--accent); color: var(--accent); }
-  .swatch-row { display: flex; gap: 8px; }
+  .segmented button {
+    flex: 1; padding: 9px 6px; border-radius: 9px; border: none; background: transparent;
+    color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .segmented button:hover { color: var(--text); }
+  .segmented button.active {
+    background: var(--card); color: var(--accent);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 4px 10px -6px var(--shadow), inset 0 0 0 1px var(--accent);
+  }
+  .flat .segmented button.active { box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+  .swatch-row { display: flex; gap: 9px; flex-wrap: wrap; }
   .swatch {
-    width: 30px; height: 30px; border-radius: 7px; border: 2px solid transparent; cursor: pointer;
+    width: 34px; height: 34px; border-radius: 10px; border: 2px solid transparent; cursor: pointer;
+    padding: 0; font: inherit;
+    display: flex; align-items: center; justify-content: center; transition: transform .12s ease, border-color .15s ease;
   }
+  .swatch:hover { transform: translateY(-1px); }
   .swatch.active { border-color: var(--text); }
-  .full-btn {
-    width: 100%; padding: 11px; border-radius: 8px; border: 1px solid var(--accent);
-    background: var(--card); color: var(--accent); font-size: 14px; font-weight: 600; cursor: pointer;
-    margin-top: 4px;
+
+  .btn-primary {
+    width: 100%; padding: 13px; border-radius: 12px; border: none;
+    background: var(--accent); color: var(--accent-ink); font: inherit; font-size: 14.5px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 12px 22px -12px var(--glow); transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
   }
-  .full-btn:active { opacity: .8; }
-  .status-note { color: var(--text-muted); font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); opacity: .9; }
+  .flat .btn-primary { box-shadow: none; }
+  .status-note { color: var(--text-muted); font-size: 12px; margin-top: 12px; line-height: 1.55; }
   .fetch-fail-note { color: var(--bad); font-size: 12px; margin-top: 6px; }
 
-  .subtitle { color: var(--text-dim); font-size: 13px; text-align: center; margin: 2px 0 16px; }
-
+  /* ---------- now view (fullscreen clock) ---------- */
   .now-view {
-    min-height: 100vh; width: 100%; cursor: pointer; background: var(--bg);
+    min-height: 100vh; width: 100%; cursor: pointer;
+    background: radial-gradient(900px 420px at 50% 30%, var(--glow), transparent 65%), var(--bg);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 28px 14px;
   }
-  .now-clock { font-size: 48px; font-weight: 700; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
-  .now-date { color: var(--text-dim); font-size: 14px; margin: 4px 0 22px; text-transform: capitalize; }
+  .now-clock {
+    font-family: var(--font-mono); font-size: clamp(42px, 12vw, 66px); font-weight: 620;
+    letter-spacing: -1px; font-variant-numeric: tabular-nums; text-shadow: 0 0 40px var(--glow);
+  }
+  .flat .now-clock { text-shadow: none; }
+  .now-date { color: var(--text-dim); font-size: 14px; margin: 6px 0 26px; text-transform: capitalize; letter-spacing: .2px; }
   .now-rows { width: 100%; max-width: 480px; }
   .now-row {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 10px;
-    padding: 10px 12px; margin-bottom: 8px;
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 13px;
+    padding: 12px 14px; margin-bottom: 9px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 10px 20px -18px var(--shadow);
   }
-  .now-row-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .now-row-title { font-weight: 600; font-size: 13px; }
-  .now-row-metrics { display: flex; gap: 16px; }
+  .flat .now-row { box-shadow: none; }
+  .now-row-head { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+  .now-row-title { font-weight: 650; font-size: 13.5px; }
+  .now-row-metrics { display: flex; gap: 18px; }
   .now-metric { flex: 1; min-width: 0; }
-  .now-metric-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+  .now-metric-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
   .now-metric-top .label { color: var(--text-dim); }
-  .now-metric-top .val { font-weight: 600; }
-  .now-metric-plain { font-weight: 600; font-size: 13px; }
+  .now-metric-top .val { font-weight: 700; }
+  .now-metric-plain { font-weight: 700; font-size: 13.5px; }
 </style>
 </head>
 <body>
@@ -158,16 +253,18 @@ const { useState, useEffect, useRef } = React;
 
 // Paletas e cores de acento — mesmos valores RGB565 do firmware (src/ui.cpp),
 // convertidos para hex, para o mostrador web ficar visualmente identico.
+// chip/shadow sao tokens novos so do mostrador web (profundidade/elevacao);
+// nao existem no firmware (TFT nao tem sombra/gradiente).
 const PALETTES = {
-  dark: { bg: "#101419", card: "#192021", cardBorder: "#3a3d42", track: "#292d31",
+  dark: { bg: "#101419", card: "#192021", cardBorder: "#3a3d42", track: "#292d31", chip: "#212a2c",
           text: "#f7f3ef", textDim: "#adaeb5", textMuted: "#6b6d73",
-          good: "#8cbe94", warn: "#e6a65a", bad: "#de6d6b" },
-  light: { bg: "#efebd6", card: "#fffbf7", cardBorder: "#c5c6c5", track: "#dedfde",
+          good: "#8cbe94", warn: "#e6a65a", bad: "#de6d6b", shadow: "rgba(0, 0, 0, .5)" },
+  light: { bg: "#efebd6", card: "#fffbf7", cardBorder: "#c5c6c5", track: "#dedfde", chip: "#f5f1e8",
            text: "#191819", textDim: "#4a4d4a", textMuted: "#7b7d7b",
-           good: "#317131", warn: "#c57500", bad: "#c52d29" },
-  contrast: { bg: "#000000", card: "#000000", cardBorder: "#ffffff", track: "#424142",
+           good: "#317131", warn: "#c57500", bad: "#c52d29", shadow: "rgba(64, 52, 28, .16)" },
+  contrast: { bg: "#000000", card: "#000000", cardBorder: "#ffffff", track: "#424142", chip: "#000000",
               text: "#ffffff", textDim: "#ffffff", textMuted: "#c5c2c5",
-              good: "#00ff00", warn: "#ffff00", bad: "#ff0000" },
+              good: "#00ff00", warn: "#ffff00", bad: "#ff0000", shadow: "rgba(0, 0, 0, 0)" },
 };
 const ACCENTS = {
   dark: ["#e63931", "#ff9619", "#f7db21", "#4ad252", "#3ab2de", "#4a8eff", "#c555de"],
@@ -203,7 +300,8 @@ const STR = {
     accentSection: "Cor", langSection: "Idioma",
     refreshSection: "Dados de uso", refreshNow: "Atualizar consumo",
     noData: "sem dados", noProviders: "Nenhum provedor configurado. Preencha no painel do coletor.",
-    subtitle: "Consumo em tempo real das IAs",
+    allOk: "Tudo certo", errorsCount: (n) => n === 1 ? "1 provedor com erro" : `${n} provedores com erro`,
+    agoNow: "agora mesmo", agoSecs: (s) => `atualizado há ${s}s`,
     autoNote: (s) => `Atualiza sozinho a cada ${s}s. Toque para forçar agora.`,
     fetchFail: "Não foi possível falar com o coletor.",
     back: "Voltar", info: "Info", now: "Agora",
@@ -224,7 +322,8 @@ const STR = {
     accentSection: "Color", langSection: "Language",
     refreshSection: "Usage data", refreshNow: "Fetch usage now",
     noData: "no data", noProviders: "No provider configured. Fill one in on the collector panel.",
-    subtitle: "Real-time AI usage",
+    allOk: "All good", errorsCount: (n) => n === 1 ? "1 provider failing" : `${n} providers failing`,
+    agoNow: "just now", agoSecs: (s) => `updated ${s}s ago`,
     autoNote: (s) => `Auto-refreshes every ${s}s. Tap to force now.`,
     fetchFail: "Could not reach the collector.",
     back: "Back", info: "Info", now: "Now",
@@ -245,7 +344,8 @@ const STR = {
     accentSection: "Color", langSection: "Idioma",
     refreshSection: "Datos de uso", refreshNow: "Actualizar consumo",
     noData: "sin datos", noProviders: "Ningún proveedor configurado. Complétalo en el panel del colector.",
-    subtitle: "Consumo en tiempo real de las IAs",
+    allOk: "Todo bien", errorsCount: (n) => n === 1 ? "1 proveedor con error" : `${n} proveedores con error`,
+    agoNow: "recién", agoSecs: (s) => `actualizado hace ${s}s`,
     autoNote: (s) => `Se actualiza solo cada ${s}s. Toca para forzar ahora.`,
     fetchFail: "No se pudo contactar al colector.",
     back: "Volver", info: "Info", now: "Ahora",
@@ -264,6 +364,11 @@ function barColor(pct, pal) {
   if (pct < 70) return pal.good;
   if (pct < 90) return pal.warn;
   return pal.bad;
+}
+function barGlow(pct, pal) {
+  if (pct == null || pct < 70) return "none";
+  if (pct < 90) return `0 0 7px ${hexToRgba(pal.warn, .4)}`;
+  return `0 0 10px ${hexToRgba(pal.bad, .55)}`;
 }
 function fmtPct(pct) { return (pct == null || pct < 0) ? "--" : Math.round(pct) + "%"; }
 function fmtRemain(pct) { return (pct == null || pct < 0) ? "--" : fmtPct(100 - clamp(pct, 0, 100)); }
@@ -287,9 +392,16 @@ function fmtClock(ms) {
   if (isNaN(d.getTime())) return "--:--";
   return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
 function inverseOn(hex) {
   const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
   return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#000000" : "#ffffff";
+}
+function prefersReducedMotion() {
+  try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
 }
 
 function usePrefs() {
@@ -306,12 +418,13 @@ function usePrefs() {
   return [prefs, setPrefs];
 }
 
-function applyThemeVars(pal, accent) {
+function applyThemeVars(pal, accent, flat) {
   const root = document.documentElement.style;
   root.setProperty("--bg", pal.bg);
   root.setProperty("--card", pal.card);
   root.setProperty("--card-border", pal.cardBorder);
   root.setProperty("--track", pal.track);
+  root.setProperty("--chip", pal.chip);
   root.setProperty("--text", pal.text);
   root.setProperty("--text-dim", pal.textDim);
   root.setProperty("--text-muted", pal.textMuted);
@@ -320,11 +433,31 @@ function applyThemeVars(pal, accent) {
   root.setProperty("--bad", pal.bad);
   root.setProperty("--accent", accent);
   root.setProperty("--accent-ink", inverseOn(accent));
+  root.setProperty("--shadow", pal.shadow);
+  root.setProperty("--glow", flat ? "rgba(0,0,0,0)" : hexToRgba(accent, .16));
+  root.setProperty("--bg-translucent", hexToRgba(pal.bg, flat ? 1 : .82));
+}
+
+function Svg({ d, size, viewBox, stroke, fill, className, children }) {
+  return h("svg", {
+    width: size || 16, height: size || 16, viewBox: viewBox || "0 0 24 24", className,
+    fill: fill || "none", xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true",
+  }, children || (d ? h("path", { d, stroke: stroke || "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" }) : null));
+}
+function ChevronLeft(props) { return h(Svg, { ...props, d: "M15 6l-6 6 6 6" }); }
+function ChevronRight(props) { return h(Svg, { ...props, d: "M9 6l6 6-6 6" }); }
+function CheckIcon(props) { return h(Svg, { ...props, d: "M5 13l4 4L19 7" }); }
+function InfoIcon({ className, size }) {
+  return h(Svg, { className, size },
+    h("circle", { cx: 12, cy: 12, r: 8.5, stroke: "currentColor", strokeWidth: 2 }),
+    h("circle", { cx: 12, cy: 8.2, r: 1.15, fill: "currentColor" }),
+    h("path", { d: "M12 11v5.2", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" }));
 }
 
 function Eye({ size }) {
   const ref = useRef(null);
   useEffect(() => {
+    if (prefersReducedMotion()) return;
     let raf = null;
     let target = { x: 0, y: 0 };
     let gaze = { x: 0, y: 0 };
@@ -350,31 +483,31 @@ function Eye({ size }) {
     h("div", { className: "pupil", ref }));
 }
 
-function Badge({ secs, showCheck, pal }) {
+function Badge({ secs, total, showCheck, pal }) {
   if (secs == null && !showCheck) return null;
-  const bg = showCheck ? pal.good : "var(--accent)";
-  const fg = showCheck ? pal.bg : "var(--accent-ink)";
-  return h("div", { className: "badge", style: { background: bg, color: fg } },
-    showCheck ? "✓" : Math.min(99, secs));
+  const pct = showCheck ? 100 : clamp(((total - secs) / total) * 100, 0, 100);
+  const ringColor = showCheck ? pal.good : "var(--accent)";
+  return h("div", { className: "badge-ring", style: { background: `conic-gradient(${ringColor} ${pct}%, var(--track) 0)` } },
+    h("div", { className: "badge-inner" }, showCheck ? h(CheckIcon, { size: 12 }) : h("span", { className: "num" }, Math.min(99, secs))));
 }
 
 function MetricRow({ label, pct, sub, pal }) {
   if (pct == null) {
     return h("div", { className: "metric" },
       h("div", { className: "metric-top" }, h("span", { className: "label" }, label)),
-      h("div", { className: "metric-plain" }, sub || "--"));
+      h("div", { className: "metric-plain num" }, sub || "--"));
   }
   return h("div", { className: "metric" },
     h("div", { className: "metric-top" },
       h("span", { className: "label" }, label),
-      h("span", { className: "val" }, fmtPct(pct))),
+      h("span", { className: "val num" }, fmtPct(pct))),
     h("div", { className: "bar-track" },
-      h("div", { className: "bar-fill", style: { width: clamp(pct, 0, 100) + "%", background: barColor(pct, pal) } })),
+      h("div", { className: "bar-fill", style: { width: clamp(pct, 0, 100) + "%", background: barColor(pct, pal), boxShadow: barGlow(pct, pal) } })),
     sub ? h("div", { className: "metric-sub" }, sub) : null);
 }
 
 function Icon({ id }) {
-  return h("img", { className: "icon-img", src: PROVIDER_ICON[id], alt: id, draggable: false });
+  return h("div", { className: "icon-chip" }, h("img", { className: "icon-img", src: PROVIDER_ICON[id], alt: id, draggable: false }));
 }
 
 // Monta os dados de cada provedor configurado uma vez só; Home (cards) e
@@ -429,22 +562,36 @@ function ProviderCard({ p, pal, onOpen }) {
   return h("div", { className: "card", onClick: onOpen },
     h("div", { className: "card-head" },
       h(Icon, { id: p.id }),
-      h("div", { className: "card-title" }, p.title),
-      h("div", { className: "fwd" }, "›")),
+      h("div", { className: "card-title" },
+        h("span", { className: "txt" }, p.title),
+        h("span", { className: "status-dot " + (p.ok ? "ok" : "bad") })),
+      h(ChevronRight, { size: 17, className: "chev" })),
     !p.ok ? h("div", { className: "error-text" }, p.error || "") :
       h(React.Fragment, null, p.metrics.map((m, i) => h(MetricRow, { key: i, ...m, pal }))));
 }
 
-function Home({ data, prefs, t, pal, onOpen }) {
+function StatusStrip({ providers, okFlashAt, now, t }) {
+  const failing = providers.filter((p) => !p.ok).length;
+  const agoS = okFlashAt ? Math.max(0, Math.round((now - okFlashAt) / 1000)) : null;
+  const agoText = agoS == null ? "" : (agoS < 3 ? t.agoNow : t.agoSecs(agoS));
+  return h("div", { className: "status-strip" },
+    h("div", { className: "who" },
+      h("span", { className: "who-dot " + (failing ? "bad" : "ok") }),
+      h("span", null, failing ? t.errorsCount(failing) : t.allOk)),
+    h("div", { className: "num" }, agoText));
+}
+
+function Home({ data, prefs, t, pal, now, okFlashAt, onOpen }) {
   const providers = buildProviders(data, t);
   if (providers.length === 0) {
     return h("div", { className: "empty-note" }, t.noProviders);
   }
   const cards = providers.map((p) => h(ProviderCard, { key: p.id, p, pal, onOpen: () => onOpen(p.id) }));
-  if (prefs.homeLayout === "grid") {
-    return h("div", { className: `home-grid n-${providers.length}` }, cards);
-  }
-  return h("div", { className: "home-list" }, cards);
+  return h(React.Fragment, null,
+    h(StatusStrip, { providers, okFlashAt, now, t }),
+    prefs.homeLayout === "grid"
+      ? h("div", { className: `home-grid n-${providers.length}` }, cards)
+      : h("div", { className: "home-list" }, cards));
 }
 
 function NowRow({ p, pal }) {
@@ -454,29 +601,30 @@ function NowRow({ p, pal }) {
       h("div", { className: "now-row-metrics" }, p.metrics.map((m, i) => h("div", { key: i, className: "now-metric" },
         h("div", { className: "now-metric-top" },
           h("span", { className: "label" }, m.label),
-          m.pct != null ? h("span", { className: "val" }, fmtPct(m.pct)) : null),
+          m.pct != null ? h("span", { className: "val num" }, fmtPct(m.pct)) : null),
         m.pct != null
-          ? h("div", { className: "bar-track" }, h("div", { className: "bar-fill", style: { width: clamp(m.pct, 0, 100) + "%", background: barColor(m.pct, pal) } }))
-          : h("div", { className: "now-metric-plain" }, m.sub || "--")))));
+          ? h("div", { className: "bar-track" }, h("div", { className: "bar-fill", style: { width: clamp(m.pct, 0, 100) + "%", background: barColor(m.pct, pal), boxShadow: barGlow(m.pct, pal) } }))
+          : h("div", { className: "now-metric-plain num" }, m.sub || "--")))));
 }
 
 // Tela cheia de relogio (equivalente a VIEW_NOW no firmware, aberta ao tocar
 // no relogio do header) — qualquer toque fecha e volta pra Início, igual la.
-function NowView({ data, prefs, t, pal, onClose }) {
-  const [now, setNow] = useState(new Date());
+function NowView({ data, prefs, t, pal, nowMs, okFlashAt, onClose }) {
+  const [clockNow, setClockNow] = useState(new Date());
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
+    const id = setInterval(() => setClockNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
   const pad2 = (n) => String(n).padStart(2, "0");
-  const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
-  const weekday = WEEKDAYS[prefs.lang][now.getDay()];
-  const dateStr = `${weekday}  ${pad2(now.getDate())}/${pad2(now.getMonth() + 1)}/${now.getFullYear()}`;
+  const timeStr = `${pad2(clockNow.getHours())}:${pad2(clockNow.getMinutes())}:${pad2(clockNow.getSeconds())}`;
+  const weekday = WEEKDAYS[prefs.lang][clockNow.getDay()];
+  const dateStr = `${weekday}  ${pad2(clockNow.getDate())}/${pad2(clockNow.getMonth() + 1)}/${clockNow.getFullYear()}`;
   const providers = buildProviders(data, t);
   return h("div", { className: "now-view", onClick: onClose },
     h("div", { className: "now-clock" }, timeStr),
     h("div", { className: "now-date" }, dateStr),
     h("div", { className: "now-rows" },
+      h(StatusStrip, { providers, okFlashAt, now: nowMs, t }),
       providers.length === 0
         ? h("div", { className: "empty-note" }, t.noProviders)
         : providers.map((p) => h(NowRow, { key: p.id, p, pal }))));
@@ -486,24 +634,24 @@ function DetailBar({ label, pct, sub, pal }) {
   if (pct == null) {
     return h("div", { className: "detail-bar" },
       h("div", { className: "detail-bar-top" }, h("span", { className: "label" }, label)),
-      h("div", { className: "detail-plain-val" }, sub || "--"));
+      h("div", { className: "detail-plain-val num" }, sub || "--"));
   }
   return h("div", { className: "detail-bar" },
     h("div", { className: "detail-bar-top" },
-      h("span", { className: "label" }, label), h("span", { className: "val" }, fmtPct(pct))),
+      h("span", { className: "label" }, label), h("span", { className: "val num" }, fmtPct(pct))),
     h("div", { className: "bar-track" },
-      h("div", { className: "bar-fill", style: { width: clamp(pct, 0, 100) + "%", background: barColor(pct, pal) } })),
+      h("div", { className: "bar-fill", style: { width: clamp(pct, 0, 100) + "%", background: barColor(pct, pal), boxShadow: barGlow(pct, pal) } })),
     sub ? h("div", { className: "metric-sub" }, sub) : null);
 }
 
 function Kv({ k, v }) {
   if (v === null || v === undefined || v === "") return null;
-  return h("div", { className: "kv" }, h("span", { className: "k" }, k), h("span", { className: "v" }, v));
+  return h("div", { className: "kv" }, h("span", { className: "k" }, k), h("span", { className: "v num" }, v));
 }
 
 function DetailShell({ id, title, ok, error, children, t }) {
   return h("div", { className: "detail-card" },
-    h("div", { className: "card-head" }, h(Icon, { id }), h("div", { className: "card-title" }, title)),
+    h("div", { className: "card-head" }, h(Icon, { id }), h("div", { className: "card-title" }, h("span", { className: "txt" }, title))),
     !ok ? h("div", { className: "error-text" }, error || t.noData) : children);
 }
 
@@ -573,34 +721,29 @@ function DeepSeekDetail({ data, t, pal }) {
 }
 
 function StatusView({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed }) {
-  const themeBtn = (key, label) => h("button", {
-    className: "choice-btn" + (prefs.theme === key ? " active" : ""),
-    onClick: () => setPrefs((p) => ({ ...p, theme: key })),
-  }, label);
-  const langBtn = (key, label) => h("button", {
-    className: "choice-btn" + (prefs.lang === key ? " active" : ""),
-    onClick: () => setPrefs((p) => ({ ...p, lang: key })),
-  }, label);
-  const layoutBtn = (key, label) => h("button", {
-    className: "choice-btn" + (prefs.homeLayout === key ? " active" : ""),
-    onClick: () => setPrefs((p) => ({ ...p, homeLayout: key })),
-  }, label);
+  const themeRow = ["dark", "light", "contrast"].map((k) =>
+    h("button", { key: k, className: prefs.theme === k ? "active" : "", onClick: () => setPrefs((p) => ({ ...p, theme: k })) }, t[k]));
+  const langRow = [["pt", "PT"], ["en", "EN"], ["es", "ES"]].map(([k, label]) =>
+    h("button", { key: k, className: prefs.lang === k ? "active" : "", onClick: () => setPrefs((p) => ({ ...p, lang: k })) }, label));
+  const layoutRow = [["list", t.list], ["grid", t.grid]].map(([k, label]) =>
+    h("button", { key: k, className: prefs.homeLayout === k ? "active" : "", onClick: () => setPrefs((p) => ({ ...p, homeLayout: k })) }, label));
   const accents = ACCENTS[prefs.theme];
+
   return h("div", { className: "detail-card" },
     h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
     h("div", { className: "section-title" }, t.homeSection),
-    h("div", { className: "choice-row" }, layoutBtn("list", t.list), layoutBtn("grid", t.grid)),
+    h("div", { className: "segmented" }, layoutRow),
     h("div", { className: "section-title" }, t.themeSection),
-    h("div", { className: "choice-row" }, themeBtn("dark", t.dark), themeBtn("light", t.light), themeBtn("contrast", t.contrast)),
+    h("div", { className: "segmented" }, themeRow),
     h("div", { className: "section-title" }, t.accentSection),
-    h("div", { className: "swatch-row" }, accents.map((c, i) => h("div", {
-      key: i, className: "swatch" + (prefs.accent === i ? " active" : ""),
+    h("div", { className: "swatch-row" }, accents.map((c, i) => h("button", {
+      key: i, className: "swatch" + (prefs.accent === i ? " active" : ""), "aria-label": t.accentSection + " " + (i + 1),
       style: { background: c }, onClick: () => setPrefs((p) => ({ ...p, accent: i })),
-    }))),
+    }, prefs.accent === i ? h(CheckIcon, { size: 15, stroke: inverseOn(c) }) : null))),
     h("div", { className: "section-title" }, t.langSection),
-    h("div", { className: "choice-row" }, langBtn("pt", "PT"), langBtn("en", "EN"), langBtn("es", "ES")),
+    h("div", { className: "segmented" }, langRow),
     h("div", { className: "section-title" }, t.refreshSection),
-    h("button", { className: "full-btn", onClick: onRefresh }, refreshing ? "…" : t.refreshNow),
+    h("button", { className: "btn-primary", onClick: onRefresh }, refreshing ? "…" : t.refreshNow),
     h("div", { className: "status-note" }, t.autoNote(POLL_MS / 1000)),
     fetchFailed ? h("div", { className: "fetch-fail-note" }, t.fetchFail) : null);
 }
@@ -617,10 +760,12 @@ function App() {
   const [fetchFailed, setFetchFailed] = useState(false);
 
   const pal = PALETTES[prefs.theme];
+  const flat = prefs.theme === "contrast";
   const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
   const t = STR[prefs.lang];
+  const shellClass = "shell" + (flat ? " flat" : "");
 
-  useEffect(() => { applyThemeVars(pal, accent); }, [prefs.theme, prefs.accent]);
+  useEffect(() => { applyThemeVars(pal, accent, flat); }, [prefs.theme, prefs.accent]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -652,16 +797,16 @@ function App() {
   }, []);
 
   if (!data) {
-    return h("div", { className: "app" },
+    return h("div", { className: shellClass },
       h("div", { className: "header" },
-        h("div", { className: "eye", style: { width: 28, height: 28 } }, h("div", { className: "pupil" })),
+        h("div", { className: "eye", style: { width: 30, height: 30 } }, h("div", { className: "pupil" })),
         h("div", { className: "brand" }, "VIGIA", h("span", { className: "ai" }, " AI"))),
       h("div", { className: "content" },
         h("div", { className: "empty-note" }, fetchFailed ? t.fetchFail : "…")));
   }
 
   if (view === "now") {
-    return h(NowView, { data, prefs, t, pal, onClose: () => setView("home") });
+    return h("div", { className: shellClass }, h(NowView, { data, prefs, t, pal, nowMs: now, okFlashAt, onClose: () => setView("home") }));
   }
 
   const showCheck = okFlashAt && (now - okFlashAt < FETCH_OK_FLASH_MS);
@@ -674,22 +819,20 @@ function App() {
   const isStatus = view === "status";
   const DetailComp = detailMap[view];
 
-  return h("div", { className: "app" },
+  return h("div", { className: shellClass },
     h("div", { className: "header" },
-      !isHome ? h("button", { className: "chevron-btn", onClick: () => setView("home"), title: t.back }, "‹") : null,
+      !isHome ? h("button", { className: "chevron-btn", onClick: () => setView("home"), title: t.back }, h(ChevronLeft, { size: 19 })) : null,
       h("button", { className: "brand-btn", onClick: () => setView("home") },
-        h(Eye, { size: 28 }),
+        h(Eye, { size: 30 }),
         h("div", { className: "brand" }, "VIGIA", h("span", { className: "ai" }, " AI"))),
       h("div", { className: "spacer" }),
-      h("button", { className: "clock-btn", onClick: () => setView("now"), title: t.now },
+      h("button", { className: "clock-btn num", onClick: () => setView("now"), title: t.now },
         h("span", { className: "clock-dot" }), fmtClock(now + driftMs)),
-      h("button", { className: "icon-btn", onClick: () => setView("status"), title: t.info },
-        h("span", { style: { color: isStatus ? "var(--accent)" : "var(--text-muted)", fontWeight: 700 } }, "ⓘ")),
-      h(Badge, { secs: secsLeft, showCheck, pal })),
-    h("div", { className: "content" },
-      isHome ? h(React.Fragment, null,
-        h("div", { className: "subtitle" }, t.subtitle),
-        h(Home, { data, prefs, t, pal, onOpen: setView })) : null,
+      h("button", { className: "icon-btn", onClick: () => setView("status"), title: t.info,
+        style: { color: isStatus ? "var(--accent)" : "var(--text-dim)" } }, h(InfoIcon, { size: 20 })),
+      h(Badge, { secs: secsLeft, total: POLL_MS / 1000, showCheck, pal })),
+    h("div", { className: "content view-fade", key: view },
+      isHome ? h(Home, { data, prefs, t, pal, now, okFlashAt, onOpen: setView }) : null,
       isStatus ? h(StatusView, { prefs, setPrefs, t, onRefresh: fetchUsage, data, refreshing, fetchFailed }) : null,
       DetailComp ? h(DetailComp, { data, t, pal }) : null));
 }

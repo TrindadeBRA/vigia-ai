@@ -17,7 +17,7 @@ from docker_ctl import docker_down, docker_up
 from formatting import utc_now
 from store import apply as apply_store
 from store import env_flag
-from panel import WEB_DIR, clear_secret, config_payload, reload_env, save_config
+from panel import WEB_DIR, clear_secret, config_payload, lan_ipv4, reload_env, save_config
 from providers.claude import _claude_fail, fetch_claude
 from providers.cursor import _cursor_fail, fetch_cursor
 from providers.deepseek import _deepseek_fail, fetch_deepseek
@@ -317,9 +317,12 @@ def main() -> None:
     apply_store(override=False)
     LISTEN_HOST = os.environ.get("HOST", "0.0.0.0")
     LISTEN_PORT = int(os.environ.get("PORT") or 8787)
-    print(f"painel     http://127.0.0.1:{LISTEN_PORT}/")
-    print(f"mostrador  http://127.0.0.1:{LISTEN_PORT}/display")
-    print(f"usage      http://127.0.0.1:{LISTEN_PORT}/usage")
+    hosts = ["127.0.0.1", *lan_ipv4()]
+    for host in hosts:
+        label = "  (LAN — use este em outro aparelho)" if host != "127.0.0.1" else ""
+        print(f"painel     http://{host}:{LISTEN_PORT}/{label}")
+        print(f"mostrador  http://{host}:{LISTEN_PORT}/display{label}")
+        print(f"usage      http://{host}:{LISTEN_PORT}/usage{label}")
     print(f"repo {_repo_root()}")
     CollectorServer.allow_reuse_address = True
     try:
