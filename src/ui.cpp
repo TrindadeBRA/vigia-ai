@@ -7,6 +7,7 @@
 View g_view = VIEW_HOME;
 HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
 static UiTheme g_theme = THEME_DARK;
+static UiLang g_lang = LANG_PT;
 
 uint16_t COL_BG = 0x10A3;
 uint16_t COL_CARD = 0x1904;
@@ -79,6 +80,7 @@ static void loadUiPrefs() {
   }
   uint8_t home = prefs.getUChar("home", (uint8_t)HOME_LAYOUT_LIST);
   uint8_t theme = prefs.getUChar("theme", (uint8_t)THEME_DARK);
+  uint8_t lang = prefs.getUChar("lang", (uint8_t)LANG_PT);
   prefs.end();
   if (home > (uint8_t)HOME_LAYOUT_GRID) {
     home = (uint8_t)HOME_LAYOUT_LIST;
@@ -86,8 +88,12 @@ static void loadUiPrefs() {
   if (theme > (uint8_t)THEME_CONTRAST) {
     theme = (uint8_t)THEME_DARK;
   }
+  if (lang > (uint8_t)LANG_ES) {
+    lang = (uint8_t)LANG_PT;
+  }
   g_homeLayout = (HomeLayout)home;
   applyTheme((UiTheme)theme);
+  g_lang = (UiLang)lang;
 }
 
 static void saveUiPref(const char* key, uint8_t value) {
@@ -118,6 +124,8 @@ void uiSetHomeLayout(HomeLayout layout) {
 
 UiTheme uiTheme() { return g_theme; }
 
+UiLang uiLang() { return g_lang; }
+
 void uiSetTheme(UiTheme theme) {
   if (theme > THEME_CONTRAST) {
     return;
@@ -127,6 +135,18 @@ void uiSetTheme(UiTheme theme) {
   }
   applyTheme(theme);
   saveUiPref("theme", (uint8_t)g_theme);
+  uiPaint();
+}
+
+void uiSetLang(UiLang lang) {
+  if (lang > LANG_ES) {
+    return;
+  }
+  if (lang == g_lang) {
+    return;
+  }
+  g_lang = lang;
+  saveUiPref("lang", (uint8_t)g_lang);
   uiPaint();
 }
 
@@ -302,6 +322,16 @@ void uiHandleTap(int16_t x, int16_t y) {
         uiSetTheme(THEME_LIGHT);
       } else {
         uiSetTheme(THEME_CONTRAST);
+      }
+      return;
+    }
+    if (inRow(g_langBtnY, g_langBtnH)) {
+      if (x < g_langSplit1) {
+        uiSetLang(LANG_PT);
+      } else if (x < g_langSplit2) {
+        uiSetLang(LANG_EN);
+      } else {
+        uiSetLang(LANG_ES);
       }
       return;
     }

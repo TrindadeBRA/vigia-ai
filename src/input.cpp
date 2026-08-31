@@ -1,5 +1,6 @@
 #include "input.h"
 
+#include "i18n.h"
 #include "ui.h"
 
 #include <Preferences.h>
@@ -132,7 +133,7 @@ void inputRunCalibration() {
   tft.fillScreen(COL_BG);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(COL_ACCENT, COL_BG);
-  tft.drawString("Toque os cantos", tft.width() / 2, tft.height() / 2 - 12, 4);
+  tft.drawString(uiTr().tapCorners, tft.width() / 2, tft.height() / 2 - 12, 4);
   delay(400);
   uint16_t cal[5];
   tft.calibrateTouch(cal, COL_TEXT, COL_BG, 20);
@@ -262,6 +263,8 @@ static void handleSerial() {
       uiDetailScrollBy(48);
     } else if (c == 't' || c == 'T') {
       uiSetTheme((UiTheme)(((uint8_t)uiTheme() + 1) % 3));
+    } else if (c == 'i' || c == 'I') {
+      uiSetLang((UiLang)(((uint8_t)uiLang() + 1) % 3));
     }
   }
 }

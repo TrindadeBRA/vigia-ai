@@ -1,5 +1,7 @@
 #include "ui_format.h"
 
+#include "i18n.h"
+
 #include <cstdlib>
 #include <pgmspace.h>
 
@@ -127,7 +129,7 @@ void drawBar(int x, int y, int w, int h, float pct) {
 void drawError(int x, int y, const String& err, uint16_t bg) {
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_BAD, bg);
-  String e = err.length() ? err : "sem dados";
+  String e = err.length() ? err : String(uiTr().noData);
   if (e.length() > 40) {
     e = e.substring(0, 40);
   }

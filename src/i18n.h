@@ -1,0 +1,57 @@
+#pragma once
+
+// Textos da UI. Sem acentos: a fonte 2 da TFT_eSPI nao cobre Latin-1.
+struct UiStrings {
+  const char* session5h;
+  const char* session5hShort;
+  const char* week;
+  const char* weekLimit;
+  const char* cursorModels;
+  const char* cursorModelsShort;
+  const char* otherModels;
+  const char* otherShort;
+  const char* credits;
+  const char* accountCredits;
+  const char* remainingPrefix;
+  const char* resetPrefix;
+  const char* bonusPrefix;
+  const char* remainMoney;
+  const char* noCredits;
+  const char* ofSep;
+  const char* system;
+  const char* network;
+  const char* networkUpper;
+  const char* updated;
+  const char* updatedUpper;
+  const char* used;
+  const char* left;
+  const char* reset;
+  const char* window5h;
+  const char* sonnetWeek;
+  const char* opusWeek;
+  const char* plan;
+  const char* cycle;
+  const char* ondemand;
+  const char* cap;
+  const char* bonus;
+  const char* requestsLegacy;
+  const char* usedCount;
+  const char* limit;
+  const char* allKeysNote;
+  const char* percent;
+  const char* homeSection;
+  const char* list;
+  const char* grid;
+  const char* themeSection;
+  const char* dark;
+  const char* light;
+  const char* contrast;
+  const char* langSection;
+  const char* refreshNow;
+  const char* calibrate;
+  const char* splashSub;
+  const char* noData;
+  const char* tapCorners;
+};
+
+const UiStrings& uiTr();

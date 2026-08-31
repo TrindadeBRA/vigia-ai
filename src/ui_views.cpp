@@ -1,5 +1,6 @@
 #include "ui_internal.h"
 
+#include "i18n.h"
 #include "ui_format.h"
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
@@ -20,6 +21,10 @@ int g_themeBtnY = 0;
 int g_themeBtnH = 28;
 int g_themeSplit1 = 0;
 int g_themeSplit2 = 0;
+int g_langBtnY = 0;
+int g_langBtnH = 28;
+int g_langSplit1 = 0;
+int g_langSplit2 = 0;
 bool g_statusHasCal = false;
 bool g_statusHasRefresh = false;
 int g_btnCalY = 0;
@@ -130,7 +135,7 @@ void drawHeader() {
 }
 
 static String withResta(float pct, const String& whenRaw) {
-  String s = "resta " + fmtRemain(pct);
+  String s = String(uiTr().remainingPrefix) + fmtRemain(pct);
   if (whenRaw.length()) {
     s += "  |  " + fmtWhen(whenRaw);
   }
@@ -153,20 +158,21 @@ static String cursorOndemand() {
     if (s.length()) {
       s += "  ";
     }
-    s += "bonus " + fmtUsdSite(g_snap.cursor.bonusCents);
+    s += String(uiTr().bonusPrefix) + fmtUsdSite(g_snap.cursor.bonusCents);
   }
   return s;
 }
 
 static String openrouterRemain() {
   if (g_snap.openrouter.limitCents >= 0) {
-    return "restam " + fmtUsdSite(g_snap.openrouter.remainingCents);
+    return String(uiTr().remainMoney) + fmtUsdSite(g_snap.openrouter.remainingCents);
   }
-  return "sem creditos comprados";
+  return String(uiTr().noCredits);
 }
 
 static String openrouterTotals() {
-  return fmtUsdSite(g_snap.openrouter.usedCents) + " de " + fmtUsdSite(g_snap.openrouter.limitCents);
+  return fmtUsdSite(g_snap.openrouter.usedCents) + uiTr().ofSep +
+         fmtUsdSite(g_snap.openrouter.limitCents);
 }
 
 static void paintHomeMetric(int x, int y, int w, const char* label, float pct, const String& sub,
@@ -268,8 +274,9 @@ static void paintHomeList() {
                     barH);
   };
 
-  String c1 = compact ? "5h" : "Sessao 5h";
-  String c2 = compact ? "Semana" : "Limite semanal";
+  const UiStrings& t = uiTr();
+  String c1 = compact ? t.session5hShort : t.session5h;
+  String c2 = compact ? t.week : t.weekLimit;
   String cs1 = withResta(g_snap.claude.sessionPercent, g_snap.claude.sessionResets);
   String cs2 = withResta(g_snap.claude.weeklyPercent, g_snap.claude.weeklyResets);
   if (!showSub) {
@@ -283,10 +290,10 @@ static void paintHomeList() {
     cs2 = "";
   }
 
-  String u1 = compact ? "Cursor" : "Modelos Cursor";
-  String u2 = compact ? "Outros" : "Outros modelos";
+  String u1 = compact ? t.cursorModelsShort : t.cursorModels;
+  String u2 = compact ? t.otherShort : t.otherModels;
   String us1 = showSub && g_snap.cursor.cycleEnd.length()
-                   ? (String(compact ? "" : "reset ") + fmtWhen(g_snap.cursor.cycleEnd))
+                   ? (String(compact ? "" : t.resetPrefix) + fmtWhen(g_snap.cursor.cycleEnd))
                    : "";
   String us2 = showSub ? cursorOndemand() : "";
   if (!showSub && g_snap.cursor.cycleEnd.length()) {
@@ -302,7 +309,7 @@ static void paintHomeList() {
           g_snap.cursor.error, u1.c_str(), g_snap.cursor.percent, us1, u2.c_str(),
           g_snap.cursor.otherPercent, us2);
   cardOne("OpenRouter", ICON_OPENROUTER, bodyTop + (cardH + gap) * 2, g_snap.openrouter.ok,
-          g_snap.openrouter.error, compact ? "Creditos" : "Creditos da conta",
+          g_snap.openrouter.error, compact ? t.credits : t.accountCredits,
           g_snap.openrouter.percent, oSub);
 }
 
@@ -400,13 +407,13 @@ static void paintHomeGrid() {
     const int y = cellY(row);
     const int lineH = compact ? 10 : 16;
     const int contentH = titleH + titleToMetric + lineH * 4 + 4;
-    const int titleY = cardChrome(x, y, "Sistema", nullptr, true, contentH);
+    const int titleY = cardChrome(x, y, uiTr().system, nullptr, true, contentH);
     const int tx = x + innerPadX;
     int ly = titleY + titleH + titleToMetric;
     const int maxChars = compact ? 16 : 22;
     tft.setTextDatum(TL_DATUM);
     tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-    tft.drawString("REDE", tx, ly, metricFont);
+    tft.drawString(uiTr().networkUpper, tx, ly, metricFont);
     ly += lineH;
     tft.setTextColor(COL_TEXT, COL_CARD);
     String net = g_netLine.length() ? g_netLine : "---";
@@ -416,7 +423,7 @@ static void paintHomeGrid() {
     tft.drawString(net, tx, ly, metricFont);
     ly += lineH + 4;
     tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
-    tft.drawString("ATUALIZADO", tx, ly, metricFont);
+    tft.drawString(uiTr().updatedUpper, tx, ly, metricFont);
     ly += lineH;
     tft.setTextColor(COL_TEXT, COL_CARD);
     String when = g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine;
@@ -426,11 +433,12 @@ static void paintHomeGrid() {
     tft.drawString(when, tx, ly, metricFont);
   };
 
+  const UiStrings& t = uiTr();
   String curTitle = cursorPlanTitle();
   String cs1 = withResta(g_snap.claude.sessionPercent, g_snap.claude.sessionResets);
   String cs2 = withResta(g_snap.claude.weeklyPercent, g_snap.claude.weeklyResets);
   String us1 = g_snap.cursor.cycleEnd.length()
-                   ? (String(compact ? "" : "reset ") + fmtWhen(g_snap.cursor.cycleEnd))
+                   ? (String(compact ? "" : t.resetPrefix) + fmtWhen(g_snap.cursor.cycleEnd))
                    : "";
   String us2 = cursorOndemand();
   String oSub = openrouterRemain();
@@ -439,13 +447,13 @@ static void paintHomeGrid() {
   }
 
   cardTwo(0, 0, "Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error,
-          compact ? "5h" : "Sessao 5h", g_snap.claude.sessionPercent, showSub ? cs1 : "",
-          compact ? "Semana" : "Limite semanal", g_snap.claude.weeklyPercent, showSub ? cs2 : "");
+          compact ? t.session5hShort : t.session5h, g_snap.claude.sessionPercent, showSub ? cs1 : "",
+          compact ? t.week : t.weekLimit, g_snap.claude.weeklyPercent, showSub ? cs2 : "");
   cardTwo(1, 0, curTitle.c_str(), ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error,
-          compact ? "Cursor" : "Modelos Cursor", g_snap.cursor.percent, showSub ? us1 : "",
-          compact ? "Outros" : "Outros modelos", g_snap.cursor.otherPercent, showSub ? us2 : "");
+          compact ? t.cursorModelsShort : t.cursorModels, g_snap.cursor.percent, showSub ? us1 : "",
+          compact ? t.otherShort : t.otherModels, g_snap.cursor.otherPercent, showSub ? us2 : "");
   cardOne(0, 1, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok, g_snap.openrouter.error,
-          compact ? "Creditos" : "Creditos da conta", g_snap.openrouter.percent, oSub);
+          compact ? t.credits : t.accountCredits, g_snap.openrouter.percent, oSub);
   cardInfo(1, 1);
 }
 
@@ -606,97 +614,101 @@ static void paintDetailFinish() {
 }
 
 void paintClaude() {
+  const UiStrings& t = uiTr();
   if (!paintDetailChrome("Claude", ICON_CLAUDE, g_snap.claude.ok, g_snap.claude.error)) {
     return;
   }
-  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
   dGap();
-  dBar("Janela de 5 horas", g_snap.claude.sessionPercent,
+  dBar(t.window5h, g_snap.claude.sessionPercent,
        withResta(g_snap.claude.sessionPercent, g_snap.claude.sessionResets));
-  dKv("usado", fmtPct(g_snap.claude.sessionPercent));
-  dKv("resta", fmtRemain(g_snap.claude.sessionPercent));
-  dKv("reset", g_snap.claude.sessionResets.length() ? fmtWhen(g_snap.claude.sessionResets) : "");
+  dKv(t.used, fmtPct(g_snap.claude.sessionPercent));
+  dKv(t.left, fmtRemain(g_snap.claude.sessionPercent));
+  dKv(t.reset, g_snap.claude.sessionResets.length() ? fmtWhen(g_snap.claude.sessionResets) : "");
   dGap();
-  dBar("Limite semanal", g_snap.claude.weeklyPercent,
+  dBar(t.weekLimit, g_snap.claude.weeklyPercent,
        withResta(g_snap.claude.weeklyPercent, g_snap.claude.weeklyResets));
-  dKv("usado", fmtPct(g_snap.claude.weeklyPercent));
-  dKv("resta", fmtRemain(g_snap.claude.weeklyPercent));
-  dKv("reset", g_snap.claude.weeklyResets.length() ? fmtWhen(g_snap.claude.weeklyResets) : "");
+  dKv(t.used, fmtPct(g_snap.claude.weeklyPercent));
+  dKv(t.left, fmtRemain(g_snap.claude.weeklyPercent));
+  dKv(t.reset, g_snap.claude.weeklyResets.length() ? fmtWhen(g_snap.claude.weeklyResets) : "");
   if (g_snap.claude.sonnetPercent >= 0) {
     dGap();
-    dBar("Sonnet (semana)", g_snap.claude.sonnetPercent,
+    dBar(t.sonnetWeek, g_snap.claude.sonnetPercent,
          withResta(g_snap.claude.sonnetPercent, g_snap.claude.sonnetResets));
-    dKv("reset", g_snap.claude.sonnetResets.length() ? fmtWhen(g_snap.claude.sonnetResets) : "");
+    dKv(t.reset, g_snap.claude.sonnetResets.length() ? fmtWhen(g_snap.claude.sonnetResets) : "");
   }
   if (g_snap.claude.opusPercent >= 0) {
     dGap();
-    dBar("Opus (semana)", g_snap.claude.opusPercent,
+    dBar(t.opusWeek, g_snap.claude.opusPercent,
          withResta(g_snap.claude.opusPercent, g_snap.claude.opusResets));
-    dKv("reset", g_snap.claude.opusResets.length() ? fmtWhen(g_snap.claude.opusResets) : "");
+    dKv(t.reset, g_snap.claude.opusResets.length() ? fmtWhen(g_snap.claude.opusResets) : "");
   }
   paintDetailFinish();
 }
 
 void paintCursor() {
+  const UiStrings& t = uiTr();
   String curTitle = cursorPlanTitle();
   if (!paintDetailChrome(curTitle.c_str(), ICON_CURSOR, g_snap.cursor.ok, g_snap.cursor.error)) {
     return;
   }
-  dKv("plano", g_snap.cursor.plan);
-  dKv("ciclo", g_snap.cursor.cycleEnd.length() ? fmtWhen(g_snap.cursor.cycleEnd) : "");
-  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dKv(t.plan, g_snap.cursor.plan);
+  dKv(t.cycle, g_snap.cursor.cycleEnd.length() ? fmtWhen(g_snap.cursor.cycleEnd) : "");
+  dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
   dGap();
-  dBar("Modelos Cursor", g_snap.cursor.percent, withResta(g_snap.cursor.percent, ""));
-  dKv("usado", fmtPct(g_snap.cursor.percent));
-  dKv("resta", fmtRemain(g_snap.cursor.percent));
+  dBar(t.cursorModels, g_snap.cursor.percent, withResta(g_snap.cursor.percent, ""));
+  dKv(t.used, fmtPct(g_snap.cursor.percent));
+  dKv(t.left, fmtRemain(g_snap.cursor.percent));
   dGap();
-  dBar("Outros modelos", g_snap.cursor.otherPercent, withResta(g_snap.cursor.otherPercent, ""));
-  dKv("usado", fmtPct(g_snap.cursor.otherPercent));
-  dKv("resta", fmtRemain(g_snap.cursor.otherPercent));
+  dBar(t.otherModels, g_snap.cursor.otherPercent, withResta(g_snap.cursor.otherPercent, ""));
+  dKv(t.used, fmtPct(g_snap.cursor.otherPercent));
+  dKv(t.left, fmtRemain(g_snap.cursor.otherPercent));
   dGap();
-  dNote("On-demand (USD)");
-  dKv("usado", g_snap.cursor.usedCents >= 0 ? fmtUsdSite(g_snap.cursor.usedCents) : "");
-  dKv("teto", g_snap.cursor.limitCents >= 0 ? fmtUsdSite(g_snap.cursor.limitCents) : "");
-  dKv("resta", g_snap.cursor.remainingCents >= 0 ? fmtUsdSite(g_snap.cursor.remainingCents) : "");
-  dKv("bonus", g_snap.cursor.bonusCents > 0 ? fmtUsdSite(g_snap.cursor.bonusCents) : "");
+  dNote(t.ondemand);
+  dKv(t.used, g_snap.cursor.usedCents >= 0 ? fmtUsdSite(g_snap.cursor.usedCents) : "");
+  dKv(t.cap, g_snap.cursor.limitCents >= 0 ? fmtUsdSite(g_snap.cursor.limitCents) : "");
+  dKv(t.left, g_snap.cursor.remainingCents >= 0 ? fmtUsdSite(g_snap.cursor.remainingCents) : "");
+  dKv(t.bonus, g_snap.cursor.bonusCents > 0 ? fmtUsdSite(g_snap.cursor.bonusCents) : "");
   if (g_snap.cursor.requestsUsed >= 0 && g_snap.cursor.requestsLimit > 0) {
     dGap();
-    dNote("Pedidos (legado)");
-    dKv("usados", String(g_snap.cursor.requestsUsed));
-    dKv("limite", String(g_snap.cursor.requestsLimit));
+    dNote(t.requestsLegacy);
+    dKv(t.usedCount, String(g_snap.cursor.requestsUsed));
+    dKv(t.limit, String(g_snap.cursor.requestsLimit));
   }
   paintDetailFinish();
 }
 
 void paintOpenRouter() {
+  const UiStrings& t = uiTr();
   if (!paintDetailChrome("OpenRouter", ICON_OPENROUTER, g_snap.openrouter.ok,
                          g_snap.openrouter.error)) {
     return;
   }
-  dNote("Creditos da conta (todas as keys)");
-  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dNote(t.allKeysNote);
+  dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
   dGap();
-  dBar("Creditos", g_snap.openrouter.percent, openrouterRemain());
-  dKv("usado", g_snap.openrouter.usedCents >= 0 ? fmtUsdSite(g_snap.openrouter.usedCents) : "");
-  dKv("resta", g_snap.openrouter.remainingCents >= 0 ? fmtUsdSite(g_snap.openrouter.remainingCents)
-                                                    : "");
-  dKv("teto", g_snap.openrouter.limitCents >= 0 ? fmtUsdSite(g_snap.openrouter.limitCents) : "");
-  dKv("percentual", fmtPct(g_snap.openrouter.percent));
+  dBar(t.credits, g_snap.openrouter.percent, openrouterRemain());
+  dKv(t.used, g_snap.openrouter.usedCents >= 0 ? fmtUsdSite(g_snap.openrouter.usedCents) : "");
+  dKv(t.left, g_snap.openrouter.remainingCents >= 0 ? fmtUsdSite(g_snap.openrouter.remainingCents)
+                                                   : "");
+  dKv(t.cap, g_snap.openrouter.limitCents >= 0 ? fmtUsdSite(g_snap.openrouter.limitCents) : "");
+  dKv(t.percent, fmtPct(g_snap.openrouter.percent));
   paintDetailFinish();
 }
 
 void paintStatus() {
   const bool compact = tft.height() < 280;
   g_btnH = compact ? 28 : 36;
+  const UiStrings& t = uiTr();
 
-  beginScrollCard("Sistema", nullptr);
+  beginScrollCard(t.system, nullptr);
   tft.setViewport(dX, dClipTop, dW, dClipH, false);
 
   String net = g_netLine.length() ? g_netLine : "---";
-  dKv("rede", net);
-  dKv("atualizado", g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine);
+  dKv(t.network, net);
+  dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine);
   dGap();
-  dSection("INICIO");
+  dSection(t.homeSection);
 
   g_layoutBtnH = g_btnH;
   g_layoutBtnY = dCursor;
@@ -705,13 +717,12 @@ void paintStatus() {
   g_layoutMidX = dX + btn2W + gapBtn / 2;
   if (dVisible(g_btnH)) {
     int y = dScreenY();
-    drawChoiceButton(dX, y, btn2W, g_btnH, "Lista", g_homeLayout == HOME_LAYOUT_LIST);
-    drawChoiceButton(dX + btn2W + gapBtn, y, btn2W, g_btnH, "Grade",
-                     g_homeLayout == HOME_LAYOUT_GRID);
+    drawChoiceButton(dX, y, btn2W, g_btnH, t.list, g_homeLayout == HOME_LAYOUT_LIST);
+    drawChoiceButton(dX + btn2W + gapBtn, y, btn2W, g_btnH, t.grid, g_homeLayout == HOME_LAYOUT_GRID);
   }
   dAdvance(g_btnH + 8);
 
-  dSection("TEMA");
+  dSection(t.themeSection);
   g_themeBtnH = g_btnH;
   g_themeBtnY = dCursor;
   const int gap3 = 6;
@@ -721,16 +732,30 @@ void paintStatus() {
   if (dVisible(g_btnH)) {
     int y = dScreenY();
     UiTheme th = uiTheme();
-    drawChoiceButton(dX, y, btn3W, g_btnH, "Escuro", th == THEME_DARK);
-    drawChoiceButton(dX + btn3W + gap3, y, btn3W, g_btnH, "Claro", th == THEME_LIGHT);
-    drawChoiceButton(dX + 2 * (btn3W + gap3), y, btn3W, g_btnH, "Contraste", th == THEME_CONTRAST);
+    drawChoiceButton(dX, y, btn3W, g_btnH, t.dark, th == THEME_DARK);
+    drawChoiceButton(dX + btn3W + gap3, y, btn3W, g_btnH, t.light, th == THEME_LIGHT);
+    drawChoiceButton(dX + 2 * (btn3W + gap3), y, btn3W, g_btnH, t.contrast, th == THEME_CONTRAST);
+  }
+  dAdvance(g_btnH + 8);
+
+  dSection(t.langSection);
+  g_langBtnH = g_btnH;
+  g_langBtnY = dCursor;
+  g_langSplit1 = g_themeSplit1;
+  g_langSplit2 = g_themeSplit2;
+  if (dVisible(g_btnH)) {
+    int y = dScreenY();
+    UiLang lang = uiLang();
+    drawChoiceButton(dX, y, btn3W, g_btnH, "PT", lang == LANG_PT);
+    drawChoiceButton(dX + btn3W + gap3, y, btn3W, g_btnH, "EN", lang == LANG_EN);
+    drawChoiceButton(dX + 2 * (btn3W + gap3), y, btn3W, g_btnH, "ES", lang == LANG_ES);
   }
   dAdvance(g_btnH + 8);
 
   g_statusHasRefresh = true;
   g_btnRefY = dCursor;
   if (dVisible(g_btnH)) {
-    drawButton(dX, dScreenY(), dW, g_btnH, "Atualizar agora");
+    drawButton(dX, dScreenY(), dW, g_btnH, t.refreshNow);
   }
   dAdvance(g_btnH + 8);
 
@@ -738,7 +763,7 @@ void paintStatus() {
   g_statusHasCal = true;
   g_btnCalY = dCursor;
   if (dVisible(g_btnH)) {
-    drawButton(dX, dScreenY(), dW, g_btnH, "Calibrar touch");
+    drawButton(dX, dScreenY(), dW, g_btnH, t.calibrate);
   }
   dAdvance(g_btnH);
 #else
@@ -813,7 +838,7 @@ void uiShowSplash() {
   for (int step = 1; step <= 8; step++) {
     uint8_t t = (uint8_t)((step * 255) / 8);
     tft.setTextColor(lerp565(COL_BG, COL_TEXT_DIM, t), COL_BG);
-    tft.drawString("Consumo em tempo real das IAs", W / 2, subY, 2);
+    tft.drawString(uiTr().splashSub, W / 2, subY, 2);
     splashDelay(24);
   }
 
