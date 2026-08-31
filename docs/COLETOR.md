@@ -87,6 +87,12 @@ Claude no **Mac + Docker**: o OAuth está no Keychain, não no arquivo. Use Pyth
 - Claude: ter usado **Claude Code** neste Mac (`claude` + login). O coletor lê o Keychain; não copie o token para disco.
 - Cursor: ter aberto o **Cursor** logado neste Mac pelo menos uma vez.
 
+## Mostrador web (`/display`)
+
+Réplica em React (sem build — React/ReactDOM UMD vendorizados em `collector/web/vendor/`, `collector/web/display.html` sem JSX/Babel) das telas do firmware: Início (lista/grade), detalhe de cada provedor, e Info com tema/cor/idioma/layout — tudo lendo só `GET /usage`, sem token no navegador. Abra **http://IP:8787/display** (link também no painel `/`).
+
+Cada aba aberta em `/display` faz o próprio poll de `/usage` (padrão 60 s, `POLL_MS` no topo do script, igual ao `USAGE_POLL_MS` do ESP32) **além** do poll da placa — ver aviso de rate limit abaixo: com a placa ligada e uma aba aberta, já são duas chamadas reais ao Claude a cada 60 s (não simultâneas, mas dividem a mesma janela seguindo o aviso de ~180 s abaixo).
+
 ## Sem cache — cuidado com rate limit
 
 Todo `GET /usage` chama as duas APIs na hora (a pedido do usuário; v1 tinha cache de 5 min pra não martelar o endpoint do Claude). Cada GET no coletor = uma chamada real em `/api/oauth/usage`. Como a placa faz poll a cada `USAGE_POLL_MS` (padrão 60 s, ver [FIRMWARE.md](FIRMWARE.md)), isso significa uma chamada ao Claude a cada 60 s enquanto a placa estiver ligada.

@@ -13,13 +13,12 @@ if [ "${1:-}" = "docker" ]; then
     exit 1
   fi
   export PORT="$PORT_VAL"
-  echo "painel: http://127.0.0.1:${PORT_VAL}/"
-  echo "usage:  http://127.0.0.1:${PORT_VAL}/usage"
+  echo "painel:    http://127.0.0.1:${PORT_VAL}/"
+  echo "mostrador: http://127.0.0.1:${PORT_VAL}/display"
+  echo "usage:     http://127.0.0.1:${PORT_VAL}/usage"
   echo "credenciais do host (opcional): docker compose -f compose.yaml -f compose.credentials.yaml up"
   exec docker compose up --build
 fi
 
-echo "painel: http://127.0.0.1:${PORT_VAL}/"
-echo "usage:  http://127.0.0.1:${PORT_VAL}/usage"
 echo "Docker: ./start.sh docker"
 exec python3 server.py

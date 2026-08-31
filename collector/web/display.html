@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigia AI</title>
+<style>
+  :root {
+    --bg: #101419; --card: #192021; --card-border: #3a3d42; --track: #292d31;
+    --text: #f7f3ef; --text-dim: #adaeb5; --text-muted: #6b6d73;
+    --good: #8cbe94; --warn: #e6a65a; --bad: #de6d6b; --accent: #e63931; --accent-ink: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  #root { min-height: 100vh; display: flex; flex-direction: column; }
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    height: 52px; padding: 0 14px;
+    background: var(--bg); border-bottom: 1px solid var(--card-border);
+  }
+  .header .spacer { flex: 1; }
+  .chevron-btn, .icon-btn {
+    background: none; border: none; cursor: pointer; color: var(--text-dim);
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px; border-radius: 8px;
+  }
+  .chevron-btn:hover, .icon-btn:hover { background: var(--card); }
+  .brand-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 4px 2px; color: var(--text); font: inherit; }
+  .eye { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 1px solid var(--text-dim); position: relative; flex: none; }
+  .eye .pupil { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); top: 50%; left: 50%; }
+  .eye .pupil::after { content: ""; position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; top: 20%; left: 20%; }
+  .brand { font-weight: 700; letter-spacing: .3px; font-size: 15px; white-space: nowrap; }
+  .brand .ai { color: var(--accent); }
+  .clock-btn {
+    background: none; border: none; cursor: pointer; font: inherit;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums;
+    color: var(--text); white-space: nowrap; padding: 6px 8px; border-radius: 8px;
+  }
+  .clock-btn:hover { background: var(--card); }
+  .clock-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); flex: none; }
+  .badge {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex: none;
+  }
+
+  .content { flex: 1; width: 100%; max-width: 560px; margin: 0 auto; padding: 14px; }
+
+  .home-grid { display: grid; gap: 10px; }
+  .home-grid.n-1 { grid-template-columns: 1fr; }
+  .home-grid.n-2, .home-grid.n-3, .home-grid.n-4 { grid-template-columns: 1fr 1fr; }
+  .home-grid.n-3 > .card:nth-child(3) { grid-column: 1 / -1; }
+  .home-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
+    padding: 14px; cursor: pointer; transition: border-color .15s ease;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .icon-img { width: 26px; height: 26px; flex: none; object-fit: contain; }
+  .card-title { font-weight: 600; flex: 1; font-size: 14px; }
+  .fwd { color: var(--text-dim); font-size: 14px; }
+
+  .metric { margin-top: 8px; }
+  .metric:first-child { margin-top: 0; }
+  .metric-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 4px; }
+  .metric-top .label { color: var(--text-dim); }
+  .metric-top .val { font-weight: 600; }
+  .metric-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .metric-plain { font-weight: 600; font-size: 14px; }
+
+  .bar-track { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; min-width: 8px; }
+
+  .error-text { color: var(--bad); font-size: 13px; line-height: 1.5; }
+  .empty-note { color: var(--text-muted); font-size: 14px; text-align: center; padding: 40px 20px; }
+
+  .detail-card {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
+    padding: 16px; max-height: calc(100vh - 100px); overflow-y: auto;
+  }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 14px; border-bottom: 1px solid var(--track); }
+  .kv:last-child { border-bottom: none; }
+  .kv .k { color: var(--text-muted); }
+  .kv .v { color: var(--text); text-align: right; }
+  .note { color: var(--text-muted); font-size: 13px; margin: 10px 0 4px; }
+  .detail-bar { margin: 14px 0; }
+  .detail-bar-top { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .detail-bar-top .label { color: var(--text-dim); }
+  .detail-bar-top .val { font-weight: 700; }
+  .detail-bar .metric-sub { font-size: 12px; margin-top: 6px; }
+  .detail-plain-val { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+
+  .section-title { color: var(--text-muted); font-size: 12px; letter-spacing: .5px; text-transform: uppercase; margin: 18px 0 8px; }
+  .section-title:first-child { margin-top: 0; }
+  .choice-row { display: flex; gap: 6px; }
+  .choice-btn {
+    flex: 1; padding: 9px 6px; border-radius: 8px; border: 1px solid var(--card-border);
+    background: var(--card); color: var(--text-dim); font-size: 13px; cursor: pointer;
+  }
+  .choice-btn.active { border-color: var(--accent); color: var(--accent); }
+  .swatch-row { display: flex; gap: 8px; }
+  .swatch {
+    width: 30px; height: 30px; border-radius: 7px; border: 2px solid transparent; cursor: pointer;
+  }
+  .swatch.active { border-color: var(--text); }
+  .full-btn {
+    width: 100%; padding: 11px; border-radius: 8px; border: 1px solid var(--accent);
+    background: var(--card); color: var(--accent); font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-top: 4px;
+  }
+  .full-btn:active { opacity: .8; }
+  .status-note { color: var(--text-muted); font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  .fetch-fail-note { color: var(--bad); font-size: 12px; margin-top: 6px; }
+
+  .subtitle { color: var(--text-dim); font-size: 13px; text-align: center; margin: 2px 0 16px; }
+
+  .now-view {
+    min-height: 100vh; width: 100%; cursor: pointer; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 28px 14px;
+  }
+  .now-clock { font-size: 48px; font-weight: 700; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+  .now-date { color: var(--text-dim); font-size: 14px; margin: 4px 0 22px; text-transform: capitalize; }
+  .now-rows { width: 100%; max-width: 480px; }
+  .now-row {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .now-row-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .now-row-title { font-weight: 600; font-size: 13px; }
+  .now-row-metrics { display: flex; gap: 16px; }
+  .now-metric { flex: 1; min-width: 0; }
+  .now-metric-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+  .now-metric-top .label { color: var(--text-dim); }
+  .now-metric-top .val { font-weight: 600; }
+  .now-metric-plain { font-weight: 600; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="/vendor/react.production.min.js"></script>
+<script src="/vendor/react-dom.production.min.js"></script>
+<script>
+const h = React.createElement;
+const { useState, useEffect, useRef } = React;
+
+// Paletas e cores de acento — mesmos valores RGB565 do firmware (src/ui.cpp),
+// convertidos para hex, para o mostrador web ficar visualmente identico.
+const PALETTES = {
+  dark: { bg: "#101419", card: "#192021", cardBorder: "#3a3d42", track: "#292d31",
+          text: "#f7f3ef", textDim: "#adaeb5", textMuted: "#6b6d73",
+          good: "#8cbe94", warn: "#e6a65a", bad: "#de6d6b" },
+  light: { bg: "#efebd6", card: "#fffbf7", cardBorder: "#c5c6c5", track: "#dedfde",
+           text: "#191819", textDim: "#4a4d4a", textMuted: "#7b7d7b",
+           good: "#317131", warn: "#c57500", bad: "#c52d29" },
+  contrast: { bg: "#000000", card: "#000000", cardBorder: "#ffffff", track: "#424142",
+              text: "#ffffff", textDim: "#ffffff", textMuted: "#c5c2c5",
+              good: "#00ff00", warn: "#ffff00", bad: "#ff0000" },
+};
+const ACCENTS = {
+  dark: ["#e63931", "#ff9619", "#f7db21", "#4ad252", "#3ab2de", "#4a8eff", "#c555de"],
+  light: ["#c52421", "#d64900", "#c59600", "#198e21", "#008a9c", "#2149bd", "#8400ce"],
+  contrast: ["#ff0000", "#ffa600", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"],
+};
+
+const PROVIDER_ICON = {
+  claude: "/icons/claude.png", cursor: "/icons/cursor.png",
+  openrouter: "/icons/openrouter.png", deepseek: "/icons/deepseek.png",
+};
+
+const WEEKDAYS = {
+  pt: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+  en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  es: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+};
+
+const STR = {
+  pt: {
+    session5h: "Sessão 5h", week: "Semana", weekLimit: "Limite semanal",
+    cursorModels: "Modelos Cursor", otherModels: "Outros modelos",
+    credits: "Créditos", accountCredits: "Créditos da conta",
+    remainingPrefix: "resta ", resetPrefix: "reset ", bonusPrefix: "bônus ",
+    remainMoney: "restam ", noCredits: "sem créditos comprados", ofSep: " de ",
+    updated: "atualizado", used: "usado", left: "resta", reset: "reset",
+    window5h: "Janela de 5 horas", sonnetWeek: "Sonnet (semana)", opusWeek: "Opus (semana)",
+    plan: "plano", cycle: "ciclo", ondemand: "On-demand (USD)", cap: "teto", bonus: "bônus",
+    requestsLegacy: "Pedidos (legado)", usedCount: "usados", limit: "limite",
+    allKeysNote: "Créditos da conta (todas as keys)", percent: "percentual",
+    homeSection: "Início", list: "Lista", grid: "Grade",
+    themeSection: "Tema", dark: "Escuro", light: "Claro", contrast: "Contraste",
+    accentSection: "Cor", langSection: "Idioma",
+    refreshSection: "Dados de uso", refreshNow: "Atualizar consumo",
+    noData: "sem dados", noProviders: "Nenhum provedor configurado. Preencha no painel do coletor.",
+    subtitle: "Consumo em tempo real das IAs",
+    autoNote: (s) => `Atualiza sozinho a cada ${s}s. Toque para forçar agora.`,
+    fetchFail: "Não foi possível falar com o coletor.",
+    back: "Voltar", info: "Info", now: "Agora",
+  },
+  en: {
+    session5h: "5h session", week: "Week", weekLimit: "Weekly limit",
+    cursorModels: "Cursor models", otherModels: "Other models",
+    credits: "Credits", accountCredits: "Account credits",
+    remainingPrefix: "left ", resetPrefix: "reset ", bonusPrefix: "bonus ",
+    remainMoney: "left ", noCredits: "no purchased credits", ofSep: " of ",
+    updated: "updated", used: "used", left: "left", reset: "reset",
+    window5h: "5-hour window", sonnetWeek: "Sonnet (week)", opusWeek: "Opus (week)",
+    plan: "plan", cycle: "cycle", ondemand: "On-demand (USD)", cap: "cap", bonus: "bonus",
+    requestsLegacy: "Requests (legacy)", usedCount: "used", limit: "limit",
+    allKeysNote: "Account credits (all keys)", percent: "percent",
+    homeSection: "Home", list: "List", grid: "Grid",
+    themeSection: "Theme", dark: "Dark", light: "Light", contrast: "Contrast",
+    accentSection: "Color", langSection: "Language",
+    refreshSection: "Usage data", refreshNow: "Fetch usage now",
+    noData: "no data", noProviders: "No provider configured. Fill one in on the collector panel.",
+    subtitle: "Real-time AI usage",
+    autoNote: (s) => `Auto-refreshes every ${s}s. Tap to force now.`,
+    fetchFail: "Could not reach the collector.",
+    back: "Back", info: "Info", now: "Now",
+  },
+  es: {
+    session5h: "Sesión 5h", week: "Semana", weekLimit: "Límite semanal",
+    cursorModels: "Modelos Cursor", otherModels: "Otros modelos",
+    credits: "Créditos", accountCredits: "Créditos de la cuenta",
+    remainingPrefix: "queda ", resetPrefix: "reset ", bonusPrefix: "bono ",
+    remainMoney: "quedan ", noCredits: "sin créditos comprados", ofSep: " de ",
+    updated: "actualizado", used: "usado", left: "queda", reset: "reset",
+    window5h: "Ventana de 5 horas", sonnetWeek: "Sonnet (semana)", opusWeek: "Opus (semana)",
+    plan: "plan", cycle: "ciclo", ondemand: "On-demand (USD)", cap: "tope", bonus: "bono",
+    requestsLegacy: "Pedidos (legado)", usedCount: "usados", limit: "límite",
+    allKeysNote: "Créditos de la cuenta (todas las keys)", percent: "porcentaje",
+    homeSection: "Inicio", list: "Lista", grid: "Cuadrícula",
+    themeSection: "Tema", dark: "Oscuro", light: "Claro", contrast: "Contraste",
+    accentSection: "Color", langSection: "Idioma",
+    refreshSection: "Datos de uso", refreshNow: "Actualizar consumo",
+    noData: "sin datos", noProviders: "Ningún proveedor configurado. Complétalo en el panel del colector.",
+    subtitle: "Consumo en tiempo real de las IAs",
+    autoNote: (s) => `Se actualiza solo cada ${s}s. Toca para forzar ahora.`,
+    fetchFail: "No se pudo contactar al colector.",
+    back: "Volver", info: "Info", now: "Ahora",
+  },
+};
+
+const POLL_MS = 60000; // igual ao poll padrao do ESP32 (USAGE_POLL_MS). Sem cache
+                       // no coletor: cada aba aberta aqui soma outra chamada real
+                       // as APIs, alem da placa. Ver docs/COLETOR.md.
+const FETCH_OK_FLASH_MS = 1500;
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function barColor(pct, pal) {
+  if (pct == null || pct < 0) return pal.textMuted;
+  if (pct < 70) return pal.good;
+  if (pct < 90) return pal.warn;
+  return pal.bad;
+}
+function fmtPct(pct) { return (pct == null || pct < 0) ? "--" : Math.round(pct) + "%"; }
+function fmtRemain(pct) { return (pct == null || pct < 0) ? "--" : fmtPct(100 - clamp(pct, 0, 100)); }
+function fmtUsd(cents) {
+  if (cents == null || cents < 0) return "--";
+  if (cents === 0) return "$0.00";
+  const reais = Math.trunc(cents / 100);
+  const cc = Math.abs(cents % 100);
+  return cc === 0 ? ("$" + reais) : ("$" + reais + "." + String(cc).padStart(2, "0"));
+}
+function fmtWhen(raw) {
+  if (!raw) return "";
+  const s = String(raw).trim();
+  if (s.length >= 16 && s[4] === "-" && s[10] === "T") {
+    return `${s.slice(8, 10)}/${s.slice(5, 7)} ${s.slice(11, 13)}h${s.slice(14, 16)}`;
+  }
+  return s;
+}
+function fmtClock(ms) {
+  const d = new Date(ms);
+  if (isNaN(d.getTime())) return "--:--";
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+function inverseOn(hex) {
+  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#000000" : "#ffffff";
+}
+
+function usePrefs() {
+  const [prefs, setPrefs] = useState(() => {
+    try {
+      const raw = localStorage.getItem("vigia_display_prefs");
+      if (raw) return { theme: "dark", accent: 0, lang: "pt", homeLayout: "list", ...JSON.parse(raw) };
+    } catch (e) {}
+    return { theme: "dark", accent: 0, lang: "pt", homeLayout: "list" };
+  });
+  useEffect(() => {
+    try { localStorage.setItem("vigia_display_prefs", JSON.stringify(prefs)); } catch (e) {}
+  }, [prefs]);
+  return [prefs, setPrefs];
+}
+
+function applyThemeVars(pal, accent) {
+  const root = document.documentElement.style;
+  root.setProperty("--bg", pal.bg);
+  root.setProperty("--card", pal.card);
+  root.setProperty("--card-border", pal.cardBorder);
+  root.setProperty("--track", pal.track);
+  root.setProperty("--text", pal.text);
+  root.setProperty("--text-dim", pal.textDim);
+  root.setProperty("--text-muted", pal.textMuted);
+  root.setProperty("--good", pal.good);
+  root.setProperty("--warn", pal.warn);
+  root.setProperty("--bad", pal.bad);
+  root.setProperty("--accent", accent);
+  root.setProperty("--accent-ink", inverseOn(accent));
+}
+
+function Eye({ size }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    let raf = null;
+    let target = { x: 0, y: 0 };
+    let gaze = { x: 0, y: 0 };
+    let nextMoveAt = 0;
+    const maxGaze = Math.max(1, size * 0.6 / 2 - 2);
+    function tick(now) {
+      if (now >= nextMoveAt) {
+        target.x = (Math.random() * 2 - 1) * maxGaze;
+        target.y = (Math.random() * 2 - 1) * maxGaze;
+        nextMoveAt = now + 900 + Math.random() * 1700;
+      }
+      gaze.x += (target.x - gaze.x) * 0.08;
+      gaze.y += (target.y - gaze.y) * 0.08;
+      if (ref.current) {
+        ref.current.style.transform = `translate(calc(-50% + ${gaze.x}px), calc(-50% + ${gaze.y}px))`;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [size]);
+  return h("div", { className: "eye", style: { width: size, height: size } },
+    h("div", { className: "pupil", ref }));
+}
+
+function Badge({ secs, showCheck, pal }) {
+  if (secs == null && !showCheck) return null;
+  const bg = showCheck ? pal.good : "var(--accent)";
+  const fg = showCheck ? pal.bg : "var(--accent-ink)";
+  return h("div", { className: "badge", style: { background: bg, color: fg } },
+    showCheck ? "✓" : Math.min(99, secs));
+}
+
+function MetricRow({ label, pct, sub, pal }) {
+  if (pct == null) {
+    return h("div", { className: "metric" },
+      h("div", { className: "metric-top" }, h("span", { className: "label" }, label)),
+      h("div", { className: "metric-plain" }, sub || "--"));
+  }
+  return h("div", { className: "metric" },
+    h("div", { className: "metric-top" },
+      h("span", { className: "label" }, label),
+      h("span", { className: "val" }, fmtPct(pct))),
+    h("div", { className: "bar-track" },
+      h("div", { className: "bar-fill", style: { width: clamp(pct, 0, 100) + "%", background: barColor(pct, pal) } })),
+    sub ? h("div", { className: "metric-sub" }, sub) : null);
+}
+
+function Icon({ id }) {
+  return h("img", { className: "icon-img", src: PROVIDER_ICON[id], alt: id, draggable: false });
+}
+
+// Monta os dados de cada provedor configurado uma vez só; Home (cards) e
+// NowView (linhas compactas da tela cheia do relogio) renderizam o mesmo
+// array de forma diferente — igual ao firmware, que reusa os mesmos campos
+// em paintHome*/paintNow.
+function buildProviders(data, t) {
+  const list = [];
+  if (data.claude && data.claude.configured) {
+    const c = data.claude;
+    list.push({
+      id: "claude", title: "Claude", ok: c.ok, error: c.error,
+      metrics: [
+        { label: t.session5h, pct: c.session_percent,
+          sub: c.session_percent != null ? (t.remainingPrefix + fmtRemain(c.session_percent) + (c.session_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.session_resets_at) : "")) : null },
+        { label: t.weekLimit, pct: c.weekly_percent,
+          sub: c.weekly_percent != null ? (t.remainingPrefix + fmtRemain(c.weekly_percent) + (c.weekly_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.weekly_resets_at) : "")) : null },
+      ],
+    });
+  }
+  if (data.cursor && data.cursor.configured) {
+    const c = data.cursor;
+    let ondemand = "";
+    if (c.used_cents != null && c.limit_cents != null) ondemand = fmtUsd(c.used_cents) + " / " + fmtUsd(c.limit_cents);
+    if (c.bonus_cents > 0) ondemand += (ondemand ? "  " : "") + t.bonusPrefix + fmtUsd(c.bonus_cents);
+    list.push({
+      id: "cursor", title: c.plan ? `Cursor ${c.plan}` : "Cursor", ok: c.ok, error: c.error,
+      metrics: [
+        { label: t.cursorModels, pct: c.percent, sub: c.cycle_end ? (t.resetPrefix + fmtWhen(c.cycle_end)) : null },
+        { label: t.otherModels, pct: c.other_percent, sub: ondemand || null },
+      ],
+    });
+  }
+  if (data.openrouter && data.openrouter.configured) {
+    const o = data.openrouter;
+    const sub = o.limit_cents != null
+      ? (t.remainMoney + fmtUsd(o.remaining_cents) + "  " + fmtUsd(o.used_cents) + t.ofSep + fmtUsd(o.limit_cents))
+      : t.noCredits;
+    list.push({ id: "openrouter", title: "OpenRouter", ok: o.ok, error: o.error,
+      metrics: [{ label: t.accountCredits, pct: o.percent, sub }] });
+  }
+  if (data.deepseek && data.deepseek.configured) {
+    const d = data.deepseek;
+    const sub = d.remaining_cents != null ? fmtUsd(d.remaining_cents) : t.noCredits;
+    list.push({ id: "deepseek", title: "DeepSeek", ok: d.ok, error: d.error,
+      metrics: [{ label: t.accountCredits, pct: d.percent, sub }] });
+  }
+  return list;
+}
+
+function ProviderCard({ p, pal, onOpen }) {
+  return h("div", { className: "card", onClick: onOpen },
+    h("div", { className: "card-head" },
+      h(Icon, { id: p.id }),
+      h("div", { className: "card-title" }, p.title),
+      h("div", { className: "fwd" }, "›")),
+    !p.ok ? h("div", { className: "error-text" }, p.error || "") :
+      h(React.Fragment, null, p.metrics.map((m, i) => h(MetricRow, { key: i, ...m, pal }))));
+}
+
+function Home({ data, prefs, t, pal, onOpen }) {
+  const providers = buildProviders(data, t);
+  if (providers.length === 0) {
+    return h("div", { className: "empty-note" }, t.noProviders);
+  }
+  const cards = providers.map((p) => h(ProviderCard, { key: p.id, p, pal, onOpen: () => onOpen(p.id) }));
+  if (prefs.homeLayout === "grid") {
+    return h("div", { className: `home-grid n-${providers.length}` }, cards);
+  }
+  return h("div", { className: "home-list" }, cards);
+}
+
+function NowRow({ p, pal }) {
+  return h("div", { className: "now-row" },
+    h("div", { className: "now-row-head" }, h(Icon, { id: p.id }), h("div", { className: "now-row-title" }, p.title)),
+    !p.ok ? h("div", { className: "error-text" }, p.error || "") :
+      h("div", { className: "now-row-metrics" }, p.metrics.map((m, i) => h("div", { key: i, className: "now-metric" },
+        h("div", { className: "now-metric-top" },
+          h("span", { className: "label" }, m.label),
+          m.pct != null ? h("span", { className: "val" }, fmtPct(m.pct)) : null),
+        m.pct != null
+          ? h("div", { className: "bar-track" }, h("div", { className: "bar-fill", style: { width: clamp(m.pct, 0, 100) + "%", background: barColor(m.pct, pal) } }))
+          : h("div", { className: "now-metric-plain" }, m.sub || "--")))));
+}
+
+// Tela cheia de relogio (equivalente a VIEW_NOW no firmware, aberta ao tocar
+// no relogio do header) — qualquer toque fecha e volta pra Início, igual la.
+function NowView({ data, prefs, t, pal, onClose }) {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
+  const weekday = WEEKDAYS[prefs.lang][now.getDay()];
+  const dateStr = `${weekday}  ${pad2(now.getDate())}/${pad2(now.getMonth() + 1)}/${now.getFullYear()}`;
+  const providers = buildProviders(data, t);
+  return h("div", { className: "now-view", onClick: onClose },
+    h("div", { className: "now-clock" }, timeStr),
+    h("div", { className: "now-date" }, dateStr),
+    h("div", { className: "now-rows" },
+      providers.length === 0
+        ? h("div", { className: "empty-note" }, t.noProviders)
+        : providers.map((p) => h(NowRow, { key: p.id, p, pal }))));
+}
+
+function DetailBar({ label, pct, sub, pal }) {
+  if (pct == null) {
+    return h("div", { className: "detail-bar" },
+      h("div", { className: "detail-bar-top" }, h("span", { className: "label" }, label)),
+      h("div", { className: "detail-plain-val" }, sub || "--"));
+  }
+  return h("div", { className: "detail-bar" },
+    h("div", { className: "detail-bar-top" },
+      h("span", { className: "label" }, label), h("span", { className: "val" }, fmtPct(pct))),
+    h("div", { className: "bar-track" },
+      h("div", { className: "bar-fill", style: { width: clamp(pct, 0, 100) + "%", background: barColor(pct, pal) } })),
+    sub ? h("div", { className: "metric-sub" }, sub) : null);
+}
+
+function Kv({ k, v }) {
+  if (v === null || v === undefined || v === "") return null;
+  return h("div", { className: "kv" }, h("span", { className: "k" }, k), h("span", { className: "v" }, v));
+}
+
+function DetailShell({ id, title, ok, error, children, t }) {
+  return h("div", { className: "detail-card" },
+    h("div", { className: "card-head" }, h(Icon, { id }), h("div", { className: "card-title" }, title)),
+    !ok ? h("div", { className: "error-text" }, error || t.noData) : children);
+}
+
+function ClaudeDetail({ data, t, pal }) {
+  const c = data.claude || {};
+  return h(DetailShell, { id: "claude", title: "Claude", ok: c.ok, error: c.error, t },
+    h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
+    h(DetailBar, { label: t.window5h, pct: c.session_percent, pal,
+      sub: t.remainingPrefix + fmtRemain(c.session_percent) + (c.session_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.session_resets_at) : "") }),
+    h(Kv, { k: t.used, v: fmtPct(c.session_percent) }),
+    h(Kv, { k: t.left, v: fmtRemain(c.session_percent) }),
+    h(Kv, { k: t.reset, v: fmtWhen(c.session_resets_at) }),
+    h(DetailBar, { label: t.weekLimit, pct: c.weekly_percent, pal,
+      sub: t.remainingPrefix + fmtRemain(c.weekly_percent) + (c.weekly_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.weekly_resets_at) : "") }),
+    h(Kv, { k: t.used, v: fmtPct(c.weekly_percent) }),
+    h(Kv, { k: t.left, v: fmtRemain(c.weekly_percent) }),
+    h(Kv, { k: t.reset, v: fmtWhen(c.weekly_resets_at) }),
+    c.sonnet_percent != null ? h(DetailBar, { label: t.sonnetWeek, pct: c.sonnet_percent, pal,
+      sub: t.remainingPrefix + fmtRemain(c.sonnet_percent) + (c.sonnet_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.sonnet_resets_at) : "") }) : null,
+    c.sonnet_percent != null ? h(Kv, { k: t.reset, v: fmtWhen(c.sonnet_resets_at) }) : null,
+    c.opus_percent != null ? h(DetailBar, { label: t.opusWeek, pct: c.opus_percent, pal,
+      sub: t.remainingPrefix + fmtRemain(c.opus_percent) + (c.opus_resets_at ? "  ·  " + t.resetPrefix + fmtWhen(c.opus_resets_at) : "") }) : null,
+    c.opus_percent != null ? h(Kv, { k: t.reset, v: fmtWhen(c.opus_resets_at) }) : null);
+}
+
+function CursorDetail({ data, t, pal }) {
+  const c = data.cursor || {};
+  return h(DetailShell, { id: "cursor", title: c.plan ? `Cursor ${c.plan}` : "Cursor", ok: c.ok, error: c.error, t },
+    h(Kv, { k: t.plan, v: c.plan }),
+    h(Kv, { k: t.cycle, v: fmtWhen(c.cycle_end) }),
+    h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
+    h(DetailBar, { label: t.cursorModels, pct: c.percent, pal, sub: t.remainingPrefix + fmtRemain(c.percent) }),
+    h(Kv, { k: t.used, v: fmtPct(c.percent) }),
+    h(Kv, { k: t.left, v: fmtRemain(c.percent) }),
+    h(DetailBar, { label: t.otherModels, pct: c.other_percent, pal, sub: t.remainingPrefix + fmtRemain(c.other_percent) }),
+    h(Kv, { k: t.used, v: fmtPct(c.other_percent) }),
+    h(Kv, { k: t.left, v: fmtRemain(c.other_percent) }),
+    h("div", { className: "note" }, t.ondemand),
+    h(Kv, { k: t.used, v: c.used_cents != null ? fmtUsd(c.used_cents) : "" }),
+    h(Kv, { k: t.cap, v: c.limit_cents != null ? fmtUsd(c.limit_cents) : "" }),
+    h(Kv, { k: t.left, v: c.remaining_cents != null ? fmtUsd(c.remaining_cents) : "" }),
+    h(Kv, { k: t.bonus, v: c.bonus_cents > 0 ? fmtUsd(c.bonus_cents) : "" }),
+    (c.requests_used != null && c.requests_limit > 0) ? h("div", { className: "note" }, t.requestsLegacy) : null,
+    (c.requests_used != null && c.requests_limit > 0) ? h(Kv, { k: t.usedCount, v: String(c.requests_used) }) : null,
+    (c.requests_used != null && c.requests_limit > 0) ? h(Kv, { k: t.limit, v: String(c.requests_limit) }) : null);
+}
+
+function OpenRouterDetail({ data, t, pal }) {
+  const o = data.openrouter || {};
+  const remain = o.limit_cents != null ? (t.remainMoney + fmtUsd(o.remaining_cents)) : t.noCredits;
+  return h(DetailShell, { id: "openrouter", title: "OpenRouter", ok: o.ok, error: o.error, t },
+    h("div", { className: "note" }, t.allKeysNote),
+    h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
+    h(DetailBar, { label: t.credits, pct: o.percent, pal, sub: remain }),
+    h(Kv, { k: t.used, v: o.used_cents != null ? fmtUsd(o.used_cents) : "" }),
+    h(Kv, { k: t.left, v: o.remaining_cents != null ? fmtUsd(o.remaining_cents) : "" }),
+    h(Kv, { k: t.cap, v: o.limit_cents != null ? fmtUsd(o.limit_cents) : "" }),
+    h(Kv, { k: t.percent, v: fmtPct(o.percent) }));
+}
+
+function DeepSeekDetail({ data, t, pal }) {
+  const d = data.deepseek || {};
+  const remain = d.remaining_cents != null ? (t.remainMoney + fmtUsd(d.remaining_cents)) : t.noCredits;
+  return h(DetailShell, { id: "deepseek", title: "DeepSeek", ok: d.ok, error: d.error, t },
+    h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
+    h(DetailBar, { label: t.credits, pct: d.percent, pal, sub: remain }));
+}
+
+function StatusView({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed }) {
+  const themeBtn = (key, label) => h("button", {
+    className: "choice-btn" + (prefs.theme === key ? " active" : ""),
+    onClick: () => setPrefs((p) => ({ ...p, theme: key })),
+  }, label);
+  const langBtn = (key, label) => h("button", {
+    className: "choice-btn" + (prefs.lang === key ? " active" : ""),
+    onClick: () => setPrefs((p) => ({ ...p, lang: key })),
+  }, label);
+  const layoutBtn = (key, label) => h("button", {
+    className: "choice-btn" + (prefs.homeLayout === key ? " active" : ""),
+    onClick: () => setPrefs((p) => ({ ...p, homeLayout: key })),
+  }, label);
+  const accents = ACCENTS[prefs.theme];
+  return h("div", { className: "detail-card" },
+    h(Kv, { k: t.updated, v: fmtWhen(data.updated_at) }),
+    h("div", { className: "section-title" }, t.homeSection),
+    h("div", { className: "choice-row" }, layoutBtn("list", t.list), layoutBtn("grid", t.grid)),
+    h("div", { className: "section-title" }, t.themeSection),
+    h("div", { className: "choice-row" }, themeBtn("dark", t.dark), themeBtn("light", t.light), themeBtn("contrast", t.contrast)),
+    h("div", { className: "section-title" }, t.accentSection),
+    h("div", { className: "swatch-row" }, accents.map((c, i) => h("div", {
+      key: i, className: "swatch" + (prefs.accent === i ? " active" : ""),
+      style: { background: c }, onClick: () => setPrefs((p) => ({ ...p, accent: i })),
+    }))),
+    h("div", { className: "section-title" }, t.langSection),
+    h("div", { className: "choice-row" }, langBtn("pt", "PT"), langBtn("en", "EN"), langBtn("es", "ES")),
+    h("div", { className: "section-title" }, t.refreshSection),
+    h("button", { className: "full-btn", onClick: onRefresh }, refreshing ? "…" : t.refreshNow),
+    h("div", { className: "status-note" }, t.autoNote(POLL_MS / 1000)),
+    fetchFailed ? h("div", { className: "fetch-fail-note" }, t.fetchFail) : null);
+}
+
+function App() {
+  const [prefs, setPrefs] = usePrefs();
+  const [data, setData] = useState(null);
+  const [view, setView] = useState("home");
+  const [nextFetchAt, setNextFetchAt] = useState(Date.now() + POLL_MS);
+  const [okFlashAt, setOkFlashAt] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const [driftMs, setDriftMs] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchFailed, setFetchFailed] = useState(false);
+
+  const pal = PALETTES[prefs.theme];
+  const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
+  const t = STR[prefs.lang];
+
+  useEffect(() => { applyThemeVars(pal, accent); }, [prefs.theme, prefs.accent]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  async function fetchUsage() {
+    setRefreshing(true);
+    try {
+      const res = await fetch("/usage", { cache: "no-store" });
+      const json = await res.json();
+      setData(json);
+      setFetchFailed(false);
+      setOkFlashAt(Date.now());
+      const serverMs = Date.parse(json.updated_at);
+      if (!isNaN(serverMs)) setDriftMs(serverMs - Date.now());
+    } catch (e) {
+      setFetchFailed(true);
+    } finally {
+      setRefreshing(false);
+      setNextFetchAt(Date.now() + POLL_MS);
+    }
+  }
+
+  useEffect(() => {
+    fetchUsage();
+    const id = setInterval(fetchUsage, POLL_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!data) {
+    return h("div", { className: "app" },
+      h("div", { className: "header" },
+        h("div", { className: "eye", style: { width: 28, height: 28 } }, h("div", { className: "pupil" })),
+        h("div", { className: "brand" }, "VIGIA", h("span", { className: "ai" }, " AI"))),
+      h("div", { className: "content" },
+        h("div", { className: "empty-note" }, fetchFailed ? t.fetchFail : "…")));
+  }
+
+  if (view === "now") {
+    return h(NowView, { data, prefs, t, pal, onClose: () => setView("home") });
+  }
+
+  const showCheck = okFlashAt && (now - okFlashAt < FETCH_OK_FLASH_MS);
+  const secsLeft = showCheck ? null : Math.max(0, Math.ceil((nextFetchAt - now) / 1000));
+
+  const detailMap = {
+    claude: ClaudeDetail, cursor: CursorDetail, openrouter: OpenRouterDetail, deepseek: DeepSeekDetail,
+  };
+  const isHome = view === "home";
+  const isStatus = view === "status";
+  const DetailComp = detailMap[view];
+
+  return h("div", { className: "app" },
+    h("div", { className: "header" },
+      !isHome ? h("button", { className: "chevron-btn", onClick: () => setView("home"), title: t.back }, "‹") : null,
+      h("button", { className: "brand-btn", onClick: () => setView("home") },
+        h(Eye, { size: 28 }),
+        h("div", { className: "brand" }, "VIGIA", h("span", { className: "ai" }, " AI"))),
+      h("div", { className: "spacer" }),
+      h("button", { className: "clock-btn", onClick: () => setView("now"), title: t.now },
+        h("span", { className: "clock-dot" }), fmtClock(now + driftMs)),
+      h("button", { className: "icon-btn", onClick: () => setView("status"), title: t.info },
+        h("span", { style: { color: isStatus ? "var(--accent)" : "var(--text-muted)", fontWeight: 700 } }, "ⓘ")),
+      h(Badge, { secs: secsLeft, showCheck, pal })),
+    h("div", { className: "content" },
+      isHome ? h(React.Fragment, null,
+        h("div", { className: "subtitle" }, t.subtitle),
+        h(Home, { data, prefs, t, pal, onOpen: setView })) : null,
+      isStatus ? h(StatusView, { prefs, setPrefs, t, onRefresh: fetchUsage, data, refreshing, fetchFailed }) : null,
+      DetailComp ? h(DetailComp, { data, t, pal }) : null));
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>

@@ -42,6 +42,8 @@ collector/server.py        # HTTP :8787, /usage + painel /
 collector/panel.py         # GET/POST /api/config (grava data/config.json, sem devolver tokens)
 collector/store.py         # persistência JSON (volume Docker em /app/data)
 collector/web/index.html   # UI do painel
+collector/web/display.html # Réplica web do firmware (React sem build, GET /usage), rota /display
+collector/web/vendor/      # React/ReactDOM UMD vendorizados (sem CDN externo)
 collector/start.sh         # python local ou `docker`
 collector/providers/       # busca + parse: claude.py, cursor.py, openrouter.py, deepseek.py
 collector/formatting.py    # datas (BRT) e percentuais/centavos compartilhados

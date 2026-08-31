@@ -186,11 +186,19 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
-    def _send_html(self) -> None:
-        path = WEB_DIR / "index.html"
+    def _send_html(self, path: Path) -> None:
         raw = path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self._cors()
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def _send_static(self, path: Path, content_type: str) -> None:
+        raw = path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(raw)))
         self._cors()
         self.end_headers()
@@ -248,7 +256,24 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         if path in ("/", "/index.html", "/panel"):
-            self._send_html()
+            self._send_html(WEB_DIR / "index.html")
+            return
+        if path in ("/display", "/display.html", "/display/"):
+            self._send_html(WEB_DIR / "display.html")
+            return
+        if path.startswith("/vendor/") and "/" not in path[len("/vendor/") :]:
+            name = path[len("/vendor/") :]
+            if name in ("react.production.min.js", "react-dom.production.min.js"):
+                self._send_static(WEB_DIR / "vendor" / name, "application/javascript; charset=utf-8")
+                return
+            self._send_json(404, {"ok": False, "error": "not found"})
+            return
+        if path.startswith("/icons/") and "/" not in path[len("/icons/") :]:
+            name = path[len("/icons/") :]
+            if name in ("claude.png", "cursor.png", "openrouter.png", "deepseek.png"):
+                self._send_static(WEB_DIR / "icons" / name, "image/png")
+                return
+            self._send_json(404, {"ok": False, "error": "not found"})
             return
         if path == "/health":
             self._send_json(
@@ -292,8 +317,9 @@ def main() -> None:
     apply_store(override=False)
     LISTEN_HOST = os.environ.get("HOST", "0.0.0.0")
     LISTEN_PORT = int(os.environ.get("PORT") or 8787)
-    print(f"painel  http://127.0.0.1:{LISTEN_PORT}/")
-    print(f"usage   http://127.0.0.1:{LISTEN_PORT}/usage")
+    print(f"painel     http://127.0.0.1:{LISTEN_PORT}/")
+    print(f"mostrador  http://127.0.0.1:{LISTEN_PORT}/display")
+    print(f"usage      http://127.0.0.1:{LISTEN_PORT}/usage")
     print(f"repo {_repo_root()}")
     CollectorServer.allow_reuse_address = True
     try:
