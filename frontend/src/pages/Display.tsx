@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { CreditsAccount, CursorAccount, ClaudeAccount, GptAccount, UsagePayload } from "../api/types";
 import { Logo } from "../components/Logo";
-import { CheckIcon, ClockIcon, CloseIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { CheckIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
@@ -273,6 +273,9 @@ function Sidebar(props: {
       <NavLink to="/display/config" className={({ isActive }) => `side-item${isActive ? " active" : ""}`} onClick={onClose}>
         <SlidersIcon size={16} /> {t.config}
       </NavLink>
+      <a className="side-item side-footer" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
+        <GitHubIcon size={16} /> GitHub
+      </a>
     </nav>
   );
 }
