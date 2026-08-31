@@ -4,6 +4,8 @@
 
 Script `collector/server.py` (Python 3, só biblioteca padrão). Sobe HTTP em `0.0.0.0:8787`.
 
+`server.py` cuida só do HTTP e do cache; a busca/parse de cada assinatura fica em `collector/providers/claude.py` e `collector/providers/cursor.py`. Datas (BRT) e percentuais/centavos compartilhados estão em `collector/formatting.py`; a leitura do `state.vscdb` do Cursor está em `collector/cursor_state.py` (usada também por `gerar_env_cursor.py`, para não duplicar essa lógica).
+
 ## Subir
 
 ```bash

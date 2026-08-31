@@ -36,10 +36,16 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 ## Mapa de arquivos que importam
 
 ```
-collector/server.py      # HTTP :8787, Claude + Cursor, cache
-src/main.cpp             # Wi-Fi, JSON, loop
-src/ui.cpp               # 4 views + abas
-src/input.cpp            # touch / botões / serial
+collector/server.py        # HTTP :8787, cache, wiring
+collector/providers/       # busca + parse: claude.py, cursor.py
+collector/formatting.py    # datas (BRT) e percentuais/centavos compartilhados
+collector/cursor_state.py  # leitura do state.vscdb (server.py + gerar_env_cursor.py)
+src/main.cpp              # setup()/loop(), mock de boot
+src/usage_client.cpp       # Wi-Fi, GET, parse do JSON de /usage
+src/ui.cpp                # controlador: navegação, toque, redesenho
+src/ui_views.cpp           # pintura das 4 views + abas
+src/ui_format.cpp          # widgets: barra, botão, formatação de texto
+src/input.cpp              # touch / botões / serial
 src/secrets.h.example
 platformio.ini
 diagram.json

@@ -58,9 +58,9 @@ Sem o `wokwigw` rodando, `host.wokwi.internal` (o `USAGE_URL` do simulador) não
 
 Três peças, um único sketch de firmware:
 
-- **`collector/server.py`** — servidor HTTP na porta `:8787`. Lê as credenciais OAuth do Claude (`~/.claude/.credentials.json`) e o JWT local do Cursor (`~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`), ou sobrescritas via `collector/.env`. Chama o endpoint de uso interno (não oficial) de cada provedor, cacheia os resultados (≥5 min — o endpoint do Claude rate-limita) e serve um único JSON combinado em `/usage`. Falha em um provedor não pode derrubar o outro; `ok: false` no objeto daquele provedor é o contrato.
-- **`src/main.cpp`** — conexão Wi-Fi, HTTP GET de `/usage`, parse do JSON (ArduinoJson), loop de poll (`USAGE_POLL_MS`).
-- **`src/ui.cpp`** — as quatro views/abas (Início, Claude, Cursor, Info) e sua renderização (TFT_eSPI).
+- **`collector/server.py`** — só o servidor HTTP na porta `:8787`: `Handler`/`CollectorServer`, cache (≥5 min — o endpoint do Claude rate-limita) e `main()`. Lê `.env`/`.env.claude`/`.env.cursor` via `http_util.load_dotenv`. A lógica de cada provedor mora em `collector/providers/claude.py` e `collector/providers/cursor.py` (busca + parse do payload); datas/percentuais compartilhados ficam em `collector/formatting.py`; a leitura do `state.vscdb` do Cursor (usada pelo coletor **e** por `gerar_env_cursor.py`) mora em `collector/cursor_state.py`. Falha em um provedor não pode derrubar o outro; `ok: false` no objeto daquele provedor é o contrato.
+- **`src/main.cpp`** — só `setup()`/`loop()` (ciclo de vida Arduino) + o caminho mock de boot. Wi-Fi e o GET/parse de `/usage` (ArduinoJson) estão em `src/usage_client.cpp`.
+- **`src/ui.cpp`** — controlador das quatro views/abas (Início, Claude, Cursor, Info): navegação, toque, redesenho. A pintura de cada view mora em `src/ui_views.cpp`; helpers de formatação/desenho reutilizáveis (barra, botão, texto de data) em `src/ui_format.cpp`.
 - **`src/input.cpp`** — touch (XPT2046 no hardware), botões Prev/Next (Wokwi), entrada por tecla serial.
 
 O `platformio.ini` builda o *mesmo* sketch `src/main.cpp` em dois ambientes, diferenciados só por `build_flags`:

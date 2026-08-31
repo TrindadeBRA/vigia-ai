@@ -103,9 +103,15 @@ O Wokwi não simula o painel resistivo: use os botões **Prev** / **Prox** ou, n
 
 | Caminho | Função |
 | --- | --- |
-| `collector/server.py` | HTTP das cotas |
-| `src/main.cpp` | Wi-Fi, JSON, loop |
-| `src/ui.cpp` | Quatro views e abas |
+| `collector/server.py` | Servidor HTTP das cotas (cache, wiring) |
+| `collector/providers/` | Busca + parse por provedor (`claude.py`, `cursor.py`) |
+| `collector/formatting.py` | Datas (BRT) e percentuais/centavos |
+| `collector/cursor_state.py` | Leitura do `state.vscdb` do Cursor |
+| `src/main.cpp` | `setup()`/`loop()`, mock de boot |
+| `src/usage_client.cpp` | Wi-Fi, GET e parse do JSON de `/usage` |
+| `src/ui.cpp` | Controlador: navegação, toque, redesenho |
+| `src/ui_views.cpp` | Pintura das quatro views e abas |
+| `src/ui_format.cpp` | Widgets: barra, botão, formatação de texto |
 | `src/input.cpp` | Touch, botões, serial |
 | `src/secrets.h.example` | Wi-Fi e URL |
 | `docs/` | Plano, APIs, touch, contexto de IA |
