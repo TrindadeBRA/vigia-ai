@@ -101,11 +101,10 @@ def main() -> None:
         print(f"swagger    http://{item}:{port}/docs{label}")
     print(f"repo {Path(__file__).resolve().parent.parent.parent}")
     uvicorn.run(
-        "app.main:app",
+        app,
         host=host,
         port=port,
         timeout_keep_alive=0,
-        reload=False,
     )
 
 

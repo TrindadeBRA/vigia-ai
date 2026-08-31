@@ -6,6 +6,7 @@ Obrigado por contribuir com o **Vigia AI**.
 
 ```bash
 ./dev up          # backend :8787 + frontend :5173
+./dev down        # encerra o que ficou nessas portas
 ./dev test
 ./dev lint
 ./dev sim         # Wokwi + coletor real

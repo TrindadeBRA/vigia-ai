@@ -5,6 +5,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MONITOR_BAUD=115200
+BACKEND_PORT=8787
+FRONTEND_PORT=5173
 WOKWIGW_BIN="$ROOT_DIR/.tools/wokwigw"
 WOKWIGW_URL="https://github.com/wokwi/wokwigw/releases/latest/download/wokwigw-darwin-arm64"
 
@@ -15,6 +17,7 @@ uso: ./dev <comando>
   ./dev                 esta ajuda
   ./dev up              backend FastAPI + frontend Vite
   ./dev up --docker     Compose na raiz
+  ./dev down            encerra o que este script deixou em :8787 / :5173
   ./dev sim             up + wokwigw + pio run -e wokwi
   ./dev firmware build  compila a placa (esp32dev)
   ./dev firmware wokwi  compila o simulador
@@ -87,6 +90,22 @@ warn_secrets() {
   fi
 }
 
+listen_pids() {
+  lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null || true
+}
+
+require_port_free() {
+  local port="$1"
+  local name="$2"
+  local pids
+  pids="$(listen_pids "$port")"
+  if [ -n "$pids" ]; then
+    echo "erro: porta $port ($name) já está em uso — pid(s): $(echo "$pids" | tr '\n' ' ')" >&2
+    echo "      encerre o outro processo (Ctrl+C naquele terminal) ou rode: ./dev down" >&2
+    exit 1
+  fi
+}
+
 PIDS=()
 cleanup() {
   trap - INT TERM EXIT
@@ -104,22 +123,76 @@ cleanup() {
 
 run_backend() {
   ensure_python
-  echo "== backend FastAPI :8787 (Swagger em /docs) =="
+  echo "== backend FastAPI :${BACKEND_PORT} (Swagger em /docs) =="
   (
     cd "$ROOT_DIR/backend"
     exec .venv/bin/python -m app.main
   ) &
-  PIDS+=("$!")
+  local backend_pid=$!
+  PIDS+=("$backend_pid")
+  local i
+  for i in $(seq 1 20); do
+    if curl -sf -o /dev/null "http://127.0.0.1:${BACKEND_PORT}/health"; then
+      return 0
+    fi
+    if ! kill -0 "$backend_pid" 2>/dev/null; then
+      echo "erro: backend saiu antes de responder em /health (porta ${BACKEND_PORT} ocupada?)." >&2
+      exit 1
+    fi
+    sleep 0.25
+  done
+  echo "erro: backend não respondeu em http://127.0.0.1:${BACKEND_PORT}/health" >&2
+  exit 1
 }
 
 run_frontend() {
   ensure_node
-  echo "== frontend Vite :5173 (proxy para o backend) =="
+  echo "== frontend Vite :${FRONTEND_PORT} (proxy para o backend) =="
   (
     cd "$ROOT_DIR/frontend"
-    exec npm run dev -- --host 127.0.0.1
+    exec npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT" --strictPort
   ) &
   PIDS+=("$!")
+}
+
+ours_on_port() {
+  # Só os processos deste repo: python -m app.main (8787) e Vite (5173).
+  local pid="$1"
+  local cmd
+  cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+  case "$cmd" in
+    *"/backend/"*"app.main"*|*python*" -m app.main"*) return 0 ;;
+    *"vite"*|*"vigia-ai-frontend"*|*"frontend/node_modules"*) return 0 ;;
+  esac
+  return 1
+}
+
+cmd_down() {
+  local pid port killed=0
+  for port in "$BACKEND_PORT" "$FRONTEND_PORT"; do
+    for pid in $(listen_pids "$port"); do
+      if ours_on_port "$pid"; then
+        echo "encerrando pid $pid (porta $port)"
+        kill -TERM "$pid" 2>/dev/null || true
+        killed=1
+      else
+        echo "aviso: porta $port em uso por pid $pid (não é deste repo) — não encerrado" >&2
+      fi
+    done
+  done
+  if [ "$killed" -eq 0 ]; then
+    echo "nada deste repo escutando em :${BACKEND_PORT} / :${FRONTEND_PORT}"
+    return 0
+  fi
+  sleep 1
+  for port in "$BACKEND_PORT" "$FRONTEND_PORT"; do
+    for pid in $(listen_pids "$port"); do
+      if ours_on_port "$pid"; then
+        kill -KILL "$pid" 2>/dev/null || true
+      fi
+    done
+  done
+  echo "portas livres."
 }
 
 cmd_up() {
@@ -128,28 +201,29 @@ cmd_up() {
       echo "docker não encontrado." >&2
       exit 1
     fi
-    echo "painel: http://127.0.0.1:8787/"
+    echo "painel: http://127.0.0.1:${BACKEND_PORT}/"
     exec docker compose -f "$ROOT_DIR/compose.yaml" up --build
   fi
+  require_port_free "$BACKEND_PORT" "backend"
+  require_port_free "$FRONTEND_PORT" "frontend Vite"
   trap cleanup INT TERM EXIT
   run_backend
-  sleep 1
   run_frontend
   echo ""
-  echo "painel     http://127.0.0.1:5173/     (dev)  ou  http://127.0.0.1:8787/ se o dist existir"
-  echo "mostrador  http://127.0.0.1:5173/display"
-  echo "swagger    http://127.0.0.1:8787/docs"
+  echo "painel     http://127.0.0.1:${FRONTEND_PORT}/"
+  echo "mostrador  http://127.0.0.1:${FRONTEND_PORT}/display"
+  echo "swagger    http://127.0.0.1:${BACKEND_PORT}/docs"
   echo "Ctrl+C encerra."
   wait
 }
 
 cmd_sim() {
+  require_port_free "$BACKEND_PORT" "backend"
   trap cleanup INT TERM EXIT
   ensure_wokwigw
   echo "== compilando firmware wokwi =="
   run_pio run -e wokwi
   run_backend
-  sleep 1
   echo "== gateway wokwigw :9011 =="
   "$WOKWIGW_BIN" &
   PIDS+=("$!")
@@ -179,6 +253,7 @@ fi
 case "$1" in
   -h|--help|help) usage ;;
   up) shift; cmd_up "$@" ;;
+  down) cmd_down ;;
   sim) cmd_sim ;;
   test) cmd_test ;;
   lint) cmd_lint ;;
