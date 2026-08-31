@@ -3,6 +3,7 @@
 #include "i18n.h"
 #include "ui_format.h"
 #include "assets/icons/icon_claude.h"
+#include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_openrouter.h"
 #include "assets/icons/icon_deepseek.h"
@@ -35,11 +36,11 @@ int g_eyeCy = 0;
 int g_eyeR = 0;
 int g_eyeGazeX = 0;
 int g_eyeGazeY = 0;
-View g_homeCardView[4] = {VIEW_CLAUDE, VIEW_CURSOR, VIEW_OPENROUTER, VIEW_DEEPSEEK};
-int g_homeCardX[4] = {0, 0, 0, 0};
-int g_homeCardY[4] = {0, 0, 0, 0};
-int g_homeCardW[4] = {0, 0, 0, 0};
-int g_homeCardH[4] = {0, 0, 0, 0};
+View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER, VIEW_DEEPSEEK};
+int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
+int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
+int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
+int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0};
 int g_homeCardCount = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;
@@ -114,6 +115,19 @@ int claudeWorstIdx() {
   return best;
 }
 
+int gptWorstIdx() {
+  int best = 0;
+  float bestVal = -2;
+  for (int i = 0; i < g_snap.gptCount; i++) {
+    float v = max(g_snap.gpt[i].sessionPercent, g_snap.gpt[i].weeklyPercent);
+    if (v > bestVal) {
+      bestVal = v;
+      best = i;
+    }
+  }
+  return best;
+}
+
 int cursorWorstIdx() {
   int best = 0;
   float bestVal = -2;
@@ -172,6 +186,8 @@ static int currentProviderCount() {
   switch (g_view) {
     case VIEW_CLAUDE:
       return g_snap.claudeCount;
+    case VIEW_GPT:
+      return g_snap.gptCount;
     case VIEW_CURSOR:
       return g_snap.cursorCount;
     case VIEW_OPENROUTER:
@@ -187,6 +203,8 @@ static int* currentProviderIdx() {
   switch (g_view) {
     case VIEW_CLAUDE:
       return &g_claudeIdx;
+    case VIEW_GPT:
+      return &g_gptIdx;
     case VIEW_CURSOR:
       return &g_cursorIdx;
     case VIEW_OPENROUTER:
@@ -413,6 +431,13 @@ static String withResta(float pct, const String& whenRaw) {
   return s;
 }
 
+static String gptPlanTitle(const GptAccount& g) {
+  if (!g.ok || !g.plan.length()) {
+    return "GPT";
+  }
+  return String("GPT ") + g.plan;
+}
+
 static String cursorPlanTitle(const CursorAccount& c) {
   if (!c.ok || !c.plan.length()) {
     return "Cursor";
@@ -586,7 +611,7 @@ static const char* emptyProvidersMsg() {
 }
 
 // Home em lista: um card empilhado por *tipo* de provedor com pelo menos uma
-// conta (0 a 4) — não um card por conta. Provedor com mais de uma conta
+// conta (0 a 5) — não um card por conta. Provedor com mais de uma conta
 // mostra a que mais precisa de atencao (claudeWorstIdx() etc.), com "+N" no
 // titulo; abrir o card leva ao detalhe de sempre, que ganha um paginador pra
 // ver as outras (ver paintDetailChrome). Provedor sem conta nenhuma (nunca
@@ -604,10 +629,12 @@ static void paintHomeList() {
   const int cardW = W - 16;
 
   const bool showClaude = g_snap.claudeCount > 0;
+  const bool showGpt = g_snap.gptCount > 0;
   const bool showCursor = g_snap.cursorCount > 0;
   const bool showOpenRouter = g_snap.openrouterCount > 0;
   const bool showDeepSeek = g_snap.deepseekCount > 0;
-  const int n = (int)showClaude + (int)showCursor + (int)showOpenRouter + (int)showDeepSeek;
+  const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
+                (int)showDeepSeek;
 
   g_homeCardCount = 0;
   if (n == 0) {
@@ -698,6 +725,7 @@ static void paintHomeList() {
 
   const UiStrings& t = uiTr();
   const ClaudeAccount& claudeAcct = g_snap.claude[showClaude ? claudeWorstIdx() : 0];
+  const GptAccount& gptAcct = g_snap.gpt[showGpt ? gptWorstIdx() : 0];
   const CursorAccount& cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
   const OpenRouterAccount& orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
   const DeepSeekAccount& dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
@@ -738,6 +766,25 @@ static void paintHomeList() {
             c1.c_str(), claudeAcct.sessionPercent, cs1, c2.c_str(), claudeAcct.weeklyPercent, cs2);
     slot++;
   }
+  if (showGpt) {
+    String gptTitle = gptPlanTitle(gptAcct);
+    String suffix = accountSuffixText(gptAcct.label, g_snap.gptCount);
+    String gs1 = showSub ? withResta(gptAcct.sessionPercent, gptAcct.sessionResets) : "";
+    String gs2 = showSub ? withResta(gptAcct.weeklyPercent, gptAcct.weeklyResets) : "";
+    String g1 = compact ? t.session5hShort : t.session5h;
+    String g2 = compact ? t.week : t.weekLimit;
+    if (!showSub) {
+      if (gptAcct.sessionResets.length()) {
+        g1 += "  " + fmtWhen(gptAcct.sessionResets).substring(0, 5);
+      }
+      if (gptAcct.weeklyResets.length()) {
+        g2 += "  " + fmtWhen(gptAcct.weeklyResets).substring(0, 5);
+      }
+    }
+    cardTwo(VIEW_GPT, gptTitle.c_str(), suffix, ICON_GPT, nextTop(), gptAcct.ok, gptAcct.error,
+            g1.c_str(), gptAcct.sessionPercent, gs1, g2.c_str(), gptAcct.weeklyPercent, gs2);
+    slot++;
+  }
   if (showCursor) {
     String cursorTitle = cursorPlanTitle(cursorAcct);
     String suffix = accountSuffixText(cursorAcct.label, g_snap.cursorCount);
@@ -766,11 +813,11 @@ struct HomeGridRect {
   int x, y, w, h;
 };
 
-// Reflui 1..4 cards num grid: 1 = celula unica; 2 = duas colunas; 3 = duas
-// em cima + uma ocupando a linha toda embaixo; 4 = 2x2 classico (igual ao
-// layout de sempre quando os 4 provedores estao configurados).
+// Reflui 1..5 cards num grid: 1 = celula unica; 2 = duas colunas; 3 = duas
+// em cima + uma ocupando a linha toda embaixo; 4 = 2x2; 5 = 2x2 + uma
+// ocupando a linha toda embaixo.
 static void computeHomeGridRects(int n, int bx, int by, int bw, int bh, int gap,
-                                 HomeGridRect out[4]) {
+                                 HomeGridRect out[MAX_HOME_CARDS]) {
   if (n <= 1) {
     out[0] = {bx, by, bw, bh};
     return;
@@ -779,6 +826,19 @@ static void computeHomeGridRects(int n, int bx, int by, int bw, int bh, int gap,
     const int colW = (bw - gap) / 2;
     out[0] = {bx, by, colW, bh};
     out[1] = {bx + colW + gap, by, bw - colW - gap, bh};
+    return;
+  }
+  if (n == 5) {
+    const int rowH = (bh - 2 * gap) / 3;
+    const int colW = (bw - gap) / 2;
+    const int row2Y = by + rowH + gap;
+    const int row3Y = by + 2 * (rowH + gap);
+    const int row3H = bh - 2 * (rowH + gap);
+    out[0] = {bx, by, colW, rowH};
+    out[1] = {bx + colW + gap, by, bw - colW - gap, rowH};
+    out[2] = {bx, row2Y, colW, rowH};
+    out[3] = {bx + colW + gap, row2Y, bw - colW - gap, rowH};
+    out[4] = {bx, row3Y, bw, row3H};
     return;
   }
   const int rowH = (bh - gap) / 2;
@@ -794,10 +854,8 @@ static void computeHomeGridRects(int n, int bx, int by, int bw, int bh, int gap,
   out[3] = {bx + colW + gap, by + rowH + gap, bw - colW - gap, row2H};
 }
 
-// Home em grade: 1 a 4 cards, um por provedor configurado. Com os 4
-// preenchidos fica 2x2 (Claude | Cursor / OpenRouter | DeepSeek), igual de
-// sempre; com menos, os cards restantes se reajustam para preencher o
-// espaco (ver computeHomeGridRects).
+// Home em grade: 1 a 5 cards, um por provedor configurado. Com 4
+// preenchidos fica 2x2; com 5, 2x2 + uma faixa embaixo.
 static void paintHomeGrid() {
   layoutContent();
   const int W = g_contentW;
@@ -809,10 +867,12 @@ static void paintHomeGrid() {
   const int pad = g_contentX + padInner;
 
   const bool showClaude = g_snap.claudeCount > 0;
+  const bool showGpt = g_snap.gptCount > 0;
   const bool showCursor = g_snap.cursorCount > 0;
   const bool showOpenRouter = g_snap.openrouterCount > 0;
   const bool showDeepSeek = g_snap.deepseekCount > 0;
-  const int n = (int)showClaude + (int)showCursor + (int)showOpenRouter + (int)showDeepSeek;
+  const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
+                (int)showDeepSeek;
 
   g_homeCardCount = 0;
   if (n == 0) {
@@ -820,7 +880,7 @@ static void paintHomeGrid() {
     return;
   }
 
-  HomeGridRect rects[4];
+  HomeGridRect rects[MAX_HOME_CARDS];
   computeHomeGridRects(n, pad, bodyTop, W - padInner * 2, bodyH, gap, rects);
 
   int minW = rects[0].w;
@@ -914,6 +974,7 @@ static void paintHomeGrid() {
 
   const UiStrings& t = uiTr();
   const ClaudeAccount& claudeAcct = g_snap.claude[showClaude ? claudeWorstIdx() : 0];
+  const GptAccount& gptAcct = g_snap.gpt[showGpt ? gptWorstIdx() : 0];
   const CursorAccount& cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
   const OpenRouterAccount& orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
   const DeepSeekAccount& dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
@@ -936,6 +997,16 @@ static void paintHomeGrid() {
             compact ? t.session5hShort : t.session5h, claudeAcct.sessionPercent,
             showSub ? cs1 : "", compact ? t.week : t.weekLimit, claudeAcct.weeklyPercent,
             showSub ? cs2 : "");
+    slot++;
+  }
+  if (showGpt) {
+    String gptTitle = gptPlanTitle(gptAcct);
+    String suffix = accountSuffixText(gptAcct.label, g_snap.gptCount);
+    cardTwo(VIEW_GPT, rects[slot], gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error,
+            compact ? t.session5hShort : t.session5h, gptAcct.sessionPercent,
+            showSub ? withResta(gptAcct.sessionPercent, gptAcct.sessionResets) : "",
+            compact ? t.week : t.weekLimit, gptAcct.weeklyPercent,
+            showSub ? withResta(gptAcct.weeklyPercent, gptAcct.weeklyResets) : "");
     slot++;
   }
   if (showCursor) {
@@ -971,8 +1042,9 @@ static void paintHomeGrid() {
 static int g_lastHomeConfigMask = -1;
 
 void paintHome() {
-  const int mask = (g_snap.claudeCount > 0 ? 1 : 0) | (g_snap.cursorCount > 0 ? 2 : 0) |
-                    (g_snap.openrouterCount > 0 ? 4 : 0) | (g_snap.deepseekCount > 0 ? 8 : 0);
+  const int mask = (g_snap.claudeCount > 0 ? 1 : 0) | (g_snap.gptCount > 0 ? 2 : 0) |
+                    (g_snap.cursorCount > 0 ? 4 : 0) | (g_snap.openrouterCount > 0 ? 8 : 0) |
+                    (g_snap.deepseekCount > 0 ? 16 : 0);
   if (mask != g_lastHomeConfigMask) {
     layoutContent();
     tft.fillRect(g_contentX, g_contentY, g_contentW, g_contentH, COL_BG);
@@ -1264,6 +1336,34 @@ void paintClaude() {
     dBar(t.opusWeek, c.opusPercent, withResta(c.opusPercent, c.opusResets));
     dKv(t.reset, c.opusResets.length() ? fmtWhen(c.opusResets) : "");
   }
+  paintDetailFinish();
+}
+
+void paintGpt() {
+  const UiStrings& t = uiTr();
+  const int count = g_snap.gptCount;
+  if (count <= 0) {
+    return;
+  }
+  const int idx = constrain(g_gptIdx, 0, count - 1);
+  g_gptIdx = idx;
+  const GptAccount& g = g_snap.gpt[idx];
+  String title = gptPlanTitle(g);
+  if (!paintDetailChrome(title.c_str(), g.label, ICON_GPT, g.ok, g.error, count, idx)) {
+    return;
+  }
+  dKv(t.plan, g.plan);
+  dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : "");
+  dGap();
+  dBar(t.window5h, g.sessionPercent, withResta(g.sessionPercent, g.sessionResets));
+  dKv(t.used, fmtPct(g.sessionPercent));
+  dKv(t.left, fmtRemain(g.sessionPercent));
+  dKv(t.reset, g.sessionResets.length() ? fmtWhen(g.sessionResets) : "");
+  dGap();
+  dBar(t.weekLimit, g.weeklyPercent, withResta(g.weeklyPercent, g.weeklyResets));
+  dKv(t.used, fmtPct(g.weeklyPercent));
+  dKv(t.left, fmtRemain(g.weeklyPercent));
+  dKv(t.reset, g.weeklyResets.length() ? fmtWhen(g.weeklyResets) : "");
   paintDetailFinish();
 }
 
@@ -1578,10 +1678,12 @@ void paintNow() {
   const int rowW = W - pad * 2;
 
   const bool showClaude = g_snap.claudeCount > 0;
+  const bool showGpt = g_snap.gptCount > 0;
   const bool showCursor = g_snap.cursorCount > 0;
   const bool showOpenRouter = g_snap.openrouterCount > 0;
   const bool showDeepSeek = g_snap.deepseekCount > 0;
-  const int n = (int)showClaude + (int)showCursor + (int)showOpenRouter + (int)showDeepSeek;
+  const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
+                (int)showDeepSeek;
   if (n == 0) {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
     return;
@@ -1636,12 +1738,15 @@ void paintNow() {
   };
 
   const ClaudeAccount& claudeAcct = g_snap.claude[showClaude ? claudeWorstIdx() : 0];
+  const GptAccount& gptAcct = g_snap.gpt[showGpt ? gptWorstIdx() : 0];
   const CursorAccount& cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
   const OpenRouterAccount& orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
   const DeepSeekAccount& dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
 
   String cs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.sessionPercent));
   String cs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.weeklyPercent));
+  String gs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(gptAcct.sessionPercent));
+  String gs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(gptAcct.weeklyPercent));
   String us1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(cursorAcct.percent));
   String us2 = compact ? String() : cursorOndemand(cursorAcct);
   // Saldo, nao assinatura — sub sempre visivel (pct -1 nao tem barra pra
@@ -1654,6 +1759,12 @@ void paintNow() {
     String suffix = accountSuffixText(claudeAcct.label, g_snap.claudeCount);
     row(slot++, "Claude", suffix, ICON_CLAUDE, claudeAcct.ok, claudeAcct.error, t.session5hShort,
         claudeAcct.sessionPercent, cs1, true, t.week, claudeAcct.weeklyPercent, cs2);
+  }
+  if (showGpt) {
+    String suffix = accountSuffixText(gptAcct.label, g_snap.gptCount);
+    String gptTitle = gptPlanTitle(gptAcct);
+    row(slot++, gptTitle.c_str(), suffix, ICON_GPT, gptAcct.ok, gptAcct.error, t.session5hShort,
+        gptAcct.sessionPercent, gs1, true, t.week, gptAcct.weeklyPercent, gs2);
   }
   if (showCursor) {
     String suffix = accountSuffixText(cursorAcct.label, g_snap.cursorCount);

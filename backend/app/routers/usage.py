@@ -57,6 +57,7 @@ def health(request: Request) -> HealthPayload:
         version=__version__,
         panel_lan=panel_lan_url(port),
         listen={"host": request.app.state.listen_host, "port": port},
+        interval_s=int(request.app.state.hub.seconds),
     )
 
 
@@ -66,7 +67,7 @@ def health(request: Request) -> HealthPayload:
     summary="Cotas na hora",
     operation_id="get_usage",
     description=(
-        "Consulta Claude, Cursor, OpenRouter e DeepSeek **neste request**, "
+        "Consulta Claude, GPT, Cursor, OpenRouter e DeepSeek **neste request**, "
         "grava o snapshot no hub e avisa todos os clientes de `GET /events`.\n\n"
         "HTTP **200** mesmo quando uma conta vem com `ok: false`. "
         "Use no `curl`, no botão «Atualizar consumo» e no Try it out do Swagger. "

@@ -69,6 +69,7 @@ export const ACCENTS: Record<ThemeName, string[]> = {
 
 export const PROVIDER_ICON: Record<string, string> = {
   claude: "/icons/claude.png",
+  gpt: "/icons/gpt.png",
   cursor: "/icons/cursor.png",
   openrouter: "/icons/openrouter.png",
   deepseek: "/icons/deepseek.png",

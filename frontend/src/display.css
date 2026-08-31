@@ -257,11 +257,13 @@
 
   /* ---------- now view (fullscreen clock) — untouched design ---------- */
   .now-view {
+    position: relative;
     min-height: 100vh; width: 100%; cursor: pointer;
     background: radial-gradient(900px 420px at 50% 30%, var(--glow), transparent 65%), var(--bg);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     padding: 28px 14px;
   }
+  .now-badge { position: absolute; top: 14px; right: 14px; }
   .now-clock {
     font-family: var(--font-mono); font-size: clamp(42px, 12vw, 66px); font-weight: 620;
     letter-spacing: -1px; font-variant-numeric: tabular-nums; text-shadow: 0 0 40px var(--glow);

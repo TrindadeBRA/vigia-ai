@@ -12,6 +12,7 @@ from fastapi.responses import PlainTextResponse
 from app.config import in_docker
 from app.local.claude_oauth import claude_token_candidates, credentials_path, last_keychain_error
 from app.local.cursor_state import cursor_missing_hint, cursor_token_candidates, jwt_expired
+from app.local.gpt_oauth import auth_path as gpt_auth_path, gpt_missing_hint, gpt_token_candidates, gpt_token_expired
 from app.netutil import lan_ipv4
 from app.providers.deepseek import clean_deepseek_key
 from app.providers.openrouter import clean_openrouter_key
@@ -118,6 +119,79 @@ def _claude_card(cfg: dict[str, Any]) -> ProviderCardPublic:
     return ProviderCardPublic(
         source="missing",
         label=hint,
+        configured=False,
+        suffix=None,
+        mode="need_local",
+        hidden=bool(p.get("hidden")),
+        local_label=str(p.get("local_label") or ""),
+        accounts=extras,
+    )
+
+
+def _gpt_card(cfg: dict[str, Any]) -> ProviderCardPublic:
+    p = provider_cfg(cfg, "gpt")
+    cands = gpt_token_candidates(cfg)
+    paste = str(p.get("paste_secret") or "").strip()
+    extras = _accounts_public(p)
+    live: tuple[str, str] | None = None
+    expired_only = False
+    for source, token, _account_id, _exp in cands:
+        if gpt_token_expired(token):
+            expired_only = True
+            continue
+        live = (source, token)
+        break
+    if live:
+        source, _token = live
+        label = f"Lido de {gpt_auth_path(cfg)}"
+        if paste:
+            label += " · token colado ignorado na conta local (o Codex tem prioridade)"
+        return ProviderCardPublic(
+            source=source,
+            label=label,
+            configured=True,
+            suffix=None,
+            mode="local",
+            hidden=bool(p.get("hidden")),
+            local_label=str(p.get("local_label") or ""),
+            accounts=extras,
+        )
+    if expired_only:
+        return ProviderCardPublic(
+            source="expired",
+            label="OAuth expirado — rode `codex login` neste Mac para renovar",
+            configured=False,
+            suffix=None,
+            mode="need_local",
+            hidden=bool(p.get("hidden")),
+            local_label=str(p.get("local_label") or ""),
+            accounts=extras,
+        )
+    if paste:
+        return ProviderCardPublic(
+            source="env",
+            label="Token colado neste coletor",
+            configured=True,
+            suffix=_suffix(paste),
+            mode="paste",
+            hidden=bool(p.get("hidden")),
+            local_label=str(p.get("local_label") or ""),
+            accounts=extras,
+        )
+    if in_docker():
+        return ProviderCardPublic(
+            source="missing",
+            label="Docker não lê ~/.codex — monte o auth.json ou cole o token abaixo",
+            configured=False,
+            suffix=None,
+            mode="need_paste",
+            hidden=bool(p.get("hidden")),
+            local_label=str(p.get("local_label") or ""),
+            accounts=extras,
+        )
+    return ProviderCardPublic(
+        source="missing",
+        label=gpt_missing_hint(cfg),
         configured=False,
         suffix=None,
         mode="need_local",
@@ -264,6 +338,7 @@ def config_public(listen_host: str, listen_port: int) -> ConfigPublic:
         restart_needed_for_port=stored_port != listen_port,
         providers={
             "claude": _claude_card(cfg),
+            "gpt": _gpt_card(cfg),
             "cursor": _cursor_card(cfg),
             "openrouter": _key_card(cfg, "openrouter"),
             "deepseek": _key_card(cfg, "deepseek"),
@@ -310,6 +385,7 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
             cfg["mock"] = body.mock
         mapping = {
             "claude": (body.claude_hidden, body.claude_local_label, body.claude_paste, None),
+            "gpt": (body.gpt_hidden, body.gpt_local_label, body.gpt_paste, None),
             "cursor": (body.cursor_hidden, body.cursor_local_label, body.cursor_paste, None),
             "openrouter": (body.openrouter_hidden, body.openrouter_primary_label, body.openrouter_paste, "openrouter"),
             "deepseek": (body.deepseek_hidden, body.deepseek_primary_label, body.deepseek_paste, "deepseek"),
@@ -379,7 +455,7 @@ def add_account(body: AddAccountBody) -> AddAccountResult:
     description="Não apaga a conta local (Keychain / state.vscdb / primeira key).",
 )
 def delete_account(provider: str, account_id: str) -> OkResult:
-    if provider not in ("claude", "cursor", "openrouter", "deepseek"):
+    if provider not in ("claude", "gpt", "cursor", "openrouter", "deepseek"):
         return OkResult(ok=False, error="provider inválido")
     if not account_id:
         return OkResult(ok=False, error="id vazio")
@@ -403,6 +479,10 @@ def clear_secret(name: str) -> OkResult:
         "claude": "claude",
         "claude_paste": "claude",
         "CLAUDE_OAUTH_TOKEN": "claude",
+        "gpt": "gpt",
+        "gpt_paste": "gpt",
+        "GPT_OAUTH_TOKEN": "gpt",
+        "CODEX_ACCESS_TOKEN": "gpt",
         "cursor": "cursor",
         "cursor_paste": "cursor",
         "CURSOR_ACCESS_TOKEN": "cursor",

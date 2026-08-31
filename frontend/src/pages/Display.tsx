@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type SVGProps } from "react";
-import { fetchUsage, openUsageEvents } from "../api/client";
-import type { CreditsAccount, CursorAccount, ClaudeAccount, UsagePayload } from "../api/types";
-import { FETCH_OK_FLASH_MS, POLL_MS, barColor, barGlow, clamp, fmtClock, fmtPct, fmtRemain, fmtUsd, fmtWhen, prefersReducedMotion } from "../format";
+import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
+import type { CreditsAccount, CursorAccount, ClaudeAccount, GptAccount, UsagePayload } from "../api/types";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs, prefersReducedMotion } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import "../display.css";
@@ -126,13 +126,12 @@ function Eye({ size }: { size: number }) {
   );
 }
 
-function Badge({ secs, total, showCheck, pal }: { secs: number | null; total: number; showCheck: boolean; pal: Pal }) {
-  if (secs == null && !showCheck) return null;
-  const pct = showCheck ? 100 : clamp(((total - (secs || 0)) / total) * 100, 0, 100);
+function Badge({ secs, total, showCheck, pal }: { secs: number; total: number; showCheck: boolean; pal: Pal }) {
+  const pct = showCheck ? 100 : clamp(((total - secs) / total) * 100, 0, 100);
   const ringColor = showCheck ? pal.good : "var(--accent)";
   return (
     <div className="badge-ring" style={{ background: `conic-gradient(${ringColor} ${pct}%, var(--track) 0)` }}>
-      <div className="badge-inner">{showCheck ? <CheckIcon size={12} /> : <span className="num">{Math.min(99, secs || 0)}</span>}</div>
+      <div className="badge-inner">{showCheck ? <CheckIcon size={12} /> : <span className="num">{Math.min(99, secs)}</span>}</div>
     </div>
   );
 }
@@ -190,6 +189,28 @@ function buildProviders(data: UsagePayload, t: T): ProviderMeta[] {
           label: t.weekLimit,
           pct: c.weekly_percent,
           sub: c.weekly_percent != null ? t.remainingPrefix + fmtRemain(c.weekly_percent) + (c.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(c.weekly_resets_at)}` : "") : null,
+        },
+      ],
+    });
+  }
+  for (const g of data.gpt || []) {
+    list.push({
+      id: `gpt:${g.id}`,
+      provider: "gpt",
+      ok: g.ok,
+      error: g.error,
+      title: g.plan ? `GPT ${g.plan}` : "GPT",
+      label: g.label || "",
+      metrics: [
+        {
+          label: t.session5h,
+          pct: g.session_percent,
+          sub: g.session_percent != null ? t.remainingPrefix + fmtRemain(g.session_percent) + (g.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.session_resets_at)}` : "") : null,
+        },
+        {
+          label: t.weekLimit,
+          pct: g.weekly_percent,
+          sub: g.weekly_percent != null ? t.remainingPrefix + fmtRemain(g.weekly_percent) + (g.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.weekly_resets_at)}` : "") : null,
         },
       ],
     });
@@ -258,9 +279,10 @@ function ProviderCard({ p, pal, onOpen }: { p: ProviderMeta; pal: Pal; onOpen: (
   );
 }
 
-function StatusStrip({ providers, okFlashAt, now, t }: { providers: ProviderMeta[]; okFlashAt: number; now: number; t: T }) {
+function StatusStrip({ providers, updatedAt, now, t }: { providers: ProviderMeta[]; updatedAt: string; now: number; t: T }) {
   const failing = providers.filter((p) => !p.ok).length;
-  const agoS = okFlashAt ? Math.max(0, Math.round((now - okFlashAt) / 1000)) : null;
+  const age = payloadAgeMs(updatedAt, now);
+  const agoS = age == null ? null : Math.max(0, Math.round(age / 1000));
   const agoText = agoS == null ? "" : agoS < 3 ? t.agoNow : t.agoSecs(agoS);
   return (
     <div className="status-strip">
@@ -315,9 +337,10 @@ function Sidebar(props: {
   );
 }
 
-function Overview({ providers, okFlashAt, now, t, pal, onOpen }: { providers: ProviderMeta[]; okFlashAt: number; now: number; t: T; pal: Pal; onOpen: (id: string) => void }) {
+function Overview({ providers, updatedAt, now, t, pal, onOpen }: { providers: ProviderMeta[]; updatedAt: string; now: number; t: T; pal: Pal; onOpen: (id: string) => void }) {
   const failing = providers.filter((p) => !p.ok).length;
-  const agoS = okFlashAt ? Math.max(0, Math.round((now - okFlashAt) / 1000)) : null;
+  const age = payloadAgeMs(updatedAt, now);
+  const agoS = age == null ? null : Math.max(0, Math.round(age / 1000));
   return (
     <>
       <div className="overview-head">
@@ -377,12 +400,8 @@ function NowRow({ p, pal }: { p: ProviderMeta; pal: Pal }) {
   );
 }
 
-function NowView({ data, prefs, t, pal, nowMs, okFlashAt, onClose }: { data: UsagePayload; prefs: Prefs; t: T; pal: Pal; nowMs: number; okFlashAt: number; onClose: () => void }) {
-  const [clockNow, setClockNow] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setClockNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
+function NowView({ data, prefs, t, pal, nowMs, driftMs, secs, pollS, showCheck, onClose }: { data: UsagePayload; prefs: Prefs; t: T; pal: Pal; nowMs: number; driftMs: number; secs: number; pollS: number; showCheck: boolean; onClose: () => void }) {
+  const clockNow = new Date(nowMs + driftMs);
   const pad2 = (n: number) => String(n).padStart(2, "0");
   const timeStr = `${pad2(clockNow.getHours())}:${pad2(clockNow.getMinutes())}:${pad2(clockNow.getSeconds())}`;
   const weekday = WEEKDAYS[prefs.lang][clockNow.getDay()];
@@ -390,10 +409,13 @@ function NowView({ data, prefs, t, pal, nowMs, okFlashAt, onClose }: { data: Usa
   const providers = buildProviders(data, t);
   return (
     <div className="now-view" onClick={onClose}>
+      <div className="now-badge">
+        <Badge secs={secs} total={pollS} showCheck={showCheck} pal={pal} />
+      </div>
       <div className="now-clock">{timeStr}</div>
       <div className="now-date">{dateStr}</div>
       <div className="now-rows">
-        <StatusStrip providers={providers} okFlashAt={okFlashAt} now={nowMs} t={t} />
+        <StatusStrip providers={providers} updatedAt={data.updated_at} now={nowMs} t={t} />
         {providers.length === 0 ? <div className="empty-note">{t.noProviders}</div> : providers.map((p) => <NowRow key={p.id} p={p} pal={pal} />)}
       </div>
     </div>
@@ -456,6 +478,24 @@ function ClaudeBody({ data, account, t, pal }: { data: UsagePayload; account: Cl
   );
 }
 
+function GptBody({ data, account, t, pal }: { data: UsagePayload; account: GptAccount; t: T; pal: Pal }) {
+  const g = account;
+  return (
+    <>
+      <Kv k={t.plan} v={g.plan} />
+      <Kv k={t.updated} v={fmtWhen(data.updated_at)} />
+      <DetailBar label={t.window5h} pct={g.session_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(g.session_percent) + (g.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.session_resets_at)}` : "")} />
+      <Kv k={t.used} v={fmtPct(g.session_percent)} />
+      <Kv k={t.left} v={fmtRemain(g.session_percent)} />
+      <Kv k={t.reset} v={fmtWhen(g.session_resets_at)} />
+      <DetailBar label={t.weekLimit} pct={g.weekly_percent} pal={pal} sub={t.remainingPrefix + fmtRemain(g.weekly_percent) + (g.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.weekly_resets_at)}` : "")} />
+      <Kv k={t.used} v={fmtPct(g.weekly_percent)} />
+      <Kv k={t.left} v={fmtRemain(g.weekly_percent)} />
+      <Kv k={t.reset} v={fmtWhen(g.weekly_resets_at)} />
+    </>
+  );
+}
+
 function CursorBody({ data, account, t, pal }: { data: UsagePayload; account: CursorAccount; t: T; pal: Pal }) {
   const c = account;
   return (
@@ -508,10 +548,11 @@ function DeepSeekBody({ data, account, t, pal }: { data: UsagePayload; account: 
   );
 }
 
-function AccountPage({ meta, account, data, t, pal }: { meta: ProviderMeta; account: ClaudeAccount | CursorAccount | CreditsAccount | null; data: UsagePayload; t: T; pal: Pal }) {
+function AccountPage({ meta, account, data, t, pal }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null; data: UsagePayload; t: T; pal: Pal }) {
   let body: ReactNode = null;
   if (meta.ok && account) {
     if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} />;
+    else if (meta.provider === "gpt") body = <GptBody data={data} account={account as GptAccount} t={t} pal={pal} />;
     else if (meta.provider === "cursor") body = <CursorBody data={data} account={account as CursorAccount} t={t} pal={pal} />;
     else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
@@ -584,27 +625,50 @@ export default function Display() {
   const [nowOpen, setNowOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pollMs, setPollMs] = useState(POLL_MS);
   const [nextFetchAt, setNextFetchAt] = useState(Date.now() + POLL_MS);
   const [okFlashAt, setOkFlashAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [driftMs, setDriftMs] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchFailed, setFetchFailed] = useState(false);
+  const pollMsRef = useRef(POLL_MS);
+  const lastUpdatedAtRef = useRef<string | null>(null);
+  pollMsRef.current = pollMs;
 
   const pal = PALETTES[prefs.theme];
   const flat = prefs.theme === "contrast";
   const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
   const t = STR[prefs.lang];
   const shellClass = `shell${flat ? " flat" : ""}`;
+  const pollS = pollMs / 1000;
+  const showCheck = Boolean(okFlashAt && now - okFlashAt < FETCH_OK_FLASH_MS);
+  const secsLeft = countdownSecs(nextFetchAt, now, pollS);
 
   useEffect(() => {
     applyThemeVars(pal, accent, flat);
   }, [pal, accent, flat]);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = window.setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    fetchHealth()
+      .then((h) => {
+        if (typeof h.interval_s === "number" && h.interval_s >= 15) {
+          setPollMs(h.interval_s * 1000);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const updatedAt = lastUpdatedAtRef.current;
+    if (!updatedAt) return;
+    setNextFetchAt(nextFetchAtMs(updatedAt, pollMs));
+  }, [pollMs]);
 
   async function loadUsage() {
     setRefreshing(true);
@@ -619,12 +683,16 @@ export default function Display() {
   }
 
   function applyPayload(json: UsagePayload) {
+    const isNew = json.updated_at !== lastUpdatedAtRef.current;
+    lastUpdatedAtRef.current = json.updated_at;
     setData(json);
     setFetchFailed(false);
-    setOkFlashAt(Date.now());
+    const intervalMs = pollMsRef.current;
     const serverMs = Date.parse(json.updated_at);
     if (!Number.isNaN(serverMs)) setDriftMs(serverMs - Date.now());
-    setNextFetchAt(Date.now() + POLL_MS);
+    setNextFetchAt(nextFetchAtMs(json.updated_at, intervalMs));
+    const age = payloadAgeMs(json.updated_at);
+    if (isNew && (age == null || age < FRESH_PAYLOAD_MS)) setOkFlashAt(Date.now());
   }
 
   useEffect(() => {
@@ -667,22 +735,20 @@ export default function Display() {
   if (nowOpen) {
     return (
       <div className={shellClass}>
-        <NowView data={data} prefs={prefs} t={t} pal={pal} nowMs={now} okFlashAt={okFlashAt} onClose={() => setNowOpen(false)} />
+        <NowView data={data} prefs={prefs} t={t} pal={pal} nowMs={now} driftMs={driftMs} secs={secsLeft} pollS={pollS} showCheck={showCheck} onClose={() => setNowOpen(false)} />
       </div>
     );
   }
 
   const providers = buildProviders(data, t);
-  const showCheck = Boolean(okFlashAt && now - okFlashAt < FETCH_OK_FLASH_MS);
-  const secsLeft = showCheck ? null : Math.max(0, Math.ceil((nextFetchAt - now) / 1000));
   let meta: ProviderMeta | null = null;
-  let rawAccount: ClaudeAccount | CursorAccount | CreditsAccount | null = null;
+  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | null = null;
   if (section === "account") {
     meta = providers.find((p) => p.id === selectedId) || null;
     if (meta) {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
-      const key = meta.provider as "claude" | "cursor" | "openrouter" | "deepseek";
+      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
   }
@@ -703,7 +769,7 @@ export default function Display() {
         <button className={`icon-btn${settingsOpen ? " on" : ""}`} onClick={() => setSettingsOpen((v) => !v)} title={t.settings}>
           <SettingsIcon size={19} />
         </button>
-        <Badge secs={secsLeft} total={POLL_MS / 1000} showCheck={showCheck} pal={pal} />
+        <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} />
       </div>
       <div className="shell-body">
         {sidebarOpen ? <div className="scrim" onClick={() => setSidebarOpen(false)} /> : null}
@@ -720,7 +786,7 @@ export default function Display() {
           onClose={() => setSidebarOpen(false)}
         />
         <main className="content-area">
-          {section === "overview" ? <Overview providers={providers} okFlashAt={okFlashAt} now={now} t={t} pal={pal} onOpen={(id) => { setSection("account"); setSelectedId(id); }} /> : null}
+          {section === "overview" ? <Overview providers={providers} updatedAt={data.updated_at} now={now} t={t} pal={pal} onOpen={(id) => { setSection("account"); setSelectedId(id); }} /> : null}
           {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} /> : null}
         </main>
       </div>

@@ -6,7 +6,7 @@ O JSON viaja em `GET /usage` (uma vez) e em `GET /events` (SSE, `event: usage`).
 
 `Content-Type` em `/usage`: `application/json; charset=utf-8`. Em `/events`: `text/event-stream` (`event: usage` + `data:` o JSON).
 
-**v2**: cada provedor (`claude`, `cursor`, `openrouter`, `deepseek`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
+**v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
 
 Percentuais: **0–100** (float). Se a API nativa mandar 0–1, o coletor converte.
 
@@ -45,6 +45,19 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "sonnet_resets_at": null,
       "opus_percent": null,
       "opus_resets_at": null
+    }
+  ],
+  "gpt": [
+    {
+      "id": "local",
+      "label": "",
+      "ok": true,
+      "error": null,
+      "session_percent": 12.0,
+      "session_resets_at": "2026-08-31T21:00:00-03:00",
+      "weekly_percent": 8.0,
+      "weekly_resets_at": "2026-09-04T03:00:00-03:00",
+      "plan": "plus"
     }
   ],
   "cursor": [
@@ -100,11 +113,12 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
 | --- | --- | --- |
 | `updated_at` | string | sim |
 | `claude` | array de contas | sim (pode ser `[]`) |
+| `gpt` | array de contas | sim (pode ser `[]`) |
 | `cursor` | array de contas | sim (pode ser `[]`) |
 | `openrouter` | array de contas | sim (pode ser `[]`) |
 | `deepseek` | array de contas | sim (pode ser `[]`) |
 
-### Campos comuns a toda conta, nos 4 provedores
+### Campos comuns a toda conta, nos 5 provedores
 
 | Campo | Tipo | Notas |
 | --- | --- | --- |
@@ -127,6 +141,18 @@ Não existe mais um `configured` por conta: uma conta só aparece no array se es
 | `sonnet_resets_at` | string ou `null` | |
 | `opus_percent` | number ou `null` | Limite semanal só Opus, se o plano tiver |
 | `opus_resets_at` | string ou `null` | |
+
+### `gpt[i]`
+
+Cota da assinatura ChatGPT / Codex CLI — ver `docs/APIS_GPT.md`.
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `session_percent` | number ou `null` | Janela curta (~5 h), se o plano tiver |
+| `session_resets_at` | string ou `null` | |
+| `weekly_percent` | number ou `null` | Janela longa (semana, ou ~30 d no plano free) |
+| `weekly_resets_at` | string ou `null` | |
+| `plan` | string ou `null` | Ex.: `plus`, `pro`, `free` |
 
 ### `cursor[i]`
 
@@ -190,9 +216,9 @@ Uma conta só entra no array se estiver visível — o firmware **não desenha o
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
    painel (`collector/data/config.json`). OpenRouter e DeepSeek somem ao
    apagar a última key.
-2. **Oculta no painel** — a conta **local** de Claude/Cursor (Keychain/`state.vscdb`) e
+2. **Oculta no painel** — a conta **local** de Claude/GPT/Cursor (Keychain/`auth.json`/`state.vscdb`) e
    a **primeira key** de OpenRouter/DeepSeek (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`)
-   têm um interruptor **Mostrar na placa** que grava `CLAUDE_HIDDEN` / `CURSOR_HIDDEN` /
+   têm um interruptor **Mostrar na placa** que grava `CLAUDE_HIDDEN` / `GPT_HIDDEN` / `CURSOR_HIDDEN` /
    `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` em `config.json` — a conta some do array
    (sem chamar a API), mas continua salva/logada; só o card some na ESP32. Contas
    extras coladas (`*_ACCOUNTS`) não têm esse interruptor — remover a conta no

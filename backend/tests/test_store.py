@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.store import migrate_legacy
+from app.store import default_config, migrate_legacy
 
 
 def test_migrate_legacy_flat_env() -> None:
@@ -24,3 +24,10 @@ def test_migrate_legacy_flat_env() -> None:
     assert cfg["providers"]["claude"]["accounts"][0]["id"] == "a1"
     assert cfg["providers"]["claude"]["accounts"][0]["secret"] == "tok-emp"
     assert cfg["providers"]["openrouter"]["paste_secret"] == "sk-or-v1-abc"
+
+
+def test_default_config_includes_gpt() -> None:
+    cfg = default_config()
+    assert "gpt" in cfg["providers"]
+    assert cfg["providers"]["gpt"]["hidden"] is False
+    assert cfg["paths"]["codex_auth"] == ""

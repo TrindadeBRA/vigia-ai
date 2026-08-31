@@ -13,7 +13,7 @@ from app.config import config_path, data_dir
 
 _LOCK = threading.Lock()
 
-PROVIDERS = ("claude", "cursor", "openrouter", "deepseek")
+PROVIDERS = ("claude", "gpt", "cursor", "openrouter", "deepseek")
 
 _EMPTY_PROVIDER: dict[str, Any] = {
     "hidden": False,
@@ -28,7 +28,7 @@ def default_config() -> dict[str, Any]:
         "version": 1,
         "listen": {"host": "0.0.0.0", "port": 8787},
         "mock": False,
-        "paths": {"claude_credentials": "", "cursor_state_db": ""},
+        "paths": {"claude_credentials": "", "cursor_state_db": "", "codex_auth": ""},
         "providers": {name: deepcopy(_EMPTY_PROVIDER) for name in PROVIDERS},
     }
 
@@ -90,6 +90,12 @@ def migrate_legacy(raw: dict[str, Any]) -> dict[str, Any]:
     claude["paste_secret"] = str(raw.get("CLAUDE_OAUTH_TOKEN") or raw.get("CLAUDE_CODE_OAUTH_TOKEN") or "")
     claude["accounts"] = _parse_accounts_blob(raw.get("CLAUDE_ACCOUNTS"), "token")
 
+    gpt = cfg["providers"]["gpt"]
+    gpt["hidden"] = _flag(raw.get("GPT_HIDDEN"))
+    gpt["local_label"] = str(raw.get("GPT_LOCAL_LABEL") or "")
+    gpt["paste_secret"] = str(raw.get("GPT_OAUTH_TOKEN") or raw.get("CODEX_ACCESS_TOKEN") or "")
+    gpt["accounts"] = _parse_accounts_blob(raw.get("GPT_ACCOUNTS") or raw.get("CODEX_ACCOUNTS"), "token")
+
     cursor = cfg["providers"]["cursor"]
     cursor["hidden"] = _flag(raw.get("CURSOR_HIDDEN"))
     cursor["local_label"] = str(raw.get("CURSOR_LOCAL_LABEL") or "")
@@ -126,6 +132,7 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
     paths = raw.get("paths") if isinstance(raw.get("paths"), dict) else {}
     cfg["paths"]["claude_credentials"] = str(paths.get("claude_credentials") or "")
     cfg["paths"]["cursor_state_db"] = str(paths.get("cursor_state_db") or "")
+    cfg["paths"]["codex_auth"] = str(paths.get("codex_auth") or "")
     providers = raw.get("providers") if isinstance(raw.get("providers"), dict) else {}
     for name in PROVIDERS:
         src = providers.get(name) if isinstance(providers.get(name), dict) else {}

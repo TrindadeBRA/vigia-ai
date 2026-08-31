@@ -30,6 +30,14 @@ void usageClientLogSnapshot(const char* why) {
                   c.id.c_str(), c.label.length() ? c.label.c_str() : "-", c.ok ? 1 : 0,
                   c.sessionPercent, c.weeklyPercent, c.error.length() ? c.error.c_str() : "-");
   }
+  Serial.printf("  gpt contas=%d\n", g_snap.gptCount);
+  for (int i = 0; i < g_snap.gptCount; i++) {
+    const GptAccount& g = g_snap.gpt[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d sessao=%.0f semana=%.0f plan=%s err=%s\n", i,
+                  g.id.c_str(), g.label.length() ? g.label.c_str() : "-", g.ok ? 1 : 0,
+                  g.sessionPercent, g.weeklyPercent, g.plan.length() ? g.plan.c_str() : "-",
+                  g.error.length() ? g.error.c_str() : "-");
+  }
   Serial.printf("  cursor contas=%d\n", g_snap.cursorCount);
   for (int i = 0; i < g_snap.cursorCount; i++) {
     const CursorAccount& c = g_snap.cursor[i];
@@ -63,6 +71,10 @@ void markAllAccountsFailed(const char* msg) {
   for (int i = 0; i < g_snap.claudeCount; i++) {
     g_snap.claude[i].ok = false;
     g_snap.claude[i].error = msg;
+  }
+  for (int i = 0; i < g_snap.gptCount; i++) {
+    g_snap.gpt[i].ok = false;
+    g_snap.gpt[i].error = msg;
   }
   for (int i = 0; i < g_snap.cursorCount; i++) {
     g_snap.cursor[i].ok = false;
@@ -134,6 +146,25 @@ static bool parseUsageJson(const String& body) {
     c.sonnetResets = jsonText(acc["sonnet_resets_at"]);
     c.opusPercent = jsonFloatOrNeg(acc["opus_percent"]);
     c.opusResets = jsonText(acc["opus_resets_at"]);
+  }
+
+  g_snap.gptCount = 0;
+  for (JsonVariantConst v : doc["gpt"].as<JsonArrayConst>()) {
+    if (g_snap.gptCount >= MAX_ACCOUNTS) {
+      Serial.println("gpt: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    GptAccount& g = g_snap.gpt[g_snap.gptCount++];
+    g.id = jsonText(acc["id"]);
+    g.label = jsonText(acc["label"]);
+    g.ok = acc["ok"] | false;
+    g.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char*>());
+    g.sessionPercent = jsonFloatOrNeg(acc["session_percent"]);
+    g.sessionResets = jsonText(acc["session_resets_at"]);
+    g.weeklyPercent = jsonFloatOrNeg(acc["weekly_percent"]);
+    g.weeklyResets = jsonText(acc["weekly_resets_at"]);
+    g.plan = jsonText(acc["plan"]);
   }
 
   g_snap.cursorCount = 0;

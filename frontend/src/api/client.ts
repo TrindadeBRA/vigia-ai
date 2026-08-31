@@ -6,6 +6,12 @@ export async function fetchUsage(): Promise<UsagePayload> {
   return res.json() as Promise<UsagePayload>;
 }
 
+export async function fetchHealth(): Promise<{ interval_s?: number }> {
+  const res = await fetch("/health", { cache: "no-store" });
+  if (!res.ok) throw new Error(`health HTTP ${res.status}`);
+  return res.json() as Promise<{ interval_s?: number }>;
+}
+
 /** Stream SSE do contrato JSON. O browser reconecta sozinho. */
 export function openUsageEvents(onPayload: (data: UsagePayload) => void, onFail: () => void): () => void {
   const es = new EventSource("/events");

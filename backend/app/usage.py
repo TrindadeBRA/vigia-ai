@@ -8,6 +8,7 @@ from app.formatting import utc_now
 from app.providers.claude import claude_fail, fetch_claude_accounts
 from app.providers.cursor import cursor_fail, fetch_cursor_accounts
 from app.providers.deepseek import deepseek_fail, fetch_deepseek_accounts
+from app.providers.gpt import fetch_gpt_accounts, gpt_fail
 from app.providers.openrouter import fetch_openrouter_accounts, openrouter_fail
 from app.store import load, provider as provider_cfg
 
@@ -30,6 +31,19 @@ def mock_payload() -> dict[str, Any]:
                 "sonnet_resets_at": None,
                 "opus_percent": None,
                 "opus_resets_at": None,
+            }
+        ],
+        "gpt": [
+            {
+                "id": "local",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "session_percent": 12.0,
+                "session_resets_at": now,
+                "weekly_percent": 8.0,
+                "weekly_resets_at": now,
+                "plan": "plus",
             }
         ],
         "cursor": [
@@ -83,6 +97,8 @@ def build_payload() -> dict[str, Any]:
         payload = mock_payload()
         if provider_cfg(cfg, "claude").get("hidden"):
             payload["claude"] = []
+        if provider_cfg(cfg, "gpt").get("hidden"):
+            payload["gpt"] = []
         if provider_cfg(cfg, "cursor").get("hidden"):
             payload["cursor"] = []
         if provider_cfg(cfg, "openrouter").get("hidden"):
@@ -94,6 +110,10 @@ def build_payload() -> dict[str, Any]:
         claude = fetch_claude_accounts(cfg)
     except Exception as exc:  # noqa: BLE001
         claude = [{"id": "local", "label": "", **claude_fail(str(exc))}]
+    try:
+        gpt = fetch_gpt_accounts(cfg)
+    except Exception as exc:  # noqa: BLE001
+        gpt = [{"id": "local", "label": "", **gpt_fail(str(exc))}]
     try:
         cursor = fetch_cursor_accounts(cfg)
     except Exception as exc:  # noqa: BLE001
@@ -109,6 +129,7 @@ def build_payload() -> dict[str, Any]:
     return {
         "updated_at": utc_now(),
         "claude": claude,
+        "gpt": gpt,
         "cursor": cursor,
         "openrouter": openrouter,
         "deepseek": deepseek,

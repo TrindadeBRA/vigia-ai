@@ -1,17 +1,17 @@
 # Vigia AI
 
-Painel de mesa para cotas de **Claude**, **Cursor**, **OpenRouter** e **DeepSeek**: **ESP32 + TFT 3,5" touch**. A placa **não** guarda tokens.
+Painel de mesa para cotas de **Claude**, **GPT** (ChatGPT / Codex), **Cursor**, **OpenRouter** e **DeepSeek**: **ESP32 + TFT 3,5" touch**. A placa **não** guarda tokens.
 
 O coletor roda no seu computador, lê o login local (ou o que você colar no painel), chama as APIs e publica JSON na LAN. A ESP32 e o mostrador web (`/display`) escutam `GET /events` (SSE). `GET /usage` continua o contrato JSON e força uma consulta na hora.
 
-> **LAN only.** Os endpoints de cota do Claude e do Cursor **não são API pública** — são os mesmos que o CLI/IDE já usam neste computador. O projeto pode quebrar se esses contratos internos mudarem. **Não exponha a porta 8787 na internet.** OpenRouter e DeepSeek usam o saldo público da API key.
+> **LAN only.** Os endpoints de cota do Claude, do GPT e do Cursor **não são API pública** — são os mesmos que o CLI/IDE já usam neste computador. O projeto pode quebrar se esses contratos internos mudarem. **Não exponha a porta 8787 na internet.** OpenRouter e DeepSeek usam o saldo público da API key.
 
 Licença [MIT](LICENSE).
 
 ## Como funciona
 
 ```
-Assinaturas (Claude / Cursor / OpenRouter / DeepSeek)
+Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek)
         │  tokens só no host
         ▼
   backend FastAPI  :8787     GET /events  (SSE, JSON sem Bearer)
@@ -22,7 +22,7 @@ Assinaturas (Claude / Cursor / OpenRouter / DeepSeek)
                                               /display  réplica da placa
 ```
 
-1. Tokens ficam no Mac (`Keychain`, `state.vscdb`, ou `backend/data/config.json` gitignored).
+1. Tokens ficam no Mac (`Keychain`, `~/.codex/auth.json`, `state.vscdb`, ou `backend/data/config.json` gitignored).
 2. O coletor consulta as APIs **uma vez por ciclo** (padrão 60 s) e empurra o mesmo JSON a todos os clientes SSE. `GET /usage` força um ciclo extra.
 3. O JSON na LAN tem percentuais e datas, **nunca** o Bearer.
 4. Falha de uma conta (`ok: false`) não derruba as outras. HTTP 200.
@@ -71,11 +71,12 @@ Várias contas por serviço. O coletor consulta as APIs a cada 60 s (`USAGE_INTE
 | Serviço | Padrão neste computador | Plano B (painel) |
 | --- | --- | --- |
 | Claude | Keychain / `~/.claude/.credentials.json` | token OAuth colado |
+| GPT | `~/.codex/auth.json` (`codex login`) | token OAuth colado |
 | Cursor | `state.vscdb` (macOS / Linux / Windows) | JWT colado |
 | OpenRouter | — | API key |
 | DeepSeek | — | API key |
 
-Detalhes: [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md), [`APIS_CURSOR.md`](docs/APIS_CURSOR.md), [`APIS_OPENROUTER.md`](docs/APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](docs/APIS_DEEPSEEK.md).
+Detalhes: [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md), [`APIS_GPT.md`](docs/APIS_GPT.md), [`APIS_CURSOR.md`](docs/APIS_CURSOR.md), [`APIS_OPENROUTER.md`](docs/APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](docs/APIS_DEEPSEEK.md).
 
 ## Placa
 

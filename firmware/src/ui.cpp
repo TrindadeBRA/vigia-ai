@@ -8,6 +8,7 @@
 View g_view = VIEW_HOME;
 HomeLayout g_homeLayout = HOME_LAYOUT_LIST;
 int g_claudeIdx = 0;
+int g_gptIdx = 0;
 int g_cursorIdx = 0;
 int g_openrouterIdx = 0;
 int g_deepseekIdx = 0;
@@ -287,6 +288,8 @@ static bool viewProviderVisible(View v) {
   switch (v) {
     case VIEW_CLAUDE:
       return g_snap.claudeCount > 0;
+    case VIEW_GPT:
+      return g_snap.gptCount > 0;
     case VIEW_CURSOR:
       return g_snap.cursorCount > 0;
     case VIEW_OPENROUTER:
@@ -314,6 +317,8 @@ void uiSetView(View v) {
   // ja teria voltado.
   if (v == VIEW_CLAUDE) {
     g_claudeIdx = claudeWorstIdx();
+  } else if (v == VIEW_GPT) {
+    g_gptIdx = gptWorstIdx();
   } else if (v == VIEW_CURSOR) {
     g_cursorIdx = cursorWorstIdx();
   } else if (v == VIEW_OPENROUTER) {
@@ -328,8 +333,8 @@ void uiSetView(View v) {
 }
 
 static bool viewHasScroll() {
-  return g_view == VIEW_CLAUDE || g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER ||
-         g_view == VIEW_DEEPSEEK || g_view == VIEW_STATUS;
+  return g_view == VIEW_CLAUDE || g_view == VIEW_GPT || g_view == VIEW_CURSOR ||
+         g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK || g_view == VIEW_STATUS;
 }
 
 void uiDetailScrollBy(int dy) {
@@ -378,6 +383,9 @@ void uiRefreshData() {
   switch (g_view) {
     case VIEW_CLAUDE:
       paintClaude();
+      break;
+    case VIEW_GPT:
+      paintGpt();
       break;
     case VIEW_CURSOR:
       paintCursor();

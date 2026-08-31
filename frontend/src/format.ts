@@ -3,6 +3,24 @@ import { PALETTES, hexToRgba } from "./theme";
 
 export const POLL_MS = 60000;
 export const FETCH_OK_FLASH_MS = 1500;
+/** Snapshot mais novo que isso conta como ciclo fresco (check verde). */
+export const FRESH_PAYLOAD_MS = 2500;
+
+export function nextFetchAtMs(updatedAt: string, pollMs: number, nowMs = Date.now()): number {
+  const serverMs = Date.parse(updatedAt);
+  if (Number.isNaN(serverMs)) return nowMs + pollMs;
+  return serverMs + pollMs;
+}
+
+export function countdownSecs(nextAt: number, nowMs: number, pollS: number): number {
+  return Math.max(0, Math.min(pollS, Math.ceil((nextAt - nowMs) / 1000)));
+}
+
+export function payloadAgeMs(updatedAt: string, nowMs = Date.now()): number | null {
+  const serverMs = Date.parse(updatedAt);
+  if (Number.isNaN(serverMs)) return null;
+  return nowMs - serverMs;
+}
 
 export function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));

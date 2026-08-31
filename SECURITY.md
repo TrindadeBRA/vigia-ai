@@ -8,13 +8,13 @@ Never commit:
 
 - `backend/data/config.json` (OAuth tokens, API keys, JWTs)
 - `firmware/src/secrets.h` (Wi-Fi password)
-- dumps of Cursor `state.vscdb` or Claude `~/.claude/.credentials.json`
+- dumps of Cursor `state.vscdb`, Claude `~/.claude/.credentials.json`, or Codex `~/.codex/auth.json`
 
 The JSON served at `GET /usage` contains percentages and dates, **not** Bearer tokens. `GET /api/config` returns only a suffix of pasted secrets.
 
 ## Unofficial APIs
 
-Claude and Cursor usage endpoints are **not** public contracts. Treat 401/429 as a provider failure. If you discover a security issue in this repo, use GitHub Security Advisories on the public repository (or email the maintainer listed on the repo).
+Claude, GPT and Cursor usage endpoints are **not** public contracts. Treat 401/429 as a provider failure. If you discover a security issue in this repo, use GitHub Security Advisories on the public repository (or email the maintainer listed on the repo).
 
 ## Rate limits
 

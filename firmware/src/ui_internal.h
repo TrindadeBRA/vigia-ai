@@ -38,14 +38,15 @@ extern int g_eyeR;
 extern int g_eyeGazeX;
 extern int g_eyeGazeY;
 // Retangulos de toque dos cards da Início, preenchidos por paintHomeList()/
-// paintHomeGrid() a cada pintura — só os provedores com `configured=true`
+// paintHomeGrid() a cada pintura — só os provedores com pelo menos uma conta
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta
-// lista em vez de assumir 4 posições fixas.
-extern View g_homeCardView[4];
-extern int g_homeCardX[4];
-extern int g_homeCardY[4];
-extern int g_homeCardW[4];
-extern int g_homeCardH[4];
+// lista em vez de assumir posições fixas.
+constexpr int MAX_HOME_CARDS = 5;
+extern View g_homeCardView[MAX_HOME_CARDS];
+extern int g_homeCardX[MAX_HOME_CARDS];
+extern int g_homeCardY[MAX_HOME_CARDS];
+extern int g_homeCardW[MAX_HOME_CARDS];
+extern int g_homeCardH[MAX_HOME_CARDS];
 extern int g_homeCardCount;
 extern HomeLayout g_homeLayout;
 extern bool g_statusHasCal;
@@ -91,6 +92,7 @@ extern bool g_detailCanScroll;
 // de atencao" (ver claudeWorstIdx() etc.) toda vez que entra na view vindo de
 // outra; o paginador (uiAccountStep(), abaixo) so move dentro da view atual.
 extern int g_claudeIdx;
+extern int g_gptIdx;
 extern int g_cursorIdx;
 extern int g_openrouterIdx;
 extern int g_deepseekIdx;
@@ -108,6 +110,7 @@ extern int g_acctPagerH;
 // Indice da conta que mais precisa de atencao (maior percentual) — usado
 // pelo card compacto da Início e como ponto de entrada ao abrir o detalhe.
 int claudeWorstIdx();
+int gptWorstIdx();
 int cursorWorstIdx();
 int openrouterWorstIdx();
 int deepseekWorstIdx();
@@ -122,6 +125,7 @@ void layoutContent();
 void drawHeader();
 void paintHome();
 void paintClaude();
+void paintGpt();
 void paintCursor();
 void paintOpenRouter();
 void paintDeepSeek();

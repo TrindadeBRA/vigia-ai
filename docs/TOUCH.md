@@ -8,8 +8,9 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 
 | Tela | Conteúdo |
 | --- | --- |
-| Inicio | Lista (3 cards) ou grade 2×2; escolhe em **Info → Início**. Um card por *tipo* de provedor (não por conta) — com mais de uma conta do mesmo provedor, mostra a que mais precisa de atenção + "+N" no título. Toque no card abre o detalhe |
+| Inicio | Lista ou grade (até 5 cards); escolhe em **Info → Início**. Um card por *tipo* de provedor (não por conta) — com mais de uma conta do mesmo provedor, mostra a que mais precisa de atenção + "+N" no título. Toque no card abre o detalhe |
 | Claude | Janelas 5h, semana, Sonnet/Opus se existirem; usado/resta/reset. **Setas** à direita se precisar de scroll. Com mais de uma conta configurada (`docs/CONTRATO_JSON.md`), aparece um paginador **‹ i/N ›** logo abaixo do título pra trocar de conta |
+| GPT | Janelas sessão e semana (assinatura ChatGPT / Codex); usado/resta/reset. Mesmo paginador de contas |
 | Cursor | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). Setas de scroll. Mesmo paginador de contas do Claude |
 | OpenRouter | Créditos da conta: barra, usado, resta, teto. Setas de scroll. Mesmo paginador de contas |
 | DeepSeek | Saldo da conta: barra, resta. Mesmo paginador de contas |
@@ -18,11 +19,11 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 
 Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O **horario** da barra abre a tela Relogio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
 
-Nas telas internas (Claude / Cursor / OpenRouter / Info): se o conteúdo não couber, aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`.
+Nas telas internas (Claude / GPT / Cursor / OpenRouter / Info): se o conteúdo não couber, aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`.
 
-Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`5`.
+Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`7`.
 
-Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `5` relogio, `l` lista, `g` grade, `t` ciclo de tema, `a` ciclo da cor, `i` ciclo de idioma, `h` ciclo da barra (esq/topo/dir/base), `u`/`d` scroll no detalhe/info, `r` refresh, `c` calibrar (só hardware).
+Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1` Claude, `2` Cursor, `3` OpenRouter, `4` DeepSeek, `5` GPT, `6` info, `7` relogio, `l` lista, `g` grade, `t` ciclo de tema, `a` ciclo da cor, `i` ciclo de idioma, `h` ciclo da barra (esq/topo/dir/base), `u`/`d` scroll no detalhe/info, `r` refresh, `c` calibrar (só hardware).
 
 A escolha Lista/Grade, o tema, a cor, o idioma e o lado da barra ficam na NVS (namespace `ui`, chaves `home`, `theme`, `accent`, `lang` e `edge`). Idioma padrão: **pt-BR**. Barra padrão: **esquerda**. Cor padrão: **vermelho**.
 

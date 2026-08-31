@@ -317,6 +317,19 @@ export default function Panel() {
             reload={reload}
           />
           <ProviderBlock
+            title="GPT"
+            blurb="Cota da assinatura ChatGPT / Codex (sessão e semana) — o mesmo login do `codex login`, não a key sk-…"
+            p={cfg.providers.gpt}
+            pasteKey="gpt_paste"
+            hiddenKey="gpt_hidden"
+            labelKey="gpt_local_label"
+            noun="token"
+            placeholder="Token OAuth do Codex"
+            onBoardContinues="O login local continua."
+            extraProvider="gpt"
+            reload={reload}
+          />
+          <ProviderBlock
             title="Cursor"
             blurb="% do plano. Sem API key oficial — lê o login salvo pelo app."
             p={cfg.providers.cursor}
@@ -363,7 +376,7 @@ export default function Panel() {
 
       <section className="mt-6 rounded-2xl border border-edge bg-panel p-5">
         <h2 className="text-base font-semibold">Testar agora</h2>
-        <p className="mt-1 text-sm text-ink2">Busca as quatro cotas uma vez, sem esperar o próximo ciclo da placa.</p>
+        <p className="mt-1 text-sm text-ink2">Busca as cotas uma vez, sem esperar o próximo ciclo da placa.</p>
         <button
           type="button"
           className="mt-3 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent/90"
@@ -380,9 +393,10 @@ export default function Panel() {
         </button>
         {test ? (
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(["claude", "cursor", "openrouter", "deepseek"] as const).map((name) => {
+            {(["claude", "gpt", "cursor", "openrouter", "deepseek"] as const).map((name) => {
               const list = test[name] || [];
-              const title = name === "openrouter" ? "OpenRouter" : name[0].toUpperCase() + name.slice(1);
+              const title =
+                name === "openrouter" ? "OpenRouter" : name === "gpt" ? "GPT" : name === "deepseek" ? "DeepSeek" : name[0].toUpperCase() + name.slice(1);
               if (!list.length) {
                 return (
                   <div key={name} className="rounded-xl border border-edge bg-surface/40 p-3">
@@ -396,7 +410,7 @@ export default function Panel() {
                   <p className="text-sm font-medium">{b.label ? `${title} · ${b.label}` : title}</p>
                   <p className={`mt-1 text-xs ${b.ok ? "text-good" : "text-bad"}`}>
                     {b.ok
-                      ? name === "claude"
+                      ? name === "claude" || name === "gpt"
                         ? `sessão ${(b as { session_percent?: number }).session_percent ?? "—"}%`
                         : `${(b as { percent?: number }).percent ?? "—"}%`
                       : b.error || "falhou"}

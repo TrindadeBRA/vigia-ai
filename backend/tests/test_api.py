@@ -32,6 +32,7 @@ def test_health(client: TestClient) -> None:
     assert "version" in body
     assert "panel_lan" in body
     assert isinstance(body["panel_lan"], str)
+    assert body["interval_s"] == 60
     if body["panel_lan"]:
         assert body["panel_lan"].startswith("http://")
         assert body["panel_lan"].endswith("/")
@@ -43,9 +44,12 @@ def test_usage_mock_schema(client: TestClient) -> None:
     body = r.json()
     assert "updated_at" in body
     assert isinstance(body["claude"], list)
+    assert isinstance(body["gpt"], list)
     assert isinstance(body["cursor"], list)
     assert body["claude"][0]["ok"] is True
     assert "session_percent" in body["claude"][0]
+    assert body["gpt"][0]["ok"] is True
+    assert "plan" in body["gpt"][0]
 
 
 def test_config_does_not_leak_token(client: TestClient) -> None:
@@ -62,6 +66,7 @@ def test_config_does_not_leak_token(client: TestClient) -> None:
     suffix = body["providers"]["claude"].get("suffix")
     if suffix:
         assert suffix == "alue"
+    assert "gpt" in body["providers"]
 
 
 def test_openapi_available(client: TestClient) -> None:
@@ -90,4 +95,5 @@ def test_sse_frame_matches_usage_contract(client: TestClient) -> None:
     assert frame.startswith("event: usage\n")
     assert "data: {" in frame
     assert '"claude"' in frame
+    assert '"gpt"' in frame
     assert frame.endswith("\n\n")

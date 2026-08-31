@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from app.local.gpt_oauth import parse_auth_blob
 from app.providers.claude import parse_claude_payload
 from app.providers.cursor import parse_cursor_dashboard
 from app.providers.deepseek import parse_deepseek_payload
+from app.providers.gpt import parse_gpt_payload
 from app.providers.openrouter import parse_openrouter_payload
 
 
@@ -16,6 +18,71 @@ def test_parse_claude_windows() -> None:
     assert parsed["ok"] is True
     assert parsed["session_percent"] == 42.0
     assert parsed["weekly_percent"] == 18.5
+
+
+def test_parse_gpt_plus_windows() -> None:
+    parsed = parse_gpt_payload(
+        {
+            "plan_type": "plus",
+            "rate_limit": {
+                "primary_window": {
+                    "used_percent": 42.0,
+                    "limit_window_seconds": 18000,
+                    "reset_at": 1780000000,
+                },
+                "secondary_window": {
+                    "used_percent": 8.5,
+                    "limit_window_seconds": 604800,
+                    "reset_at": 1780500000,
+                },
+            },
+        }
+    )
+    assert parsed["ok"] is True
+    assert parsed["session_percent"] == 42.0
+    assert parsed["weekly_percent"] == 8.5
+    assert parsed["plan"] == "plus"
+    assert parsed["session_resets_at"]
+    assert parsed["weekly_resets_at"]
+
+
+def test_parse_gpt_free_monthly_only() -> None:
+    parsed = parse_gpt_payload(
+        {
+            "plan_type": "free",
+            "rate_limit": {
+                "primary_window": {
+                    "used_percent": 0,
+                    "limit_window_seconds": 2592000,
+                    "reset_at": 1790795505,
+                },
+                "secondary_window": None,
+            },
+        }
+    )
+    assert parsed["ok"] is True
+    assert parsed["session_percent"] is None
+    assert parsed["weekly_percent"] == 0.0
+    assert parsed["plan"] == "free"
+
+
+def test_parse_gpt_used_percent_is_already_0_100() -> None:
+    parsed = parse_gpt_payload(
+        {
+            "rate_limit": {
+                "primary_window": {"used_percent": 0.5, "limit_window_seconds": 18000, "reset_at": 1780000000}
+            }
+        }
+    )
+    assert parsed["session_percent"] == 0.5
+
+
+def test_parse_codex_auth_blob() -> None:
+    token, account_id = parse_auth_blob(
+        {"tokens": {"access_token": "tok-abc", "account_id": "acct-1", "refresh_token": "nope"}}
+    )
+    assert token == "tok-abc"
+    assert account_id == "acct-1"
 
 
 def test_parse_cursor_dashboard() -> None:

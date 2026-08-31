@@ -9,9 +9,10 @@ enum View : uint8_t {
   VIEW_CURSOR = 2,
   VIEW_OPENROUTER = 3,
   VIEW_DEEPSEEK = 4,
-  VIEW_STATUS = 5,
-  VIEW_NOW = 6,
-  VIEW_COUNT = 7
+  VIEW_GPT = 5,
+  VIEW_STATUS = 6,
+  VIEW_NOW = 7,
+  VIEW_COUNT = 8
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
@@ -34,6 +35,18 @@ struct ClaudeAccount {
   String sonnetResets;
   float opusPercent = -1;
   String opusResets;
+};
+
+struct GptAccount {
+  String id;
+  String label;
+  bool ok = false;
+  String error;
+  float sessionPercent = -1;
+  String sessionResets;
+  float weeklyPercent = -1;
+  String weeklyResets;
+  String plan;
 };
 
 struct CursorAccount {
@@ -81,6 +94,8 @@ struct UsageSnapshot {
   String updatedAt;
   ClaudeAccount claude[MAX_ACCOUNTS];
   int claudeCount = 0;
+  GptAccount gpt[MAX_ACCOUNTS];
+  int gptCount = 0;
   CursorAccount cursor[MAX_ACCOUNTS];
   int cursorCount = 0;
   OpenRouterAccount openrouter[MAX_ACCOUNTS];

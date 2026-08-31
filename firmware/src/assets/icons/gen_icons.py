@@ -63,6 +63,7 @@ def convert(png_path: Path, out_name: str, macro_prefix: str):
     print(f"wrote {out_path}")
 
 convert(ASSETS_DIR / "claude.png", "icon_claude.h", "ICON_CLAUDE")
+convert(ASSETS_DIR / "gpt.png", "icon_gpt.h", "ICON_GPT")
 convert(ASSETS_DIR / "cursor.png", "icon_cursor.h", "ICON_CURSOR")
 convert(ASSETS_DIR / "openrouter.png", "icon_openrouter.h", "ICON_OPENROUTER")
 convert(ASSETS_DIR / "deepseek.png", "icon_deepseek.h", "ICON_DEEPSEEK")

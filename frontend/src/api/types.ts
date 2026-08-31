@@ -13,6 +13,18 @@ export type ClaudeAccount = {
   opus_resets_at: string | null;
 };
 
+export type GptAccount = {
+  id: string;
+  label: string;
+  ok: boolean;
+  error: string | null;
+  session_percent: number | null;
+  session_resets_at: string | null;
+  weekly_percent: number | null;
+  weekly_resets_at: string | null;
+  plan: string | null;
+};
+
 export type CursorAccount = {
   id: string;
   label: string;
@@ -44,6 +56,7 @@ export type CreditsAccount = {
 export type UsagePayload = {
   updated_at: string;
   claude: ClaudeAccount[];
+  gpt: GptAccount[];
   cursor: CursorAccount[];
   openrouter: CreditsAccount[];
   deepseek: CreditsAccount[];

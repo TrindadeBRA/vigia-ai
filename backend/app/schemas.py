@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ProviderId = Literal["claude", "cursor", "openrouter", "deepseek"]
+ProviderId = Literal["claude", "gpt", "cursor", "openrouter", "deepseek"]
 
 USAGE_EXAMPLE = {
     "updated_at": "2026-08-31T14:00:00-03:00",
@@ -24,6 +24,19 @@ USAGE_EXAMPLE = {
             "sonnet_resets_at": None,
             "opus_percent": None,
             "opus_resets_at": None,
+        }
+    ],
+    "gpt": [
+        {
+            "id": "local",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "session_percent": 12.0,
+            "session_resets_at": "31/08 21h00",
+            "weekly_percent": 8.0,
+            "weekly_resets_at": "04/09 03h00",
+            "plan": "plus",
         }
     ],
     "cursor": [
@@ -73,7 +86,7 @@ USAGE_EXAMPLE = {
 SSE_WIRE_EXAMPLE = (
     ": connected\n\n"
     "event: usage\n"
-    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"cursor":[],"openrouter":[],"deepseek":[]}\n\n'
+    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[]}\n\n'
     ": ping\n\n"
 )
 
@@ -94,6 +107,14 @@ class ClaudeAccount(AccountBase):
     sonnet_resets_at: str | None = None
     opus_percent: float | None = None
     opus_resets_at: str | None = None
+
+
+class GptAccount(AccountBase):
+    session_percent: float | None = Field(default=None, description="0–100, janela curta (~5 h) se o plano tiver.")
+    session_resets_at: str | None = None
+    weekly_percent: float | None = Field(default=None, description="0–100, janela longa (semana / mês).")
+    weekly_resets_at: str | None = None
+    plan: str | None = Field(default=None, description="plus, pro, free, … — vem do Codex / ChatGPT.")
 
 
 class CursorAccount(AccountBase):
@@ -123,6 +144,7 @@ class UsagePayload(BaseModel):
 
     updated_at: str = Field(description="ISO-8601 com offset, ou o instante do ciclo no coletor.")
     claude: list[ClaudeAccount]
+    gpt: list[GptAccount]
     cursor: list[CursorAccount]
     openrouter: list[CreditsAccount]
     deepseek: list[CreditsAccount]
@@ -141,6 +163,7 @@ class HealthPayload(BaseModel):
     events: str = Field(default="/events", description="Stream SSE (firmware e /display).")
     docs: str = Field(default="/docs", description="Swagger UI.")
     listen: dict[str, str | int] = Field(description="host e port em que o Uvicorn está escutando.")
+    interval_s: int = Field(description="Segundos entre ciclos do hub (`USAGE_INTERVAL_S`).")
 
 
 class AccountPublic(BaseModel):
@@ -192,14 +215,17 @@ class ConfigPatch(BaseModel):
     port: int | None = Field(default=None, ge=1, le=65535)
     mock: bool | None = None
     claude_hidden: bool | None = None
+    gpt_hidden: bool | None = None
     cursor_hidden: bool | None = None
     openrouter_hidden: bool | None = None
     deepseek_hidden: bool | None = None
     claude_local_label: str | None = None
+    gpt_local_label: str | None = None
     cursor_local_label: str | None = None
     openrouter_primary_label: str | None = None
     deepseek_primary_label: str | None = None
     claude_paste: str | None = None
+    gpt_paste: str | None = None
     cursor_paste: str | None = None
     openrouter_paste: str | None = None
     deepseek_paste: str | None = None
