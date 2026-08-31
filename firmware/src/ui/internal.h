@@ -43,6 +43,10 @@ extern int g_eyeR;
 // a cada redesenho periódico do header (contador, refresh etc).
 extern int g_eyeGazeX;
 extern int g_eyeGazeY;
+// Fração (0..1) de quanto as pálpebras estão fechadas, animada por
+// uiTickEye() (blink vertical, igual ao logo do frontend) — drawHeader()
+// reaproveita pra não "reabrir" o olho a cada redesenho periódico do header.
+extern float g_eyeLid;
 // Retangulos de toque dos cards da Início, preenchidos por paintHomeList()/
 // paintHomeGrid() a cada pintura — só os provedores com pelo menos uma conta
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta

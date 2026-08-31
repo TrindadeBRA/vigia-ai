@@ -418,7 +418,8 @@ void uiTickClock()
 }
 
 // Anima a pupila do olho da marca (saccade: olha pra um ponto, pausa curta,
-// olha pra outro) redesenhando só o icone, sem passar por drawHeader() —
+// olha pra outro) e o blink (palpebras fechando/abrindo na vertical, igual
+// ao logo do frontend) redesenhando só o icone, sem passar por drawHeader() —
 // chamado a cada volta do loop() em main.cpp, bem mais amiude que o resto do
 // header pra dar movimento continuo. VIEW_NOW e tela cheia sem header.
 void uiTickEye()
@@ -433,6 +434,11 @@ void uiTickEye()
   static int targetY = 0;
   static float gazeX = 0;
   static float gazeY = 0;
+  static bool blinkInited = false;
+  static uint32_t nextBlinkMs = 0;
+  static uint32_t blinkStartMs = 0;
+  static uint32_t blinkDurMs = 160;
+  static bool blinking = false;
 
   uint32_t now = millis();
   if (now - lastDrawMs < 40)
@@ -458,5 +464,36 @@ void uiTickEye()
   g_eyeGazeX = (int)gazeX;
   g_eyeGazeY = (int)gazeY;
 
-  drawEyeIcon(g_eyeCx, g_eyeCy, g_eyeR, g_eyeGazeX, g_eyeGazeY);
+  if (!blinkInited)
+  {
+    blinkInited = true;
+    nextBlinkMs = now + 2200;
+  }
+
+  float lid = 0.0f;
+  if (blinking)
+  {
+    float p = (float)(now - blinkStartMs) / (float)blinkDurMs;
+    if (p >= 1.0f)
+    {
+      blinking = false;
+      // 12% de chance de um blink duplo rapido, senao a proxima pausa longa.
+      bool doubleBlink = random(0, 100) < 12;
+      nextBlinkMs = now + (doubleBlink ? 180 : (uint32_t)random(2600, 6800));
+    }
+    else
+    {
+      // Envelope triangular: fecha nos primeiros 40% do tempo, abre no resto.
+      lid = (p < 0.4f) ? (p / 0.4f) : (1.0f - (p - 0.4f) / 0.6f);
+    }
+  }
+  else if ((int32_t)(now - nextBlinkMs) >= 0)
+  {
+    blinking = true;
+    blinkStartMs = now;
+    blinkDurMs = 140 + random(0, 60);
+  }
+  g_eyeLid = lid;
+
+  drawEyeIcon(g_eyeCx, g_eyeCy, g_eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid);
 }

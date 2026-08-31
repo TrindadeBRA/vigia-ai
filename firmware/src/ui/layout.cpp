@@ -29,6 +29,7 @@ int g_eyeCy = 0;
 int g_eyeR = 0;
 int g_eyeGazeX = 0;
 int g_eyeGazeY = 0;
+float g_eyeLid = 0.0f;
 View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER,
                                        VIEW_DEEPSEEK, VIEW_OPENCODE_GO, VIEW_OPENCODE_ZEN};
 int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
@@ -472,7 +473,7 @@ void drawHeader()
     g_eyeCx = brandX + eyeR;
     g_eyeCy = midY;
     g_eyeR = eyeR;
-    drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY);
+    drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid);
     g_headerHomeX0 = g_hdrX0;
     g_headerHomeY0 = g_hdrY0;
     g_headerHomeX1 = brandX + eyeR * 2 + 12;
@@ -518,7 +519,7 @@ void drawHeader()
   g_eyeCx = cx;
   g_eyeCy = y + eyeR;
   g_eyeR = eyeR;
-  drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY);
+  drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid);
   const int iconBottom = y + eyeR * 2;
   g_headerHomeX0 = g_hdrX0;
   g_headerHomeY0 = g_hdrY0;
