@@ -42,7 +42,11 @@ A placa real é XPT2046 (SPI, `T_CS` 21). O Wokwi não tem XPT2046; usa `board-i
 
 ## Docker opcional
 
-`./dev-collector.sh docker`. O container não lê Keychain nem o Cursor do host — tokens pelo painel em `data/config.json` (volume). No Mac da mesa, Python local continua o caminho mais simples.
+`./dev-collector.sh docker`. O container não lê Keychain. Cursor: overlay `compose.credentials.yaml` (bind-mount somente leitura). Claude no Mac Docker: Python local ou token colado (plano B). No Mac da mesa, Python local continua o caminho mais simples.
+
+## Login local, sem copiar token
+
+Claude e Cursor: Keychain / `state.vscdb` primeiro; paste no painel só se o app não estiver neste PC. Não usar `gerar_env_*.py` para gravar Bearer em `config.json`. O coletor não faz refresh OAuth/JWT próprio — abra o app oficial para renovar.
 
 ## Sem autenticação no coletor (v1)
 

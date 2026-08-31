@@ -2,6 +2,8 @@
 
 Não é a API paga por token (`ANTHROPIC_API_KEY`). É o **OAuth da assinatura**, o mesmo do Claude Code.
 
+O endpoint **não é um produto público**. Path, headers e o valor de `anthropic-beta` podem mudar sem aviso. O coletor isola a quebra (`ok: false` só no card Claude).
+
 ## Endpoint
 
 ```
@@ -11,19 +13,25 @@ anthropic-beta: oauth-2025-04-20
 User-Agent: claude-code/2.1
 ```
 
-Sem o header `anthropic-beta`, costuma vir **401**. Sem `User-Agent: claude-code/<versão>`, o endpoint costuma devolver **429** persistente (bucket agressivo do `Python-urllib` / `curl`).
+Sem o header `anthropic-beta`, costuma vir **401**. Sem `User-Agent: claude-code/<versão>`, o endpoint costuma devolver **429** persistente (bucket agressivo do `Python-urllib` / `curl`). O coletor usa esse User-Agent porque é o que o próprio CLI envia — não é uma API documentada para terceiros.
 
-Não documentado no docs oficial. Pode mudar o path ou o valor do beta.
+## Token (app local primeiro)
 
-## Token
+O coletor **não** implementa refresh OAuth próprio. Quem renova é o Claude Code. Se `expiresAt` passou, abra o app (`claude`) neste Mac.
 
-1. **macOS (Claude Code 2.x):** Keychain, serviço `Claude Code-credentials` — o coletor lê com `security find-generic-password`.
+Ordem:
+
+1. **macOS (Claude Code 2.x):** Keychain, serviço `Claude Code-credentials` — `security find-generic-password -s … -w`. Sem dump da Keychain. Se o nome do serviço mudar, `CLAUDE_KEYCHAIN_SERVICE`.
 2. **Linux / fallback:** `~/.claude/.credentials.json` → `claudeAiOauth.accessToken`
-3. Override no painel (`data/config.json`): `CLAUDE_OAUTH_TOKEN`. **Não** use `claude setup-token` / `sk-ant-oat01-…`: esse token só tem escopo `user:inference` e o endpoint de cota exige `user:profile` → HTTP 403. No Mac, não grave token e use o login do Claude Code.
+3. Plano B no painel (`data/config.json`): `CLAUDE_OAUTH_TOKEN` (`CLAUDE_CODE_OAUTH_TOKEN` ainda é alias). Só Docker / outro PC. Token colado **não** ganha do Keychain se os dois existirem.
 
-`expiresAt` (ms): se no passado, abra o Claude Code para renovar.
+**Não** use `claude setup-token` / `sk-ant-oat01-…`: escopo `user:inference`; o endpoint de cota exige `user:profile` → HTTP 403.
 
-**Não** usar API key `sk-ant-...` neste endpoint.
+**Não** use API key `sk-ant-...` neste endpoint.
+
+**Não** rode `gerar_env_claude.py` no Mac — ele só avisa para não copiar o Bearer do Keychain para JSON.
+
+Tokens **nunca** vão para a ESP32 nem para o JSON de `GET /usage`.
 
 ## Formato da resposta (varia)
 

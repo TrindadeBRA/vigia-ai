@@ -48,12 +48,13 @@ Libere a porta **8787** no firewall para a rede local. Detalhes: [`docs/COLETOR.
 
 Tokens (não vão para a placa):
 
-| Serviço | Padrão |
-| --- | --- |
-| Claude | `~/.claude/.credentials.json` |
-| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` |
+| Serviço | Padrão (app neste PC) | Plano B |
+| --- | --- | --- |
+| Claude | Keychain (`Claude Code-credentials`), senão `~/.claude/.credentials.json` | `CLAUDE_OAUTH_TOKEN` no painel |
+| Cursor | `state.vscdb` (JWT da sessão) | `CURSOR_ACCESS_TOKEN` no painel |
+| OpenRouter | — | `OPENROUTER_API_KEY` no painel |
 
-Override no painel (`collector/data/config.json`): `CLAUDE_OAUTH_TOKEN`, `CURSOR_ACCESS_TOKEN`, `OPENROUTER_API_KEY`.
+No Mac, deixe Claude e Cursor **vazios** no painel. Se o login expirar, abra o app oficial — o coletor não copia token do Keychain para JSON. Docker: [docs/COLETOR.md](docs/COLETOR.md#docker-e-credenciais-do-host).
 
 ## Firmware na placa
 
@@ -135,6 +136,6 @@ Contrato do JSON: [`docs/CONTRATO_JSON.md`](docs/CONTRATO_JSON.md).
 
 ## APIs
 
-São as **mesmas da assinatura** (OAuth / JWT local), não a API paga por token. Não são estáveis como produto oficial; o coletor isola a quebra. Ver [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md) e [`docs/APIS_CURSOR.md`](docs/APIS_CURSOR.md).
+São as **mesmas da assinatura** (OAuth / JWT local), **não** a API paga por token e **não** um contrato público estável. O coletor isola a quebra. Endpoints internos; o Claude exige `User-Agent: claude-code/<ver>` senão 429. Tokens nunca na placa. Ver [`docs/APIS_CLAUDE.md`](docs/APIS_CLAUDE.md) e [`docs/APIS_CURSOR.md`](docs/APIS_CURSOR.md).
 
 Coletor sem cache: cada `GET /usage` busca dado em tempo real. O endpoint do Claude rate-limita se martelado — reduza o poll (`USAGE_POLL_MS`) se aparecer `HTTP 429` no card do Claude. Detalhes: [`docs/COLETOR.md`](docs/COLETOR.md#sem-cache--cuidado-com-rate-limit).

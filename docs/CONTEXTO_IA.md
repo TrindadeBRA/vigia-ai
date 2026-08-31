@@ -44,7 +44,7 @@ collector/web/index.html   # UI do painel
 collector/start.sh         # python local ou `docker`
 collector/providers/       # busca + parse: claude.py, cursor.py, openrouter.py
 collector/formatting.py    # datas (BRT) e percentuais/centavos compartilhados
-collector/cursor_state.py  # leitura do state.vscdb (server.py + gerar_env_cursor.py)
+collector/cursor_state.py  # leitura do state.vscdb + JWT exp (painel e provedor)
 src/main.cpp              # setup()/loop(), mock de boot
 src/usage_client.cpp       # Wi-Fi, GET, parse do JSON de /usage
 src/ui.cpp                # controlador: navegação, toque, redesenho

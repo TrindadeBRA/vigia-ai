@@ -31,10 +31,21 @@ def http_json(
     body: bytes | None = None,
     timeout: float = 20.0,
 ) -> Any:
-    req = urllib.request.Request(url, data=body, method=method, headers=headers or {})
+    hdrs = headers or {}
+    # urllib envia headers em latin-1. Token colado do Notes/Word com "—" (U+2014)
+    # derruba a request com UnicodeEncodeError ilegível na tela da placa.
+    try:
+        for key, val in hdrs.items():
+            key.encode("latin-1")
+            val.encode("latin-1")
+    except UnicodeEncodeError as exc:
+        raise RuntimeError("token com caractere especial; cole de novo no painel") from exc
+    req = urllib.request.Request(url, data=body, method=method, headers=hdrs)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
+    except UnicodeEncodeError as exc:
+        raise RuntimeError("token com caractere especial; cole de novo no painel") from exc
     except urllib.error.HTTPError as exc:
         err_body = exc.read().decode("utf-8", errors="replace")[:300]
         extra = _rate_limit_extra(exc)

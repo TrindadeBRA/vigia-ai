@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
-"""Grava CURSOR_ACCESS_TOKEN em data/config.json a partir do JWT do Cursor. Não imprime o token."""
+"""Aposentado: não copie o JWT do Cursor para config.json."""
 
 from __future__ import annotations
 
 import sys
 
-from cursor_state import read_item, state_db_path
-from store import CONFIG_PATH, update
+from store import CONFIG_PATH
 
 
 def main() -> int:
-    db = state_db_path()
-    token = read_item(db, "cursorAuth/accessToken")
-    if not token:
-        print(f"nao achei JWT em {db}")
-        print("abra o Cursor, faca login, feche e rode este script de novo")
-        return 1
-    plan = read_item(db, "cursorAuth/stripeMembershipType") or ""
-    update({"CURSOR_ACCESS_TOKEN": token, "CURSOR_STATE_DB": str(db)})
-    extra = f" plano={plan}" if plan else ""
-    print(f"gravado CURSOR_ACCESS_TOKEN em {CONFIG_PATH} ({len(token)} chars, nao exibido){extra}")
-    return 0
+    print("gerar_env_cursor.py foi aposentado.")
+    print()
+    print("No Mac, NÃO copie o JWT do Cursor para disco.")
+    print("Suba o coletor com ./dev-collector.sh (Python local) e deixe o campo vazio no painel.")
+    print("O coletor lê o state.vscdb do app já logado.")
+    print()
+    print("Docker: monte o globalStorage do Cursor (somente leitura) — ver docs/COLETOR.md")
+    print("Cole JWT no painel só se o app não estiver neste PC.")
+    print()
+    print(f"Não grave Bearer em {CONFIG_PATH} se o Cursor estiver neste computador.")
+    return 1
 
 
 if __name__ == "__main__":

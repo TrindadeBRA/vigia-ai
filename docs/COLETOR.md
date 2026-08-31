@@ -4,7 +4,7 @@
 
 Script `collector/server.py` (Python 3, só biblioteca padrão). Sobe HTTP em `0.0.0.0:8787`.
 
-`server.py` cuida só do HTTP; a busca/parse de cada assinatura fica em `collector/providers/claude.py` e `collector/providers/cursor.py`. Datas (BRT) e percentuais/centavos compartilhados estão em `collector/formatting.py`; a leitura do `state.vscdb` do Cursor está em `collector/cursor_state.py` (usada também por `gerar_env_cursor.py`, para não duplicar essa lógica).
+`server.py` cuida só do HTTP; a busca/parse de cada assinatura fica em `collector/providers/claude.py` e `collector/providers/cursor.py`. Datas (BRT) e percentuais/centavos compartilhados estão em `collector/formatting.py`; a leitura do `state.vscdb` do Cursor está em `collector/cursor_state.py`.
 
 Cada `GET /usage` busca as duas APIs na hora — **sem cache**. Ver aviso de rate limit abaixo.
 
@@ -12,7 +12,7 @@ Cada `GET /usage` busca as duas APIs na hora — **sem cache**. Ver aviso de rat
 
 ```bash
 ./dev-collector.sh                 # Python local (lê Claude/Cursor deste Mac)
-# ./dev-collector.sh docker        # opcional: Docker; tokens pelo painel
+# ./dev-collector.sh docker        # opcional; ver bind-mount abaixo
 ```
 
 Ou:
@@ -22,11 +22,11 @@ cd collector
 ./start.sh
 ```
 
-Abra **http://127.0.0.1:8787/** — painel para portas, URL da ESP32 e tokens. `GET /usage` continua sendo o contrato da placa.
+Abra **http://127.0.0.1:8787/** — painel para portas, URL da ESP32 e status do login. `GET /usage` continua sendo o contrato da placa.
 
-Tokens ficam em `collector/data/config.json` (gitignored). No Docker o mesmo arquivo é o volume `./data`. No Mac logado, Claude e Cursor podem ficar sem token gravado. OpenRouter: cole a key no painel.
+No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter: cole a key no painel (`data/config.json`, gitignored).
 
-Headless / Docker: o container **não** lê o Keychain. Cole o OAuth do Claude Code (não `setup-token`) e o JWT do Cursor no painel, ou rode sem Docker.
+O container **não** lê o Keychain do macOS. Prefira Python local neste Mac; no Docker, monte arquivos do host (abaixo) ou cole token só como plano B (`claude setup-token` **não** serve).
 
 Teste:
 
@@ -48,17 +48,43 @@ Firewall: permitir Python na porta **8787** para a rede local.
 
 ## Autenticação
 
+Caminho feliz: **app oficial neste computador**. O coletor relê Keychain / `state.vscdb` a cada `GET /usage`. Quem renova o login é o Claude Code ou o Cursor — se expirou, abra o app. A placa nunca recebe Bearer.
+
+| Fonte | Claude | Cursor |
+| --- | --- | --- |
+| 1 (local) | Keychain `Claude Code-credentials`, senão `~/.claude/.credentials.json` | `state.vscdb` → `cursorAuth/accessToken` |
+| 2 (plano B) | `CLAUDE_OAUTH_TOKEN` no painel | `CURSOR_ACCESS_TOKEN` no painel |
+
+Token colado **não** ganha do app local. Se o JWT/OAuth local falhar (expirado ou 401), tenta o colado.
+
+Não use `python3 gerar_env_claude.py` / `gerar_env_cursor.py` — copiam segredo para JSON; os scripts só imprimem este aviso.
+
 | Arquivo | Uso |
 | --- | --- |
-| `data/config.json` | Gitignored; gravado pelo painel; volume `./data` no Docker |
-| Painel `http://IP:8787/` | HOST, PORT, tokens; mostra URL LAN para `USAGE_URL` |
+| `data/config.json` | Gitignored; painel; volume `./data` no Docker (OpenRouter e plano B) |
+| Painel `http://IP:8787/` | HOST, PORT, status da fonte real (keychain / arquivo / vscdb / paste) |
 | `./start.sh` / `./dev-collector.sh` | Sobe o coletor; `docker` usa `compose.yaml` |
 
 No painel, **Modo mock** grava JSON falso (útil sem login).
 
+## Docker e credenciais do host
+
+`./dev-collector.sh docker` sobe só `compose.yaml` (`./data` para config). O Keychain **não** entra no container.
+
+Cursor (e Claude se existir `~/.claude/.credentials.json`): overlay somente leitura — **só se os caminhos já existirem** (senão o Docker cria pasta vazia no host):
+
+```bash
+cd collector
+docker compose -f compose.yaml -f compose.credentials.yaml up --build
+```
+
+Isso monta `~/.claude` e o `globalStorage` do Cursor no Mac. No Linux, edite o volume do Cursor em `compose.credentials.yaml` (`~/.config/Cursor/User/globalStorage`).
+
+Claude no **Mac + Docker**: o OAuth está no Keychain, não no arquivo. Use Python local, ou cole o accessToken no painel (não `setup-token`).
+
 ## Pré-requisitos de conta
 
-- Claude: ter usado **Claude Code** (ou app que grave OAuth nesse JSON) neste Mac.
+- Claude: ter usado **Claude Code** neste Mac (`claude` + login). O coletor lê o Keychain; não copie o token para disco.
 - Cursor: ter aberto o **Cursor** logado neste Mac pelo menos uma vez.
 
 ## Sem cache — cuidado com rate limit

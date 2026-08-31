@@ -8,9 +8,13 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+# Nomes conhecidos do Claude Code. Sem dump da Keychain: se a Anthropic
+# mudar o serviço, defina CLAUDE_KEYCHAIN_SERVICE (um nome, exatamente).
 KEYCHAIN_SERVICES = (
     "Claude Code-credentials",
 )
+
+_last_keychain_err: str | None = None
 
 
 def parse_oauth_blob(data: Any) -> tuple[str | None, int | None]:
@@ -48,28 +52,37 @@ def from_credentials_file(path: Path) -> tuple[str | None, int | None, str | Non
 
 def _keychain_services() -> list[str]:
     names = list(KEYCHAIN_SERVICES)
-    try:
-        dump = subprocess.run(
-            ["security", "dump-keychain"],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return names
-    for line in dump.stdout.splitlines():
-        if "Claude Code-credentials" not in line:
-            continue
-        # "svce"<blob>="Claude Code-credentials-abcd"
-        if '="' in line:
-            name = line.split('="', 1)[1].rstrip('"')
-            if name and name not in names:
-                names.append(name)
+    extra = os.environ.get("CLAUDE_KEYCHAIN_SERVICE", "").strip()
+    if extra and extra not in names:
+        names.insert(0, extra)
     return names
 
 
+def _keychain_error(svc: str, proc: subprocess.CompletedProcess[str]) -> str:
+    raw = (proc.stderr or proc.stdout or "").strip()
+    low = raw.lower()
+    if "could not be found" in low or proc.returncode == 44:
+        return (
+            f"Keychain sem o item «{svc}». Abra o Claude Code (`claude`) neste Mac, "
+            "faça login, e se o sistema pedir, permita o acesso do coletor."
+        )
+    if "user interaction is not allowed" in low:
+        return (
+            "Keychain recusou (sem janela para confirmar). Rode o coletor no Terminal "
+            "deste Mac — não no Docker — e permita o acesso quando o macOS pedir."
+        )
+    if "errsecauthfailed" in low or "authorization" in low:
+        return "Keychain recusou a senha. Rode `claude` e tente o coletor de novo no Terminal."
+    return (raw or "keychain recusou")[:240]
+
+
+def last_keychain_error() -> str | None:
+    return _last_keychain_err
+
+
 def from_macos_keychain() -> tuple[str | None, int | None, str | None]:
+    global _last_keychain_err
+    _last_keychain_err = None
     if os.uname().sysname != "Darwin":
         return None, None, None
     best: tuple[str, int | None] | None = None
@@ -87,7 +100,7 @@ def from_macos_keychain() -> tuple[str | None, int | None, str | None]:
             last_err = str(exc)
             continue
         if proc.returncode != 0:
-            last_err = (proc.stderr or proc.stdout or "keychain recusou").strip()[:200]
+            last_err = _keychain_error(svc, proc)
             continue
         token, exp = parse_oauth_blob(proc.stdout.strip())
         if not token:
@@ -96,7 +109,9 @@ def from_macos_keychain() -> tuple[str | None, int | None, str | None]:
         if best is None or (exp or 0) >= (best[1] or 0):
             best = (token, exp)
     if best:
+        _last_keychain_err = None
         return best[0], best[1], None
+    _last_keychain_err = last_err
     return None, None, last_err
 
 
@@ -120,9 +135,12 @@ def load_claude_oauth() -> tuple[str | None, int | None, str | None]:
     if not cands:
         path = credentials_path()
         bits = []
+        _tok, _exp, kc_err = from_macos_keychain()
+        if kc_err:
+            bits.append(kc_err)
         if not path.is_file():
             bits.append(f"sem {path} (no macOS o Claude Code 2.x usa o Keychain)")
-        bits.append("rode `claude` e, se o Mac pedir, permita acesso ao Keychain")
+        bits.append("rode `claude` neste Mac para renovar o login")
         return None, None, "; ".join(bits)
     _src, token, exp = cands[0]
     return token, exp, None

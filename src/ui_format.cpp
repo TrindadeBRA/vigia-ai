@@ -195,6 +195,70 @@ void drawError(int x, int y, const String& err, uint16_t bg) {
   tft.drawString(e, x, y, 2);
 }
 
+int drawErrorWrapped(int x, int y, int maxW, const String& err, uint16_t bg, uint8_t font,
+                     int maxH) {
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_BAD, bg);
+  const String e = err.length() ? err : String(uiTr().noData);
+  const int lineH = tft.fontHeight(font) + (font == 1 ? 2 : 4);
+  if (maxW < 8) {
+    return 0;
+  }
+  int cy = y;
+  int i = 0;
+  const int n = (int)e.length();
+  while (i < n) {
+    if (maxH > 0 && cy + lineH > y + maxH) {
+      break;
+    }
+    while (i < n && e[i] == ' ') {
+      i++;
+    }
+    if (i >= n) {
+      break;
+    }
+    int lineEnd = i;
+    int lastBreak = -1;
+    int j = i;
+    while (j < n) {
+      if (e[j] == '\n') {
+        lineEnd = j;
+        break;
+      }
+      const int next = j + 1;
+      if (tft.textWidth(e.substring(i, next), font) > maxW) {
+        break;
+      }
+      lineEnd = next;
+      char c = e[j];
+      if (c == ' ' || c == '/' || c == '-' || c == '_' || c == ':' || c == '.') {
+        lastBreak = next;
+      }
+      j = next;
+    }
+    if (j >= n) {
+      lineEnd = n;
+    } else if (j < n && e[j] == '\n') {
+      lineEnd = j;
+    } else if (lastBreak > i) {
+      lineEnd = lastBreak;
+    } else if (lineEnd == i) {
+      lineEnd = i + 1;
+    }
+    String line = e.substring(i, lineEnd);
+    line.trim();
+    if (line.length()) {
+      tft.drawString(line, x, cy, font);
+      cy += lineH;
+    }
+    i = lineEnd;
+    if (i < n && e[i] == '\n') {
+      i++;
+    }
+  }
+  return cy > y ? cy - y : lineH;
+}
+
 // Botão contornado (borda em acento, fundo do card) — mais discreto que um
 // bloco solido, condizente com a paleta neutra.
 void drawChoiceButton(int x, int y, int w, int h, const char* label, bool selected) {

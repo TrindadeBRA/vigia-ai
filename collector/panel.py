@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import os
 import socket
+import time
 from pathlib import Path
 from typing import Any
 
-from claude_oauth import credentials_path, env_claude_token
-from cursor_state import read_item, state_db_path
+from claude_oauth import claude_token_candidates, credentials_path, env_claude_token, last_keychain_error
+from cursor_state import cursor_token_candidates, env_cursor_token, jwt_expired
 from docker_ctl import docker_status
+from providers.openrouter import clean_openrouter_key
 from store import KEYS as ALLOWED_KEYS
 from store import apply as apply_store
 from store import update as update_store
@@ -66,71 +68,110 @@ def lan_ipv4() -> list[str]:
 
 
 def _claude_card() -> dict[str, Any]:
-    token = env_claude_token()
-    if token:
+    cands = claude_token_candidates()
+    env_tok = env_claude_token()
+    now_ms = int(time.time() * 1000)
+    live: tuple[str, str] | None = None
+    expired_only = False
+    for source, token, exp_ms in cands:
+        if exp_ms and exp_ms < now_ms:
+            expired_only = True
+            continue
+        live = (source, token)
+        break
+    if live:
+        source, token = live
+        unused_paste = bool(env_tok) and source != "env"
+        if source == "keychain":
+            label = "Lido do Keychain do Claude Code"
+        elif source == "credentials":
+            label = f"Lido de {credentials_path()}"
+        else:
+            label = "Token colado neste coletor"
+        mode = "local" if source != "env" else "paste"
+        if unused_paste:
+            label += " · token colado ignorado (o app local tem prioridade)"
         return {
-            "source": "env",
-            "label": "Token salvo neste coletor",
+            "source": source,
+            "label": label,
             "configured": True,
-            "suffix": _suffix(token),
-            "mode": "paste",
+            "suffix": _suffix(token) if source == "env" else None,
+            "mode": mode,
         }
-    creds = credentials_path()
-    if creds.is_file():
+    if expired_only:
         return {
-            "source": "credentials",
-            "label": "Arquivo do Claude Code neste computador",
-            "configured": True,
+            "source": "expired",
+            "label": "OAuth expirado — abra o Claude Code neste Mac para renovar",
+            "configured": False,
             "suffix": None,
-            "mode": "local",
+            "mode": "need_local",
         }
+    _tok, _exp, kc_err = None, None, last_keychain_error()
     if in_docker():
         return {
             "source": "missing",
-            "label": "No Docker o login do Mac não entra — cole o token abaixo",
+            "label": "Docker não lê o Keychain — monte ~/.claude ou cole o token abaixo",
             "configured": False,
             "suffix": None,
             "mode": "need_paste",
         }
+    label = kc_err or "Nenhum login encontrado — rode `claude` neste Mac"
     return {
-        "source": "app",
-        "label": "Vai usar o Claude Code já logado neste Mac",
-        "configured": True,
+        "source": "missing",
+        "label": label,
+        "configured": False,
         "suffix": None,
-        "mode": "local",
+        "mode": "need_local",
     }
 
 
 def _cursor_card() -> dict[str, Any]:
-    env_tok = os.environ.get("CURSOR_ACCESS_TOKEN", "").strip()
-    if env_tok:
+    cands = cursor_token_candidates()
+    env_tok = env_cursor_token()
+    live: tuple[str, str] | None = None
+    expired_only = False
+    for source, token, _plan in cands:
+        if jwt_expired(token):
+            expired_only = True
+            continue
+        live = (source, token)
+        break
+    if live:
+        source, token = live
+        unused_paste = bool(env_tok) and source != "env"
+        if source == "vscdb":
+            label = "Lido do login do Cursor neste Mac"
+        else:
+            label = "Token colado neste coletor"
+        mode = "local" if source != "env" else "paste"
+        if unused_paste:
+            label += " · token colado ignorado (o app local tem prioridade)"
         return {
-            "source": "env",
-            "label": "Token salvo neste coletor",
+            "source": source,
+            "label": label,
             "configured": True,
-            "suffix": _suffix(env_tok),
-            "mode": "paste",
+            "suffix": _suffix(token) if source == "env" else None,
+            "mode": mode,
         }
-    db = state_db_path()
-    if db.is_file() and read_item(db, "cursorAuth/accessToken"):
+    if expired_only:
         return {
-            "source": "vscdb",
-            "label": "Vai usar o Cursor já logado neste computador",
-            "configured": True,
+            "source": "expired",
+            "label": "Sessão expirada — abra o Cursor neste Mac para renovar",
+            "configured": False,
             "suffix": None,
-            "mode": "local",
+            "mode": "need_local",
         }
     if in_docker():
         return {
             "source": "missing",
-            "label": "No Docker o Cursor do Mac não entra — cole o token abaixo",
+            "label": "Docker não vê o Cursor do Mac — monte o state.vscdb ou cole o token abaixo",
             "configured": False,
             "suffix": None,
             "mode": "need_paste",
         }
     return {
         "source": "missing",
-        "label": "Abra o Cursor logado neste Mac — ou cole o token se estiver em outro PC",
+        "label": "Nenhum login encontrado — abra o Cursor neste Mac",
         "configured": False,
         "suffix": None,
         "mode": "need_local",
@@ -142,14 +183,14 @@ def _openrouter_card() -> dict[str, Any]:
     if token:
         return {
             "source": "env",
-            "label": "API key salva neste coletor",
+            "label": "Key salva neste coletor",
             "configured": True,
             "suffix": _suffix(token),
             "mode": "paste",
         }
     return {
         "source": "missing",
-        "label": "Falta a key — o OpenRouter não tem app neste Mac",
+        "label": "Nenhuma key configurada",
         "configured": False,
         "suffix": None,
         "mode": "need_paste",
@@ -226,6 +267,11 @@ def save_config(body: dict[str, Any]) -> dict[str, Any]:
             val = "1"
         if key == "COLLECTOR_MOCK" and val.lower() in ("false", "no", "0"):
             val = ""
+        if key == "OPENROUTER_API_KEY" and val:
+            cleaned = clean_openrouter_key(val)
+            if not cleaned:
+                return {"ok": False, "error": "API key OpenRouter inválida; cole só a chave sk-or-..."}
+            val = cleaned
         updates[key] = val
     if not updates:
         return {"ok": True, "changed": [], "note": "nada para gravar"}

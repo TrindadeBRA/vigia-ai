@@ -1,8 +1,10 @@
 # API Cursor (assinatura)
 
-Não há API pública documentada de “% do Pro restante”. O coletor imita o que o IDE já faz.
+Não há API pública documentada de “% do Pro restante”. O coletor imita o que o IDE já faz. Endpoints e nomes de campo **podem mudar** sem aviso.
 
-## Token
+Tokens **nunca** vão para a ESP32 nem para o JSON de `GET /usage`. Quem renova o JWT é o próprio Cursor: se expirou, abra o IDE neste Mac. O coletor só lê o `exp` do payload (sem verificar assinatura) para a mensagem de erro.
+
+## Token (app local primeiro)
 
 SQLite do Cursor (somente leitura; copia o arquivo para evitar lock):
 
@@ -18,7 +20,11 @@ SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken';
 
 Outras chaves úteis: `cursorAuth/cachedEmail`, `cursorAuth/stripeMembershipType`.
 
-Override: `CURSOR_ACCESS_TOKEN` no painel (`http://127.0.0.1:8787/`). Sem token gravado, o coletor lê o `state.vscdb` do app.
+Ordem: **`state.vscdb` primeiro**, depois `CURSOR_ACCESS_TOKEN` colado no painel. Se o JWT local estiver expirado ou a API devolver 401, o coletor tenta o token colado. No Mac com o app aberto, deixe o campo vazio.
+
+Plano B: `CURSOR_ACCESS_TOKEN` no painel — Docker / outro PC. Não rode `gerar_env_cursor.py` para copiar o JWT para JSON.
+
+Docker: monte o `globalStorage` (somente leitura) com `compose.credentials.yaml` — ver [COLETOR.md](COLETOR.md#docker-e-credenciais-do-host). Colar JWT continua sendo fallback.
 
 ## Endpoint principal (Pro / Ultra / Team)
 
@@ -31,7 +37,7 @@ Connect-Protocol-Version: 1
 {}
 ```
 
-Campos úteis (nomes podem mudar; ver `parse_cursor_dashboard` em `collector/server.py`):
+Campos úteis (nomes podem mudar; ver `parse_cursor_dashboard` em `collector/providers/cursor.py`):
 
 - `planUsage.autoPercentUsed` (ou `totalPercentUsed`) → "Cursor Models" no dashboard, vira `percent` no `/usage`
 - `planUsage.apiPercentUsed` → "Other Models" no dashboard, vira `other_percent` no `/usage`

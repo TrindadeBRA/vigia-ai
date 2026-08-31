@@ -389,7 +389,9 @@ static void paintHomeList() {
     const int contentH = titleH + titleToMetric + metricH + gapM + metricH;
     const int titleY = cardChrome(title, icon, top, contentH);
     if (!ok) {
-      drawError(pad + 12, titleY + 18, err, COL_CARD);
+      const int errY = titleY + titleH + 4;
+      const int errMaxH = (top + cardH - 8) - errY;
+      drawErrorWrapped(pad + 12, errY, cardW - 24, err, COL_CARD, 1, errMaxH);
       return;
     }
     const int barX = pad + 12;
@@ -404,7 +406,9 @@ static void paintHomeList() {
     const int contentH = titleH + titleToMetric + metricH;
     const int titleY = cardChrome(title, icon, top, contentH);
     if (!ok) {
-      drawError(pad + 12, titleY + 18, err, COL_CARD);
+      const int errY = titleY + titleH + 4;
+      const int errMaxH = (top + cardH - 8) - errY;
+      drawErrorWrapped(pad + 12, errY, cardW - 24, err, COL_CARD, 1, errMaxH);
       return;
     }
     const int barX = pad + 12;
@@ -520,7 +524,9 @@ static void paintHomeGrid() {
     const int barX = x + innerPadX;
     const int barW = cardW - innerPadX * 2;
     if (!ok) {
-      drawError(barX, titleY + titleH + 4, err, COL_CARD);
+      const int errY = titleY + titleH + 4;
+      const int errMaxH = (y + cardH - 8) - errY;
+      drawErrorWrapped(barX, errY, barW, err, COL_CARD, 1, errMaxH);
       return;
     }
     int my = titleY + titleH + titleToMetric;
@@ -537,7 +543,9 @@ static void paintHomeGrid() {
     const int barX = x + innerPadX;
     const int barW = cardW - innerPadX * 2;
     if (!ok) {
-      drawError(barX, titleY + titleH + 4, err, COL_CARD);
+      const int errY = titleY + titleH + 4;
+      const int errMaxH = (y + cardH - 8) - errY;
+      drawErrorWrapped(barX, errY, barW, err, COL_CARD, 1, errMaxH);
       return;
     }
     paintHomeMetric(barX, titleY + titleH + titleToMetric, barW, label, pct, sub, metricFont, labelH,
@@ -729,15 +737,17 @@ static void beginScrollCard(const char* title, const uint16_t* icon) {
   g_detailContentW = dW;
 }
 
+static void paintDetailFinish();
+
 static bool paintDetailChrome(const char* title, const uint16_t* icon, bool ok, const String& err) {
   beginScrollCard(title, icon);
+  tft.setViewport(dX, dClipTop, dW, dClipH, false);
   if (!ok) {
-    drawError(dX, dClipTop, err, COL_CARD);
-    g_detailCanScroll = false;
-    g_detailMaxScroll = 0;
+    int h = drawErrorWrapped(dX, dScreenY(), dW, err, COL_CARD);
+    dAdvance(h);
+    paintDetailFinish();
     return false;
   }
-  tft.setViewport(dX, dClipTop, dW, dClipH, false);
   return true;
 }
 
@@ -1080,7 +1090,9 @@ void paintNow() {
     const int metricH = labelH + 1 + barH + (compact || !sub1.length() ? 0 : 11);
     const int my = y + (rowH - metricH) / 2;
     if (!providerOk) {
-      drawError(mx0, y + 8, err, COL_CARD);
+      const int errY = y + 8;
+      const int errMaxH = (y + rowH - 6) - errY;
+      drawErrorWrapped(mx0, errY, mwAll, err, COL_CARD, 1, errMaxH);
       return;
     }
     paintNowMetric(mx0, my, mw, label1, pct1, compact ? String() : sub1, metricFont, labelH, barH);

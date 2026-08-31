@@ -15,6 +15,10 @@ String fmtUsdSite(int cents);
 
 void drawBar(int x, int y, int w, int h, float pct);
 void drawError(int x, int y, const String& err, uint16_t bg);
+// Quebra o erro em várias linhas. `font` 1 é menor (cards da home); 2 é o padrão
+// das telas de detalhe. `maxH` 0 = sem teto (o viewport da tela recorta).
+int drawErrorWrapped(int x, int y, int maxW, const String& err, uint16_t bg, uint8_t font = 2,
+                     int maxH = 0);
 void drawButton(int x, int y, int w, int h, const char* label);
 void drawChoiceButton(int x, int y, int w, int h, const char* label, bool selected);
 void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor);

@@ -43,7 +43,7 @@ def docker_status() -> dict[str, Any]:
             "daemon": False,
             "in_docker": _in_docker(),
             "compose_up": False,
-            "hint": "Instale o Docker Desktop se quiser o coletor em container. No Mac da mesa o Python local basta.",
+            "hint": "Instale o Docker Desktop se quiser o coletor em container. No Mac da mesa o Python local lê Keychain e Cursor; o container não lê Keychain.",
         }
     code, out, err = _run([docker_bin, "info"], timeout=8)
     daemon = code == 0

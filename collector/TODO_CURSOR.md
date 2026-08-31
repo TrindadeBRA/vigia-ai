@@ -8,10 +8,12 @@ Não existe API key oficial de “% do Pro”. O coletor lê o JWT que o Cursor 
 2. `./dev-collector.sh` — deixe `CURSOR_ACCESS_TOKEN` vazio no painel.
 3. Confira `cursor.ok` em `/usage`.
 
+O JWT do app tem prioridade sobre token colado. Se expirar, abra o Cursor.
+
 ## Headless / Docker
 
-Cole o token no painel (o container não vê o `state.vscdb` do host, a menos que você monte o arquivo).
+Monte o `state.vscdb` com `compose.credentials.yaml` (ver `docs/COLETOR.md`). Cole JWT no painel só se não puder montar o arquivo.
 
-## Script opcional
+## Script `gerar_env_cursor.py`
 
-`python3 gerar_env_cursor.py` grava o JWT em `data/config.json`. No Mac com o app aberto isso **não** é necessário.
+Aposentado. Só imprime o aviso acima e sai com código 1.

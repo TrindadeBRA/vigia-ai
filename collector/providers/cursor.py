@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
-from cursor_state import read_item, state_db_path
+from cursor_state import cursor_token_and_plan, cursor_token_candidates, jwt_expired
 from formatting import as_percent, cycle_end_label, money_cents
 from http_util import http_json
 
@@ -13,19 +12,6 @@ CURSOR_USAGE_URL = (
     "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage"
 )
 CURSOR_AUTH_USAGE_URL = "https://api2.cursor.sh/auth/usage"
-
-
-def cursor_token_and_plan() -> tuple[str | None, str | None, str | None]:
-    env_tok = os.environ.get("CURSOR_ACCESS_TOKEN", "").strip()
-    db = state_db_path()
-    if env_tok:
-        plan = read_item(db, "cursorAuth/stripeMembershipType")
-        return env_tok, plan, None
-    token = read_item(db, "cursorAuth/accessToken")
-    plan = read_item(db, "cursorAuth/stripeMembershipType")
-    if not token:
-        return None, None, f"sem JWT Cursor (abra o Cursor neste Mac): {db}"
-    return token, plan, None
 
 
 def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, Any] | None:
@@ -121,11 +107,11 @@ def _cursor_fail(msg: str) -> dict[str, Any]:
     }
 
 
-def fetch_cursor() -> dict[str, Any]:
-    token, plan, err = cursor_token_and_plan()
-    if err:
-        return _cursor_fail(err)
-    assert token
+def _is_auth_error(msg: str) -> bool:
+    return "HTTP 401" in msg or "HTTP 403" in msg
+
+
+def _fetch_cursor_with_token(token: str, plan: str | None) -> dict[str, Any]:
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -162,3 +148,24 @@ def fetch_cursor() -> dict[str, Any]:
     except RuntimeError as exc:
         return _cursor_fail(f"{dash_err}; fallback: {exc}")
     return _cursor_fail(dash_err)
+
+
+def fetch_cursor() -> dict[str, Any]:
+    cands = cursor_token_candidates()
+    if not cands:
+        _token, _plan, err = cursor_token_and_plan()
+        return _cursor_fail(err or "sem JWT Cursor")
+    last_err = "sem JWT Cursor"
+    for _source, token, plan in cands:
+        if jwt_expired(token):
+            last_err = "JWT expirado; abra o Cursor neste Mac"
+            continue
+        parsed = _fetch_cursor_with_token(token, plan)
+        if parsed.get("ok"):
+            return parsed
+        err = str(parsed.get("error") or "")
+        last_err = err
+        if _is_auth_error(err):
+            continue
+        return parsed
+    return _cursor_fail(last_err)
