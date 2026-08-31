@@ -212,6 +212,82 @@ static void updateNetLine() {
   }
 }
 
+static String originWithSlash(const String& url) {
+  String u = url;
+  int scheme = u.indexOf("://");
+  if (scheme < 0) {
+    return "";
+  }
+  int path = u.indexOf('/', scheme + 3);
+  if (path >= 0) {
+    u = u.substring(0, path);
+  }
+  u += "/";
+  return u;
+}
+
+static bool urlLooksLan(const String& u) {
+  if (!u.startsWith("http://") && !u.startsWith("https://")) {
+    return false;
+  }
+  if (u.indexOf("127.0.0.1") >= 0 || u.indexOf("localhost") >= 0) {
+    return false;
+  }
+  if (u.indexOf(".internal") >= 0) {
+    return false;
+  }
+  return true;
+}
+
+static void applyPanelUrl(const String& candidate) {
+  String next = originWithSlash(candidate);
+  if (!urlLooksLan(next)) {
+    return;
+  }
+  if (next != g_panelUrl) {
+    g_panelUrl = next;
+    Serial.printf("painel LAN=%s\n", g_panelUrl.c_str());
+    uiRefreshData();
+  }
+}
+
+static uint32_t g_panelTriedMs = 0;
+
+static void refreshPanelUrl() {
+  g_panelTriedMs = millis();
+  applyPanelUrl(USAGE_URL);
+  if (WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+  String health = originWithSlash(USAGE_URL) + "health";
+  if (!health.length() || health == "health") {
+    return;
+  }
+  HTTPClient http;
+#ifdef WOKWI_SIM
+  http.setTimeout(8000);
+  http.setConnectTimeout(8000);
+#else
+  http.setTimeout(3000);
+  http.setConnectTimeout(2500);
+#endif
+  if (!http.begin(health)) {
+    return;
+  }
+  int code = http.GET();
+  if (code != 200) {
+    http.end();
+    return;
+  }
+  String body = http.getString();
+  http.end();
+  JsonDocument doc;
+  if (deserializeJson(doc, body)) {
+    return;
+  }
+  applyPanelUrl(jsonText(doc["panel_lan"]));
+}
+
 static String usageEventsUrl() {
   String u = USAGE_URL;
   if (u.endsWith("/usage")) {
@@ -335,6 +411,9 @@ static void sseOpen() {
 void usageClientPoll() {
   uint32_t now = millis();
   if (!g_sseOpen) {
+    if (!g_panelUrl.length() && now - g_panelTriedMs > 15000) {
+      refreshPanelUrl();
+    }
     if (now < g_sseRetryAt) {
       return;
     }
@@ -381,6 +460,7 @@ void usageClientPoll() {
 
 void usageClientFetch() {
   updateNetLine();
+  refreshPanelUrl();
   Serial.println("coletor: GET /usage (refresh)");
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("coletor: sem Wi-Fi, aborta GET");
@@ -444,6 +524,7 @@ void usageClientEnsureWifi() {
       Serial.printf("Wi-Fi conectado ip=%s rssi=%d dBm\n", WiFi.localIP().toString().c_str(),
                     WiFi.RSSI());
       g_wifiLogged = true;
+      refreshPanelUrl();
     }
     return;
   }

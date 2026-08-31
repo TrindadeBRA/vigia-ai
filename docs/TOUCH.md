@@ -13,7 +13,7 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 | Cursor | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). Setas de scroll. Mesmo paginador de contas do Claude |
 | OpenRouter | Créditos da conta: barra, usado, resta, teto. Setas de scroll. Mesmo paginador de contas |
 | DeepSeek | Saldo da conta: barra, resta. Mesmo paginador de contas |
-| Info | Rede, layout da home (**Lista** / **Grade**), **tema** (Escuro / Claro / Contraste), **cor** (7 tons, padrao vermelho), **idioma** (PT / EN / ES, padrão pt-BR), **Atualizar**, **Calibrar**. **Setas** à direita se precisar de scroll |
+| Info | Rede, URL/QR do painel na LAN, layout da home (**Lista** / **Grade**), **tema** (Escuro / Claro / Contraste), **cor** (7 tons, padrao vermelho), **idioma** (PT / EN / ES, padrão pt-BR), **Atualizar**, **Calibrar**. **Setas** à direita se precisar de scroll |
 | Relogio | Hora com segundos, data e resumo dos provedores (mesma regra de "pior conta" da Início). **Sem barra**. Toque em qualquer lugar volta ao inicio |
 
 Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O **horario** da barra abre a tela Relogio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.

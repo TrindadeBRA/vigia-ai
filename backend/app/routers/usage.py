@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from app import __version__
 from app.hub import sse_bytes
+from app.netutil import panel_lan_url
 from app.schemas import SSE_WIRE_EXAMPLE, HealthPayload, UsagePayload
 
 router = APIRouter(tags=["usage"])
@@ -45,13 +46,17 @@ _SSE_RESPONSE_HEADERS = {
     operation_id="get_health",
     description=(
         "Processo no ar. Inclui os caminhos do painel, mostrador, "
-        "`GET /usage`, `GET /events` e o Swagger."
+        "`GET /usage`, `GET /events` e o Swagger. "
+        "`panel_lan` é a URL absoluta para abrir o painel em outro aparelho da rede "
+        "(a placa usa isso no QR da tela Sistema)."
     ),
 )
 def health(request: Request) -> HealthPayload:
+    port = int(request.app.state.listen_port)
     return HealthPayload(
         version=__version__,
-        listen={"host": request.app.state.listen_host, "port": request.app.state.listen_port},
+        panel_lan=panel_lan_url(port),
+        listen={"host": request.app.state.listen_host, "port": port},
     )
 
 

@@ -132,6 +132,10 @@ class HealthPayload(BaseModel):
     ok: bool = True
     version: str = Field(description="Versão do coletor.")
     panel: str = Field(default="/", description="Painel React.")
+    panel_lan: str = Field(
+        default="",
+        description="URL absoluta do painel na LAN (telefone / outro PC). Vazia se não houver IPv4.",
+    )
     display: str = Field(default="/display", description="Mostrador web.")
     usage: str = Field(default="/usage", description="JSON na hora (força um ciclo de APIs).")
     events: str = Field(default="/events", description="Stream SSE (firmware e /display).")

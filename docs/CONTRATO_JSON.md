@@ -171,7 +171,7 @@ Vem de `GET /user/balance` — saldo da conta dessa key; ver `docs/APIS_DEEPSEEK
 
 | Método | Caminho | Corpo |
 | --- | --- | --- |
-| GET | `/health` | `{"ok":true}` |
+| GET | `/health` | `{"ok":true,"panel_lan":"http://IP:8787/",...}` — `panel_lan` é a URL absoluta do painel na LAN (QR da placa) |
 | GET | `/usage` | contrato acima — consulta as APIs **na hora** e avisa os clientes SSE |
 | GET | `/events` | `text/event-stream`. `event: usage` + `data:` o mesmo JSON. Comentários `: ping` ~15 s. |
 

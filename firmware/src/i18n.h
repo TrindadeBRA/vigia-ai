@@ -23,6 +23,7 @@ struct UiStrings {
   const char* networkUpper;
   const char* updated;
   const char* updatedUpper;
+  const char* panel;
   const char* used;
   const char* left;
   const char* reset;

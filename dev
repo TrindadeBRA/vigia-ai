@@ -64,6 +64,15 @@ ensure_node() {
   fi
 }
 
+ensure_frontend_dist() {
+  if [ -f "$ROOT_DIR/frontend/dist/index.html" ]; then
+    return 0
+  fi
+  ensure_node
+  echo "== build frontend (painel na :${BACKEND_PORT} pra LAN / QR da placa) =="
+  (cd "$ROOT_DIR/frontend" && npm run build)
+}
+
 ensure_wokwigw() {
   if [ -x "$WOKWIGW_BIN" ]; then
     return 0
@@ -124,6 +133,7 @@ cleanup() {
 
 run_backend() {
   ensure_python
+  ensure_frontend_dist
   echo "== backend FastAPI :${BACKEND_PORT} (Swagger em /docs) =="
   (
     cd "$ROOT_DIR/backend"

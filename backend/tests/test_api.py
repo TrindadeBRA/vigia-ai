@@ -30,6 +30,11 @@ def test_health(client: TestClient) -> None:
     body = r.json()
     assert body["ok"] is True
     assert "version" in body
+    assert "panel_lan" in body
+    assert isinstance(body["panel_lan"], str)
+    if body["panel_lan"]:
+        assert body["panel_lan"].startswith("http://")
+        assert body["panel_lan"].endswith("/")
 
 
 def test_usage_mock_schema(client: TestClient) -> None:

@@ -7,6 +7,8 @@
 #include "assets/icons/icon_openrouter.h"
 #include "assets/icons/icon_deepseek.h"
 
+#include <qrcode.h>
+
 int g_headerH = 40;
 int g_contentX = 40;
 int g_contentY = 0;
@@ -1015,6 +1017,65 @@ static void dKv(const char* k, const String& v) {
   dAdvance(h);
 }
 
+static void dNote(const String& s);
+
+static String panelUrlCaption(const String& url) {
+  String s = url;
+  if (s.startsWith("http://")) {
+    s.remove(0, 7);
+  } else if (s.startsWith("https://")) {
+    s.remove(0, 8);
+  }
+  if (s.endsWith("/")) {
+    s.remove(s.length() - 1);
+  }
+  return s;
+}
+
+static void dPanelQr(const String& url) {
+  if (!url.length()) {
+    return;
+  }
+  QRCode qr;
+  static uint8_t qrBuf[256];
+  int err = qrcode_initText(&qr, qrBuf, 4, ECC_LOW, url.c_str());
+  if (err != 0) {
+    err = qrcode_initText(&qr, qrBuf, 5, ECC_LOW, url.c_str());
+  }
+  if (err != 0) {
+    dNote(url);
+    dAdvance(4);
+    return;
+  }
+  const bool compact = tft.height() < 280;
+  const int quiet = 3;
+  const int maxBox = compact ? 96 : 132;
+  int scale = maxBox / (qr.size + quiet * 2);
+  if (scale < 2) {
+    scale = 2;
+  }
+  const int box = (qr.size + quiet * 2) * scale;
+  const int h = box + 4;
+  if (dVisible(h)) {
+    int y = dScreenY();
+    int x = dX + (dW - box) / 2;
+    if (x < dX) {
+      x = dX;
+    }
+    tft.fillRoundRect(x, y, box, box, 4, 0xFFFF);
+    const int ox = x + quiet * scale;
+    const int oy = y + quiet * scale;
+    for (uint8_t row = 0; row < qr.size; row++) {
+      for (uint8_t col = 0; col < qr.size; col++) {
+        if (qrcode_getModule(&qr, col, row)) {
+          tft.fillRect(ox + (int)col * scale, oy + (int)row * scale, scale, scale, 0x0000);
+        }
+      }
+    }
+  }
+  dAdvance(h + 2);
+}
+
 static void dNote(const String& s) {
   if (!s.length()) {
     return;
@@ -1304,6 +1365,8 @@ void paintStatus() {
   String net = g_netLine.length() ? g_netLine : "---";
   dKv(t.network, net);
   dKv(t.updated, g_snap.updatedAt.length() ? fmtWhen(g_snap.updatedAt) : g_snap.statusLine);
+  dKv(t.panel, panelUrlCaption(g_panelUrl));
+  dPanelQr(g_panelUrl);
   dGap();
   dSection(t.homeSection);
 

@@ -95,6 +95,8 @@ extern View g_view;
 extern bool g_requestRefresh;
 extern bool g_requestCalibrate;
 extern String g_netLine;
+// URL absoluta do painel na LAN (`http://IP:porta/`) — QR da tela Sistema.
+extern String g_panelUrl;
 extern uint32_t g_lastFetchMs;
 extern uint32_t g_pollMs;
 extern bool g_hasFetchedOk;

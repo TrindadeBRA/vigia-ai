@@ -19,6 +19,7 @@ UsageSnapshot g_snap;
 bool g_requestRefresh = false;
 bool g_requestCalibrate = false;
 String g_netLine = "";
+String g_panelUrl = "";
 
 uint32_t g_lastFetchMs = 0;
 uint32_t g_pollMs = USAGE_POLL_MS;

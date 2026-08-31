@@ -26,3 +26,11 @@ def lan_ipv4() -> list[str]:
     except OSError:
         pass
     return found
+
+
+def panel_lan_url(port: int) -> str:
+    """URL absoluta do painel na LAN — o QR da placa aponta para cá."""
+    ips = lan_ipv4()
+    if not ips:
+        return ""
+    return f"http://{ips[0]}:{int(port)}/"
