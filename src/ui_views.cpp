@@ -371,8 +371,8 @@ static void paintHomeMetric(int x, int y, int w, const char* label, float pct, c
 }
 
 // Home em lista: um card empilhado por provedor configurado (0 a 4).
-// Provedores nunca preenchidos no painel (`configured=false`) não entram na
-// lista — o card nem é desenhado nem responde a toque.
+// Provedores com `configured=false` (nunca preenchidos, ou ocultos no
+// painel) não entram na lista — o card nem é desenhado nem responde a toque.
 static void paintHomeList() {
   layoutContent();
   const int x0 = g_contentX;

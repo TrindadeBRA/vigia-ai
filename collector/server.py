@@ -16,6 +16,7 @@ from cursor_state import cursor_token_candidates
 from docker_ctl import docker_down, docker_up
 from formatting import utc_now
 from store import apply as apply_store
+from store import env_flag
 from panel import WEB_DIR, clear_secret, config_payload, reload_env, save_config
 from providers.claude import _claude_fail, fetch_claude
 from providers.cursor import _cursor_fail, fetch_cursor
@@ -76,36 +77,59 @@ def mock_payload() -> dict[str, Any]:
 
 
 def _is_configured() -> dict[str, bool]:
-    """Provedor foi preenchido pelo usuario (painel ou credencial local)?
+    """Provedor deve aparecer na ESP32?
 
     Distinto de `ok`: um provedor configurado pode falhar (rede, token
-    expirado) e ainda assim deve aparecer na tela, com erro. So um provedor
-    nunca preenchido fica de fora — o usuario controla o que quer listar.
+    expirado) e ainda assim deve aparecer na tela, com erro. Fica de fora
+    quem nunca foi preenchido (OpenRouter/DeepSeek sem key) ou quem o
+    usuário ocultou no painel (Claude/Cursor — o login local continua).
     """
     return {
-        "claude": bool(claude_token_candidates()),
-        "cursor": bool(cursor_token_candidates()),
+        "claude": (not env_flag("CLAUDE_HIDDEN")) and bool(claude_token_candidates()),
+        "cursor": (not env_flag("CURSOR_HIDDEN")) and bool(cursor_token_candidates()),
         "openrouter": bool(os.environ.get("OPENROUTER_API_KEY", "").strip()),
         "deepseek": bool(os.environ.get("DEEPSEEK_API_KEY", "").strip()),
     }
 
 
+def _stamp_configured(payload: dict[str, Any]) -> dict[str, Any]:
+    configured = _is_configured()
+    for name in ("claude", "cursor", "openrouter", "deepseek"):
+        block = payload.get(name)
+        if isinstance(block, dict):
+            block["configured"] = configured[name]
+    return payload
+
+
 def build_payload() -> dict[str, Any]:
     reload_env()
-    if os.environ.get("COLLECTOR_MOCK", "").strip() in ("1", "true", "yes"):
-        return mock_payload()
+    if env_flag("COLLECTOR_MOCK"):
+        payload = mock_payload()
+        if env_flag("CLAUDE_HIDDEN"):
+            payload["claude"]["configured"] = False
+        if env_flag("CURSOR_HIDDEN"):
+            payload["cursor"]["configured"] = False
+        return payload
     claude: dict[str, Any]
     cursor: dict[str, Any]
     openrouter: dict[str, Any]
     deepseek: dict[str, Any]
-    try:
-        claude = fetch_claude()
-    except Exception as exc:  # noqa: BLE001 — isolar provedor
-        claude = _claude_fail(str(exc))
-    try:
-        cursor = fetch_cursor()
-    except Exception as exc:  # noqa: BLE001
-        cursor = _cursor_fail(str(exc))
+    # Oculto no painel: não chama a API (rate limit do Claude) e o firmware
+    # some o card via configured=false.
+    if env_flag("CLAUDE_HIDDEN"):
+        claude = _claude_fail("oculto no painel")
+    else:
+        try:
+            claude = fetch_claude()
+        except Exception as exc:  # noqa: BLE001 — isolar provedor
+            claude = _claude_fail(str(exc))
+    if env_flag("CURSOR_HIDDEN"):
+        cursor = _cursor_fail("oculto no painel")
+    else:
+        try:
+            cursor = fetch_cursor()
+        except Exception as exc:  # noqa: BLE001
+            cursor = _cursor_fail(str(exc))
     try:
         openrouter = fetch_openrouter()
     except Exception as exc:  # noqa: BLE001
@@ -114,18 +138,15 @@ def build_payload() -> dict[str, Any]:
         deepseek = fetch_deepseek()
     except Exception as exc:  # noqa: BLE001
         deepseek = _deepseek_fail(str(exc))
-    configured = _is_configured()
-    claude["configured"] = configured["claude"]
-    cursor["configured"] = configured["cursor"]
-    openrouter["configured"] = configured["openrouter"]
-    deepseek["configured"] = configured["deepseek"]
-    return {
-        "updated_at": utc_now(),
-        "claude": claude,
-        "cursor": cursor,
-        "openrouter": openrouter,
-        "deepseek": deepseek,
-    }
+    return _stamp_configured(
+        {
+            "updated_at": utc_now(),
+            "claude": claude,
+            "cursor": cursor,
+            "openrouter": openrouter,
+            "deepseek": deepseek,
+        }
+    )
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -247,7 +268,7 @@ class Handler(BaseHTTPRequestHandler):
             payload = build_payload()
             for name in ("claude", "cursor", "openrouter", "deepseek"):
                 block = payload.get(name) or {}
-                if isinstance(block, dict) and not block.get("ok"):
+                if isinstance(block, dict) and not block.get("ok") and block.get("configured"):
                     print(f"[{utc_now()}] ERRO {name}: {block.get('error')}")
             self._send_json(200, payload)
             return

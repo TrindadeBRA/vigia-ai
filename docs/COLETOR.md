@@ -24,7 +24,7 @@ cd collector
 
 Abra **http://127.0.0.1:8787/** — painel para portas, URL da ESP32 e status do login. `GET /usage` continua sendo o contrato da placa.
 
-No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter e DeepSeek: cole a key de cada um no painel (`data/config.json`, gitignored).
+No Mac com Claude Code e Cursor logados, **não cole token**. OpenRouter e DeepSeek: cole a key de cada um no painel (`data/config.json`, gitignored). Claude e Cursor aparecem na placa automaticamente se o app local estiver logado; no painel, desmarque **Mostrar na placa** para ocultar o card na ESP32 sem apagar o login.
 
 O container **não** lê o Keychain do macOS. Prefira Python local neste Mac; no Docker, monte arquivos do host (abaixo) ou cole token só como plano B (`claude setup-token` **não** serve).
 
@@ -61,8 +61,8 @@ Não use `python3 gerar_env_claude.py` / `gerar_env_cursor.py` — copiam segred
 
 | Arquivo | Uso |
 | --- | --- |
-| `data/config.json` | Gitignored; painel; volume `./data` no Docker (OpenRouter, DeepSeek e plano B) |
-| Painel `http://IP:8787/` | HOST, PORT, status da fonte real (keychain / arquivo / vscdb / paste) |
+| `data/config.json` | Gitignored; painel; volume `./data` no Docker (OpenRouter, DeepSeek, plano B, `CLAUDE_HIDDEN` / `CURSOR_HIDDEN`) |
+| Painel `http://IP:8787/` | HOST, PORT, status da fonte real, interruptor **Mostrar na placa** (Claude/Cursor) |
 | `./start.sh` / `./dev-collector.sh` | Sobe o coletor; `docker` usa `compose.yaml` |
 
 No painel, **Modo mock** grava JSON falso (útil sem login).

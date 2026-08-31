@@ -80,7 +80,7 @@ Datas: string ISO-8601 UTC (`…Z`) ou `null`.
 | --- | --- | --- |
 | `ok` | bool | `false` se não deu para obter cota |
 | `error` | string ou `null` | Mensagem curta para a tela / curl |
-| `configured` | bool | `false` se o usuário nunca preencheu este provedor (sem credencial local nem key colada no painel) — o firmware não desenha o card. Distinto de `ok`: um provedor `configured=true` pode falhar (`ok=false`) e o card continua aparecendo, com erro |
+| `configured` | bool | `false` se o firmware não deve desenhar o card: usuário nunca preencheu o provedor (sem credencial local nem key no painel) **ou** ocultou Claude/Cursor no painel. Distinto de `ok`: um provedor `configured=true` pode falhar (`ok=false`) e o card continua aparecendo, com erro |
 | `session_percent` | number ou `null` | Janela ~5 h |
 | `session_resets_at` | string ou `null` | |
 | `weekly_percent` | number ou `null` | Janela ~7 d (todos os modelos) |
@@ -151,13 +151,18 @@ Se só o Claude falhar: `claude.ok=false`, `cursor` preenchido. HTTP **200**. A 
 
 HTTP 5xx só se o processo do coletor quebrar de fato.
 
-## Provedor não configurado
+## Provedor não configurado (ou oculto)
 
-`configured=false` significa que o usuário nunca preencheu aquele provedor —
-nenhuma credencial local encontrada e nenhuma key colada no painel
-(`collector/data/config.json`). O firmware **não desenha o card** desse
-provedor em nenhuma tela (Início lista/grade, Agora); o usuário controla o
-que quer listar simplesmente preenchendo ou não cada provedor no painel.
+`configured=false` significa que o firmware **não desenha o card** em nenhuma
+tela (Início lista/grade, Agora). Duas origens:
+
+1. **Nunca preenchido** — nenhuma credencial local e nenhuma key colada no
+   painel (`collector/data/config.json`). OpenRouter e DeepSeek somem ao
+   apagar a API key.
+2. **Oculto no painel** — Claude e Cursor pegam o login local do Mac
+   sozinhos; o interruptor **Mostrar na placa** grava `CLAUDE_HIDDEN` /
+   `CURSOR_HIDDEN` em `config.json` e o coletor passa `configured=false`
+   (sem chamar a API). O login local continua; só o card some na ESP32.
 
 Isso é diferente de `ok=false`: um provedor `configured=true` que falha
 (rede fora do ar, token expirado, rate limit) continua com o card visível,

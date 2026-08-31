@@ -279,9 +279,27 @@ void uiTickEye() {
   drawEyeIcon(g_eyeCx, g_eyeCy, g_eyeR, g_eyeGazeX, g_eyeGazeY);
 }
 
+static bool viewProviderVisible(View v) {
+  switch (v) {
+    case VIEW_CLAUDE:
+      return g_snap.claude.configured;
+    case VIEW_CURSOR:
+      return g_snap.cursor.configured;
+    case VIEW_OPENROUTER:
+      return g_snap.openrouter.configured;
+    case VIEW_DEEPSEEK:
+      return g_snap.deepseek.configured;
+    default:
+      return true;
+  }
+}
+
 void uiSetView(View v) {
   if (v >= VIEW_COUNT) {
     return;
+  }
+  if (!viewProviderVisible(v)) {
+    v = VIEW_HOME;
   }
   if (v == g_view) {
     return;
@@ -329,6 +347,12 @@ void uiPrev() {
 // pra atualizacoes periodicas de dado (refresh automatico/manual) e evita o
 // "pisca" de um fillScreen a cada poucos segundos.
 void uiRefreshData() {
+  if (!viewProviderVisible(g_view)) {
+    g_view = VIEW_HOME;
+    g_detailScroll = 0;
+    g_lastHeaderKey = -1000000;
+    tft.fillScreen(COL_BG);
+  }
   if (g_view == VIEW_NOW) {
     paintNow();
     return;

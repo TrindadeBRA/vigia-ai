@@ -21,7 +21,18 @@ KEYS = (
     "OPENROUTER_API_KEY",
     "DEEPSEEK_API_KEY",
     "COLLECTOR_MOCK",
+    # Claude/Cursor pegam login local sozinhos; estes flags só escondem o card
+    # na ESP32 (configured=false no /usage). Ausente = visível.
+    "CLAUDE_HIDDEN",
+    "CURSOR_HIDDEN",
 )
+
+FLAG_KEYS = frozenset({"COLLECTOR_MOCK", "CLAUDE_HIDDEN", "CURSOR_HIDDEN"})
+
+
+def env_flag(key: str) -> bool:
+    return os.environ.get(key, "").strip().lower() in ("1", "true", "yes")
+
 
 _LISTEN = frozenset({"HOST", "PORT"})
 

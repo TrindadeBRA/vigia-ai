@@ -13,8 +13,10 @@ from cursor_state import cursor_missing_hint, cursor_token_candidates, env_curso
 from docker_ctl import docker_status
 from providers.deepseek import clean_deepseek_key
 from providers.openrouter import clean_openrouter_key
+from store import FLAG_KEYS
 from store import KEYS as ALLOWED_KEYS
 from store import apply as apply_store
+from store import env_flag
 from store import update as update_store
 
 HERE = Path(__file__).resolve().parent
@@ -256,8 +258,8 @@ def config_payload(listen_host: str, listen_port: int) -> dict[str, Any]:
         "port_file": env_port or str(listen_port),
         "restart_needed_for_port": restart,
         "providers": {
-            "claude": _claude_card(),
-            "cursor": _cursor_card(),
+            "claude": {**_claude_card(), "hidden": env_flag("CLAUDE_HIDDEN")},
+            "cursor": {**_cursor_card(), "hidden": env_flag("CURSOR_HIDDEN")},
             "openrouter": _openrouter_card(),
             "deepseek": _deepseek_card(),
         },
@@ -292,10 +294,12 @@ def save_config(body: dict[str, Any]) -> dict[str, Any]:
                 return {"ok": False, "error": "PORT precisa ser um número"}
             if n < 1 or n > 65535:
                 return {"ok": False, "error": "PORT fora do intervalo 1–65535"}
-        if key == "COLLECTOR_MOCK" and val.lower() in ("true", "yes"):
-            val = "1"
-        if key == "COLLECTOR_MOCK" and val.lower() in ("false", "no", "0"):
-            val = ""
+        if key in FLAG_KEYS:
+            low = val.lower()
+            if low in ("true", "yes", "1"):
+                val = "1"
+            elif low in ("false", "no", "0", ""):
+                val = ""
         if key == "OPENROUTER_API_KEY" and val:
             cleaned = clean_openrouter_key(val)
             if not cleaned:

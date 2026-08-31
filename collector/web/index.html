@@ -84,6 +84,11 @@
             <span id="claude-badge" class="text-xs font-medium"></span>
           </div>
           <p class="mt-1 text-xs text-ink3">Cota da assinatura (sessão de 5h e semana) — a mesma do Claude Code, não a key <code class="text-ink2">sk-ant-…</code>.</p>
+          <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-ink2">
+            <input id="claude-on-board" type="checkbox" class="rounded border-edge accent-accent" />
+            Mostrar na placa
+          </label>
+          <p class="mt-1 text-xs text-ink3">O login local continua; desmarque só para tirar o card da ESP32.</p>
           <div class="mt-3">
             <p class="text-xs leading-relaxed text-ink3">Só para Docker ou outro PC sem o Claude Code. Não cole o resultado de <code class="text-ink2">claude setup-token</code>.</p>
             <div id="claude-fields-skel" class="mt-2 flex flex-wrap gap-2">
@@ -109,6 +114,11 @@
             <span id="cursor-badge" class="text-xs font-medium"></span>
           </div>
           <p class="mt-1 text-xs text-ink3">% do plano (Cursor Models e Other Models). Sem API key oficial — lê o login salvo pelo app.</p>
+          <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm text-ink2">
+            <input id="cursor-on-board" type="checkbox" class="rounded border-edge accent-accent" />
+            Mostrar na placa
+          </label>
+          <p class="mt-1 text-xs text-ink3">O login local continua; desmarque só para tirar o card da ESP32.</p>
           <div class="mt-3">
             <p class="text-xs leading-relaxed text-ink3">
               <strong class="text-ink2">Tente primeiro:</strong> no Cursor, Settings → Account → sair e entrar de novo,
@@ -324,6 +334,8 @@ rm -f "$tmp"
       fillProv("cursor", d.providers.cursor);
       fillProv("or", d.providers.openrouter);
       fillProv("deepseek", d.providers.deepseek);
+      $("claude-on-board").checked = !d.providers.claude.hidden;
+      $("cursor-on-board").checked = !d.providers.cursor.hidden;
       fillDocker(d);
     }
 
@@ -411,6 +423,20 @@ rm -f "$tmp"
     bindProviderActions("or", "OPENROUTER_API_KEY", "key");
     bindProviderActions("deepseek", "DEEPSEEK_API_KEY", "key");
 
+    function bindOnBoard(prefix, flagKey) {
+      $(prefix + "-on-board").onchange = async () => {
+        const hidden = !$(prefix + "-on-board").checked;
+        const out = await postConfig({ [flagKey]: hidden ? "1" : "" });
+        const msg = $(prefix + "-msg");
+        msg.textContent = out.ok
+          ? (hidden ? "Oculto na placa. O login local continua." : "Voltou a aparecer na placa.")
+          : (out.error || "Falha ao salvar.");
+        await load();
+      };
+    }
+    bindOnBoard("claude", "CLAUDE_HIDDEN");
+    bindOnBoard("cursor", "CURSOR_HIDDEN");
+
     $("copy-cursor-cmd").onclick = async () => {
       const btn = $("copy-cursor-cmd");
       try {
@@ -429,6 +455,12 @@ rm -f "$tmp"
       const d = await r.json();
       const card = (name, title) => {
         const b = d[name] || {};
+        if (!b.configured) {
+          return `<div class="rounded-xl border border-edge bg-surface/40 p-3">
+          <p class="text-sm font-medium">${title}</p>
+          <p class="mt-1 text-xs text-ink3">não listado na placa</p>
+        </div>`;
+        }
         const ok = !!b.ok;
         const detail = ok
           ? (name === "claude"
