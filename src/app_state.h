@@ -9,7 +9,8 @@ enum View : uint8_t {
   VIEW_CURSOR = 2,
   VIEW_OPENROUTER = 3,
   VIEW_STATUS = 4,
-  VIEW_COUNT = 5
+  VIEW_NOW = 5,
+  VIEW_COUNT = 6
 };
 
 struct ClaudeUsage {

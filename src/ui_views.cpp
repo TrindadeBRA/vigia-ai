@@ -23,6 +23,10 @@ int g_headerInfoX0 = 0;
 int g_headerInfoY0 = 0;
 int g_headerInfoX1 = 0;
 int g_headerInfoY1 = 0;
+int g_headerClockX0 = 0;
+int g_headerClockY0 = 0;
+int g_headerClockX1 = 0;
+int g_headerClockY1 = 0;
 int g_homeSplitX = 0;
 int g_homeSplitY = 0;
 int g_homeSplitY1 = 0;
@@ -210,9 +214,17 @@ void drawHeader() {
     g_headerInfoX1 = infoCx + infoR + 8;
     g_headerInfoY1 = g_hdrY1;
 
-    String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 10) : "---";
+    String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 10) : "--:--";
+    int tw = tft.textWidth(right, 2);
+    g_headerClockX1 = g_headerInfoX0 - 2;
+    g_headerClockX0 = g_headerClockX1 - tw - 10;
+    if (g_headerClockX0 < g_headerHomeX1) {
+      g_headerClockX0 = g_headerHomeX1;
+    }
+    g_headerClockY0 = g_hdrY0;
+    g_headerClockY1 = g_hdrY1;
     tft.setTextDatum(TR_DATUM);
-    tft.setTextColor(COL_TEXT_DIM, COL_BG);
+    tft.setTextColor(COL_TEXT, COL_BG);
     tft.drawString(right, g_headerInfoX0 - 4, barY + 8, 2);
     if (showBadge) {
       drawCountdownBadgeAt(badgeCx, midY, secs);
@@ -232,10 +244,14 @@ void drawHeader() {
   g_headerHomeX1 = g_hdrX1;
   g_headerHomeY1 = y + 28;
 
-  String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 5) : "---";
+  String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 5) : "--:--";
   tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(COL_TEXT_DIM, COL_BG);
+  tft.setTextColor(COL_TEXT, COL_BG);
   tft.drawString(right, cx, y + 30, 1);
+  g_headerClockX0 = g_hdrX0;
+  g_headerClockY0 = y + 24;
+  g_headerClockX1 = g_hdrX1;
+  g_headerClockY1 = y + 48;
 
   const int badgeCy = H - 8 - r;
   const int infoCy = showBadge ? badgeCy - r - 12 - infoR : H - 8 - infoR;
@@ -916,6 +932,61 @@ void paintStatus() {
 #endif
 
   paintDetailFinish();
+}
+
+void paintNow() {
+  const int W = tft.width();
+  const int H = tft.height();
+  tft.fillRect(0, 0, W, H, COL_BG);
+
+  int year = 0, mo = 0, dd = 0, hh = 0, mi = 0;
+  bool ok = wallClockNow(year, mo, dd, hh, mi);
+
+  char timeBuf[8];
+  if (ok) {
+    snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", hh, mi);
+  } else {
+    snprintf(timeBuf, sizeof(timeBuf), "--:--");
+  }
+  const uint8_t timeFont = (H >= 280) ? 6 : 4;
+  tft.setTextDatum(TC_DATUM);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  const int timeY = (H >= 280) ? 28 : 18;
+  tft.drawString(timeBuf, W / 2, timeY, timeFont);
+
+  char dateBuf[28];
+  if (ok) {
+    snprintf(dateBuf, sizeof(dateBuf), "%s  %02d/%02d/%04d", uiWeekday(weekdaySun0(year, mo, dd)), dd,
+             mo, year);
+  } else {
+    snprintf(dateBuf, sizeof(dateBuf), "--/--/----");
+  }
+  tft.setTextColor(COL_TEXT_DIM, COL_BG);
+  const int dateY = timeY + ((H >= 280) ? 52 : 36);
+  tft.drawString(dateBuf, W / 2, dateY, 2);
+
+  const int rowTop = dateY + 28;
+  const int rowH = (H - rowTop - 12) / 3;
+  const int pad = (W < 360) ? 16 : 28;
+  const int barW = W - pad * 2 - 24 - ICON_CLAUDE_W;
+  const int barX = pad + ICON_CLAUDE_W + 10;
+  auto row = [&](int i, const char* name, const uint16_t* icon, float pct, const String& extra) {
+    int y = rowTop + i * rowH;
+    drawIcon(pad, y + 2, ICON_CLAUDE_W, ICON_CLAUDE_H, icon);
+    tft.setTextDatum(TL_DATUM);
+    tft.setTextColor(COL_TEXT, COL_BG);
+    tft.drawString(name, barX, y, 2);
+    tft.setTextDatum(TR_DATUM);
+    String right = fmtPct(pct);
+    if (extra.length()) {
+      right = extra + "  " + right;
+    }
+    tft.drawString(right, W - pad, y, 2);
+    drawBar(barX, y + 18, barW, 8, pct);
+  };
+  row(0, "Claude", ICON_CLAUDE, g_snap.claude.weeklyPercent, fmtPct(g_snap.claude.sessionPercent));
+  row(1, "Cursor", ICON_CURSOR, g_snap.cursor.percent, "");
+  row(2, "OpenRouter", ICON_OPENROUTER, g_snap.openrouter.percent, "");
 }
 
 static void splashDelay(uint32_t ms) {

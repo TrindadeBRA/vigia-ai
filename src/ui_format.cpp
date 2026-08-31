@@ -71,6 +71,61 @@ String fmtWhen(const String& raw) {
   return String(buf);
 }
 
+int weekdaySun0(int year, int mo, int dd) {
+  static const int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+  if (mo < 3) {
+    year--;
+  }
+  return (year + year / 4 - year / 100 + year / 400 + t[mo - 1] + dd) % 7;
+}
+
+bool wallClockNow(int& year, int& mo, int& dd, int& hh, int& mi) {
+  String s = g_snap.updatedAt;
+  s.trim();
+  if (s.length() < 16 || s.charAt(4) != '-' || s.indexOf('T') != 10) {
+    return false;
+  }
+  year = s.substring(0, 4).toInt();
+  mo = s.substring(5, 7).toInt();
+  dd = s.substring(8, 10).toInt();
+  hh = s.substring(11, 13).toInt();
+  mi = s.substring(14, 16).toInt();
+  int ss = (s.length() >= 19) ? s.substring(17, 19).toInt() : 0;
+  if (year < 2020 || mo < 1 || mo > 12 || dd < 1) {
+    return false;
+  }
+  uint32_t origin = g_hasFetchedOk ? g_lastFetchOkMs : g_lastFetchMs;
+  if (origin != 0) {
+    ss += (int)((millis() - origin) / 1000UL);
+  }
+  mi += ss / 60;
+  hh += mi / 60;
+  dd += hh / 24;
+  mi %= 60;
+  hh %= 24;
+  if (mi < 0) {
+    mi += 60;
+  }
+  if (hh < 0) {
+    hh += 24;
+  }
+  static const int mdays[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  auto leap = [](int y) { return (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0); };
+  while (mo <= 12) {
+    int dim = mdays[mo] + ((mo == 2 && leap(year)) ? 1 : 0);
+    if (dd <= dim) {
+      break;
+    }
+    dd -= dim;
+    mo++;
+    if (mo > 12) {
+      mo = 1;
+      year++;
+    }
+  }
+  return true;
+}
+
 String fmtPct(float pct) {
   if (pct < 0) {
     return "--";

@@ -1,5 +1,6 @@
 #include "ui.h"
 
+#include "ui_format.h"
 #include "ui_internal.h"
 
 #include <Preferences.h>
@@ -173,6 +174,16 @@ void uiSetHeaderEdge(HeaderEdge edge) {
 // Redesenha so o header quando o contador (ou o check de sucesso) muda,
 // sem repintar a tela inteira — chamado a cada volta do loop() em main.cpp.
 void uiTickClock() {
+  if (g_view == VIEW_NOW) {
+    int year, mo, dd, hh, mi;
+    int key = wallClockNow(year, mo, dd, hh, mi) ? (hh * 60 + mi) : -1;
+    if (key == g_lastHeaderKey) {
+      return;
+    }
+    g_lastHeaderKey = key;
+    paintNow();
+    return;
+  }
   int key = headerDisplayKey(countdownSeconds(), showFetchOkCheck());
   if (key == g_lastHeaderKey) {
     return;
@@ -189,6 +200,7 @@ void uiSetView(View v) {
   }
   g_view = v;
   g_detailScroll = 0;
+  g_lastHeaderKey = -1000000;
   uiPaint();
 }
 
@@ -229,6 +241,10 @@ void uiPrev() {
 // pra atualizacoes periodicas de dado (refresh automatico/manual) e evita o
 // "pisca" de um fillScreen a cada poucos segundos.
 void uiRefreshData() {
+  if (g_view == VIEW_NOW) {
+    paintNow();
+    return;
+  }
   drawHeader();
   switch (g_view) {
     case VIEW_CLAUDE:
@@ -258,6 +274,10 @@ void uiPaint() {
 }
 
 void uiHandleSwipe(int16_t dx) {
+  if (g_view == VIEW_NOW) {
+    uiSetView(VIEW_HOME);
+    return;
+  }
   if (dx <= -40) {
     uiNext();
   } else if (dx >= 40) {
@@ -277,6 +297,10 @@ void uiHandleTap(int16_t x, int16_t y) {
   const int W = tft.width();
   x = constrain(x, 0, W - 1);
   y = constrain(y, 0, tft.height() - 1);
+  if (g_view == VIEW_NOW) {
+    uiSetView(VIEW_HOME);
+    return;
+  }
   if (x >= g_hdrX0 && x < g_hdrX1 && y >= g_hdrY0 && y < g_hdrY1) {
     if (x >= g_headerHomeX0 && x < g_headerHomeX1 && y >= g_headerHomeY0 && y < g_headerHomeY1) {
       uiSetView(VIEW_HOME);
@@ -284,6 +308,11 @@ void uiHandleTap(int16_t x, int16_t y) {
     }
     if (x >= g_headerInfoX0 && x < g_headerInfoX1 && y >= g_headerInfoY0 && y < g_headerInfoY1) {
       uiSetView(VIEW_STATUS);
+      return;
+    }
+    if (x >= g_headerClockX0 && x < g_headerClockX1 && y >= g_headerClockY0 &&
+        y < g_headerClockY1) {
+      uiSetView(VIEW_NOW);
       return;
     }
     g_requestRefresh = true;

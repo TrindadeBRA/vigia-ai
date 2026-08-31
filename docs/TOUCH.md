@@ -14,13 +14,15 @@ O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrat
 | OpenRouter | Créditos da conta: barra, usado, resta, teto. Setas de scroll |
 | Info | Rede, layout da home (**Lista** / **Grade**), **tema** (Escuro / Claro / Contraste), **idioma** (PT / EN / ES, padrão pt-BR), **Atualizar**, **Calibrar**. **Setas** à direita se precisar de scroll |
 
-Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
+| Relogio | Hora e data (a partir do coletor, avanca no ESP32), resumo das 3 IAs. **Sem barra**. Toque em qualquer lugar volta ao inicio |
+
+Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O **horario** da barra abre a tela Relogio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
 
 Nas telas internas (Claude / Cursor / OpenRouter / Info): se o conteúdo não couber, aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`.
 
-Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`4`.
+Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`5`.
 
-Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `l` lista, `g` grade, `t` ciclo de tema, `i` ciclo de idioma, `h` ciclo da barra (esq/topo/dir/base), `u`/`d` scroll no detalhe/info, `r` refresh, `c` calibrar (só hardware).
+Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1`–`3` detalhe, `4` info, `5` relogio, `l` lista, `g` grade, `t` ciclo de tema, `i` ciclo de idioma, `h` ciclo da barra (esq/topo/dir/base), `u`/`d` scroll no detalhe/info, `r` refresh, `c` calibrar (só hardware).
 
 A escolha Lista/Grade, o tema, o idioma e o lado da barra ficam na NVS (namespace `ui`, chaves `home`, `theme`, `lang` e `edge`). Idioma padrão: **pt-BR**. Barra padrão: **esquerda**.
 

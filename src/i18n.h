@@ -61,3 +61,4 @@ struct UiStrings {
 };
 
 const UiStrings& uiTr();
+const char* uiWeekday(int dowSun0);

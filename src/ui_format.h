@@ -7,6 +7,8 @@
 
 uint16_t barColor(float pct);
 String fmtWhen(const String& raw);
+bool wallClockNow(int& year, int& mo, int& dd, int& hh, int& mi);
+int weekdaySun0(int year, int mo, int dd);
 String fmtPct(float pct);
 String fmtRemain(float used);
 String fmtUsdSite(int cents);

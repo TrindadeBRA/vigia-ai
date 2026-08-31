@@ -247,7 +247,7 @@ static void handleSerial() {
       uiNext();
     } else if (c == 'p' || c == '-' || c == 'P') {
       uiPrev();
-    } else if (c >= '0' && c <= '4') {
+    } else if (c >= '0' && c <= '5') {
       uiSetView((View)(c - '0'));
     } else if (c == 'r' || c == 'R') {
       g_requestRefresh = true;

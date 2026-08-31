@@ -189,3 +189,21 @@ const UiStrings& uiTr() {
       return kPt;
   }
 }
+
+const char* uiWeekday(int dowSun0) {
+  static const char* pt[] = {"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"};
+  static const char* en[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+  static const char* es[] = {"Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"};
+  int i = dowSun0;
+  if (i < 0 || i > 6) {
+    i = 0;
+  }
+  switch (uiLang()) {
+    case LANG_EN:
+      return en[i];
+    case LANG_ES:
+      return es[i];
+    default:
+      return pt[i];
+  }
+}
