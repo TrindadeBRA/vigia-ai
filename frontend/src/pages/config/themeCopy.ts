@@ -15,6 +15,8 @@ export type ThemeCopy = {
   backgroundUpload: string;
   backgroundClear: string;
   backgroundNoBytes: string;
+  backgroundReplace: string;
+  backgroundEmpty: string;
   clock: string;
   clockEnabled: string;
   clockFormat24h: string;
@@ -63,13 +65,15 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     retry: "Tentar de novo",
     canvasTitle: "Canvas (proporção da tela da placa)",
     canvasHint: "Arraste o relógio, os ícones e os textos pra posicionar. Clique num elemento pra editar cor e tamanho.",
-    canvasNoDevice: "Sem contato com a placa ainda — editando na proporção padrão (480×320). Preencha o IP abaixo pra ajustar.",
+    canvasNoDevice: "Sem contato com a placa ainda — editando na proporção padrão (480×320). Acerta sozinho assim que ela falar com o coletor.",
     background: "Fundo",
     backgroundColor: "Cor sólida",
     backgroundImage: "Imagem",
     backgroundUpload: "Escolher imagem…",
     backgroundClear: "Remover imagem",
     backgroundNoBytes: "Imagem ainda não carregada nesta sessão — escolha o arquivo de novo antes de salvar.",
+    backgroundReplace: "Trocar imagem…",
+    backgroundEmpty: "Nenhuma imagem escolhida ainda.",
     clock: "Relógio",
     clockEnabled: "Mostrar relógio",
     clockFormat24h: "Formato 24h",
@@ -117,13 +121,15 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     retry: "Retry",
     canvasTitle: "Canvas (board screen proportions)",
     canvasHint: "Drag the clock, icons and texts to position them. Click an element to edit its color and size.",
-    canvasNoDevice: "No contact with the board yet — editing at the default 480×320 proportions. Fill in the IP below to adjust.",
+    canvasNoDevice: "No contact with the board yet — editing at the default 480×320 proportions. Fixes itself once it talks to the collector.",
     background: "Background",
     backgroundColor: "Solid color",
     backgroundImage: "Image",
     backgroundUpload: "Choose image…",
     backgroundClear: "Remove image",
     backgroundNoBytes: "Image not loaded in this session yet — pick the file again before saving.",
+    backgroundReplace: "Change image…",
+    backgroundEmpty: "No image chosen yet.",
     clock: "Clock",
     clockEnabled: "Show clock",
     clockFormat24h: "24h format",
@@ -171,13 +177,15 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     retry: "Reintentar",
     canvasTitle: "Lienzo (proporción de la pantalla de la placa)",
     canvasHint: "Arrastrá el reloj, los íconos y los textos para ubicarlos. Hacé clic en un elemento para editar su color y tamaño.",
-    canvasNoDevice: "Todavía sin contacto con la placa — editando con la proporción por defecto (480×320). Completá el IP abajo para ajustar.",
+    canvasNoDevice: "Todavía sin contacto con la placa — editando con la proporción por defecto (480×320). Se ajusta solo en cuanto hable con el colector.",
     background: "Fondo",
     backgroundColor: "Color sólido",
     backgroundImage: "Imagen",
     backgroundUpload: "Elegir imagen…",
     backgroundClear: "Quitar imagen",
     backgroundNoBytes: "Imagen no cargada en esta sesión — elegí el archivo de nuevo antes de guardar.",
+    backgroundReplace: "Cambiar imagen…",
+    backgroundEmpty: "Todavía no elegiste ninguna imagen.",
     clock: "Reloj",
     clockEnabled: "Mostrar reloj",
     clockFormat24h: "Formato 24h",

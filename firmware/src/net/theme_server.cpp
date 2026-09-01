@@ -27,8 +27,12 @@ static void handleOptions() {
 static void handleGetTheme() {
   sendCors();
   String json = customThemeCurrentJson();
-  String body = "{\"width\":" + String(customThemeCanvasWidth()) +
-               ",\"height\":" + String(customThemeCanvasHeight()) +
+  // width/height = tela CHEIA (não customThemeCanvasWidth/Height, que é
+  // metade — só pro fundo). O editor usa isso pra posicionar/dimensionar
+  // ícones, relógio e texto, que ficam contra a tela cheia; a conversão do
+  // fundo faz a metade sozinha no browser (ver ThemeEditorPage.tsx).
+  String body = "{\"width\":" + String(tft.width()) +
+               ",\"height\":" + String(tft.height()) +
                ",\"active\":" + String(customThemeActive() ? "true" : "false") +
                ",\"fs_ok\":" + String(customThemeFsOk() ? "true" : "false") +
                ",\"theme\":" + (json.length() ? json : "null") + "}";

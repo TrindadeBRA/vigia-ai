@@ -98,6 +98,8 @@ export type ProviderCardPublic = {
 export type DevicePublic = {
   ip: string | null;
   last_seen_s: number | null;
+  width: number | null;
+  height: number | null;
 };
 
 export type ConfigPublic = {

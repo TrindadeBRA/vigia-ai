@@ -216,6 +216,9 @@ static void sseOpen() {
   // Distingue a placa do /display (que também escuta /events) pro coletor
   // saber pra quem mandar o tema — ver device_ip em app/hub.py.
   g_http.addHeader("X-Vigia-Device", "esp32");
+  // Resolução da tela (protótipo do tema — deixa o editor acertar o
+  // tamanho do fundo sem o usuário precisar digitar o IP da placa).
+  g_http.addHeader("X-Vigia-Screen", String(tft.width()) + "x" + String(tft.height()));
   g_http.useHTTP10(true);
   int code = g_http.GET();
   Serial.printf("coletor SSE GET -> HTTP %d\n", code);
@@ -318,6 +321,7 @@ void usageClientFetch() {
   }
 
   http.addHeader("X-Vigia-Device", "esp32");
+  http.addHeader("X-Vigia-Screen", String(tft.width()) + "x" + String(tft.height()));
   int code = http.GET();
   Serial.printf("coletor GET %s -> HTTP %d\n", USAGE_URL, code);
   if (code != 200) {
@@ -386,7 +390,11 @@ void usageClientEnsureWifi() {
 // (LittleFS ou RAM, ver ui/customtheme.h), nunca bufferiza a imagem inteira.
 static bool themeClientFetchBackground(const String& base) {
   HTTPClient http;
-  http.setTimeout(15000);
+  // setTimeout() vira o timeout do WiFiClient usado por readBytes() abaixo —
+  // cada chamada espera até esse tanto por *algum* byte, não é um prazo
+  // único pra transferência inteira (~150-300 KB podem vir em várias
+  // rajadas na rede simulada do Wokwi).
+  http.setTimeout(20000);
   http.setConnectTimeout(5000);
   if (!http.begin(base + "api/theme/background")) {
     return false;
@@ -396,36 +404,32 @@ static bool themeClientFetchBackground(const String& base) {
   if (code == 200) {
     int len = http.getSize();
     WiFiClient* stream = http.getStreamPtr();
+    Serial.printf("tema: baixando fundo (%d bytes)\n", len);
     if (len > 0 && customThemeBeginBackgroundWrite()) {
       uint8_t buf[1024];
       int remaining = len;
       ok = true;
-      uint32_t deadline = millis() + 20000;
-      while (remaining > 0 && millis() < deadline) {
-        size_t avail = stream->available();
-        if (avail == 0) {
-          delay(1);
-          continue;
-        }
-        size_t want = avail < sizeof(buf) ? avail : sizeof(buf);
-        if ((int)want > remaining) {
-          want = remaining;
-        }
+      while (remaining > 0) {
+        int want = remaining < (int)sizeof(buf) ? remaining : (int)sizeof(buf);
         int n = stream->readBytes(buf, want);
         if (n <= 0) {
+          Serial.printf("tema: leitura do fundo parou em %d/%d bytes\n", len - remaining, len);
           ok = false;
           break;
         }
         if (!customThemeWriteBackgroundChunk(buf, n)) {
+          Serial.println("tema: gravação do fundo falhou (RAM/LittleFS cheios?)");
           ok = false;
           break;
         }
         remaining -= n;
       }
-      if (remaining > 0) {
-        ok = false;
-      }
       customThemeEndBackgroundWrite(ok);
+      Serial.println(ok ? "tema: fundo baixado" : "tema: download do fundo falhou");
+    } else if (len <= 0) {
+      Serial.println("tema: coletor não informou o tamanho do fundo (sem Content-Length?)");
+    } else {
+      Serial.println("tema: sem storage (RAM/LittleFS) pro fundo");
     }
   } else if (code != 404) {
     Serial.printf("tema: GET /api/theme/background -> HTTP %d\n", code);

@@ -249,6 +249,8 @@ class ListenPublic(BaseModel):
 class DevicePublic(BaseModel):
     ip: str | None = Field(default=None, description="Último IP que chamou /usage ou /events (a placa).")
     last_seen_s: int | None = Field(default=None, description="Segundos desde o último request da placa.")
+    width: int | None = Field(default=None, description="Resolução da tela (header X-Vigia-Screen) — protótipo do tema.")
+    height: int | None = Field(default=None, description="Resolução da tela (header X-Vigia-Screen) — protótipo do tema.")
 
 
 class ConfigPublic(BaseModel):

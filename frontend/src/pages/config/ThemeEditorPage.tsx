@@ -198,6 +198,29 @@ function ScaleField({ label, value, onChange }: { label: string; value: number; 
   );
 }
 
+const checkerBg =
+  "linear-gradient(45deg,#8888 25%,transparent 25%),linear-gradient(-45deg,#8888 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#8888 75%),linear-gradient(-45deg,transparent 75%,#8888 75%)";
+
+// Círculo de cor + swatch clicável (o <input type=color> nativo fica
+// invisível por cima, só pra abrir o seletor do SO) — reutilizado em fundo,
+// relógio, ícones e textos.
+function ColorSwatch({ value, onChange, size = 36 }: { value: string | null; onChange: (v: string) => void; size?: number }) {
+  return (
+    <label
+      className="relative shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1.5px_var(--card-border)] transition-transform hover:scale-105"
+      style={{
+        width: size,
+        height: size,
+        background: value || checkerBg,
+        backgroundSize: value ? undefined : "8px 8px",
+        backgroundPosition: value ? undefined : "0 0, 0 4px, 4px -4px, -4px 0px",
+      }}
+    >
+      <input type="color" value={value || "#ffffff"} onChange={(e) => onChange(e.target.value)} className="absolute inset-0 size-full cursor-pointer opacity-0" />
+    </label>
+  );
+}
+
 function ColorField({
   label,
   value,
@@ -212,16 +235,16 @@ function ColorField({
   return (
     <div className="flex flex-col gap-1.5">
       <span className={cfgFieldLabel}>{label}</span>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value || "#ffffff"}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-8 w-8 shrink-0 cursor-pointer rounded-md border border-edge bg-transparent p-0"
-        />
-        <button type="button" className="text-[12px] text-ink3 underline decoration-dotted underline-offset-2" onClick={() => onChange(null)}>
-          {noneLabel}
-        </button>
+      <div className="flex items-center gap-3">
+        <ColorSwatch value={value} onChange={onChange} />
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className={cn("font-mono text-[13px]", value ? "text-ink" : "text-ink3")}>{value ? value.toUpperCase() : noneLabel}</span>
+          {value ? (
+            <button type="button" className="w-fit text-[11.5px] text-ink3 underline decoration-dotted underline-offset-2 hover:text-ink2" onClick={() => onChange(null)}>
+              {noneLabel}
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -259,6 +282,17 @@ export default function ThemeEditorPage() {
   useEffect(() => {
     if (!ipTouched && cfg?.device.ip) setDeviceIp(cfg.device.ip);
   }, [cfg?.device.ip, ipTouched]);
+
+  // Resolução real da placa reportada ao coletor (header X-Vigia-Screen em
+  // GET /usage e /events, ver firmware/src/net/client.cpp) — acerta o
+  // tamanho do fundo sem precisar digitar o IP (esse só é usado no card de
+  // depuração, pra enviar direto e pro screenshot).
+  useEffect(() => {
+    if (cfg?.device.width && cfg.device.height) {
+      setCanvasSize({ width: cfg.device.width, height: cfg.device.height });
+      setCanvasKnown(true);
+    }
+  }, [cfg?.device.width, cfg?.device.height]);
 
   // Quantos px CSS o canvas de fato ocupa na tela vs. o tamanho real (em px
   // do device) — sem isso, ícone/relógio/texto ficam com tamanho fixo em CSS
@@ -325,8 +359,12 @@ export default function ThemeEditorPage() {
   }
 
   async function handleBackgroundFile(file: File) {
-    const targetW = canvasSize.width;
-    const targetH = canvasSize.height;
+    // Metade da resolução da tela — a placa desenha com upscale 2x nearest
+    // neighbor (ver customThemeCanvasWidth/Height em customtheme.cpp). Um
+    // fundo em resolução cheia não cabe num bloco contíguo de RAM depois
+    // do WiFi/HTTPClient fragmentarem o heap (confirmado no Wokwi).
+    const targetW = Math.max(1, Math.floor(canvasSize.width / 2));
+    const targetH = Math.max(1, Math.floor(canvasSize.height / 2));
     const bitmap = await createImageBitmap(file);
     const canvas = document.createElement("canvas");
     canvas.width = targetW;
@@ -486,29 +524,50 @@ export default function ThemeEditorPage() {
 
       <div className={cfgGrid}>
         <Card title={c.background}>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input type="radio" name="bgtype" checked={theme.background.type === "color"} onChange={() => setTheme((t) => ({ ...t, background: { ...t.background, type: "color" } }))} />
+          <div className="inline-flex w-fit items-center gap-0.5 rounded-full bg-canvas p-1 shadow-[inset_0_0_0_1px_var(--card-border)]">
+            <button
+              type="button"
+              onClick={() => setTheme((t) => ({ ...t, background: { ...t.background, type: "color" } }))}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-[12.5px] font-[650] transition-colors",
+                theme.background.type === "color" ? "bg-accent text-accent-ink" : "text-ink2 hover:text-ink",
+              )}
+            >
               {c.backgroundColor}
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="bgtype"
-                checked={theme.background.type === "image"}
-                disabled={!bgPreviewUrl}
-                onChange={() => setTheme((t) => ({ ...t, background: { ...t.background, type: "image" } }))}
-              />
+            </button>
+            <button
+              type="button"
+              disabled={!bgPreviewUrl}
+              onClick={() => setTheme((t) => ({ ...t, background: { ...t.background, type: "image" } }))}
+              title={!bgPreviewUrl ? c.backgroundUpload : undefined}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-[12.5px] font-[650] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                theme.background.type === "image" ? "bg-accent text-accent-ink" : "text-ink2 hover:text-ink",
+              )}
+            >
               {c.backgroundImage}
-            </label>
+            </button>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              type="color"
-              value={theme.background.color}
-              onChange={(e) => setTheme((t) => ({ ...t, background: { ...t.background, color: e.target.value } }))}
-              className="h-9 w-9 shrink-0 cursor-pointer rounded-md border border-edge bg-transparent p-0"
-            />
+
+          {theme.background.type === "color" ? (
+            <div className="flex items-center gap-3">
+              <ColorSwatch value={theme.background.color} onChange={(v) => setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} size={40} />
+              <span className="font-mono text-[13px] text-ink">{theme.background.color.toUpperCase()}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {bgPreviewUrl ? (
+                <img src={bgPreviewUrl} alt="" className="size-14 shrink-0 rounded-[10px] border border-edge object-cover" />
+              ) : (
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-[10px] border border-dashed border-edge text-center text-[10px] leading-tight text-ink3">
+                  {c.backgroundImage}
+                </div>
+              )}
+              <span className="text-[12.5px] text-ink3">{bgPreviewUrl ? c.backgroundImage : c.backgroundEmpty}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-edge pt-3">
             <input
               ref={fileRef}
               type="file"
@@ -520,8 +579,12 @@ export default function ThemeEditorPage() {
                 e.target.value = "";
               }}
             />
-            <Button variant="secondary" onClick={() => fileRef.current?.click()}>{c.backgroundUpload}</Button>
-            {bgPreviewUrl ? <Button variant="ghost" onClick={clearBackgroundImage}>{c.backgroundClear}</Button> : null}
+            <Button variant="secondary" onClick={() => fileRef.current?.click()}>{bgPreviewUrl ? c.backgroundReplace : c.backgroundUpload}</Button>
+            {bgPreviewUrl ? (
+              <button type="button" className="text-[12px] text-ink3 underline decoration-dotted underline-offset-2 hover:text-ink2" onClick={clearBackgroundImage}>
+                {c.backgroundClear}
+              </button>
+            ) : null}
           </div>
           {backgroundNeedsUpload ? <p className={`${cfgStatus} text-warn`}>{c.backgroundNoBytes}</p> : null}
         </Card>

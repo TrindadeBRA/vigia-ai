@@ -78,7 +78,7 @@ def health(request: Request) -> HealthPayload:
 async def usage(request: Request) -> UsagePayload:
     hub = request.app.state.hub
     if request.client and request.headers.get("x-vigia-device") == "esp32":
-        hub.note_device(request.client.host)
+        hub.note_device(request.client.host, request.headers.get("x-vigia-screen"))
     payload = await hub.refresh()
     return UsagePayload.model_validate(payload)
 
@@ -131,7 +131,7 @@ async def usage(request: Request) -> UsagePayload:
 async def events(request: Request) -> StreamingResponse:
     hub = request.app.state.hub
     if request.client and request.headers.get("x-vigia-device") == "esp32":
-        hub.note_device(request.client.host)
+        hub.note_device(request.client.host, request.headers.get("x-vigia-screen"))
     return StreamingResponse(
         sse_bytes(hub),
         media_type="text/event-stream",

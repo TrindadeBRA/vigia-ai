@@ -223,8 +223,17 @@ bool customThemeClockEnabled() { return g_active && g_theme.clock.enabled; }
 
 // Tela cheia (sem header, ver core/state.h:VIEW_THEME) — não usa
 // g_contentW/H (essas dependem do header, que essa view não desenha).
-int customThemeCanvasWidth() { return tft.width(); }
-int customThemeCanvasHeight() { return tft.height(); }
+//
+// O FUNDO é armazenado em metade da resolução da tela (desenhado com
+// upscale 2x nearest-neighbor, ver drawThemeBackground) — um fundo em
+// resolução cheia (480x320x2 ≈ 300 KB, ou até 320x240x2 ≈ 150 KB no Wokwi)
+// não cabe num bloco contíguo de heap depois do WiFi/HTTPClient já terem
+// fragmentado a RAM (confirmado: só ~110 KB de maior bloco livre no Wokwi
+// com 182 KB "livres" no total). Ícones/relógio/texto continuam com posição
+// fracionária contra a tela CHEIA (tft.width()/height() direto nas funções
+// de desenho) — só o fundo usa essa resolução reduzida.
+int customThemeCanvasWidth() { return tft.width() / 2; }
+int customThemeCanvasHeight() { return tft.height() / 2; }
 
 String customThemeLastError() { return g_lastParseError; }
 
@@ -304,7 +313,8 @@ bool customThemeBeginBackgroundWrite() {
   }
   g_bgRam = (uint8_t*)malloc(need);
   if (!g_bgRam) {
-    Serial.println("tema: malloc do fundo em RAM falhou");
+    Serial.printf("tema: malloc do fundo (%u bytes) em RAM falhou — livre=%u maior_bloco=%u\n", (unsigned)need,
+                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
     return false;
   }
   g_bgRamCap = need;
@@ -371,51 +381,70 @@ static IconRef iconRefFor(ThemeIconKind k) {
   }
 }
 
-// Faixas de linhas lidas do /theme_bg.raw por vez — nunca bufferiza a imagem
-// inteira (pode passar de 300 KB em 480x320) em RAM.
-constexpr int kBgBandRows = 16;
-static uint16_t g_bgBand[480 * kBgBandRows];
+// Linha de origem (meia resolução) + par de linhas de destino (upscale 2x
+// nearest-neighbor, ver customThemeCanvasWidth/Height) — bem menor que
+// bufferizar a imagem em resolução cheia, tanto lendo do LittleFS quanto da
+// RAM (ver drawThemeBackground).
+static uint16_t g_bgHalfRow[240];
+static uint16_t g_bgFullRowPair[480 * 2];
 
 static void drawThemeBackground(const CustomTheme& t) {
-  const int w = tft.width();
-  const int h = tft.height();
-  if (t.bgKind == TBG_IMAGE) {
-    const size_t expected = (size_t)w * (size_t)h * 2;
-    if (g_bgRam && g_bgRamLen == expected) {
-      tft.setSwapBytes(true);
-      tft.pushImage(0, 0, w, h, (const uint16_t*)g_bgRam);
-      tft.setSwapBytes(false);
-      return;
+  const int fullW = tft.width();
+  const int fullH = tft.height();
+  const int halfW = customThemeCanvasWidth();
+  const int halfH = customThemeCanvasHeight();
+  if (t.bgKind == TBG_IMAGE && halfW > 0 && halfW <= 240) {
+    const size_t expected = (size_t)halfW * (size_t)halfH * 2;
+    const bool useRam = g_bgRam && g_bgRamLen == expected;
+    File f;
+    bool useFile = false;
+    if (!useRam && g_fsOk) {
+      f = LittleFS.open(kBgPath, "r");
+      useFile = (bool)f && (size_t)f.size() == expected;
+      if (f && !useFile) {
+        f.close();
+      }
     }
-    File f = g_fsOk ? LittleFS.open(kBgPath, "r") : File();
-    if (f) {
-      if (f.size() == expected && w > 0 && w <= 480) {
-        tft.setSwapBytes(true);
-        int y = 0;
-        bool ok = true;
-        while (y < h) {
-          int rows = min(kBgBandRows, h - y);
-          size_t want = (size_t)w * rows * 2;
-          size_t got = f.read((uint8_t*)g_bgBand, want);
-          if (got != want) {
+    if (useRam || useFile) {
+      tft.setSwapBytes(true);
+      bool ok = true;
+      for (int sy = 0; sy < halfH; sy++) {
+        const uint16_t* srcRow;
+        if (useRam) {
+          srcRow = (const uint16_t*)g_bgRam + (size_t)sy * halfW;
+        } else {
+          if (f.read((uint8_t*)g_bgHalfRow, (size_t)halfW * 2) != (size_t)halfW * 2) {
             ok = false;
             break;
           }
-          tft.pushImage(0, y, w, rows, g_bgBand);
-          y += rows;
+          srcRow = g_bgHalfRow;
         }
-        tft.setSwapBytes(false);
-        f.close();
-        if (ok) {
-          return;
+        for (int x = 0; x < halfW; x++) {
+          uint16_t p = srcRow[x];
+          g_bgFullRowPair[x * 2] = p;
+          if (x * 2 + 1 < fullW) {
+            g_bgFullRowPair[x * 2 + 1] = p;
+          }
         }
-      } else {
-        f.close();
-        Serial.println("tema: theme_bg.raw com tamanho incompatível, usando cor");
+        const int destY = sy * 2;
+        const int destRows = (destY + 1 < fullH) ? 2 : 1;
+        if (destRows == 2) {
+          memcpy(g_bgFullRowPair + fullW, g_bgFullRowPair, (size_t)fullW * 2);
+        }
+        tft.pushImage(0, destY, fullW, destRows, g_bgFullRowPair);
       }
+      tft.setSwapBytes(false);
+      if (useFile) {
+        f.close();
+      }
+      if (ok) {
+        return;
+      }
+    } else if (g_fsOk) {
+      Serial.println("tema: sem fundo em RAM/LittleFS compatível, usando cor");
     }
   }
-  tft.fillRect(0, 0, w, h, t.bgColor);
+  tft.fillRect(0, 0, fullW, fullH, t.bgColor);
 }
 
 // Buffer de escala nearest-neighbor pros ícones (base 20x20, até 4x = 80x80).

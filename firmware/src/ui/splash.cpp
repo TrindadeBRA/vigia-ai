@@ -29,10 +29,10 @@ static void splashGazeTo(int cx, int cy, int r, int* gazeX, int* gazeY,
     *gazeX = startX + (targetX - startX) * s / steps;
     *gazeY = startY + (targetY - startY) * s / steps;
     drawEyeIcon(cx, cy, r, *gazeX, *gazeY, 0.0f);
-    splashDelay(8);
+    splashDelay(4);
   }
   if (holdMs > 0) {
-    splashDelay((uint32_t)holdMs);
+    splashDelay((uint32_t)holdMs / 2);
   }
 }
 
@@ -40,12 +40,12 @@ static void splashBlink(int cx, int cy, int r, int gazeX, int gazeY) {
   const int steps = 5;
   for (int step = 0; step <= steps; step++) {
     drawEyeIcon(cx, cy, r, gazeX, gazeY, (float)step / (float)steps);
-    splashDelay(7);
+    splashDelay(4);
   }
   for (int step = 0; step <= steps; step++) {
     drawEyeIcon(cx, cy, r, gazeX, gazeY,
                 1.0f - (float)step / (float)steps);
-    splashDelay(7);
+    splashDelay(4);
   }
 }
 
@@ -75,9 +75,9 @@ void uiShowSplash() {
   for (int step = 0; step <= 10; step++) {
     float lid = 1.0f - (float)step / 10.0f;
     drawEyeIcon(eyeCx, eyeCy, eyeR, 0, 0, lid);
-    splashDelay(14);
+    splashDelay(7);
   }
-  splashDelay(40);
+  splashDelay(20);
 
   const int maxGaze = eyeR * 3 / 5 - 2;
   const int up = maxGaze / 2;
@@ -98,7 +98,7 @@ void uiShowSplash() {
   splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, 0, 0, 20);
 
   splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
-  splashDelay(45);
+  splashDelay(22);
   splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
 
   const int x = (W - bw) / 2;

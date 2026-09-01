@@ -40,6 +40,13 @@ firmware manda um header `X-Vigia-Device: esp32` nesses dois requests
 (`firmware/src/net/client.cpp`) pro coletor não confundir o navegador do
 usuário com a placa (`backend/app/routers/usage.py`). Não é autenticação.
 
+Junto com esse header, a placa também manda `X-Vigia-Screen: <largura>x<altura>`
+(`tft.width()`/`height()`) — o coletor guarda em `device.width`/`device.height`
+(`GET /api/config`) e o editor usa isso pra acertar a resolução do fundo
+**sozinho**, sem precisar do IP (`ThemeEditorPage.tsx`, efeito que observa
+`cfg.device.width/height`). O IP só é necessário pro card de depuração
+(envio direto pra placa e `GET /theme/screenshot`).
+
 LAN only, igual ao resto do projeto: não exponha essa porta na internet.
 
 ## Coordenadas
@@ -83,11 +90,25 @@ sempre converte fração → pixel na hora de desenhar, contra
 ## Imagem de fundo
 
 RAW **RGB565 little-endian** (2 bytes por pixel, sem cabeçalho), exatamente
-`width * height * 2` bytes onde `width`/`height` são a resolução **da tela
-inteira** da placa (480×320 no hardware real, 320×240 no Wokwi).
+`width * height * 2` bytes onde `width`/`height` são **metade** da
+resolução da tela, arredondada pra baixo (240×160 no hardware real 480×320,
+160×120 no Wokwi 320×240) — a placa desenha com upscale 2x nearest-neighbor
+(`customThemeCanvasWidth/Height()` + `drawThemeBackground()` em
+`ui/customtheme.cpp`).
+
+Por quê: um fundo em resolução cheia (480×320×2 ≈ 300 KB, ou 320×240×2 ≈
+150 KB no Wokwi) não cabe num bloco **contíguo** de heap depois do
+WiFi/HTTPClient já terem fragmentado a RAM — confirmado no Wokwi (182 KB
+"livres" no total, só ~110 KB no maior bloco alocável). Ícones, relógio e
+texto continuam com posição fracionária contra a tela **cheia**
+(`tft.width()`/`height()` direto) — só o fundo usa essa resolução reduzida.
+`GET /theme` (na placa) sempre reporta a tela cheia em `width`/`height` (pra
+não confundir o editor, que usa isso pra posicionar/dimensionar os outros
+elementos) — o `ThemeEditorPage.tsx` divide por 2 sozinho na hora de
+converter a imagem.
 
 Conversão no browser (`ThemeEditorPage.tsx`): `<canvas>` faz o crop/resize
-"cover" pra `width`×`height`, e cada pixel RGBA vira
+"cover" pra `width`×`height` (já na metade), e cada pixel RGBA vira
 
 ```ts
 const v = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
@@ -148,10 +169,11 @@ disparam preflight).
 - Só os 7 ícones de provedor + a marca — sem upload de ícone/PNG arbitrário.
 - Relógio mostra só `HH:MM` (sem segundos) e repinta a tela inteira 1x por
   minuto — sem blitting parcial.
-- No Wokwi, o LittleFS não monta (`fs_ok: false`) — o tema (JSON pequeno e,
-  se couber em ~200 KB, a imagem de fundo) fica só em RAM pra sessão atual;
-  reiniciar o simulador perde o tema (mas o botão de recarregar busca de
-  novo do coletor, que persiste em disco no host).
+- No Wokwi, o LittleFS não monta (`fs_ok: false`) — o tema (JSON pequeno e a
+  imagem de fundo, já em meia resolução — ~38 KB no Wokwi, ~77 KB no
+  hardware real, ver seção "Imagem de fundo" acima) fica só em RAM pra
+  sessão atual; reiniciar o simulador perde o tema (mas o botão de
+  recarregar busca de novo do coletor, que persiste em disco no host).
 - Corpo do `POST /theme/meta` direto na placa é bufferizado inteiro em RAM
   pelo `WebServer` (`arg("plain")`) antes de chegar no handler — por isso o
   limite de 8 KB.

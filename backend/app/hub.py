@@ -44,12 +44,23 @@ class UsageHub:
         # pré-preencher o "enviar tema pro device" no painel; não faz parte do contrato JSON.
         self.device_ip: str | None = None
         self.device_seen_at: float | None = None
+        # Resolução da tela (header X-Vigia-Screen, ver firmware/src/net/client.cpp) —
+        # deixa o editor de tema (protótipo) acertar o tamanho do fundo sem precisar do IP.
+        self.device_width: int | None = None
+        self.device_height: int | None = None
 
-    def note_device(self, ip: str | None) -> None:
+    def note_device(self, ip: str | None, screen: str | None = None) -> None:
         if not ip:
             return
         self.device_ip = ip
         self.device_seen_at = time.monotonic()
+        if screen:
+            w_s, _, h_s = screen.partition("x")
+            try:
+                self.device_width = int(w_s)
+                self.device_height = int(h_s)
+            except ValueError:
+                pass
 
     async def start(self) -> None:
         await self.refresh()

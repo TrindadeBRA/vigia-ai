@@ -318,7 +318,12 @@ def _device_public(hub: Any) -> DevicePublic:
     seen_at = getattr(hub, "device_seen_at", None)
     if not ip or seen_at is None:
         return DevicePublic()
-    return DevicePublic(ip=ip, last_seen_s=max(0, int(time.monotonic() - seen_at)))
+    return DevicePublic(
+        ip=ip,
+        last_seen_s=max(0, int(time.monotonic() - seen_at)),
+        width=getattr(hub, "device_width", None),
+        height=getattr(hub, "device_height", None),
+    )
 
 
 def config_public(listen_host: str, listen_port: int, hub: Any = None) -> ConfigPublic:
