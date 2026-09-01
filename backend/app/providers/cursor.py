@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.formatting import as_percent_points, cycle_end_label, money_cents, pick, ratio_percent
+from app.formatting import as_percent_points, iso_or_none, money_cents, pick, ratio_percent
 from app.http_util import http_json
 from app.local.cursor_state import cursor_token_candidates, jwt_expired
 from app.store import provider as provider_cfg
@@ -48,7 +48,7 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
         ondemand_used = max(0, ondemand_limit - ondemand_remain)
     elif ondemand_limit is not None:
         ondemand_used = 0
-    cycle_end = cycle_end_label(
+    cycle_end = iso_or_none(
         data.get("billingCycleEnd") or data.get("billing_cycle_end") or usage.get("endDate")
     )
     # proto3 omite scalar 0: ciclo novo chega sem autoPercentUsed/apiPercentUsed.

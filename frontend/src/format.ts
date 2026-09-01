@@ -72,16 +72,29 @@ function pad2(n: number): string {
 export function parseResetMs(raw: string | null | undefined, nowMs = Date.now()): number | null {
   if (!raw) return null;
   const s = String(raw).trim();
-  const iso = Date.parse(s);
-  if (!Number.isNaN(iso)) return iso;
+  if (/^\d{4}-/.test(s) || s.includes("T")) {
+    const iso = Date.parse(s);
+    if (!Number.isNaN(iso)) return iso;
+  }
   const m = /^(\d{2})\/(\d{2})\s+(\d{2})h(\d{2})$/.exec(s);
-  if (!m) return null;
-  const dd = Number(m[1]);
-  const mo = Number(m[2]);
-  const hh = Number(m[3]);
-  const mi = Number(m[4]);
+  if (m) {
+    const dd = Number(m[1]);
+    const mo = Number(m[2]);
+    const hh = Number(m[3]);
+    const mi = Number(m[4]);
+    const y = new Date(nowMs).getFullYear();
+    const mk = (year: number) => Date.parse(`${year}-${pad2(mo)}-${pad2(dd)}T${pad2(hh)}:${pad2(mi)}:00-03:00`);
+    let t = mk(y);
+    if (Number.isNaN(t)) return null;
+    if (t < nowMs - 24 * 3600 * 1000) t = mk(y + 1);
+    return Number.isNaN(t) ? null : t;
+  }
+  const dmy = /^(\d{2})\/(\d{2})$/.exec(s);
+  if (!dmy) return null;
+  const dd = Number(dmy[1]);
+  const mo = Number(dmy[2]);
   const y = new Date(nowMs).getFullYear();
-  const mk = (year: number) => Date.parse(`${year}-${pad2(mo)}-${pad2(dd)}T${pad2(hh)}:${pad2(mi)}:00-03:00`);
+  const mk = (year: number) => Date.parse(`${year}-${pad2(mo)}-${pad2(dd)}T00:00:00-03:00`);
   let t = mk(y);
   if (Number.isNaN(t)) return null;
   if (t < nowMs - 24 * 3600 * 1000) t = mk(y + 1);

@@ -21,7 +21,7 @@ const boardCollision: CollisionDetection = (args) => {
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout };
 type Pal = (typeof PALETTES)[ThemeName];
-type Metric = { label: string; pct: number | null; sub: string | null };
+type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null };
 type ProviderMeta = {
   id: string;
   provider: string;
@@ -81,27 +81,57 @@ function barFillStyle(pct: number, pal: Pal) {
   return { width: `${v}%`, minWidth: v > 0 ? 7 : 0, background: barColor(pct, pal), boxShadow: barGlow(pct, pal) };
 }
 
-function MetricRow({ label, pct, sub, pal, compact }: Metric & { pal: Pal; compact?: boolean }) {
+function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, resetIn }: Metric & { pal: Pal; compact?: boolean; nowMs?: number; resetIn?: string }) {
+  const clock = countdownAt ? fmtCountdown(countdownAt, nowMs) : null;
   if (pct == null) {
+    const value = clock || sub || "--";
+    if (compact) {
+      return (
+        <div className="mt-1 flex min-w-0 items-baseline justify-between gap-1.5 first:mt-0">
+          <span className="shrink-0 text-[11px] leading-none text-ink2">{label}</span>
+          <span className={cn(num, "min-w-0 truncate text-[12px] font-bold leading-none")}>{value}</span>
+        </div>
+      );
+    }
     return (
-      <div className={compact ? "mt-1.5 first:mt-0" : "mt-3 first:mt-0"}>
-        <div className={cn("mb-1 flex items-baseline justify-between", compact ? "text-[11px]" : "mb-1.5 text-[12.5px]")}>
+      <div className="mt-3 first:mt-0">
+        <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
         </div>
-        <div className={cn(num, "font-bold", compact ? "text-[13px]" : "text-[15px]")}>{sub || "--"}</div>
+        <div className={cn(num, "text-[15px] font-bold")}>{value}</div>
       </div>
     );
   }
-  return (
-    <div className={compact ? "mt-1.5 first:mt-0" : "mt-3 first:mt-0"}>
-      <div className={cn("mb-1 flex items-baseline justify-between", compact ? "text-[11px]" : "mb-1.5 text-[12.5px]")}>
-        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
-        <span className={`${num} shrink-0 font-bold ${compact ? "text-[12px]" : "text-sm"}`}>{fmtPct(pct)}</span>
+  if (compact) {
+    return (
+      <div className="mt-1.5 first:mt-0">
+        <div className="mb-0.5 flex items-baseline justify-between gap-1 text-[11px] leading-none">
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
+          <span className={`${num} shrink-0 font-bold`}>{fmtPct(pct)}</span>
+        </div>
+        <div className={cn(barTrack, "h-[5px]")}>
+          <div className={barFill} style={barFillStyle(pct, pal)} />
+        </div>
       </div>
-      <div className={cn(barTrack, compact && "h-[5px]")}>
+    );
+  }
+  const largeClock = clock;
+  return (
+    <div className="mt-3 first:mt-0">
+      <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
+        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
+        <span className={`${num} shrink-0 text-sm font-bold`}>{fmtPct(pct)}</span>
+      </div>
+      <div className={barTrack}>
         <div className={barFill} style={barFillStyle(pct, pal)} />
       </div>
-      {sub && !compact ? <div className="mt-[5px] text-[11.5px] text-ink3">{sub}</div> : null}
+      {largeClock ? (
+        <div className={cn(num, "mt-[5px] text-[12.5px] font-[550] text-ink2")}>
+          {resetIn ? `${resetIn} ${largeClock}` : largeClock}
+        </div>
+      ) : sub ? (
+        <div className="mt-[5px] text-[11.5px] text-ink3">{sub}</div>
+      ) : null}
     </div>
   );
 }
@@ -130,7 +160,7 @@ function gptSessionMetric(g: GptAccount, t: T, nowMs: number): Metric {
     };
   }
   const until = g.session_resets_at || g.weekly_resets_at;
-  return { label: t.resetIn, pct: null, sub: fmtCountdown(until, nowMs) };
+  return { label: t.resetIn, pct: null, sub: fmtCountdown(until, nowMs), countdownAt: until };
 }
 
 function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderMeta[] {
@@ -147,7 +177,8 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
         {
           label: t.session5h,
           pct: c.session_percent,
-          sub: c.session_percent != null ? t.remainingPrefix + fmtRemain(c.session_percent) + (c.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(c.session_resets_at)}` : "") : null,
+          sub: c.session_percent != null ? t.remainingPrefix + fmtRemain(c.session_percent) : null,
+          countdownAt: c.session_resets_at,
         },
         {
           label: t.weekLimit,
@@ -187,7 +218,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       title: c.plan ? `Cursor ${c.plan}` : "Cursor",
       label: c.label || "",
       metrics: [
-        { label: t.cursorModels, pct: c.percent, sub: c.cycle_end ? t.resetPrefix + fmtWhen(c.cycle_end) : null },
+        { label: t.cursorModels, pct: c.percent, sub: c.cycle_end ? t.resetPrefix + fmtWhen(c.cycle_end) : null, countdownAt: c.cycle_end },
         { label: t.otherModels, pct: c.other_percent, sub: ondemand || null },
       ],
     });
@@ -306,6 +337,7 @@ function ProviderCard({
   dragging,
   lifted,
   t,
+  nowMs,
   grip,
   onOpen,
   onSetSize,
@@ -316,6 +348,7 @@ function ProviderCard({
   dragging?: boolean;
   lifted?: boolean;
   t: T;
+  nowMs?: number;
   grip?: object;
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
@@ -353,7 +386,7 @@ function ProviderCard({
         <SizeToggle size={size} t={t} onChange={onSetSize} />
       </div>
       ) : null}
-      <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-2 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
+      <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
         <div className="relative shrink-0">
           <Icon id={p.provider} compact={sm} />
           <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", p.ok ? "bg-good" : "bg-bad")} />
@@ -363,8 +396,8 @@ function ProviderCard({
           {p.label ? <div className={cardLabel}>{p.label}</div> : null}
         </div>
       </button>
-      <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-hidden border-0 bg-transparent p-0 text-left text-ink" onClick={onOpen}>
-        {!p.ok ? <div className={cn(errorText, sm && "text-[11px] leading-snug")}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} compact={sm} />)}
+      <button type="button" className={cn("flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink", sm ? "justify-start" : "justify-center")} onClick={onOpen}>
+        {!p.ok ? <div className={cn(errorText, sm && "text-[11px] leading-snug")}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} resetIn={t.resetIn} />)}
       </button>
     </div>
   );
@@ -389,6 +422,7 @@ function BoardTile({
   pal,
   size,
   t,
+  nowMs,
   col,
   row,
   span,
@@ -399,6 +433,7 @@ function BoardTile({
   pal: Pal;
   size: CardSize;
   t: T;
+  nowMs: number;
   col: number;
   row: number;
   span: number;
@@ -421,6 +456,7 @@ function BoardTile({
         pal={pal}
         size={size}
         t={t}
+        nowMs={nowMs}
         dragging={isDragging}
         grip={{ ...attributes, ...listeners }}
         onOpen={onOpen}
@@ -660,6 +696,7 @@ function Overview({
                   pal={pal}
                   size={size}
                   t={t}
+                  nowMs={now}
                   col={pos.c}
                   row={pos.r}
                   span={spanFor(size, cols)}
@@ -675,7 +712,7 @@ function Overview({
                 className="pointer-events-none cursor-grabbing"
                 style={{ width: liftSize?.w || (activeSize === "sm" ? cellPx : cellPx * 2 + CELL_GAP), height: liftSize?.h || (activeSize === "sm" ? rowPx : rowPx * 2 + CELL_GAP) }}
               >
-                <ProviderCard p={active} pal={pal} size={activeSize} t={t} lifted onOpen={() => {}} onSetSize={() => {}} />
+                <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => {}} onSetSize={() => {}} />
               </div>
             ) : null}
           </DragOverlay>
@@ -816,13 +853,22 @@ function Kv({ k, v }: { k: string; v: ReactNode }) {
   );
 }
 
-function ClaudeBody({ data, account, t, pal }: { data: UsagePayload; account: ClaudeAccount; t: T; pal: Pal }) {
+function ClaudeBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: ClaudeAccount; t: T; pal: Pal; nowMs: number }) {
   const c = account;
+  const sessionClock = fmtCountdown(c.session_resets_at, nowMs);
   return (
     <>
       <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
       <MetricsGrid>
-        <MetricCard label={t.window5h} pct={c.session_percent} pal={pal} sub={remainLine(t, c.session_percent, c.session_resets_at)} />
+        <MetricCard
+          label={t.window5h}
+          pct={c.session_percent}
+          pal={pal}
+          sub={joinParts(
+            c.session_percent != null ? `${t.left} ${fmtRemain(c.session_percent)}` : null,
+            sessionClock ? `${t.resetIn} ${sessionClock}` : c.session_resets_at ? `${t.resetPrefix}${fmtWhen(c.session_resets_at)}` : null,
+          )}
+        />
         <MetricCard label={t.weekLimit} pct={c.weekly_percent} pal={pal} sub={remainLine(t, c.weekly_percent, c.weekly_resets_at)} />
         {c.sonnet_percent != null ? <MetricCard label={t.sonnetWeek} pct={c.sonnet_percent} pal={pal} sub={remainLine(t, c.sonnet_percent, c.sonnet_resets_at)} /> : null}
         {c.opus_percent != null ? <MetricCard label={t.opusWeek} pct={c.opus_percent} pal={pal} sub={remainLine(t, c.opus_percent, c.opus_resets_at)} /> : null}
@@ -849,13 +895,14 @@ function GptBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account
   );
 }
 
-function CursorBody({ data, account, t, pal }: { data: UsagePayload; account: CursorAccount; t: T; pal: Pal }) {
+function CursorBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: CursorAccount; t: T; pal: Pal; nowMs: number }) {
   const c = account;
+  const cycleClock = fmtCountdown(c.cycle_end, nowMs);
   const ondemandPct = c.used_cents != null && c.limit_cents != null && c.limit_cents > 0 ? clamp((c.used_cents / c.limit_cents) * 100, 0, 100) : null;
   const hasLegacy = c.requests_used != null && (c.requests_limit || 0) > 0;
   return (
     <>
-      <MetaChips items={[{ k: t.plan, v: c.plan }, { k: t.cycle, v: fmtWhen(c.cycle_end) }, { k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetaChips items={[{ k: t.plan, v: c.plan }, { k: t.cycle, v: cycleClock ? `${t.resetIn} ${cycleClock}` : fmtWhen(c.cycle_end) }, { k: t.updated, v: fmtWhen(data.updated_at) }]} />
       <MetricsGrid>
         <MetricCard label={t.cursorModels} pct={c.percent} pal={pal} sub={remainLine(t, c.percent)} />
         <MetricCard label={t.otherModels} pct={c.other_percent} pal={pal} sub={remainLine(t, c.other_percent)} />
@@ -945,9 +992,9 @@ function FalBody({ data, account, t, pal }: { data: UsagePayload; account: Credi
 function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   let body: ReactNode = null;
   if (meta.ok && account) {
-    if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} />;
+    if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} nowMs={nowMs} />;
     else if (meta.provider === "gpt") body = <GptBody data={data} account={account as GptAccount} t={t} pal={pal} nowMs={nowMs} />;
-    else if (meta.provider === "cursor") body = <CursorBody data={data} account={account as CursorAccount} t={t} pal={pal} />;
+    else if (meta.provider === "cursor") body = <CursorBody data={data} account={account as CursorAccount} t={t} pal={pal} nowMs={nowMs} />;
     else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "opencode") body = <OpenCodeBody data={data} account={account as OpenCodeAccount} t={t} pal={pal} />;
