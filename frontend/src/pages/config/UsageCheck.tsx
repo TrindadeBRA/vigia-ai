@@ -44,13 +44,13 @@ export function UsageCheck({ c }: { c: ConfigCopy }) {
     >
       {req.status === "error" && req.message ? <p className={`${cfgStatus} text-bad`}>{req.message}</p> : null}
       {test ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr))]">
           {NAMES.map((name) => {
             const list = test[name] || [];
             const title = titleOf(name);
             if (!list.length) {
               return (
-                <div key={name} className="flex-[1_1_140px] rounded-xl border border-edge bg-canvas px-3 py-2.5 opacity-70">
+                <div key={name} className="min-w-0 rounded-xl border border-edge bg-canvas px-3 py-2.5 opacity-70">
                   <p className="m-0 text-[13px] font-[650]">{title}</p>
                   <p className="mb-0 mt-1 text-xs text-ink2">{c.checkHidden}</p>
                 </div>
@@ -60,7 +60,7 @@ export function UsageCheck({ c }: { c: ConfigCopy }) {
               <div
                 key={`${name}-${b.id}`}
                 className={cn(
-                  "flex-[1_1_140px] rounded-xl border bg-canvas px-3 py-2.5",
+                  "min-w-0 rounded-xl border bg-canvas px-3 py-2.5",
                   b.ok ? "border-[color-mix(in_srgb,var(--good)_40%,var(--card-border))]" : "border-[color-mix(in_srgb,var(--bad)_40%,var(--card-border))]",
                 )}
               >

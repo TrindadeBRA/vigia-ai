@@ -102,6 +102,51 @@ def test_parse_cursor_dashboard() -> None:
     assert parsed["plan"] == "pro"
 
 
+def test_parse_cursor_dashboard_new_cycle_one_percent() -> None:
+    """O site mostra 1% usado; `as_percent` antigo multiplicava 1 → 100."""
+    parsed = parse_cursor_dashboard(
+        {
+            "planUsage": {"autoPercentUsed": 1, "apiPercentUsed": 0, "totalPercentUsed": 1},
+            "spendLimitUsage": {"individualLimit": 1000, "individualRemaining": 1000},
+            "billingCycleEnd": "2026-10-01T00:00:00Z",
+            "membershipType": "pro",
+        },
+        "pro",
+    )
+    assert parsed is not None
+    assert parsed["percent"] == 1.0
+    assert parsed["other_percent"] == 0.0
+
+
+def test_parse_cursor_dashboard_zero_not_total_fallback() -> None:
+    parsed = parse_cursor_dashboard(
+        {
+            "planUsage": {"autoPercentUsed": 0, "apiPercentUsed": 0, "totalPercentUsed": 100},
+            "spendLimitUsage": {"individualLimit": 1000, "individualRemaining": 1000},
+            "membershipType": "pro",
+        },
+        "pro",
+    )
+    assert parsed is not None
+    assert parsed["percent"] == 0.0
+    assert parsed["other_percent"] == 0.0
+
+
+def test_parse_cursor_dashboard_omitted_zero_fields() -> None:
+    parsed = parse_cursor_dashboard(
+        {
+            "planUsage": {"totalSpend": 0, "includedSpend": 0},
+            "spendLimitUsage": {"individualLimit": 1000, "individualRemaining": 1000},
+            "billingCycleEnd": "2026-10-01T00:00:00Z",
+            "membershipType": "pro",
+        },
+        "pro",
+    )
+    assert parsed is not None
+    assert parsed["percent"] == 0.0
+    assert parsed["other_percent"] == 0.0
+
+
 def test_parse_openrouter_credits() -> None:
     parsed = parse_openrouter_payload({"data": {"total_credits": 10.0, "total_usage": 6.66}})
     assert parsed["ok"] is True

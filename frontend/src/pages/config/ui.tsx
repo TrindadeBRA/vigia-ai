@@ -2,7 +2,8 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react
 import { useState } from "react";
 import { cn } from "../../cn";
 import type { RequestStatus } from "../../hooks/useRequest";
-import { cfgCard, cfgFieldLabel, cfgGrid, cfgSkel, cfgStatus } from "../../tw";
+import { ConfigSkeleton } from "../../components/Skeleton";
+import { cfgCard, cfgFieldLabel, cfgStatus } from "../../tw";
 
 export function Card({
   title,
@@ -174,19 +175,5 @@ export function ActionRow({ children }: { children: ReactNode }) {
 }
 
 export function Skeleton() {
-  return (
-    <div className="flex w-full flex-col gap-[14px]" aria-hidden>
-      <div className={cn(cfgSkel, "h-11")} />
-      <div className={cn(cfgSkel, "h-[92px]")} />
-      <div className={cfgGrid}>
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className={cn(cfgSkel, "h-[172px]")} />
-        ))}
-      </div>
-      <div className={cfgGrid}>
-        <div className={cn(cfgSkel, "h-[172px]")} />
-        <div className={cn(cfgSkel, "h-[172px]")} />
-      </div>
-    </div>
-  );
+  return <ConfigSkeleton />;
 }

@@ -20,10 +20,38 @@ static uint16_t lerp565(uint16_t a, uint16_t b, uint8_t t) {
   return (uint16_t)((r << 11) | (g << 5) | bc);
 }
 
+static void splashGazeTo(int cx, int cy, int r, int* gazeX, int* gazeY,
+                         int targetX, int targetY, int holdMs) {
+  const int startX = *gazeX;
+  const int startY = *gazeY;
+  const int steps = 6;
+  for (int s = 1; s <= steps; s++) {
+    *gazeX = startX + (targetX - startX) * s / steps;
+    *gazeY = startY + (targetY - startY) * s / steps;
+    drawEyeIcon(cx, cy, r, *gazeX, *gazeY, 0.0f);
+    splashDelay(16);
+  }
+  if (holdMs > 0) {
+    splashDelay((uint32_t)holdMs);
+  }
+}
+
+static void splashBlink(int cx, int cy, int r, int gazeX, int gazeY) {
+  const int steps = 5;
+  for (int step = 0; step <= steps; step++) {
+    drawEyeIcon(cx, cy, r, gazeX, gazeY, (float)step / (float)steps);
+    splashDelay(14);
+  }
+  for (int step = 0; step <= steps; step++) {
+    drawEyeIcon(cx, cy, r, gazeX, gazeY,
+                1.0f - (float)step / (float)steps);
+    splashDelay(14);
+  }
+}
+
 // Boot: o olho da marca em tamanho grande "acordando" (fechado -> aberto),
-// dando uma olhada ao redor (saccade) e piscando, seguido da marca (VIGIA
-// claro + AI vermelho) entrando letra a letra — curto o bastante pra nao
-// atrasar o Wi-Fi, visivel o bastante pra nao parecer um flash.
+// olhando ao redor (saccades + piscadas) e depois a marca (VIGIA claro + AI
+// vermelho) letra a letra — curto o bastante pra nao atrasar o Wi-Fi.
 void uiShowSplash() {
   const int W = tft.width();
   const int H = tft.height();
@@ -47,40 +75,31 @@ void uiShowSplash() {
   for (int step = 0; step <= 10; step++) {
     float lid = 1.0f - (float)step / 10.0f;
     drawEyeIcon(eyeCx, eyeCy, eyeR, 0, 0, lid);
-    splashDelay(30);
+    splashDelay(28);
   }
-  splashDelay(120);
+  splashDelay(80);
 
-  // Saccade: olha pros lados e pra cima, volta ao centro.
   const int maxGaze = eyeR * 3 / 5 - 2;
-  const int gazeSeq[4][2] = {
-      {-maxGaze, 0}, {maxGaze, 0}, {0, -maxGaze / 2}, {0, 0}};
+  const int up = maxGaze / 2;
+  const int down = maxGaze / 3;
   int gazeX = 0;
   int gazeY = 0;
-  for (int g = 0; g < 4; g++) {
-    const int startX = gazeX;
-    const int startY = gazeY;
-    const int targetX = gazeSeq[g][0];
-    const int targetY = gazeSeq[g][1];
-    const int steps = 6;
-    for (int s = 1; s <= steps; s++) {
-      gazeX = startX + (targetX - startX) * s / steps;
-      gazeY = startY + (targetY - startY) * s / steps;
-      drawEyeIcon(eyeCx, eyeCy, eyeR, gazeX, gazeY, 0.0f);
-      splashDelay(18);
-    }
-    splashDelay(90);
-  }
 
-  // Pisca rapido antes de mostrar a marca.
-  for (int step = 0; step <= 6; step++) {
-    drawEyeIcon(eyeCx, eyeCy, eyeR, 0, 0, (float)step / 6.0f);
-    splashDelay(16);
-  }
-  for (int step = 0; step <= 6; step++) {
-    drawEyeIcon(eyeCx, eyeCy, eyeR, 0, 0, 1.0f - (float)step / 6.0f);
-    splashDelay(16);
-  }
+  // Olha ao redor, piscando varias vezes (incluindo um blink duplo).
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, -maxGaze, 0, 70);
+  splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
+
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, maxGaze, 0, 70);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, maxGaze / 2, -up, 50);
+  splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
+
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, -maxGaze / 2, -up, 50);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, 0, down, 60);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, 0, 0, 40);
+
+  splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
+  splashDelay(90);
+  splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
 
   const int x = (W - bw) / 2;
   const int y = topY + eyeR * 2 + gapEyeToBrand;

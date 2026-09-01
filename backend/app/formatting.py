@@ -54,6 +54,25 @@ def as_percent(value: Any) -> float | None:
     return round(n, 1)
 
 
+def as_percent_points(value: Any) -> float | None:
+    """Percentual que já vem em 0–100 (não fração 0–1).
+
+    `as_percent` trata 1.0 como 100% — certo pro `utilization` do Claude.
+    No Cursor, `autoPercentUsed: 1` é 1% usado; multiplicar vira 100% no ciclo novo.
+    """
+    if value is None:
+        return None
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return None
+    if n < 0:
+        n = 0.0
+    if n > 100:
+        n = 100.0
+    return round(n, 1)
+
+
 def ratio_percent(numerator: float, denominator: float) -> float | None:
     if not denominator:
         return None

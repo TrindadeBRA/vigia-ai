@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.formatting import as_percent, cycle_end_label, money_cents, ratio_percent
+from app.formatting import as_percent_points, cycle_end_label, money_cents, pick, ratio_percent
 from app.http_util import http_json
 from app.local.cursor_state import cursor_token_candidates, jwt_expired
 from app.store import provider as provider_cfg
@@ -34,8 +34,10 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
     usage = data.get("planUsage") or data.get("plan_usage") or {}
     if not isinstance(usage, dict):
         usage = {}
-    percent = as_percent(usage.get("autoPercentUsed") or usage.get("totalPercentUsed"))
-    other_percent = as_percent(usage.get("apiPercentUsed"))
+    # Campos já em 0–100. Não usar `or`: 0 é valor válido (ciclo recém-resetado).
+    # Não cair em totalPercentUsed — é outra barra (incluso total), não "Cursor Models".
+    percent = as_percent_points(pick(usage.get("autoPercentUsed"), usage.get("auto_percent_used")))
+    other_percent = as_percent_points(pick(usage.get("apiPercentUsed"), usage.get("api_percent_used")))
     spend = data.get("spendLimitUsage") or data.get("spend_limit_usage") or {}
     if not isinstance(spend, dict):
         spend = {}
@@ -49,13 +51,16 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
     cycle_end = cycle_end_label(
         data.get("billingCycleEnd") or data.get("billing_cycle_end") or usage.get("endDate")
     )
+    # proto3 omite scalar 0: ciclo novo chega sem autoPercentUsed/apiPercentUsed.
     if percent is None and other_percent is None and ondemand_limit is None and not cycle_end:
         return None
+    if percent is None:
+        percent = 0.0
+    if other_percent is None:
+        other_percent = 0.0
     return {
-        "ok": percent is not None or other_percent is not None or ondemand_limit is not None,
-        "error": None
-        if (percent is not None or other_percent is not None or ondemand_limit is not None)
-        else "planUsage sem números",
+        "ok": True,
+        "error": None,
         "percent": percent,
         "other_percent": other_percent,
         "used_cents": ondemand_used,

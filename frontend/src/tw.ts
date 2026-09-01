@@ -26,16 +26,22 @@ export const barFill =
   "h-full min-w-0 rounded-[5px] bg-gradient-to-b from-white/20 to-transparent bg-blend-overlay [.flat_&]:bg-none";
 
 export const metricCard =
-  "flex min-w-0 flex-col rounded-2xl border border-edge bg-panel px-[18px] py-4 shadow-card [.flat_&]:shadow-none";
+  "flex h-full min-w-0 flex-col rounded-2xl border border-edge bg-panel px-[18px] py-4 shadow-card [.flat_&]:shadow-none";
 
 export const cfgCard =
-  "flex w-full flex-1 flex-col gap-3 rounded-2xl border border-edge bg-panel px-[18px] py-4 shadow-card [.flat_&]:shadow-none";
+  "flex h-full min-w-0 w-full flex-col gap-3 rounded-2xl border border-edge bg-panel px-[18px] py-4 shadow-card [.flat_&]:shadow-none";
 
 export const cfgGrid =
-  "flex w-full flex-wrap items-stretch gap-[14px] [&>*]:min-w-0 [&>*]:flex-[1_1_360px] [&>form]:flex";
+  "grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))] [&>form]:contents";
+
+export const overviewGrid =
+  "grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))]";
+
+export const metricsGrid =
+  "grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))]";
 
 export const cfgSkel =
-  "box-border min-w-0 w-full animate-shimmer rounded-2xl border border-edge bg-[linear-gradient(90deg,var(--card)_0%,var(--chip)_50%,var(--card)_100%)] bg-[length:200%_100%]";
+  "box-border min-w-0 overflow-hidden rounded-2xl border border-edge bg-[linear-gradient(90deg,var(--card)_0%,var(--chip)_50%,var(--card)_100%)] bg-[length:200%_100%] animate-shimmer";
 
 export const cfgFieldLabel = "text-[11.5px] font-[650] uppercase tracking-[.4px] text-ink3";
 

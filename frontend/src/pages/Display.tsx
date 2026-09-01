@@ -2,13 +2,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
+import { OverviewSkeleton } from "../components/Skeleton";
 import { Logo } from "../components/Logo";
 import { CheckIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { cn } from "../cn";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
-import { accentLink, barFill, barTrack, cardLabel, cfgGrid, cfgSkel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, num, shell, sideItem, sideItemActive, viewFade } from "../tw";
+import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewGrid, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { ConfigOutlet } from "./config/ConfigPage";
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang };
@@ -260,7 +261,7 @@ function ProviderCard({ p, pal, onOpen }: { p: ProviderMeta; pal: Pal; onOpen: (
   return (
     <div
       className={cn(
-        "flex flex-[1_1_280px] cursor-pointer flex-col rounded-2xl border border-edge bg-panel p-4 shadow-card transition-[transform,box-shadow,border-color] duration-150",
+        "flex h-full min-w-0 w-full cursor-pointer flex-col rounded-2xl border border-edge bg-panel p-4 shadow-card transition-[transform,box-shadow,border-color] duration-150",
         "hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover active:translate-y-0",
         "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0",
         viewFade,
@@ -367,7 +368,7 @@ function Overview({ providers, updatedAt, now, t, pal, onOpen }: { providers: Pr
           </Link>
         </div>
       ) : (
-        <div className="flex w-full flex-wrap items-stretch gap-[14px]">
+        <div className={overviewGrid}>
           {providers.map((p) => (
             <ProviderCard key={p.id} p={p} pal={pal} onOpen={() => onOpen(p.id)} />
           ))}
@@ -495,7 +496,7 @@ function MetricCard({
 }
 
 function MetricsGrid({ children }: { children: ReactNode }) {
-  return <div className="flex w-full flex-wrap items-stretch gap-[14px] [&>*]:flex-[1_1_260px]">{children}</div>;
+  return <div className={metricsGrid}>{children}</div>;
 }
 
 function Kv({ k, v }: { k: string; v: ReactNode }) {
@@ -896,14 +897,7 @@ export default function Display() {
             fetchFailed ? (
               <div className={emptyNote}>{t.fetchFail}</div>
             ) : (
-              <div className={`flex w-full flex-col gap-[14px] ${viewFade}`} aria-hidden>
-                <div className={`${cfgSkel} h-11`} />
-                <div className={cfgGrid}>
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <div key={i} className={`${cfgSkel} h-[172px]`} />
-                  ))}
-                </div>
-              </div>
+              <OverviewSkeleton />
             )
           ) : (
             <>

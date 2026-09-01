@@ -41,8 +41,9 @@ Connect-Protocol-Version: 1
 
 Campos úteis (nomes podem mudar; ver `parse_cursor_dashboard` em `collector/providers/cursor.py`):
 
-- `planUsage.autoPercentUsed` (ou `totalPercentUsed`) → "Cursor Models" no dashboard, vira `percent` no `/usage`
+- `planUsage.autoPercentUsed` → "Cursor Models" no dashboard, vira `percent` no `/usage` (já vem **0–100**; `1` é 1%, não 100%)
 - `planUsage.apiPercentUsed` → "Other Models" no dashboard, vira `other_percent` no `/usage`
+- Connect/proto3 **omite campos em 0** — ausência de `autoPercentUsed` no ciclo novo é 0%, não um fallback para `totalPercentUsed`
 - `spendLimitUsage.individualLimit` / `individualRemaining` (centavos, USD) → `limit_cents` / `remaining_cents` (`used_cents` = limite − restante)
 - `billingCycleEnd` (ou `planUsage.endDate`) → `cycle_end`
 

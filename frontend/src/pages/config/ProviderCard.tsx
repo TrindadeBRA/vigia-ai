@@ -45,7 +45,6 @@ export function ProviderCard({
   const hasPaste = p.mode === "paste";
   const local = p.mode === "local";
   const editable = !local;
-  const needsSecret = editable && !p.configured;
   const savedLabel = p.local_label || p.primary_label || "";
   const [secret, setSecret] = useState(hasPaste ? MASK : "");
   const [label, setLabel] = useState(savedLabel);
@@ -130,7 +129,7 @@ export function ProviderCard({
       </ActionRow>
 
       {editable ? (
-        <Fold summary={c.secretFold} defaultOpen={needsSecret}>
+        <Fold summary={c.secretFold}>
           <ActionRow>
             <TextField
               type="password"
@@ -184,7 +183,7 @@ export function ProviderCard({
 
       {children}
 
-      <Fold summary={p.accounts.length ? c.extraCount(p.accounts.length) : c.extraTitle} defaultOpen={p.accounts.length > 0}>
+      <Fold summary={p.accounts.length ? c.extraCount(p.accounts.length) : c.extraTitle}>
         <ExtraAccounts provider={providerId} accounts={p.accounts} placeholder={placeholder} c={c} offline={c.offline} onReload={onReload} />
       </Fold>
 
