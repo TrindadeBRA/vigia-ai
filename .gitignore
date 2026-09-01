@@ -19,6 +19,7 @@ firmware/src/secrets.h
 backend/.venv
 backend/data/*.json
 backend/data/*.json.tmp
+backend/data/theme_bg.raw
 frontend/node_modules
 frontend/dist
 *.egg-info/

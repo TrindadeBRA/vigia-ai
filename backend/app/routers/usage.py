@@ -76,7 +76,10 @@ def health(request: Request) -> HealthPayload:
     response_description="Mesmo schema do evento SSE `usage`. HTTP 200 com falha parcial.",
 )
 async def usage(request: Request) -> UsagePayload:
-    payload = await request.app.state.hub.refresh()
+    hub = request.app.state.hub
+    if request.client and request.headers.get("x-vigia-device") == "esp32":
+        hub.note_device(request.client.host)
+    payload = await hub.refresh()
     return UsagePayload.model_validate(payload)
 
 
@@ -127,6 +130,8 @@ async def usage(request: Request) -> UsagePayload:
 )
 async def events(request: Request) -> StreamingResponse:
     hub = request.app.state.hub
+    if request.client and request.headers.get("x-vigia-device") == "esp32":
+        hub.note_device(request.client.host)
     return StreamingResponse(
         sse_bytes(hub),
         media_type="text/event-stream",

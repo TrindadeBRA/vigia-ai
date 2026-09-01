@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -39,6 +40,16 @@ class UsageHub:
         self._latest: dict[str, Any] | None = None
         self._queues: set[asyncio.Queue[dict[str, Any] | None]] = set()
         self._task: asyncio.Task[None] | None = None
+        # IP de quem chamou GET /usage ou /events por último (a placa) — usado só pra
+        # pré-preencher o "enviar tema pro device" no painel; não faz parte do contrato JSON.
+        self.device_ip: str | None = None
+        self.device_seen_at: float | None = None
+
+    def note_device(self, ip: str | None) -> None:
+        if not ip:
+            return
+        self.device_ip = ip
+        self.device_seen_at = time.monotonic()
 
     async def start(self) -> None:
         await self.refresh()

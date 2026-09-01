@@ -1,6 +1,7 @@
 #include "net/usage_client.h"
 
 #include "net/parse.h"
+#include "ui/customtheme.h"
 #include "ui/ui.h"
 
 #ifdef WOKWI_SIM
@@ -212,6 +213,9 @@ static void sseOpen() {
   }
   g_http.addHeader("Accept", "text/event-stream");
   g_http.addHeader("Cache-Control", "no-cache");
+  // Distingue a placa do /display (que também escuta /events) pro coletor
+  // saber pra quem mandar o tema — ver device_ip em app/hub.py.
+  g_http.addHeader("X-Vigia-Device", "esp32");
   g_http.useHTTP10(true);
   int code = g_http.GET();
   Serial.printf("coletor SSE GET -> HTTP %d\n", code);
@@ -313,6 +317,7 @@ void usageClientFetch() {
     return;
   }
 
+  http.addHeader("X-Vigia-Device", "esp32");
   int code = http.GET();
   Serial.printf("coletor GET %s -> HTTP %d\n", USAGE_URL, code);
   if (code != 200) {
@@ -375,4 +380,107 @@ void usageClientEnsureWifi() {
 #endif
     g_wifiRetryMs = now;
   }
+}
+
+// GET <coletor>/api/theme/background — stream direto pro storage do tema
+// (LittleFS ou RAM, ver ui/customtheme.h), nunca bufferiza a imagem inteira.
+static bool themeClientFetchBackground(const String& base) {
+  HTTPClient http;
+  http.setTimeout(15000);
+  http.setConnectTimeout(5000);
+  if (!http.begin(base + "api/theme/background")) {
+    return false;
+  }
+  int code = http.GET();
+  bool ok = false;
+  if (code == 200) {
+    int len = http.getSize();
+    WiFiClient* stream = http.getStreamPtr();
+    if (len > 0 && customThemeBeginBackgroundWrite()) {
+      uint8_t buf[1024];
+      int remaining = len;
+      ok = true;
+      uint32_t deadline = millis() + 20000;
+      while (remaining > 0 && millis() < deadline) {
+        size_t avail = stream->available();
+        if (avail == 0) {
+          delay(1);
+          continue;
+        }
+        size_t want = avail < sizeof(buf) ? avail : sizeof(buf);
+        if ((int)want > remaining) {
+          want = remaining;
+        }
+        int n = stream->readBytes(buf, want);
+        if (n <= 0) {
+          ok = false;
+          break;
+        }
+        if (!customThemeWriteBackgroundChunk(buf, n)) {
+          ok = false;
+          break;
+        }
+        remaining -= n;
+      }
+      if (remaining > 0) {
+        ok = false;
+      }
+      customThemeEndBackgroundWrite(ok);
+    }
+  } else if (code != 404) {
+    Serial.printf("tema: GET /api/theme/background -> HTTP %d\n", code);
+  }
+  http.end();
+  return ok;
+}
+
+// Botão de recarregar no header (ui/nav.cpp) — puxa o tema que o painel
+// salvou no coletor (POST /api/theme/meta feito por
+// frontend/.../ThemeEditorPage.tsx) e aplica via ui/customtheme.h. Não é
+// automático: só quando o usuário toca o ícone.
+void themeClientReload() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("tema: sem Wi-Fi, aborta recarregar");
+    return;
+  }
+  String base = originWithSlash(USAGE_URL);
+  if (!base.length()) {
+    Serial.println("tema: USAGE_URL sem origem válida, aborta recarregar");
+    return;
+  }
+  HTTPClient http;
+  http.setTimeout(8000);
+  http.setConnectTimeout(5000);
+  if (!http.begin(base + "api/theme")) {
+    Serial.println("tema: GET /api/theme http.begin falhou");
+    return;
+  }
+  int code = http.GET();
+  if (code != 200) {
+    Serial.printf("tema: GET /api/theme -> HTTP %d\n", code);
+    http.end();
+    return;
+  }
+  String body = http.getString();
+  http.end();
+  JsonDocument doc;
+  if (deserializeJson(doc, body)) {
+    Serial.println("tema: resposta do coletor inválida");
+    return;
+  }
+  if (!(doc["active"] | false)) {
+    Serial.println("tema: coletor sem tema salvo");
+    return;
+  }
+  if (doc["has_background"] | false) {
+    if (!themeClientFetchBackground(base)) {
+      Serial.println("tema: falha ao baixar a imagem de fundo, segue só com o resto");
+    }
+  }
+  String themeJson = jsonText(doc["theme"]);
+  if (!themeJson.length() || !customThemeApplyMeta(themeJson)) {
+    Serial.println("tema: JSON do coletor inválido");
+    return;
+  }
+  Serial.println("tema: recarregado do coletor");
 }

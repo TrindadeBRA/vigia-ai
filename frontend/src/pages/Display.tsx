@@ -5,7 +5,7 @@ import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
 import { Skeleton } from "../components/Skeleton";
 import { Logo } from "../components/Logo";
-import { CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { cn } from "../cn";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
@@ -526,10 +526,11 @@ function Sidebar(props: {
   nowActive: boolean;
   configActive: boolean;
   setupActive: boolean;
+  temaActive: boolean;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, setupActive, t } = props;
-  const onPage = configActive || setupActive;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, setupActive, temaActive, t } = props;
+  const onPage = configActive || setupActive || temaActive;
   const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
   return (
     <nav
@@ -580,6 +581,9 @@ function Sidebar(props: {
         </NavLink>
         <NavLink to="/display/setup" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <ChipIcon size={16} /> {t.board}
+        </NavLink>
+        <NavLink to="/display/tema" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+          <PaletteIcon size={16} /> {t.tema}
         </NavLink>
         <a className={sideItem} href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
           <GitHubIcon size={16} /> GitHub
@@ -1136,7 +1140,8 @@ export default function Display() {
   const navigate = useNavigate();
   const isConfig = Boolean(useMatch("/display/config"));
   const isSetup = Boolean(useMatch("/display/setup"));
-  const isNested = isConfig || isSetup;
+  const isTema = Boolean(useMatch("/display/tema"));
+  const isNested = isConfig || isSetup || isTema;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -1291,6 +1296,7 @@ export default function Display() {
           nowActive={nowOpen}
           configActive={isConfig}
           setupActive={isSetup}
+          temaActive={isTema}
           onOverview={goOverview}
           onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); setNowOpen(false); }}
           onNow={() => { if (data) setNowOpen(true); }}

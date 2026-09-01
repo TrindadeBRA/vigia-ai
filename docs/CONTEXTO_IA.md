@@ -7,6 +7,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [SETUP.md](SETUP.md)                         | Instalar e rodar: quick start, comandos, placa, Wokwi, provedores |
 | [ARQUITETURA.md](ARQUITETURA.md)             | Coletor ↔ ESP32 ↔ APIs                                            |
 | [CONTRATO_JSON.md](CONTRATO_JSON.md)         | Formato de `/usage` (não quebrar o firmware)                      |
+| [CONTRATO_TEMA.md](CONTRATO_TEMA.md)         | Protótipo: tema custom (`porta 80` da placa, `/display/tema`)     |
 | [APIS_CLAUDE.md](APIS_CLAUDE.md)             | OAuth usage da Anthropic                                          |
 | [APIS_GPT.md](APIS_GPT.md)                   | OAuth usage do Codex / ChatGPT                                    |
 | [APIS_CURSOR.md](APIS_CURSOR.md)             | Dashboard Connect RPC do Cursor                                   |
@@ -52,6 +53,11 @@ backend/app/local/            Keychain, credentials, state.vscdb, auth.json (Cod
 frontend/src/pages/Display.tsx         mostrador (SSE GET /events)
 frontend/src/pages/config/ConfigPage.tsx  contas, placa, rede
 firmware/src/                  sketch ESP32 (`core/` `net/` `input/` `ui/`)
+frontend/src/pages/config/ThemeEditorPage.tsx  editor de tema (protótipo, ver CONTRATO_TEMA.md)
+backend/app/routers/theme.py       coletor guarda o tema salvo pelo painel (protótipo)
+firmware/src/net/theme_server.cpp  servidor HTTP :80 do tema, direto/debug (protótipo)
+firmware/src/net/client.cpp        themeClientReload(): placa busca o tema do coletor
+firmware/src/ui/customtheme.cpp    persistência (LittleFS/RAM) + render do tema (VIEW_THEME)
 firmware/platformio.ini
 ./dev                          único script
 ```

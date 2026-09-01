@@ -25,6 +25,7 @@ from app.schemas import (
     ConfigPatch,
     ConfigPublic,
     ConfigSaveResult,
+    DevicePublic,
     ListenPublic,
     OkResult,
     ProviderCardPublic,
@@ -312,7 +313,15 @@ def _secrets_h_file(usage_lan: str) -> str:
     )
 
 
-def config_public(listen_host: str, listen_port: int) -> ConfigPublic:
+def _device_public(hub: Any) -> DevicePublic:
+    ip = getattr(hub, "device_ip", None)
+    seen_at = getattr(hub, "device_seen_at", None)
+    if not ip or seen_at is None:
+        return DevicePublic()
+    return DevicePublic(ip=ip, last_seen_s=max(0, int(time.monotonic() - seen_at)))
+
+
+def config_public(listen_host: str, listen_port: int, hub: Any = None) -> ConfigPublic:
     cfg = load()
     ips = lan_ipv4()
     usage_paths = [f"http://127.0.0.1:{listen_port}/usage"]
@@ -347,6 +356,7 @@ def config_public(listen_host: str, listen_port: int) -> ConfigPublic:
             "opencode": _key_card(cfg, "opencode"),
             "fal": _key_card(cfg, "fal"),
         },
+        device=_device_public(hub),
     )
 
 
@@ -365,7 +375,7 @@ def _listen(request: Request) -> tuple[str, int]:
 )
 def get_config(request: Request) -> ConfigPublic:
     host, port = _listen(request)
-    return config_public(host, port)
+    return config_public(host, port, hub=request.app.state.hub)
 
 
 @router.post(

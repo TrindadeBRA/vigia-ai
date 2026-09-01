@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Display from "./pages/Display";
 import ConfigPage from "./pages/config/ConfigPage";
 import SetupPage from "./pages/config/SetupPage";
+import ThemeEditorPage from "./pages/config/ThemeEditorPage";
 import "./index.css";
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/display" element={<Display />}>
           <Route path="config" element={<ConfigPage />} />
           <Route path="setup" element={<SetupPage />} />
+          <Route path="tema" element={<ThemeEditorPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

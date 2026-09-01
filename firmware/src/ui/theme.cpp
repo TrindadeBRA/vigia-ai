@@ -2,6 +2,8 @@
 
 #include "ui/internal.h"
 
+#include "ui/customtheme.h"
+
 #include <Preferences.h>
 
 HomeLayout g_homeLayout = HOME_LAYOUT_GRID;
@@ -140,6 +142,7 @@ static void saveUiPref(const char* key, uint8_t value) {
 void uiInit() {
   g_view = VIEW_HOME;
   loadUiPrefs();
+  customThemeInit();
 }
 
 void uiSetHomeLayout(HomeLayout layout) {

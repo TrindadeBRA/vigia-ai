@@ -1,5 +1,7 @@
 #include "ui/ui.h"
 
+#include "net/usage_client.h"
+#include "ui/customtheme.h"
 #include "ui/internal.h"
 
 View g_view = VIEW_HOME;
@@ -147,6 +149,11 @@ void uiRefreshData()
     paintNow();
     return;
   }
+  if (g_view == VIEW_THEME)
+  {
+    paintCustomHome();
+    return;
+  }
   drawHeader();
   switch (g_view)
   {
@@ -191,7 +198,7 @@ void uiPaint()
 
 void uiHandleSwipe(int16_t dx)
 {
-  if (g_view == VIEW_NOW)
+  if (g_view == VIEW_NOW || g_view == VIEW_THEME)
   {
     uiSetView(VIEW_HOME);
     return;
@@ -221,7 +228,7 @@ void uiHandleTap(int16_t x, int16_t y)
   const int W = tft.width();
   x = constrain(x, 0, W - 1);
   y = constrain(y, 0, tft.height() - 1);
-  if (g_view == VIEW_NOW)
+  if (g_view == VIEW_NOW || g_view == VIEW_THEME)
   {
     uiSetView(VIEW_HOME);
     return;
@@ -253,6 +260,16 @@ void uiHandleTap(int16_t x, int16_t y)
     {
       uiSetView(VIEW_NOW);
       return;
+    }
+    if (g_reloadIconR > 0)
+    {
+      const int hit = g_reloadIconR + 8;
+      if (x >= g_reloadIconCx - hit && x < g_reloadIconCx + hit && y >= g_reloadIconCy - hit &&
+          y < g_reloadIconCy + hit)
+      {
+        themeClientReload();
+        return;
+      }
     }
     g_requestRefresh = true;
     return;
@@ -411,6 +428,11 @@ void uiTickClock()
     }
     return;
   }
+  if (g_view == VIEW_THEME)
+  {
+    customThemeTickClock();
+    return;
+  }
   int key = headerDisplayKey(countdownSeconds(), showFetchOkCheck());
   if (key == g_lastHeaderKey)
   {
@@ -426,7 +448,7 @@ void uiTickClock()
 // header pra dar movimento continuo. VIEW_NOW e tela cheia sem header.
 void uiTickEye()
 {
-  if (g_view == VIEW_NOW || g_eyeR <= 0)
+  if (g_view == VIEW_NOW || g_view == VIEW_THEME || g_eyeR <= 0)
   {
     return;
   }

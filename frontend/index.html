@@ -3,18 +3,85 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Vigia AI — Painel de Cotas de IA (Claude, GPT, Cursor)</title>
     <meta
       name="description"
-      content="Vigia AI: painel de mesa para cotas de IA (Claude, GPT, Cursor, OpenRouter e DeepSeek), rodando em ESP32 + TFT touch ou no navegador — sem nunca expor um token."
+      content="Painel de mesa para cotas de Claude, GPT, Cursor, OpenRouter e DeepSeek — ao vivo, em ESP32 + TFT touch ou no navegador, sem nunca expor um token."
     />
-    <meta property="og:title" content="Vigia AI" />
+    <meta name="keywords" content="painel de cotas de IA, uso de IA, Claude usage, ChatGPT usage, Cursor usage, OpenRouter, DeepSeek, ESP32, dashboard de IA, monitor de consumo de IA" />
+    <meta name="author" content="Vigia AI" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#101419" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#efebd6" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
+
+    <!--
+      Open Graph / Twitter Card.
+      og:image e og:url abaixo estão como caminhos relativos porque este projeto
+      ainda não tem um domínio público fixo (é um painel LAN-only). Se/quando
+      publicar em um domínio real, troque os dois por URLs absolutas
+      (https://SEU-DOMINIO/og-image.png e https://SEU-DOMINIO/) — várias
+      plataformas sociais não resolvem URLs relativas de imagem.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vigia AI" />
+    <meta property="og:title" content="Vigia AI — Painel de Cotas de IA" />
     <meta
       property="og:description"
       content="Painel de mesa para cotas de IA — Claude, GPT, Cursor, OpenRouter e DeepSeek, sem nunca expor um token."
     />
-    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vigia AI — painel de cotas de IA com contas Claude, GPT, Cursor, OpenRouter e DeepSeek" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="es_ES" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vigia AI — Painel de Cotas de IA" />
+    <meta
+      name="twitter:description"
+      content="Painel de mesa para cotas de IA — Claude, GPT, Cursor, OpenRouter e DeepSeek, sem nunca expor um token."
+    />
+    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image:alt" content="Vigia AI — painel de cotas de IA com contas Claude, GPT, Cursor, OpenRouter e DeepSeek" />
+
+    <!-- Ícones -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Vigia AI — Painel de cotas de IA</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/mask-icon.svg" color="#e63931" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- PWA / mobile -->
+    <meta name="application-name" content="Vigia AI" />
+    <meta name="apple-mobile-web-app-title" content="Vigia AI" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Vigia AI",
+        "alternateName": "Vigia AI — Painel de Cotas de IA",
+        "description": "Painel de mesa para cotas de IA (Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen e fal.ai), rodando em ESP32 + TFT touch ou no navegador, sem nunca expor um token.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web, ESP32",
+        "inLanguage": ["pt-BR", "en", "es"],
+        "image": "/og-image.png",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body class="min-h-screen overflow-x-hidden bg-canvas font-sans text-ink antialiased [text-rendering:optimizeLegibility] motion-reduce:scroll-auto motion-reduce:[&_*]:![animation-duration:0.001ms] motion-reduce:[&_*]:![animation-iteration-count:1] motion-reduce:[&_*]:![transition-duration:0.001ms]">
     <div id="root" class="min-h-full"></div>

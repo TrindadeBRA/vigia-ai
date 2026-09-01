@@ -91,6 +91,22 @@ export function GripIcon(props: { size?: number }) {
   );
 }
 
+export function PaletteIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M12 4a8 8 0 1 0 0 16h1.5a1.8 1.8 0 0 0 1.3-3.1 1.8 1.8 0 0 1 1.3-3.1H17a3 3 0 0 0 3-3c0-3.8-3.6-6.8-8-6.8Z"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      <circle cx={8} cy={11} r={1.2} fill="currentColor" />
+      <circle cx={11} cy={8} r={1.2} fill="currentColor" />
+      <circle cx={15} cy={9} r={1.2} fill="currentColor" />
+    </Svg>
+  );
+}
+
 export function SlidersIcon(props: { size?: number }) {
   return (
     <Svg {...props}>

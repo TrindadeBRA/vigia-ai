@@ -29,7 +29,7 @@ static void splashGazeTo(int cx, int cy, int r, int* gazeX, int* gazeY,
     *gazeX = startX + (targetX - startX) * s / steps;
     *gazeY = startY + (targetY - startY) * s / steps;
     drawEyeIcon(cx, cy, r, *gazeX, *gazeY, 0.0f);
-    splashDelay(16);
+    splashDelay(8);
   }
   if (holdMs > 0) {
     splashDelay((uint32_t)holdMs);
@@ -40,12 +40,12 @@ static void splashBlink(int cx, int cy, int r, int gazeX, int gazeY) {
   const int steps = 5;
   for (int step = 0; step <= steps; step++) {
     drawEyeIcon(cx, cy, r, gazeX, gazeY, (float)step / (float)steps);
-    splashDelay(14);
+    splashDelay(7);
   }
   for (int step = 0; step <= steps; step++) {
     drawEyeIcon(cx, cy, r, gazeX, gazeY,
                 1.0f - (float)step / (float)steps);
-    splashDelay(14);
+    splashDelay(7);
   }
 }
 
@@ -75,9 +75,9 @@ void uiShowSplash() {
   for (int step = 0; step <= 10; step++) {
     float lid = 1.0f - (float)step / 10.0f;
     drawEyeIcon(eyeCx, eyeCy, eyeR, 0, 0, lid);
-    splashDelay(28);
+    splashDelay(14);
   }
-  splashDelay(80);
+  splashDelay(40);
 
   const int maxGaze = eyeR * 3 / 5 - 2;
   const int up = maxGaze / 2;
@@ -86,19 +86,19 @@ void uiShowSplash() {
   int gazeY = 0;
 
   // Olha ao redor, piscando varias vezes (incluindo um blink duplo).
-  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, -maxGaze, 0, 70);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, -maxGaze, 0, 35);
   splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
 
-  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, maxGaze, 0, 70);
-  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, maxGaze / 2, -up, 50);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, maxGaze, 0, 35);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, maxGaze / 2, -up, 25);
   splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
 
-  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, -maxGaze / 2, -up, 50);
-  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, 0, down, 60);
-  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, 0, 0, 40);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, -maxGaze / 2, -up, 25);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, 0, down, 30);
+  splashGazeTo(eyeCx, eyeCy, eyeR, &gazeX, &gazeY, 0, 0, 20);
 
   splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
-  splashDelay(90);
+  splashDelay(45);
   splashBlink(eyeCx, eyeCy, eyeR, gazeX, gazeY);
 
   const int x = (W - bw) / 2;

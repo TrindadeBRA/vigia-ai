@@ -5,3 +5,11 @@ elf = "firmware/.pio/build/wokwi/firmware.elf"
 
 [net]
 gateway = "ws://127.0.0.1:9011"
+
+# Expõe o servidor de tema (porta 80 na placa) em localhost:8180 no host, pra
+# o painel web (frontend/src/pages/config/ThemeEditorPage.tsx) conseguir
+# falar com a placa simulada — a rede virtual do Wokwi só permite a placa
+# "sair" pro host por padrão (ex.: host.wokwi.internal:8787), não o inverso.
+[[net.forward]]
+from = "localhost:8180"
+to = "target:80"

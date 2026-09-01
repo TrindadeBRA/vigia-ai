@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +18,7 @@ from app.config import frontend_dist
 from app.hub import UsageHub
 from app.netutil import lan_ipv4
 from app.routers.config import router as config_router
+from app.routers.theme import router as theme_router
 from app.routers.usage import router as usage_router
 from app.store import load
 
@@ -100,6 +101,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(usage_router)
     app.include_router(config_router)
+    app.include_router(theme_router)
 
     dist = frontend_dist()
     if dist is not None:
@@ -121,6 +123,19 @@ def create_app() -> FastAPI:
         @app.get("/display/setup/", include_in_schema=False)
         def spa() -> FileResponse:
             return FileResponse(dist / "index.html")
+
+        dist_root = dist.resolve()
+
+        @app.get("/{static_name}", include_in_schema=False)
+        def dist_root_static(static_name: str) -> FileResponse:
+            """Arquivos copiados de frontend/public/ para a raiz do dist pelo Vite."""
+            if not static_name or "/" in static_name or "\\" in static_name or static_name in (".", ".."):
+                raise HTTPException(status_code=404)
+            path = (dist / static_name).resolve()
+            if not str(path).startswith(str(dist_root)) or not path.is_file():
+                raise HTTPException(status_code=404)
+            media_type = "application/manifest+json" if static_name.endswith(".webmanifest") else None
+            return FileResponse(path, media_type=media_type)
 
     @app.exception_handler(404)
     async def not_found(_request: Request, _exc: Exception) -> JSONResponse | FileResponse:

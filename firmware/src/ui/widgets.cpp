@@ -330,6 +330,16 @@ void drawClockIcon(int cx, int cy, int r, uint16_t color) {
   tft.fillCircle(cx, cy, 1, color);
 }
 
+// Seta pra baixo num círculo (atalho "recarregar tema do coletor" no
+// header, protótipo — ver net/usage_client.h:themeClientReload).
+void drawReloadIcon(int cx, int cy, int r, uint16_t color) {
+  tft.drawCircle(cx, cy, r, color);
+  const int half = r / 2;
+  tft.drawLine(cx, cy - half, cx, cy + half - 1, color);
+  tft.drawLine(cx - half, cy, cx, cy + half, color);
+  tft.drawLine(cx + half, cy, cx, cy + half, color);
+}
+
 void drawScrollChevron(int cx, int cy, bool up, bool enabled) {
   uint16_t c = enabled ? COL_ACCENT : COL_TEXT_MUTED;
   const int r = 7;

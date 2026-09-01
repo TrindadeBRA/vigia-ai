@@ -15,7 +15,11 @@ enum View : uint8_t
   VIEW_NOW = 7,
   VIEW_OPENCODE = 8,
   VIEW_FAL = 9,
-  VIEW_COUNT = 10
+  // Tema custom (protótipo) — tela cheia, sem header, ver ui/customtheme.h.
+  // Só entra por gatilho explícito (botão de recarregar ou tema recebido),
+  // nunca pelo swipe/paginação normal de views.
+  VIEW_THEME = 10,
+  VIEW_COUNT = 11
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da

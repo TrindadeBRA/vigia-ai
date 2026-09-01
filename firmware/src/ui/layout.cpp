@@ -24,6 +24,9 @@ int g_headerClockY1 = 0;
 int g_clockIconCx = 0;
 int g_clockIconCy = 0;
 int g_clockIconR = 0;
+int g_reloadIconCx = 0;
+int g_reloadIconCy = 0;
+int g_reloadIconR = 0;
 int g_eyeCx = 0;
 int g_eyeCy = 0;
 int g_eyeR = 0;
@@ -454,10 +457,31 @@ static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint
   drawClockIcon(g_clockIconCx, g_clockIconCy, clockR, color);
 }
 
+// Protótipo (docs/CONTRATO_TEMA.md): botão de recarregar o tema salvo no
+// coletor. Só no header vertical (esquerda/direita) — no horizontal a barra
+// já é apertada demais pra mais um ícone.
+static void drawHeaderReloadButton(int gap0, int gap1, int along, uint16_t color)
+{
+  const int iconR = 8;
+  const int pad = 6;
+  const int need = (iconR + pad) * 2;
+  g_reloadIconR = 0;
+  if (gap1 - gap0 < need)
+  {
+    return;
+  }
+  const int mid = (gap0 + gap1) / 2;
+  g_reloadIconCx = along;
+  g_reloadIconCy = mid;
+  g_reloadIconR = iconR;
+  drawReloadIcon(g_reloadIconCx, g_reloadIconCy, iconR, color);
+}
+
 void drawHeader()
 {
   layoutContent();
   g_clockIconR = 0;
+  g_reloadIconR = 0;
   const int W = tft.width();
   const int H = tft.height();
   const HeaderEdge edge = uiHeaderEdge();
@@ -567,7 +591,9 @@ void drawHeader()
   g_headerInfoY0 = infoCy - infoR - 8;
   g_headerInfoX1 = g_hdrX1;
   g_headerInfoY1 = infoCy + infoR + 8;
-  drawHeaderClockButton(g_headerClockY1, g_headerInfoY0, cx, true, clockCol);
+  const int clockReloadMid = (g_headerClockY1 + g_headerInfoY0) / 2;
+  drawHeaderClockButton(g_headerClockY1, clockReloadMid, cx, true, clockCol);
+  drawHeaderReloadButton(clockReloadMid, g_headerInfoY0, cx, clockCol);
   if (showBadge)
   {
     drawCountdownBadgeAt(cx, badgeCy, secs);

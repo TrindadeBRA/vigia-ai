@@ -33,13 +33,24 @@ src/
   secrets.h.example     Wi-Fi (copiar para secrets.h)
   core/state.h          View, snapshot, globais
   net/                  Wi-Fi, SSE, GET /usage, parse JSON
+                        theme_server.cpp: servidor HTTP :80 do tema (protótipo)
   input/                gestos, serial, XPT2046 / FT6206
   ui/
     ui.h                API pública da tela
     theme.cpp           paleta + NVS
+    customtheme.cpp     tema custom: LittleFS + render (protótipo)
     nav.cpp             views, toque, scroll
     layout.cpp          header e geometria
     widgets.cpp         barras, ícones, texto
     views/              Início, Claude, GPT, Cursor, …
   assets/icons/
 ```
+
+## Tema personalizado (protótipo)
+
+Além do coletor, a placa passa a escutar HTTP na **porta 80** só pra receber
+o tema montado em `/display/tema` (fundo, relógio, ícones dos provedores —
+ver [CONTRATO_TEMA.md](CONTRATO_TEMA.md)). Usa `WebServer.h` e `LittleFS.h`
+(ambos já vêm no core do ESP32 Arduino, sem `lib_deps` novo) — a tabela de
+partições padrão do `esp32dev` já reserva espaço de sobra pro `theme.json` e
+pro `theme_bg.raw` (imagem de fundo, ~300 KB em 480×320).

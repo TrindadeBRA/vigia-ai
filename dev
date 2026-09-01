@@ -7,6 +7,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MONITOR_BAUD=115200
 BACKEND_PORT=8787
 FRONTEND_PORT=5173
+# wokwigw expõe a porta 80 da placa simulada em 127.0.0.1:9080 por padrão
+# (forward embutido dele, sem precisar de --forward) — dá pra testar o
+# upload de tema (protótipo, ver docs/CONTRATO_TEMA.md) sem hardware real.
+THEME_SIM_PORT=9080
 WOKWIGW_BIN="$ROOT_DIR/.tools/wokwigw"
 WOKWIGW_VERSION="v2.0.1"
 WOKWIGW_ASSET=""
@@ -290,6 +294,9 @@ cmd_sim() {
   echo "2. Cmd+Shift+P → Wokwi: Start Simulator"
   echo "3. Neste terminal deve aparecer: Client connected"
   echo "   se não aparecer, o Wokwi não está usando o gateway."
+  echo ""
+  echo "Editor de tema (/display/tema) na placa simulada: IP \"127.0.0.1:${THEME_SIM_PORT}\""
+  echo "(o coletor detecta a placa como 127.0.0.1 — completa a porta à mão nesse campo)."
   echo "Ctrl+C encerra o gateway (e o backend, se este script o tiver subido)."
   wait
 }

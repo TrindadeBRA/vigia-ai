@@ -246,6 +246,11 @@ class ListenPublic(BaseModel):
     port: int
 
 
+class DevicePublic(BaseModel):
+    ip: str | None = Field(default=None, description="Último IP que chamou /usage ou /events (a placa).")
+    last_seen_s: int | None = Field(default=None, description="Segundos desde o último request da placa.")
+
+
 class ConfigPublic(BaseModel):
     ok: bool = True
     in_docker: bool
@@ -255,6 +260,7 @@ class ConfigPublic(BaseModel):
     lan_ips: list[str]
     restart_needed_for_port: bool = False
     providers: dict[str, ProviderCardPublic]
+    device: DevicePublic = Field(default_factory=DevicePublic)
 
 
 class ConfigPatch(BaseModel):

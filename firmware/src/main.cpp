@@ -4,6 +4,7 @@
 
 // Árvore: core/ (estado) · net/ (Wi-Fi/SSE/JSON) · input/ (toque/serial) · ui/ (tema, nav, views/).
 #include "input/input.h"
+#include "net/theme_server.h"
 #include "net/usage_client.h"
 #include "ui/ui.h"
 
@@ -49,6 +50,7 @@ void setup() {
   inputBegin();
   g_lastFetchMs = 0;
   usageClientEnsureWifi();
+  themeServerBegin();
   uiPaint();
 }
 
@@ -56,6 +58,7 @@ void loop() {
   inputPoll();
   uiTickClock();
   uiTickEye();
+  themeServerHandle();
 
   usageClientEnsureWifi();
   uint32_t now = millis();

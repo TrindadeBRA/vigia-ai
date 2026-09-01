@@ -95,6 +95,11 @@ export type ProviderCardPublic = {
   accounts: AccountPublic[];
 };
 
+export type DevicePublic = {
+  ip: string | null;
+  last_seen_s: number | null;
+};
+
 export type ConfigPublic = {
   ok: boolean;
   in_docker: boolean;
@@ -112,4 +117,5 @@ export type ConfigPublic = {
   lan_ips: string[];
   restart_needed_for_port: boolean;
   providers: Record<string, ProviderCardPublic>;
+  device: DevicePublic;
 };
