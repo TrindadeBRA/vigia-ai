@@ -238,10 +238,12 @@ void uiHandleTap(int16_t x, int16_t y)
       uiSetView(VIEW_STATUS);
       return;
     }
-    if (g_clockIconR > 0) {
+    if (g_clockIconR > 0)
+    {
       const int hit = g_clockIconR + 8;
       if (x >= g_clockIconCx - hit && x < g_clockIconCx + hit && y >= g_clockIconCy - hit &&
-          y < g_clockIconCy + hit) {
+          y < g_clockIconCy + hit)
+      {
         uiSetView(VIEW_NOW);
         return;
       }
