@@ -55,8 +55,7 @@ export type ConfigCopy = {
   cursorBlurb: string;
   openrouterBlurb: string;
   deepseekBlurb: string;
-  opencodeGoBlurb: string;
-  opencodeZenBlurb: string;
+  opencodeBlurb: string;
   cursorHint: string;
   cursorAdvanced: string;
   modeLocal: string;
@@ -83,8 +82,7 @@ export type ConfigCopy = {
   keyPh: string;
   orTokenPh: string;
   dsKeyPh: string;
-  ocGoKeyPh: string;
-  ocZenKeyPh: string;
+  ocKeyPh: string;
   gptTokenPh: string;
   cursorTokenPh: string;
 };
@@ -144,8 +142,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cursorBlurb: "Usa o login do app Cursor neste computador.",
     openrouterBlurb: "Cole a chave da sua conta. Você cria em openrouter.ai, em Settings → Keys.",
     deepseekBlurb: "Cole a chave da sua conta. Você cria em platform.deepseek.com, em API Keys.",
-    opencodeGoBlurb: "Cota da assinatura (janelas rolling, semanal e mensal). Crie a key em opencode.ai/auth.",
-    opencodeZenBlurb: "Saldo pago-conforme-uso. Crie a key em opencode.ai/auth.",
+    opencodeBlurb: "Cota da assinatura (janelas rolling, semanal e mensal) e saldo pago-conforme-uso. Crie a key em opencode.ai/auth.",
     cursorHint: "Se não aparecer sozinho: no Cursor, abra a conta, saia e entre de novo.",
     cursorAdvanced: "Opção avançada (Terminal)",
     modeLocal: "Encontramos o login neste computador.",
@@ -172,8 +169,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     keyPh: "Chave da API",
     orTokenPh: "sk-or-…",
     dsKeyPh: "sk-…",
-    ocGoKeyPh: "sk-…",
-    ocZenKeyPh: "sk-…",
+    ocKeyPh: "sk-…",
     gptTokenPh: "Token do Codex",
     cursorTokenPh: "Token da sessão",
   },
@@ -231,8 +227,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cursorBlurb: "Uses the Cursor app sign-in on this computer.",
     openrouterBlurb: "Paste your account key. Create one at openrouter.ai, under Settings → Keys.",
     deepseekBlurb: "Paste your account key. Create one at platform.deepseek.com, under API Keys.",
-    opencodeGoBlurb: "Subscription quota (rolling, weekly and monthly windows). Create a key at opencode.ai/auth.",
-    opencodeZenBlurb: "Pay-as-you-go balance. Create a key at opencode.ai/auth.",
+    opencodeBlurb: "Subscription quota (rolling, weekly and monthly windows) and pay-as-you-go balance. Create a key at opencode.ai/auth.",
     cursorHint: "If it doesn't show up: in Cursor, open the account, sign out, and sign back in.",
     cursorAdvanced: "Advanced (Terminal)",
     modeLocal: "We found the sign-in on this computer.",
@@ -259,8 +254,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     keyPh: "API key",
     orTokenPh: "sk-or-…",
     dsKeyPh: "sk-…",
-    ocGoKeyPh: "sk-…",
-    ocZenKeyPh: "sk-…",
+    ocKeyPh: "sk-…",
     gptTokenPh: "Codex token",
     cursorTokenPh: "Session token",
   },
@@ -318,8 +312,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cursorBlurb: "Usa el inicio de sesión de la app Cursor en este computador.",
     openrouterBlurb: "Pega la clave de tu cuenta. La creas en openrouter.ai, en Settings → Keys.",
     deepseekBlurb: "Pega la clave de tu cuenta. La creas en platform.deepseek.com, en API Keys.",
-    opencodeGoBlurb: "Cuota de la suscripción (ventanas rolling, semanal y mensual). Crea una clave en opencode.ai/auth.",
-    opencodeZenBlurb: "Saldo de pago por uso. Crea una clave en opencode.ai/auth.",
+    opencodeBlurb: "Cuota de la suscripción (ventanas rolling, semanal y mensual) y saldo de pago por uso. Crea una clave en opencode.ai/auth.",
     cursorHint: "Si no aparece solo: en Cursor, abre la cuenta, cierra sesión y vuelve a entrar.",
     cursorAdvanced: "Opción avanzada (Terminal)",
     modeLocal: "Encontramos el inicio de sesión en este computador.",
@@ -346,8 +339,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     keyPh: "Clave de API",
     orTokenPh: "sk-or-…",
     dsKeyPh: "sk-…",
-    ocGoKeyPh: "sk-…",
-    ocZenKeyPh: "sk-…",
+    ocKeyPh: "sk-…",
     gptTokenPh: "Token de Codex",
     cursorTokenPh: "Token de sesión",
   },

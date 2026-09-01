@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
-import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeGoAccount, UsagePayload } from "../api/types";
+import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
 import { Logo } from "../components/Logo";
 import { CheckIcon, ClockIcon, CloseIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import "../display.css";
@@ -43,12 +43,21 @@ function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
   return [prefs, (fn) => setPrefs(fn)];
 }
 
-function Badge({ secs, total, showCheck, pal }: { secs: number; total: number; showCheck: boolean; pal: Pal }) {
+function Badge({ secs, total, showCheck, pal, onClick }: { secs: number; total: number; showCheck: boolean; pal: Pal; onClick?: () => void }) {
   const pct = showCheck ? 100 : clamp(((total - secs) / total) * 100, 0, 100);
   const ringColor = showCheck ? pal.good : "var(--accent)";
+  const inner = <div className="badge-inner">{showCheck ? <CheckIcon size={12} /> : <span className="num">{Math.min(99, secs)}</span>}</div>;
+  const style = { background: `conic-gradient(${ringColor} ${pct}%, var(--track) 0)` };
+  if (onClick) {
+    return (
+      <button className="badge-ring" style={style} onClick={onClick} title="Atualizar agora" aria-label="Atualizar agora">
+        {inner}
+      </button>
+    );
+  }
   return (
-    <div className="badge-ring" style={{ background: `conic-gradient(${ringColor} ${pct}%, var(--track) 0)` }}>
-      <div className="badge-inner">{showCheck ? <CheckIcon size={12} /> : <span className="num">{Math.min(99, secs)}</span>}</div>
+    <div className="badge-ring" style={style}>
+      {inner}
     </div>
   );
 }
@@ -186,43 +195,44 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       metrics: [{ label: t.accountCredits, pct: d.percent, sub }],
     });
   }
-  for (const g of data.opencode_go || []) {
+  for (const o of data.opencode || []) {
+    const metrics: Metric[] = [];
+    if (o.rolling_percent != null) {
+      metrics.push({
+        label: t.rolling,
+        pct: o.rolling_percent,
+        sub: t.remainingPrefix + fmtRemain(o.rolling_percent) + (o.rolling_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(o.rolling_resets_at)}` : ""),
+      });
+    }
+    if (o.weekly_percent != null) {
+      metrics.push({
+        label: t.weekLimit,
+        pct: o.weekly_percent,
+        sub: t.remainingPrefix + fmtRemain(o.weekly_percent) + (o.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(o.weekly_resets_at)}` : ""),
+      });
+    }
+    if (o.monthly_percent != null) {
+      metrics.push({
+        label: t.monthLimit,
+        pct: o.monthly_percent,
+        sub: t.remainingPrefix + fmtRemain(o.monthly_percent) + (o.monthly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(o.monthly_resets_at)}` : ""),
+      });
+    }
+    if (o.remaining_cents != null) {
+      metrics.push({
+        label: t.accountCredits,
+        pct: null,
+        sub: t.remainMoney + fmtUsd(o.remaining_cents),
+      });
+    }
     list.push({
-      id: `opencode_go:${g.id}`,
-      provider: "opencode_go",
-      ok: g.ok,
-      error: g.error,
-      title: "OpenCode Go",
-      label: g.label || "",
-      metrics: [
-        {
-          label: t.rolling,
-          pct: g.rolling_percent,
-          sub: g.rolling_percent != null ? t.remainingPrefix + fmtRemain(g.rolling_percent) + (g.rolling_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.rolling_resets_at)}` : "") : null,
-        },
-        {
-          label: t.weekLimit,
-          pct: g.weekly_percent,
-          sub: g.weekly_percent != null ? t.remainingPrefix + fmtRemain(g.weekly_percent) + (g.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.weekly_resets_at)}` : "") : null,
-        },
-        {
-          label: t.monthLimit,
-          pct: g.monthly_percent,
-          sub: g.monthly_percent != null ? t.remainingPrefix + fmtRemain(g.monthly_percent) + (g.monthly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.monthly_resets_at)}` : "") : null,
-        },
-      ],
-    });
-  }
-  for (const z of data.opencode_zen || []) {
-    const sub = z.remaining_cents != null ? t.remainMoney + fmtUsd(z.remaining_cents) : t.noCredits;
-    list.push({
-      id: `opencode_zen:${z.id}`,
-      provider: "opencode_zen",
-      ok: z.ok,
-      error: z.error,
-      title: "OpenCode Zen",
-      label: z.label || "",
-      metrics: [{ label: t.accountCredits, pct: null, sub }],
+      id: `opencode:${o.id}`,
+      provider: "opencode",
+      ok: o.ok,
+      error: o.error,
+      title: "OpenCode",
+      label: o.label || "",
+      metrics,
     });
   }
   return list;
@@ -577,34 +587,23 @@ function DeepSeekBody({ data, account, t, pal }: { data: UsagePayload; account: 
   );
 }
 
-function OpenCodeGoBody({ data, account, t, pal }: { data: UsagePayload; account: OpenCodeGoAccount; t: T; pal: Pal }) {
-  const g = account;
+function OpenCodeBody({ data, account, t, pal }: { data: UsagePayload; account: OpenCodeAccount; t: T; pal: Pal }) {
+  const o = account;
+  const remain = o.remaining_cents != null ? t.remainMoney + fmtUsd(o.remaining_cents) : null;
   return (
     <>
       <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
       <MetricsGrid>
-        <MetricCard label={t.rolling} pct={g.rolling_percent} pal={pal} sub={remainLine(t, g.rolling_percent, g.rolling_resets_at)} />
-        <MetricCard label={t.weekLimit} pct={g.weekly_percent} pal={pal} sub={remainLine(t, g.weekly_percent, g.weekly_resets_at)} />
-        <MetricCard label={t.monthLimit} pct={g.monthly_percent} pal={pal} sub={remainLine(t, g.monthly_percent, g.monthly_resets_at)} />
+        {o.rolling_percent != null && <MetricCard label={t.rolling} pct={o.rolling_percent} pal={pal} sub={remainLine(t, o.rolling_percent, o.rolling_resets_at)} />}
+        {o.weekly_percent != null && <MetricCard label={t.weekLimit} pct={o.weekly_percent} pal={pal} sub={remainLine(t, o.weekly_percent, o.weekly_resets_at)} />}
+        {o.monthly_percent != null && <MetricCard label={t.monthLimit} pct={o.monthly_percent} pal={pal} sub={remainLine(t, o.monthly_percent, o.monthly_resets_at)} />}
+        {remain != null && <MetricCard label={t.credits} pct={o.percent} pal={pal} sub={remain} />}
       </MetricsGrid>
     </>
   );
 }
 
-function OpenCodeZenBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
-  const z = account;
-  const remain = z.remaining_cents != null ? t.remainMoney + fmtUsd(z.remaining_cents) : t.noCredits;
-  return (
-    <>
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard label={t.credits} pct={z.percent} pal={pal} sub={remain} />
-      </MetricsGrid>
-    </>
-  );
-}
-
-function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeGoAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
+function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   let body: ReactNode = null;
   if (meta.ok && account) {
     if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} />;
@@ -612,8 +611,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "cursor") body = <CursorBody data={data} account={account as CursorAccount} t={t} pal={pal} />;
     else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
-    else if (meta.provider === "opencode_go") body = <OpenCodeGoBody data={data} account={account as OpenCodeGoAccount} t={t} pal={pal} />;
-    else body = <OpenCodeZenBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
+    else if (meta.provider === "opencode") body = <OpenCodeBody data={data} account={account as OpenCodeAccount} t={t} pal={pal} />;
   }
   return (
     <div className="account-page view-fade">
@@ -793,13 +791,13 @@ export default function Display() {
 
   const providers = data ? buildProviders(data, t, now) : [];
   let meta: ProviderMeta | null = null;
-  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeGoAccount | null = null;
+  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null = null;
   if (data && section === "account") {
     meta = providers.find((p) => p.id === selectedId) || null;
     if (meta) {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
-      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode_go" | "opencode_zen";
+      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
   }
@@ -819,7 +817,7 @@ export default function Display() {
         <button className={`icon-btn${settingsOpen ? " on" : ""}`} onClick={() => setSettingsOpen((v) => !v)} title={t.settings}>
           <SettingsIcon size={19} />
         </button>
-        <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} />
+        <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} onClick={() => void loadUsage()} />
       </div>
       <div className="shell-body">
         {sidebarOpen ? <div className="scrim" onClick={() => setSidebarOpen(false)} /> : null}

@@ -9,8 +9,7 @@ from app.providers.claude import claude_fail, fetch_claude_accounts
 from app.providers.cursor import cursor_fail, fetch_cursor_accounts
 from app.providers.deepseek import deepseek_fail, fetch_deepseek_accounts
 from app.providers.gpt import fetch_gpt_accounts, gpt_fail
-from app.providers.opencode_go import fetch_opencode_go_accounts, opencode_go_fail
-from app.providers.opencode_zen import fetch_opencode_zen_accounts, opencode_zen_fail
+from app.providers.opencode import fetch_opencode_accounts, opencode_fail
 from app.providers.openrouter import fetch_openrouter_accounts, openrouter_fail
 from app.store import load, provider as provider_cfg
 
@@ -90,7 +89,7 @@ def mock_payload() -> dict[str, Any]:
                 "remaining_cents": 750,
             }
         ],
-        "opencode_go": [
+        "opencode": [
             {
                 "id": "legacy",
                 "label": "",
@@ -102,14 +101,6 @@ def mock_payload() -> dict[str, Any]:
                 "weekly_resets_at": now,
                 "monthly_percent": 10.0,
                 "monthly_resets_at": now,
-            }
-        ],
-        "opencode_zen": [
-            {
-                "id": "legacy",
-                "label": "",
-                "ok": True,
-                "error": None,
                 "percent": None,
                 "limit_cents": None,
                 "used_cents": None,
@@ -133,10 +124,8 @@ def build_payload() -> dict[str, Any]:
             payload["openrouter"] = []
         if provider_cfg(cfg, "deepseek").get("hidden"):
             payload["deepseek"] = []
-        if provider_cfg(cfg, "opencode_go").get("hidden"):
-            payload["opencode_go"] = []
-        if provider_cfg(cfg, "opencode_zen").get("hidden"):
-            payload["opencode_zen"] = []
+        if provider_cfg(cfg, "opencode").get("hidden"):
+            payload["opencode"] = []
         return payload
     try:
         claude = fetch_claude_accounts(cfg)
@@ -159,13 +148,9 @@ def build_payload() -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         deepseek = [{"id": "legacy", "label": "", **deepseek_fail(str(exc))}]
     try:
-        opencode_go = fetch_opencode_go_accounts(cfg)
+        opencode = fetch_opencode_accounts(cfg)
     except Exception as exc:  # noqa: BLE001
-        opencode_go = [{"id": "legacy", "label": "", **opencode_go_fail(str(exc))}]
-    try:
-        opencode_zen = fetch_opencode_zen_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        opencode_zen = [{"id": "legacy", "label": "", **opencode_zen_fail(str(exc))}]
+        opencode = [{"id": "legacy", "label": "", **opencode_fail(str(exc))}]
     return {
         "updated_at": utc_now(),
         "claude": claude,
@@ -173,6 +158,5 @@ def build_payload() -> dict[str, Any]:
         "cursor": cursor,
         "openrouter": openrouter,
         "deepseek": deepseek,
-        "opencode_go": opencode_go,
-        "opencode_zen": opencode_zen,
+        "opencode": opencode,
     }

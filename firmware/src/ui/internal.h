@@ -102,8 +102,7 @@ extern int g_gptIdx;
 extern int g_cursorIdx;
 extern int g_openrouterIdx;
 extern int g_deepseekIdx;
-extern int g_opencodeGoIdx;
-extern int g_opencodeZenIdx;
+extern int g_opencodeIdx;
 
 // Geometria do paginador "< i/N >" no topo do card de detalhe — só existe
 // (g_acctPagerVisible) quando o provedor tem mais de uma conta.
@@ -122,8 +121,7 @@ int gptWorstIdx();
 int cursorWorstIdx();
 int openrouterWorstIdx();
 int deepseekWorstIdx();
-int opencodeGoWorstIdx();
-int opencodeZenWorstIdx();
+int opencodeWorstIdx();
 
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
 // selo do header deve mostrar o check verde de sucesso em vez do contador.
@@ -140,8 +138,7 @@ void paintGpt();
 void paintCursor();
 void paintOpenRouter();
 void paintDeepSeek();
-void paintOpenCodeGo();
-void paintOpenCodeZen();
+void paintOpenCode();
 void paintStatus();
 void paintNow();
 void paintNowClock();
@@ -162,9 +159,8 @@ String openrouterRemain(const OpenRouterAccount &o);
 String openrouterBalance(const OpenRouterAccount &o);
 String deepseekRemain(const DeepSeekAccount &d);
 String deepseekBalance(const DeepSeekAccount &d);
-String opencodeGoRemain(const OpenCodeGoAccount &g);
-String opencodeZenRemain(const OpenCodeZenAccount &z);
-String opencodeZenBalance(const OpenCodeZenAccount &z);
+String opencodeRemain(const OpenCodeAccount &o);
+String opencodeBalance(const OpenCodeAccount &o);
 const char *emptyProvidersMsg();
 
 // Chrome das telas de detalhe / Sistema (card com scroll).

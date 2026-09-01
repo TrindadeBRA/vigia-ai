@@ -177,27 +177,30 @@ String deepseekBalance(const DeepSeekAccount &d)
   return d.remainingCents >= 0 ? fmtUsdSite(d.remainingCents) : String(uiTr().noCredits);
 }
 
-// OpenCode Go e assinatura com janelas (rolling/semanal/mensal) — o destaque
-// e o percentual da janela rolling (~5h), como o Claude/GPT.
-String opencodeGoRemain(const OpenCodeGoAccount &g)
+// OpenCode unifica assinatura (janelas rolling/semanal/mensal) e saldo
+// pago-conforme-uso. O destaque do card é a janela rolling (~5h), como o
+// Claude/GPT; o saldo do Zen aparece como valor extra quando disponível.
+String opencodeRemain(const OpenCodeAccount &o)
 {
-  return withResta(g.rollingPercent, g.rollingResets);
-}
-
-// OpenCode Zen e saldo pago-conforme-uso — o destaque e o saldo restante.
-String opencodeZenRemain(const OpenCodeZenAccount &z)
-{
-  if (z.remainingCents >= 0)
+  if (o.rollingPercent >= 0)
   {
-    return String(uiTr().remainMoney) + fmtUsdSite(z.remainingCents);
+    return withResta(o.rollingPercent, o.rollingResets);
+  }
+  if (o.remainingCents >= 0)
+  {
+    return String(uiTr().remainMoney) + fmtUsdSite(o.remainingCents);
   }
   return String(uiTr().noCredits);
 }
 
 // So o valor, sem o prefixo "restam" — usado no card da Início.
-String opencodeZenBalance(const OpenCodeZenAccount &z)
+String opencodeBalance(const OpenCodeAccount &o)
 {
-  return z.remainingCents >= 0 ? fmtUsdSite(z.remainingCents) : String(uiTr().noCredits);
+  if (o.remainingCents >= 0)
+  {
+    return fmtUsdSite(o.remainingCents);
+  }
+  return String(uiTr().noCredits);
 }
 
 const char *emptyProvidersMsg()

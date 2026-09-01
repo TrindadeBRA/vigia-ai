@@ -13,7 +13,7 @@ from app.config import config_path, data_dir
 
 _LOCK = threading.Lock()
 
-PROVIDERS = ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode_go", "opencode_zen")
+PROVIDERS = ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode")
 
 _EMPTY_PROVIDER: dict[str, Any] = {
     "hidden": False,
@@ -141,6 +141,20 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
         dest["local_label"] = str(src.get("local_label") or "")
         dest["paste_secret"] = str(src.get("paste_secret") or "")
         dest["accounts"] = _parse_accounts_blob(src.get("accounts") or [], "secret")
+    # Migração: opencode_go/opencode_zen (antigos) → opencode (unificado).
+    # Ambos usavam a mesma chave; consolida a primeira chave encontrada.
+    if not cfg["providers"]["opencode"]["paste_secret"] and not cfg["providers"]["opencode"]["accounts"]:
+        for old in ("opencode_go", "opencode_zen"):
+            src = providers.get(old) if isinstance(providers.get(old), dict) else {}
+            if not src:
+                continue
+            dest = cfg["providers"]["opencode"]
+            if not dest["paste_secret"]:
+                dest["paste_secret"] = str(src.get("paste_secret") or "")
+            if not dest["local_label"]:
+                dest["local_label"] = str(src.get("local_label") or "")
+            dest["hidden"] = dest["hidden"] or bool(src.get("hidden"))
+            dest["accounts"] = _parse_accounts_blob(src.get("accounts") or [], "secret")
     return cfg
 
 
