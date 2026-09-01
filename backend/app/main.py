@@ -14,10 +14,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app import __version__
+from app.alarms import AlarmEngine
 from app.config import frontend_dist
 from app.hub import UsageHub
 from app.netutil import lan_ipv4
+from app.routers.alarms import router as alarms_router
 from app.routers.config import router as config_router
+from app.routers.push import router as push_router
 from app.routers.theme import router as theme_router
 from app.routers.usage import router as usage_router
 from app.store import load
@@ -41,7 +44,8 @@ class CloseConnectionMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    hub = UsageHub()
+    alarm_engine = AlarmEngine()
+    hub = UsageHub(on_payload=alarm_engine.handle_payload)
     app.state.hub = hub
     await hub.start()
     try:
@@ -102,6 +106,8 @@ def create_app() -> FastAPI:
     app.include_router(usage_router)
     app.include_router(config_router)
     app.include_router(theme_router)
+    app.include_router(alarms_router)
+    app.include_router(push_router)
 
     dist = frontend_dist()
     if dist is not None:

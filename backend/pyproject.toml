@@ -15,6 +15,7 @@ dependencies = [
   "uvicorn[standard]>=0.32",
   "pydantic>=2.9",
   "python-multipart>=0.0.12",
+  "pywebpush>=2.0",
 ]
 
 [project.optional-dependencies]

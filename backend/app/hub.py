@@ -6,7 +6,7 @@ import asyncio
 import os
 import time
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, Callable
 
 from app.formatting import utc_now
 from app.schemas import UsagePayload
@@ -34,12 +34,13 @@ def _log_failures(payload: dict[str, Any]) -> None:
 
 
 class UsageHub:
-    def __init__(self, seconds: int | None = None) -> None:
+    def __init__(self, seconds: int | None = None, on_payload: Callable[[dict[str, Any]], None] | None = None) -> None:
         self.seconds = seconds if seconds is not None else interval_s()
         self._lock = asyncio.Lock()
         self._latest: dict[str, Any] | None = None
         self._queues: set[asyncio.Queue[dict[str, Any] | None]] = set()
         self._task: asyncio.Task[None] | None = None
+        self._on_payload = on_payload
         # IP de quem chamou GET /usage ou /events por último (a placa) — usado só pra
         # pré-preencher o "enviar tema pro device" no painel; não faz parte do contrato JSON.
         self.device_ip: str | None = None
@@ -94,7 +95,18 @@ class UsageHub:
             self._latest = payload
             _log_failures(payload)
             self._broadcast(payload)
+            if self._on_payload is not None:
+                # dispara em background (pode fazer request de push síncrona) sem
+                # atrasar a resposta de GET /usage nem o fan-out do SSE.
+                asyncio.create_task(self._run_on_payload(payload))
             return payload
+
+    async def _run_on_payload(self, payload: dict[str, Any]) -> None:
+        assert self._on_payload is not None
+        try:
+            await asyncio.to_thread(self._on_payload, payload)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[{utc_now()}] ERRO on_payload: {exc}")
 
     def snapshot(self) -> dict[str, Any] | None:
         return self._latest

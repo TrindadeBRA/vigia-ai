@@ -1,4 +1,4 @@
-import type { ConfigPublic, UsagePayload } from "./types";
+import type { AlarmRule, AlarmsPublic, ConfigPublic, UsagePayload } from "./types";
 
 export async function fetchUsage(): Promise<UsagePayload> {
   const res = await fetch("/usage", { cache: "no-store" });
@@ -80,5 +80,65 @@ export async function deleteAccount(provider: string, id: string) {
 
 export async function clearSecret(name: string) {
   const res = await fetch(`/api/config/secret/${name}`, { method: "DELETE" });
+  return readMutate(res);
+}
+
+export async function fetchAlarms(): Promise<AlarmsPublic> {
+  const res = await fetch("/api/alarms", { cache: "no-store" });
+  if (!res.ok) throw new Error(`alarms HTTP ${res.status}`);
+  return res.json() as Promise<AlarmsPublic>;
+}
+
+export async function createAlarm(body: { provider: string; metric: string; threshold: number; label?: string }) {
+  const res = await fetch("/api/alarms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as (AlarmRule & { detail?: unknown }) | { detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data as { detail?: unknown }, res.status) };
+  return { ok: true, rule: data as AlarmRule };
+}
+
+export async function patchAlarm(id: string, body: { threshold?: number; enabled?: boolean; label?: string }) {
+  const res = await fetch(`/api/alarms/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res);
+}
+
+export async function deleteAlarm(id: string) {
+  const res = await fetch(`/api/alarms/${id}`, { method: "DELETE" });
+  return readMutate(res);
+}
+
+export async function fetchVapidPublicKey(): Promise<{ public_key: string }> {
+  const res = await fetch("/api/push/vapid-public-key", { cache: "no-store" });
+  if (!res.ok) throw new Error(`vapid HTTP ${res.status}`);
+  return res.json() as Promise<{ public_key: string }>;
+}
+
+export async function subscribePush(body: { endpoint: string; p256dh: string; auth: string; ua: string }) {
+  const res = await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res);
+}
+
+export async function unsubscribePush(endpoint: string) {
+  const res = await fetch("/api/push/unsubscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoint }),
+  });
+  return readMutate(res);
+}
+
+export async function testPush() {
+  const res = await fetch("/api/push/test", { method: "POST" });
   return readMutate(res);
 }

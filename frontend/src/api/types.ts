@@ -102,6 +102,25 @@ export type DevicePublic = {
   height: number | null;
 };
 
+export type AlarmMetricKind = "percent" | "cents";
+
+export type AlarmMetric = { key: string; label: string; kind: AlarmMetricKind };
+
+export type AlarmRule = {
+  id: string;
+  provider: string;
+  account_id: string;
+  metric: string;
+  threshold: number;
+  enabled: boolean;
+  label: string;
+};
+
+export type AlarmsPublic = {
+  rules: AlarmRule[];
+  metrics: Record<string, AlarmMetric[]>;
+};
+
 export type ConfigPublic = {
   ok: boolean;
   in_docker: boolean;

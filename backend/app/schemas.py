@@ -298,6 +298,59 @@ class ConfigSaveResult(BaseModel):
     restart_needed_for_port: bool = False
 
 
+AlarmMetricKind = Literal["percent", "cents"]
+
+
+class AlarmMetric(BaseModel):
+    key: str
+    label: str
+    kind: AlarmMetricKind
+
+
+class AlarmRule(BaseModel):
+    id: str
+    provider: ProviderId
+    account_id: str = "*"
+    metric: str
+    threshold: float
+    enabled: bool = True
+    label: str = ""
+
+
+class AlarmRuleBody(BaseModel):
+    provider: ProviderId
+    metric: str
+    threshold: float
+    enabled: bool = True
+    label: str = ""
+
+
+class AlarmRulePatch(BaseModel):
+    threshold: float | None = None
+    enabled: bool | None = None
+    label: str | None = None
+
+
+class AlarmsPublic(BaseModel):
+    rules: list[AlarmRule]
+    metrics: dict[str, list[AlarmMetric]]
+
+
+class PushSubscriptionBody(BaseModel):
+    endpoint: str
+    p256dh: str
+    auth: str
+    ua: str = ""
+
+
+class PushUnsubscribeBody(BaseModel):
+    endpoint: str
+
+
+class VapidPublicKey(BaseModel):
+    public_key: str
+
+
 class AddAccountBody(BaseModel):
     provider: ProviderId
     label: str = ""

@@ -30,6 +30,8 @@ def default_config() -> dict[str, Any]:
         "mock": False,
         "paths": {"claude_credentials": "", "cursor_state_db": "", "codex_auth": ""},
         "providers": {name: deepcopy(_EMPTY_PROVIDER) for name in PROVIDERS},
+        "push": {"vapid_public_key": "", "vapid_private_key": "", "subscriptions": []},
+        "alarms": [],
     }
 
 
@@ -68,6 +70,56 @@ def _parse_accounts_blob(raw: Any, secret_field: str) -> list[dict[str, str]]:
 
 def _flag(raw: Any) -> bool:
     return str(raw or "").strip().lower() in ("1", "true", "yes")
+
+
+def _parse_subscriptions(raw: Any) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        endpoint = str(item.get("endpoint") or "")
+        p256dh = str(item.get("p256dh") or "")
+        auth = str(item.get("auth") or "")
+        if not endpoint or not p256dh or not auth:
+            continue
+        out.append(
+            {
+                "id": str(item.get("id") or ""),
+                "endpoint": endpoint,
+                "p256dh": p256dh,
+                "auth": auth,
+                "ua": str(item.get("ua") or ""),
+                "created_at": str(item.get("created_at") or ""),
+            }
+        )
+    return out
+
+
+def _parse_alarms(raw: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict) or not item.get("id") or not item.get("provider") or not item.get("metric"):
+            continue
+        try:
+            threshold = float(item.get("threshold"))
+        except (TypeError, ValueError):
+            continue
+        out.append(
+            {
+                "id": str(item["id"]),
+                "provider": str(item["provider"]),
+                "account_id": str(item.get("account_id") or "*"),
+                "metric": str(item["metric"]),
+                "threshold": threshold,
+                "enabled": bool(item.get("enabled", True)),
+                "label": str(item.get("label") or ""),
+            }
+        )
+    return out
 
 
 def migrate_legacy(raw: dict[str, Any]) -> dict[str, Any]:
@@ -155,6 +207,11 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
                 dest["local_label"] = str(src.get("local_label") or "")
             dest["hidden"] = dest["hidden"] or bool(src.get("hidden"))
             dest["accounts"] = _parse_accounts_blob(src.get("accounts") or [], "secret")
+    push_raw = raw.get("push") if isinstance(raw.get("push"), dict) else {}
+    cfg["push"]["vapid_public_key"] = str(push_raw.get("vapid_public_key") or "")
+    cfg["push"]["vapid_private_key"] = str(push_raw.get("vapid_private_key") or "")
+    cfg["push"]["subscriptions"] = _parse_subscriptions(push_raw.get("subscriptions") or [])
+    cfg["alarms"] = _parse_alarms(raw.get("alarms") or [])
     return cfg
 
 

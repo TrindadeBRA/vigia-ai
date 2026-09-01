@@ -8,6 +8,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [ARQUITETURA.md](ARQUITETURA.md)             | Coletor ↔ ESP32 ↔ APIs                                            |
 | [CONTRATO_JSON.md](CONTRATO_JSON.md)         | Formato de `/usage` (não quebrar o firmware)                      |
 | [CONTRATO_TEMA.md](CONTRATO_TEMA.md)         | Protótipo: tema custom (`porta 80` da placa, `/display/tema`)     |
+| [NOTIFICACOES.md](NOTIFICACOES.md)           | Protótipo: alarmes + push (`/display/alarmes`)                    |
 | [APIS_CLAUDE.md](APIS_CLAUDE.md)             | OAuth usage da Anthropic                                          |
 | [APIS_GPT.md](APIS_GPT.md)                   | OAuth usage do Codex / ChatGPT                                    |
 | [APIS_CURSOR.md](APIS_CURSOR.md)             | Dashboard Connect RPC do Cursor                                   |
@@ -57,6 +58,12 @@ frontend/src/pages/config/ThemeEditorPage.tsx  editor de tema (protótipo, ver C
 backend/app/routers/theme.py       coletor guarda o tema salvo pelo painel (protótipo)
 firmware/src/net/theme_server.cpp  servidor HTTP :80 do tema, direto/debug (protótipo)
 firmware/src/net/client.cpp        themeClientReload(): placa busca o tema do coletor
+backend/app/alarms.py              catálogo de métricas + motor de disparo dos alarmes (protótipo)
+backend/app/push.py                chaves VAPID + envio de Web Push (protótipo)
+backend/app/routers/alarms.py      rotas /api/alarms/*
+backend/app/routers/push.py        rotas /api/push/*
+frontend/src/pages/config/AlarmsPage.tsx  painel de alarmes + notificações (/display/alarmes)
+frontend/public/sw.js              service worker (push, notificationclick)
 firmware/src/ui/customtheme.cpp    persistência (LittleFS/RAM) + render do tema (VIEW_THEME)
 firmware/platformio.ini
 ./dev                          único script

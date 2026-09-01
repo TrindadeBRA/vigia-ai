@@ -107,6 +107,20 @@ export function PaletteIcon(props: { size?: number }) {
   );
 }
 
+export function BellIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M12 4.5a5 5 0 0 0-5 5v2.4c0 .9-.32 1.77-.9 2.46L5 15.8h14l-1.1-1.44a3.9 3.9 0 0 1-.9-2.46V9.5a5 5 0 0 0-5-5Z"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      <path d="M10 18.5a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function SlidersIcon(props: { size?: number }) {
   return (
     <Svg {...props}>

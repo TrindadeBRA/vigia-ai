@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Display from "./pages/Display";
+import AlarmsPage from "./pages/config/AlarmsPage";
 import ConfigPage from "./pages/config/ConfigPage";
 import SetupPage from "./pages/config/SetupPage";
 import ThemeEditorPage from "./pages/config/ThemeEditorPage";
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="config" element={<ConfigPage />} />
           <Route path="setup" element={<SetupPage />} />
           <Route path="tema" element={<ThemeEditorPage />} />
+          <Route path="alarmes" element={<AlarmsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
