@@ -58,6 +58,15 @@ function uid(): string {
   return `e${Date.now().toString(36)}${(uidCounter++).toString(36)}`;
 }
 
+function formatClock(d: Date, format24h: boolean): string {
+  let h = d.getHours();
+  if (!format24h) {
+    h = h % 12;
+    if (h === 0) h = 12;
+  }
+  return `${String(h).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState) => void] {
   const [theme, setTheme] = useState<ThemeState>(() => {
     try {
@@ -235,11 +244,17 @@ export default function ThemeEditorPage() {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [screenshotFullscreen, setScreenshotFullscreen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const send = useRequest();
   const remove = useRequest();
   const screenshot = useRequest();
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!ipTouched && cfg?.device.ip) setDeviceIp(cfg.device.ip);
@@ -414,7 +429,7 @@ export default function ThemeEditorPage() {
                 className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-mono font-bold text-white"
                 style={{ color: theme.clock.color || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
               >
-                {theme.clock.format24h ? "14:32" : "02:32"}
+                {formatClock(now, theme.clock.format24h)}
               </span>
             </CanvasDot>
           ) : null}
