@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Variáveis de tema — o JS (applyThemeVars) atualiza estes valores. */
 :root {
   --bg: #101419;
   --card: #192021;
@@ -19,35 +20,4 @@
   --shadow: rgba(0, 0, 0, .5);
   --glow: rgba(230, 57, 49, .14);
   --bg-translucent: rgba(16, 20, 25, .82);
-}
-
-@layer base {
-  html,
-  body,
-  #root {
-    min-height: 100%;
-  }
-
-  body {
-    @apply overflow-x-hidden bg-canvas font-sans text-ink antialiased;
-    min-height: 100vh;
-    text-rendering: optimizeLegibility;
-  }
-
-  :focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-    border-radius: 6px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
 }
