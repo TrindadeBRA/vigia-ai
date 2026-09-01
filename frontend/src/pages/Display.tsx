@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { DndContext, DragOverlay, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
-import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
@@ -12,9 +10,14 @@ import { cn } from "../cn";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
-import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewGrid, shell, sideItem, sideItemActive, viewFade } from "../tw";
+import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { ConfigOutlet } from "./config/ConfigPage";
-import { syncBoard, type BoardLayout, type CardSize } from "../board";
+import { CELL_GAP, colsForWidth, dropTarget, emptyBoard, emptyCells, fitBoard, packBoard, padRowsForHeight, placeCard, rowPxFor, sameBoard, setCardSize, slotKey, spanFor, syncBoard, type BoardLayout, type CardSize } from "../board";
+
+const boardCollision: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  return hits.length ? hits : closestCorners(args);
+};
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout };
 type Pal = (typeof PALETTES)[ThemeName];
@@ -269,29 +272,30 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
 }
 
 function SizeToggle({ size, t, onChange }: { size: CardSize; t: T; onChange: (next: CardSize) => void }) {
+  const next = size === "sm" ? "lg" : "sm";
+  const label = next === "lg" ? t.cardLarge : t.cardSmall;
   return (
-    <div className="flex shrink-0 rounded-lg border border-edge bg-canvas p-0.5" onClick={(e) => e.stopPropagation()}>
-      <button
-        type="button"
-        className={cn("flex size-6 items-center justify-center rounded-md transition-colors duration-150", size === "sm" ? "bg-chip text-ink" : "text-ink3 hover:text-ink")}
-        title={t.cardSmall}
-        aria-label={t.cardSmall}
-        aria-pressed={size === "sm"}
-        onClick={() => onChange("sm")}
-      >
-        <span className="block size-[7px] rounded-[2px] border-[1.6px] border-current" />
-      </button>
-      <button
-        type="button"
-        className={cn("flex size-6 items-center justify-center rounded-md transition-colors duration-150", size === "lg" ? "bg-chip text-ink" : "text-ink3 hover:text-ink")}
-        title={t.cardLarge}
-        aria-label={t.cardLarge}
-        aria-pressed={size === "lg"}
-        onClick={() => onChange("lg")}
-      >
-        <span className="block h-[7px] w-[13px] rounded-[2px] border-[1.6px] border-current" />
-      </button>
-    </div>
+    <button
+      type="button"
+      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
+      title={label}
+      aria-label={label}
+      onClick={(e) => {
+        e.stopPropagation();
+        onChange(next);
+      }}
+    >
+      {size === "sm" ? (
+        <span className="block size-[7px] rounded-[2px] border-[1.5px] border-current" />
+      ) : (
+        <span className="grid size-[11px] grid-cols-2 gap-px">
+          <span className="rounded-[1px] border-[1.4px] border-current" />
+          <span className="rounded-[1px] border-[1.4px] border-current" />
+          <span className="rounded-[1px] border-[1.4px] border-current" />
+          <span className="rounded-[1px] border-[1.4px] border-current" />
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -320,8 +324,8 @@ function ProviderCard({
   return (
     <div
       className={cn(
-        "flex min-w-0 w-full flex-col rounded-2xl border bg-panel shadow-card",
-        sm ? "p-3" : "min-h-[196px] p-4",
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-3 pb-2.5 pt-2.5" : "px-3.5 pb-3 pt-3",
         lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
         dragging && !lifted && "border-dashed border-edge opacity-35",
         !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
@@ -329,7 +333,14 @@ function ProviderCard({
         !lifted && viewFade,
       )}
     >
-      <div className={cn("flex items-center", sm ? "mb-2 gap-2" : "mb-3.5 gap-[11px]")}>
+      {!lifted ? (
+      <div
+        className={cn(
+          "absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip",
+          "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100",
+          "max-[860px]:pointer-events-auto max-[860px]:opacity-100",
+        )}
+      >
         <button
           type="button"
           className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing"
@@ -337,32 +348,50 @@ function ProviderCard({
           title={t.dragCard}
           {...grip}
         >
-          <GripIcon size={15} />
-        </button>
-        <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-left text-ink" onClick={onOpen}>
-          <Icon id={p.provider} compact={sm} />
-          <div className="min-w-0 flex-1">
-            <div className={cn("flex min-w-0 items-center gap-[7px] font-[650]", sm ? "text-[13px]" : "text-[14.5px]")}>
-              <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{p.title}</span>
-              <span className={cn("size-1.5 shrink-0 rounded-full", p.ok ? "bg-good" : "bg-bad")} />
-            </div>
-            {p.label ? <div className={cardLabel}>{p.label}</div> : null}
-          </div>
+          <GripIcon size={14} />
         </button>
         <SizeToggle size={size} t={t} onChange={onSetSize} />
       </div>
-      <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center border-0 bg-transparent p-0 text-left text-ink" onClick={onOpen}>
-        {!p.ok ? <div className={errorText}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} compact={sm} />)}
+      ) : null}
+      <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-2 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
+        <div className="relative shrink-0">
+          <Icon id={p.provider} compact={sm} />
+          <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", p.ok ? "bg-good" : "bg-bad")} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className={cn("overflow-hidden text-ellipsis whitespace-nowrap font-[650] leading-none", sm ? "text-[12.5px]" : "text-[14px]")}>{p.title}</div>
+          {p.label ? <div className={cardLabel}>{p.label}</div> : null}
+        </div>
+      </button>
+      <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-hidden border-0 bg-transparent p-0 text-left text-ink" onClick={onOpen}>
+        {!p.ok ? <div className={cn(errorText, sm && "text-[11px] leading-snug")}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} compact={sm} />)}
       </button>
     </div>
   );
 }
 
-function SortableTile({
+function EmptySlot({ id, active }: { id: string; active: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "h-full min-h-0 rounded-2xl border border-dashed transition-colors duration-150",
+        active ? "border-edge bg-chip/30" : "border-transparent",
+        isOver && "border-accent bg-chip",
+      )}
+    />
+  );
+}
+
+function BoardTile({
   p,
   pal,
   size,
   t,
+  col,
+  row,
+  span,
   onOpen,
   onSetSize,
 }: {
@@ -370,19 +399,22 @@ function SortableTile({
   pal: Pal;
   size: CardSize;
   t: T;
+  col: number;
+  row: number;
+  span: number;
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: p.id });
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: p.id });
+  const { setNodeRef: setDropRef } = useDroppable({ id: p.id });
   return (
     <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 2 : undefined,
+      ref={(node) => {
+        setDragRef(node);
+        setDropRef(node);
       }}
-      className={cn("min-w-0", size === "lg" ? "col-span-2" : "col-span-1")}
+      style={{ gridColumn: `${col + 1} / span ${span}`, gridRow: `${row + 1} / span ${span}`, zIndex: isDragging ? 2 : 1 }}
+      className="min-h-0 min-w-0 h-full"
     >
       <ProviderCard
         p={p}
@@ -496,17 +528,53 @@ function Overview({
   const age = payloadAgeMs(updatedAt, now);
   const agoS = age == null ? null : Math.max(0, Math.round(age / 1000));
   const byId = new Map(providers.map((p) => [p.id, p]));
-  const tiles = board.order.map((id) => byId.get(id)).filter((p): p is ProviderMeta => Boolean(p));
-  const idsKey = providers.map((p) => p.id).join("|");
+  const ids = providers.map((p) => p.id);
+  const idsKey = ids.join("|");
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(4);
+  const [pad, setPad] = useState(3);
+  const [fillPx, setFillPx] = useState(0);
+  const [cellPx, setCellPx] = useState(104);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
+  const rowPx = rowPxFor(cellPx);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const layout = fitBoard(ids, syncBoard(ids, board, cols), cols);
+  const holes = emptyCells(ids, layout, cols, pad);
   const active = activeId ? byId.get(activeId) : null;
-  const activeSize: CardSize = activeId && board.size[activeId] === "sm" ? "sm" : "lg";
+  const activeSize: CardSize = activeId && layout.size[activeId] === "sm" ? "sm" : "lg";
 
   useEffect(() => {
-    onBoard((b) => b);
+    const el = gridRef.current;
+    if (!el) return;
+    const measure = () => {
+      const nextCols = colsForWidth(el.clientWidth);
+      setCols(nextCols);
+      const cell = Math.max(80, Math.floor((el.clientWidth - CELL_GAP * Math.max(0, nextCols - 1)) / Math.max(1, nextCols)));
+      setCellPx(cell);
+      const main = el.closest("main");
+      const gridBox = el.getBoundingClientRect();
+      const mainBottom = main ? main.getBoundingClientRect().bottom : window.innerHeight;
+      const tiles = [...el.children].filter((node) => node.querySelector('[aria-label="Arrastar"], [aria-label="Drag"], [aria-label="Arrastrar"]'));
+      const lastBottom = tiles.reduce((max, node) => Math.max(max, node.getBoundingClientRect().bottom), gridBox.top);
+      const leftover = Math.round(mainBottom - lastBottom);
+      setFillPx(Math.max(0, Math.round(mainBottom - gridBox.top)));
+      setPad(padRowsForHeight(leftover, rowPxFor(cell)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    if (el.closest("main")) ro.observe(el.closest("main") as Element);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, [idsKey]);
+
+  useEffect(() => {
+    onBoard((b) => fitBoard(ids, syncBoard(ids, b, cols), cols));
+  }, [cols, idsKey]);
 
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
@@ -515,28 +583,35 @@ function Overview({
   }
 
   function onDragEnd(e: DragEndEvent) {
+    const from = String(e.active.id);
+    const over = e.over ? String(e.over.id) : null;
     setActiveId(null);
     setLiftSize(null);
-    const over = e.over;
-    if (!over || e.active.id === over.id) return;
-    const from = String(e.active.id);
-    const to = String(over.id);
+    if (!over || over === from) return;
+    const dest = dropTarget(over, layout);
+    if (!dest) return;
     onBoard((b) => {
-      const oldIndex = b.order.indexOf(from);
-      const newIndex = b.order.indexOf(to);
-      if (oldIndex < 0 || newIndex < 0) return b;
-      return { ...b, order: arrayMove(b.order, oldIndex, newIndex) };
+      const cur = fitBoard(ids, syncBoard(ids, b, cols), cols);
+      return placeCard(ids, cur, from, dest, cols);
     });
   }
 
   return (
-    <>
+    <div className="flex min-h-full flex-col">
       <div className="mb-[18px] flex w-full flex-wrap items-end justify-between gap-3">
         <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px] max-[860px]:text-[19px]">{t.overview}</h1>
-        <div className="flex items-center gap-2 text-[12.5px] text-ink2">
+        <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink2">
           <span className={cn("size-[7px] shrink-0 rounded-full", failing ? "bg-bad shadow-[0_0_5px_var(--bad)]" : "bg-good shadow-[0_0_5px_var(--good)]", "[.flat_&]:shadow-none")} />
           <span>{failing ? t.errorsCount(failing) : t.allOk}</span>
           <span className={num}>{agoS != null ? `· ${agoS < 3 ? t.agoNow : t.agoSecs(agoS)}` : ""}</span>
+          <button
+            type="button"
+            className="ml-1 cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
+            title={t.resetLayout}
+            onClick={() => onBoard((b) => packBoard(ids, fitBoard(ids, syncBoard(ids, b, cols), cols), cols))}
+          >
+            {t.resetLayout}
+          </button>
         </div>
       </div>
       {providers.length === 0 ? (
@@ -547,30 +622,58 @@ function Overview({
           </Link>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => { setActiveId(null); setLiftSize(null); }}>
-          <SortableContext items={tiles.map((p) => p.id)} strategy={rectSortingStrategy}>
-            <div className={overviewGrid}>
-              {tiles.map((p) => {
-                const size = board.size[p.id] === "sm" ? "sm" : "lg";
-                return (
-                  <SortableTile
-                    key={p.id}
-                    p={p}
-                    pal={pal}
-                    size={size}
-                    t={t}
-                    onOpen={() => onOpen(p.id)}
-                    onSetSize={(next) => onBoard((b) => ({ ...b, size: { ...b.size, [p.id]: next } }))}
-                  />
-                );
-              })}
-            </div>
-          </SortableContext>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={boardCollision}
+          autoScroll={{ threshold: { x: 0.08, y: 0.12 }, acceleration: 12 }}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => { setActiveId(null); setLiftSize(null); }}
+        >
+          <div
+            ref={gridRef}
+            className={cn(overviewBoard, "min-h-0 flex-1")}
+            style={{
+              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+              gridAutoRows: rowPx,
+              minHeight: fillPx > 0 ? fillPx : undefined,
+            }}
+          >
+            {holes.map((cell) => (
+              <div
+                key={slotKey(cell.r, cell.c)}
+                style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
+                className="min-h-0 min-w-0 h-full"
+              >
+                <EmptySlot id={slotKey(cell.r, cell.c)} active={Boolean(activeId)} />
+              </div>
+            ))}
+            {ids.map((id) => {
+              const p = byId.get(id);
+              const pos = layout.pos[id];
+              if (!p || !pos) return null;
+              const size = layout.size[id] === "sm" ? "sm" : "lg";
+              return (
+                <BoardTile
+                  key={id}
+                  p={p}
+                  pal={pal}
+                  size={size}
+                  t={t}
+                  col={pos.c}
+                  row={pos.r}
+                  span={spanFor(size, cols)}
+                  onOpen={() => onOpen(id)}
+                  onSetSize={(next) => onBoard((b) => setCardSize(ids, fitBoard(ids, syncBoard(ids, b, cols), cols), id, next, cols))}
+                />
+              );
+            })}
+          </div>
           <DragOverlay zIndex={80} dropAnimation={null}>
             {active ? (
               <div
                 className="pointer-events-none cursor-grabbing"
-                style={{ width: liftSize?.w || (activeSize === "sm" ? 160 : 320) }}
+                style={{ width: liftSize?.w || (activeSize === "sm" ? cellPx : cellPx * 2 + CELL_GAP), height: liftSize?.h || (activeSize === "sm" ? rowPx : rowPx * 2 + CELL_GAP) }}
               >
                 <ProviderCard p={active} pal={pal} size={activeSize} t={t} lifted onOpen={() => {}} onSetSize={() => {}} />
               </div>
@@ -578,7 +681,7 @@ function Overview({
           </DragOverlay>
         </DndContext>
       )}
-    </>
+    </div>
   );
 }
 
@@ -589,7 +692,7 @@ function NowRow({ p, pal }: { p: ProviderMeta; pal: Pal }) {
       <div className="mb-2.5 flex items-center gap-[9px]">
         <Icon id={p.provider} />
         <div className="min-w-0 flex-1">
-          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">{p.title}</div>
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650] leading-none">{p.title}</div>
           {p.label ? <div className={cardLabel}>{p.label}</div> : null}
         </div>
       </div>
@@ -855,7 +958,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
       <div className="mb-4 flex items-center gap-3">
         <Icon id={meta.provider} large />
         <div>
-          <div className="text-[19px] font-[750] tracking-[-.1px]">{meta.title}</div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{meta.title}</div>
           {meta.label ? <div className={cardLabel}>{meta.label}</div> : null}
         </div>
       </div>
@@ -1115,18 +1218,12 @@ export default function Display() {
                   now={now}
                   t={t}
                   pal={pal}
-                  board={syncBoard(providers.map((p) => p.id), prefs.board)}
+                  board={prefs.board || emptyBoard()}
                   onBoard={(fn) =>
                     setPrefs((p) => {
-                      const base = syncBoard(providers.map((x) => x.id), p.board);
-                      const next = fn(base);
-                      if (
-                        p.board
-                        && p.board.order.join("|") === next.order.join("|")
-                        && providers.every((x) => (p.board?.size[x.id] || "lg") === (next.size[x.id] || "lg"))
-                      ) {
-                        return p;
-                      }
+                      const ids = providers.map((x) => x.id);
+                      const next = fn(p.board || emptyBoard());
+                      if (sameBoard(p.board, next, ids)) return p;
                       return { ...p, board: next };
                     })
                   }

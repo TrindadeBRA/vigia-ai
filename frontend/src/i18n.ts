@@ -68,6 +68,7 @@ type Strings = {
   cardLarge: string;
   cardSmall: string;
   dragCard: string;
+  resetLayout: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -133,6 +134,7 @@ export const STR: Record<Lang, Strings> = {
     cardLarge: "Card grande",
     cardSmall: "Card pequeno",
     dragCard: "Arrastar",
+    resetLayout: "Redefinir grade",
   },
   en: {
     overview: "Overview",
@@ -196,6 +198,7 @@ export const STR: Record<Lang, Strings> = {
     cardLarge: "Large card",
     cardSmall: "Small card",
     dragCard: "Drag",
+    resetLayout: "Reset layout",
   },
   es: {
     overview: "Resumen",
@@ -259,6 +262,7 @@ export const STR: Record<Lang, Strings> = {
     cardLarge: "Card grande",
     cardSmall: "Card pequeño",
     dragCard: "Arrastrar",
+    resetLayout: "Restablecer cuadrícula",
   },
 };
 

@@ -12,7 +12,7 @@ export const iconChip =
 
 export const iconImg = "size-[19px] object-contain";
 
-export const cardLabel = "mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[11.5px] font-medium text-ink3";
+export const cardLabel = "m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[11.5px] font-medium leading-none text-ink3";
 
 export const errorText = "text-[13px] leading-[1.55] text-bad";
 
@@ -37,6 +37,8 @@ export const cfgGrid =
 
 export const overviewGrid =
   "grid w-full items-start gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr))]";
+
+export const overviewBoard = "grid w-full items-stretch gap-[14px]";
 
 export const metricsGrid =
   "grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))]";

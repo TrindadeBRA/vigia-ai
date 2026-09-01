@@ -50,7 +50,7 @@ function OverviewBody() {
         <Bone className="h-8 w-40" />
         <Bone className="h-4 w-52" />
       </div>
-      <Cards n={6} className={overviewGrid} itemClass="col-span-2 min-h-[196px]" />
+      <Cards n={4} className={overviewGrid} itemClass="col-span-2 row-span-2 min-h-[196px] aspect-square" />
     </>
   );
 }

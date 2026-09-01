@@ -14,7 +14,7 @@ Em desenvolvimento o Vite (`:5173`) faz proxy para o FastAPI (`:8787`). Em produ
 
 Tema/cor/idioma do mostrador ficam no `localStorage` (`vigia_display_prefs`). Paleta em `frontend/src/theme.ts` — mesmos RGB do firmware (`firmware/src/ui/theme.cpp`).
 
-O board de `/display` (ordem e tamanho dos cards) usa **dnd-kit**. MCPs para UI e DnD: [MCPS.md](MCPS.md).
+O board de `/display` usa **dnd-kit** em grade de células: card **grande** 2×2, **pequeno** 1×1. **Redefinir grade** empilha de novo na ordem das contas, sem sobrepor. Posição e tamanho ficam no `localStorage`. MCPs: [MCPS.md](MCPS.md).
 
 ## Marca
 
