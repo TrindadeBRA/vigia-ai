@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ProviderId = Literal[
-    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode"
+    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal"
 ]
 
 USAGE_EXAMPLE = {
@@ -101,12 +101,24 @@ USAGE_EXAMPLE = {
             "remaining_cents": 1500,
         }
     ],
+    "fal": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "percent": None,
+            "limit_cents": None,
+            "used_cents": None,
+            "remaining_cents": 2450,
+        }
+    ],
 }
 
 SSE_WIRE_EXAMPLE = (
     ": connected\n\n"
     "event: usage\n"
-    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode":[]}\n\n'
+    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode":[],"fal":[]}\n\n'
     ": ping\n\n"
 )
 
@@ -182,6 +194,7 @@ class UsagePayload(BaseModel):
     openrouter: list[CreditsAccount]
     deepseek: list[CreditsAccount]
     opencode: list[OpenCodeAccount]
+    fal: list[CreditsAccount]
 
 
 class HealthPayload(BaseModel):
@@ -254,18 +267,21 @@ class ConfigPatch(BaseModel):
     openrouter_hidden: bool | None = None
     deepseek_hidden: bool | None = None
     opencode_hidden: bool | None = None
+    fal_hidden: bool | None = None
     claude_local_label: str | None = None
     gpt_local_label: str | None = None
     cursor_local_label: str | None = None
     openrouter_primary_label: str | None = None
     deepseek_primary_label: str | None = None
     opencode_primary_label: str | None = None
+    fal_primary_label: str | None = None
     claude_paste: str | None = None
     gpt_paste: str | None = None
     cursor_paste: str | None = None
     openrouter_paste: str | None = None
     deepseek_paste: str | None = None
     opencode_paste: str | None = None
+    fal_paste: str | None = None
 
 
 class ConfigSaveResult(BaseModel):

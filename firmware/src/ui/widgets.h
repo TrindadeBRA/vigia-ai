@@ -35,5 +35,7 @@ void drawBrand(int x, int y, uint8_t font);
 
 // Icone da marca: olho com esclera branca fixa (nao muda com o tema) e pupila
 // na cor de acento, desviada do centro por (gazeX, gazeY) em px — usado pra
-// animar o olhar (ver uiTickEye). Centro (cx, cy), raio r.
-void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY);
+// animar o olhar (ver uiTickEye). Centro (cx, cy), raio r. `lid` (0..1) fecha
+// o olho verticalmente com palpebras deslizando de cima/baixo, igual ao blink
+// do logo do frontend (0 = aberto, 1 = fechado).
+void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f);

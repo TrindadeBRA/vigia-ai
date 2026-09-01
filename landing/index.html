@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigia AI — Painel de mesa para cotas de IA</title>
+  <meta
+    name="description"
+    content="Vigia AI: painel de mesa para cotas de IA (Claude, GPT, Cursor, OpenRouter e DeepSeek), rodando em ESP32 + TFT touch ou no navegador — sem nunca expor um token."
+  />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Vigia AI — Painel de mesa para cotas de IA" />
+  <meta
+    property="og:description"
+    content="Claude, GPT, Cursor, OpenRouter e DeepSeek num mostrador sempre ligado — ESP32 + TFT touch ou navegador, sem nunca expor um token."
+  />
+  <meta property="og:image" content="assets/social-preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0b0d10',
+            surface: '#101419',
+            accent: {
+              DEFAULT: '#e63931',
+              soft: '#ff8f89',
+            },
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-feature-settings: "cv02","cv03","cv04","cv11"; }
+  </style>
+</head>
+<body class="bg-ink text-neutral-200 font-sans antialiased">
+
+  <header class="sticky top-0 z-50 border-b border-white/10 bg-ink/80 backdrop-blur">
+    <div class="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <a href="#top" class="flex items-center gap-2 text-lg font-bold text-white">
+        <img src="assets/favicon.svg" alt="" width="28" height="28" class="rounded-md" />
+        Vigia<em class="not-italic text-accent">AI</em>
+      </a>
+
+      <nav class="hidden items-center gap-8 text-sm font-medium text-neutral-300 md:flex">
+        <a class="hover:text-white transition" href="#problema">O problema</a>
+        <a class="hover:text-white transition" href="#recursos">Recursos</a>
+        <a class="hover:text-white transition" href="#capturas">Capturas</a>
+        <a class="hover:text-white transition" href="#como-funciona">Como funciona</a>
+        <a class="rounded-full border border-white/15 px-4 py-1.5 text-white hover:bg-white/5 transition"
+           href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">GitHub ↗</a>
+      </nav>
+
+      <button id="nav-toggle" aria-label="Abrir menu" aria-expanded="false"
+              class="flex flex-col gap-1.5 p-2 md:hidden">
+        <span class="h-0.5 w-6 rounded bg-white"></span>
+        <span class="h-0.5 w-6 rounded bg-white"></span>
+        <span class="h-0.5 w-6 rounded bg-white"></span>
+      </button>
+
+      <div id="mobile-menu" class="hidden absolute inset-x-0 top-full flex-col gap-4 border-t border-white/10 bg-surface px-6 py-6 text-sm text-neutral-300 md:hidden">
+        <a href="#problema">O problema</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#capturas">Capturas</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a class="font-semibold text-white" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="relative overflow-hidden">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(1100px_600px_at_15%_-10%,rgba(230,57,49,0.22),transparent_60%)]"></div>
+      <div class="relative mx-auto grid max-w-6xl gap-14 px-6 py-24 md:grid-cols-2 md:items-center md:py-32">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">Open source · MIT</p>
+          <h1 class="mt-4 text-4xl font-extrabold leading-tight text-white md:text-5xl">
+            Painel de mesa para cotas de IA
+            <br />
+            <span class="text-accent">sem nunca expor um token</span>
+          </h1>
+          <p class="mt-6 max-w-xl text-lg leading-relaxed text-neutral-300">
+            <strong class="text-white">Claude</strong> · <strong class="text-white">GPT</strong> (ChatGPT/Codex) ·
+            <strong class="text-white">Cursor</strong> · <strong class="text-white">OpenRouter</strong> ·
+            <strong class="text-white">DeepSeek</strong> — tudo num único mostrador, rodando em
+            <strong class="text-white">ESP32 + TFT 3,5&quot; touch</strong> ou direto no navegador.
+          </p>
+          <div class="mt-8 flex flex-wrap gap-4">
+            <a class="rounded-full bg-accent px-6 py-3 font-semibold text-white shadow-lg shadow-accent/30 transition hover:bg-accent/90"
+               href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">Ver no GitHub</a>
+            <a class="rounded-full border border-white/20 px-6 py-3 font-semibold text-white transition hover:bg-white/5"
+               href="https://github.com/TrindadeBRA/vigia-ai/blob/main/docs/SETUP.md" target="_blank" rel="noopener">Guia de instalação</a>
+          </div>
+          <div class="mt-8 flex flex-wrap gap-2">
+            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">Python 3.11+</span>
+            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">Node 20+</span>
+            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">FastAPI</span>
+            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">React + TS</span>
+            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">PlatformIO</span>
+            <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">ESP32</span>
+          </div>
+        </div>
+        <div class="overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-black/50">
+          <img src="assets/wokwi-wiring.png" alt="Diagrama de montagem: ESP32 + TFT 3,5&quot; touch, simulado no Wokwi" class="w-full" />
+        </div>
+      </div>
+    </section>
+
+    <!-- O PROBLEMA -->
+    <section id="problema" class="border-t border-white/5 py-20">
+      <div class="mx-auto grid max-w-6xl gap-12 px-6 md:grid-cols-2 md:items-center">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">O problema</p>
+          <h2 class="mt-3 text-3xl font-bold text-white">Cinco assinaturas, cinco abas, zero visibilidade</h2>
+          <p class="mt-5 leading-relaxed text-neutral-300">
+            Eu uso Claude, ChatGPT/Codex, Cursor, OpenRouter e DeepSeek no mesmo dia de trabalho —
+            cada um com sua própria cota, sua própria janela de reset e sua própria aba pra checar.
+            Na prática, eu só descobria que tinha estourado o limite do Cursor quando o autocomplete
+            parava de responder no meio de uma tarefa.
+          </p>
+          <p class="mt-4 leading-relaxed text-neutral-300">
+            O <strong class="text-white">Vigia AI</strong> tira essa pergunta da cabeça: um mostrador
+            sempre ligado na mesa, com o consumo de todas as contas atualizado sozinho. Sem abrir aba,
+            sem rodar <code class="rounded bg-white/10 px-1.5 py-0.5 text-sm text-accent-soft">curl</code>,
+            sem lembrar de conferir.
+          </p>
+        </div>
+        <div class="overflow-hidden rounded-2xl border border-white/10 shadow-xl shadow-black/40">
+          <img src="assets/display-home-grid.png" alt="Início em grade com as 5 contas no firmware" class="w-full" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ONDE RODA -->
+    <section id="onde-roda" class="border-t border-white/5 bg-white/[0.02] py-20">
+      <div class="mx-auto max-w-6xl px-6 text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">Onde roda</p>
+        <h2 class="mx-auto mt-3 max-w-2xl text-3xl font-bold text-white">Um gadget físico — mas o firmware é opcional</h2>
+        <p class="mx-auto mt-4 max-w-xl text-neutral-400">
+          Do tamanho de um despertador na mesa, ou como página web num monitor extra e até no celular.
+        </p>
+        <div class="mt-12 grid gap-6 md:grid-cols-3">
+          <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-left transition hover:border-accent/40">
+            <div class="mb-4 text-4xl">🖥️</div>
+            <h3 class="text-lg font-semibold text-white">Físico</h3>
+            <p class="mt-2 text-sm text-neutral-400">ESP32 Dev Module + TFT SPI 3,5&quot; touch (XPT2046), tela sempre ligada na mesa.</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-left transition hover:border-accent/40">
+            <div class="mb-4 text-4xl">🌐</div>
+            <h3 class="text-lg font-semibold text-white">Web</h3>
+            <p class="mt-2 text-sm text-neutral-400"><code class="text-accent-soft">/display</code>, mesmo layout, responsivo (desktop e mobile), tema e cor salvos no navegador.</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-left transition hover:border-accent/40">
+            <div class="mb-4 text-4xl">🧪</div>
+            <h3 class="text-lg font-semibold text-white">Simulado</h3>
+            <p class="mt-2 text-sm text-neutral-400"><a class="text-accent-soft hover:underline" href="https://wokwi.com/" target="_blank" rel="noopener">Wokwi</a> no VS Code — testa o firmware sem soldar nada.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECURSOS -->
+    <section id="recursos" class="border-t border-white/5 py-20">
+      <div class="mx-auto max-w-6xl px-6 text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">Recursos</p>
+        <h2 class="mx-auto mt-3 max-w-2xl text-3xl font-bold text-white">Tudo que um mostrador de cotas precisa ser</h2>
+        <div class="mt-12 grid gap-6 text-left sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">5 provedores, múltiplas contas cada</span>
+            <p class="mt-2 text-sm text-neutral-400">Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">Tempo real</span>
+            <p class="mt-2 text-sm text-neutral-400">Um único ciclo de consulta no coletor, distribuído por SSE — placa e abas não multiplicam chamadas.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">Zero tokens expostos</span>
+            <p class="mt-2 text-sm text-neutral-400">Placa e navegador só veem percentuais, datas e <code class="text-accent-soft">ok: true/false</code>.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">Touch nativo</span>
+            <p class="mt-2 text-sm text-neutral-400">Grade ou lista na Início, detalhe por conta, configurações direto na tela.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">3 temas × 7 cores</span>
+            <p class="mt-2 text-sm text-neutral-400">Escuro, claro e alto contraste, com PT / EN / ES.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">QR code na tela</span>
+            <p class="mt-2 text-sm text-neutral-400">Abre o painel de configuração de qualquer aparelho na mesma Wi-Fi.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">Resiliente</span>
+            <p class="mt-2 text-sm text-neutral-400">Falha numa conta (<code class="text-accent-soft">ok: false</code>) nunca derruba as outras.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <span class="block font-semibold text-white">Sem OAuth próprio</span>
+            <p class="mt-2 text-sm text-neutral-400">Reusa o login que Claude Code, Codex ou Cursor já fizeram neste host.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPTURAS -->
+    <section id="capturas" class="border-t border-white/5 bg-white/[0.02] py-20">
+      <div class="mx-auto max-w-6xl px-6 text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">Capturas de tela</p>
+        <h2 class="mx-auto mt-3 max-w-2xl text-3xl font-bold text-white">Firmware e web, lado a lado</h2>
+        <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <figure class="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <img src="assets/display-home-list.png" alt="Início em lista no firmware" class="w-full" />
+            <figcaption class="border-t border-white/10 p-3 text-xs text-neutral-400">Firmware — início em lista</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <img src="assets/display-detail-claude.png" alt="Detalhe da conta Claude no firmware" class="w-full" />
+            <figcaption class="border-t border-white/10 p-3 text-xs text-neutral-400">Firmware — detalhe Claude</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <img src="assets/display-settings-theme.png" alt="Temas e cores do mostrador" class="w-full" />
+            <figcaption class="border-t border-white/10 p-3 text-xs text-neutral-400">Firmware — temas e cor</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <img src="assets/web-overview.png" alt="Visão geral do mostrador web" class="w-full" />
+            <figcaption class="border-t border-white/10 p-3 text-xs text-neutral-400">Web — visão geral</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <img src="assets/web-settings.png" alt="Painel de aparência no mostrador web" class="w-full" />
+            <figcaption class="border-t border-white/10 p-3 text-xs text-neutral-400">Web — aparência</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <img src="assets/web-mobile.png" alt="Mostrador web em viewport de celular" class="mx-auto h-full w-auto max-h-80 object-contain" />
+            <figcaption class="border-t border-white/10 p-3 text-xs text-neutral-400">Web — responsivo (mobile)</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMO FUNCIONA -->
+    <section id="como-funciona" class="border-t border-white/5 py-20">
+      <div class="mx-auto grid max-w-6xl gap-12 px-6 md:grid-cols-2 md:items-center">
+        <div class="order-2 flex flex-col items-center gap-3 md:order-1">
+          <div class="w-full rounded-xl border border-accent/40 bg-accent/10 px-6 py-4 text-center text-sm text-white">
+            Assinaturas
+            <br />
+            <small class="text-neutral-400">Claude · GPT · Cursor · OpenRouter · DeepSeek</small>
+          </div>
+          <div class="text-xs text-neutral-500">↓ tokens só no host</div>
+          <div class="w-full rounded-xl border border-white/10 bg-white/[0.03] px-6 py-4 text-center text-sm text-white">
+            Backend FastAPI · :8787
+            <br />
+            <small class="text-neutral-400">GET /events (SSE) · GET /usage · GET /docs</small>
+          </div>
+          <div class="text-xs text-neutral-500">↓</div>
+          <div class="grid w-full grid-cols-2 gap-3">
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4 text-center text-sm text-white">
+              ESP32 / Wokwi
+              <br />
+              <small class="text-neutral-400">escuta o stream</small>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4 text-center text-sm text-white">
+              React <code class="text-accent-soft">/display</code>
+              <br />
+              <small class="text-neutral-400">réplica da placa</small>
+            </div>
+          </div>
+        </div>
+        <div class="order-1 md:order-2">
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">Como funciona</p>
+          <h2 class="mt-3 text-3xl font-bold text-white">Um ciclo, todos os clientes</h2>
+          <ol class="mt-6 list-inside list-decimal space-y-3 text-neutral-300 marker:font-bold marker:text-accent">
+            <li>Tokens ficam no computador (Keychain, <code class="text-accent-soft">auth.json</code>, <code class="text-accent-soft">state.vscdb</code>) — o Vigia <strong class="text-white">reusa</strong> o login que os apps oficiais já fizeram.</li>
+            <li>O coletor consulta as APIs <strong class="text-white">uma vez por ciclo</strong> (padrão 60s) e empurra o mesmo JSON a todos os clientes SSE.</li>
+            <li>O JSON na LAN tem percentuais e datas, <strong class="text-white">nunca</strong> o Bearer.</li>
+            <li>Falha de uma conta (<code class="text-accent-soft">ok: false</code>) não derruba as outras. HTTP 200.</li>
+          </ol>
+          <p class="mt-6 text-sm text-neutral-500">
+            Guia técnico completo em
+            <a class="text-accent-soft hover:underline" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/docs/SETUP.md" target="_blank" rel="noopener"><code>docs/SETUP.md</code></a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- AVISO -->
+    <section class="border-t border-white/5 py-16">
+      <div class="mx-auto flex max-w-4xl items-start gap-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6">
+        <span class="text-2xl">⚠️</span>
+        <p class="text-sm leading-relaxed text-amber-100/90">
+          <strong>LAN only.</strong> Os endpoints de cota do Claude, do GPT e do Cursor <strong>não são API pública</strong> —
+          são os mesmos que o CLI/IDE já usam neste computador. <strong>Não exponha a porta 8787 na internet.</strong>
+          A placa <strong>nunca</strong> guarda tokens — só percentuais e datas.
+        </p>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="border-t border-white/5 bg-white/[0.02] py-24">
+      <div class="mx-auto max-w-2xl px-6 text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">Comece agora</p>
+        <h2 class="mt-3 text-3xl font-bold text-white">Precisa de Python ≥ 3.11, Node 20+ e, para o firmware, PlatformIO Core</h2>
+        <pre class="mt-8 inline-block rounded-xl border border-white/10 bg-black/40 px-6 py-4 font-mono text-lg text-accent-soft"><code>./dev up</code></pre>
+        <p class="mt-4 text-neutral-400">Sobe o coletor e o mostrador web em <code class="text-accent-soft">http://127.0.0.1:8787/display</code>.</p>
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+          <a class="rounded-full bg-accent px-6 py-3 font-semibold text-white shadow-lg shadow-accent/30 transition hover:bg-accent/90"
+             href="https://github.com/TrindadeBRA/vigia-ai/blob/main/docs/SETUP.md" target="_blank" rel="noopener">📖 Guia completo de setup</a>
+          <a class="rounded-full border border-white/20 px-6 py-3 font-semibold text-white transition hover:bg-white/5"
+             href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">Repositório no GitHub</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-white/10 py-10">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-neutral-400 md:flex-row">
+      <div class="flex items-center gap-2 font-bold text-white">
+        <img src="assets/favicon.svg" alt="" width="22" height="22" class="rounded-md" />
+        Vigia<em class="not-italic text-accent">AI</em>
+      </div>
+      <p>Licença MIT · feito por <a class="text-accent-soft hover:underline" href="https://github.com/TrindadeBRA" target="_blank" rel="noopener">TrindadeBRA</a></p>
+      <div class="flex gap-6">
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribuir</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/SECURITY.md" target="_blank" rel="noopener">Segurança</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/LICENSE" target="_blank" rel="noopener">Licença</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const toggle = document.getElementById('nav-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    toggle.addEventListener('click', () => {
+      const isOpen = mobileMenu.classList.contains('flex');
+      mobileMenu.classList.toggle('flex', !isOpen);
+      mobileMenu.classList.toggle('hidden', isOpen);
+      toggle.setAttribute('aria-expanded', String(!isOpen));
+    });
+    mobileMenu.querySelectorAll('a').forEach((a) =>
+      a.addEventListener('click', () => {
+        mobileMenu.classList.remove('flex');
+        mobileMenu.classList.add('hidden');
+      })
+    );
+  </script>
+</body>
+</html>

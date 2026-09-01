@@ -14,7 +14,8 @@ enum View : uint8_t
   VIEW_STATUS = 6,
   VIEW_NOW = 7,
   VIEW_OPENCODE = 8,
-  VIEW_COUNT = 9
+  VIEW_FAL = 9,
+  VIEW_COUNT = 10
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
@@ -113,6 +114,18 @@ struct OpenCodeAccount
   int remainingCents = -1;
 };
 
+struct FalAccount
+{
+  String id;
+  String label;
+  bool ok = false;
+  String error;
+  float percent = -1;
+  int limitCents = -1;
+  int usedCents = -1;
+  int remainingCents = -1;
+};
+
 struct UsageSnapshot
 {
   bool httpOk = false;
@@ -130,6 +143,8 @@ struct UsageSnapshot
   int deepseekCount = 0;
   OpenCodeAccount opencode[MAX_ACCOUNTS];
   int opencodeCount = 0;
+  FalAccount fal[MAX_ACCOUNTS];
+  int falCount = 0;
 };
 
 extern TFT_eSPI tft;

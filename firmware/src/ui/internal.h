@@ -43,11 +43,15 @@ extern int g_eyeR;
 // a cada redesenho periódico do header (contador, refresh etc).
 extern int g_eyeGazeX;
 extern int g_eyeGazeY;
+// Fração (0..1) de quanto as pálpebras estão fechadas, animada por
+// uiTickEye() (blink vertical, igual ao logo do frontend) — drawHeader()
+// reaproveita pra não "reabrir" o olho a cada redesenho periódico do header.
+extern float g_eyeLid;
 // Retangulos de toque dos cards da Início, preenchidos por paintHomeList()/
 // paintHomeGrid() a cada pintura — só os provedores com pelo menos uma conta
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta
 // lista em vez de assumir posições fixas.
-constexpr int MAX_HOME_CARDS = 7;
+constexpr int MAX_HOME_CARDS = 8;
 extern View g_homeCardView[MAX_HOME_CARDS];
 extern int g_homeCardX[MAX_HOME_CARDS];
 extern int g_homeCardY[MAX_HOME_CARDS];
@@ -103,6 +107,7 @@ extern int g_cursorIdx;
 extern int g_openrouterIdx;
 extern int g_deepseekIdx;
 extern int g_opencodeIdx;
+extern int g_falIdx;
 
 // Geometria do paginador "< i/N >" no topo do card de detalhe — só existe
 // (g_acctPagerVisible) quando o provedor tem mais de uma conta.
@@ -122,6 +127,7 @@ int cursorWorstIdx();
 int openrouterWorstIdx();
 int deepseekWorstIdx();
 int opencodeWorstIdx();
+int falWorstIdx();
 
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
 // selo do header deve mostrar o check verde de sucesso em vez do contador.
@@ -139,6 +145,7 @@ void paintCursor();
 void paintOpenRouter();
 void paintDeepSeek();
 void paintOpenCode();
+void paintFal();
 void paintStatus();
 void paintNow();
 void paintNowClock();
@@ -161,6 +168,8 @@ String deepseekRemain(const DeepSeekAccount &d);
 String deepseekBalance(const DeepSeekAccount &d);
 String opencodeRemain(const OpenCodeAccount &o);
 String opencodeBalance(const OpenCodeAccount &o);
+String falRemain(const FalAccount &f);
+String falBalance(const FalAccount &f);
 const char *emptyProvidersMsg();
 
 // Chrome das telas de detalhe / Sistema (card com scroll).

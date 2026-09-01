@@ -6,7 +6,7 @@ O JSON viaja em `GET /usage` (uma vez) e em `GET /events` (SSE, `event: usage`).
 
 `Content-Type` em `/usage`: `application/json; charset=utf-8`. Em `/events`: `text/event-stream` (`event: usage` + `data:` o JSON).
 
-**v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`, `opencode_go`, `opencode_zen`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
+**v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`, `opencode_go`, `opencode_zen`, `fal`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
 
 Percentuais: **0–100** (float). Se a API nativa mandar 0–1, o coletor converte.
 
@@ -127,6 +127,18 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "used_cents": null,
       "remaining_cents": 1500
     }
+  ],
+  "fal": [
+    {
+      "id": "legacy",
+      "label": "",
+      "ok": true,
+      "error": null,
+      "percent": null,
+      "limit_cents": null,
+      "used_cents": null,
+      "remaining_cents": 2450
+    }
   ]
 }
 ```
@@ -145,8 +157,9 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
 | `deepseek`     | array de contas | sim (pode ser `[]`) |
 | `opencode_go`  | array de contas | sim (pode ser `[]`) |
 | `opencode_zen` | array de contas | sim (pode ser `[]`) |
+| `fal`          | array de contas | sim (pode ser `[]`) |
 
-### Campos comuns a toda conta, nos 7 provedores
+### Campos comuns a toda conta, nos 8 provedores
 
 | Campo   | Tipo             | Notas                                                                                                                                                      |
 | ------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -245,6 +258,17 @@ Vem de um endpoint de saldo da OpenCode — créditos pré-pagos; ver `docs/APIS
 | `used_cents`      | number ou `null` | Gasto em centavos de USD; `null` se não houver               |
 | `remaining_cents` | number ou `null` | Saldo restante em centavos de USD (único campo confiável)    |
 
+### `fal[i]`
+
+Vem de `GET /v1/account/billing` (fal.ai) — créditos pré-pagos; ver `docs/APIS_FAL.md`.
+
+| Campo             | Tipo             | Notas                                                        |
+| ----------------- | ---------------- | ------------------------------------------------------------ |
+| `percent`         | number ou `null` | Sempre `null` — a API não expõe limite/teto                  |
+| `limit_cents`     | number ou `null` | Sempre `null` — a API não expõe teto                          |
+| `used_cents`      | number ou `null` | Sempre `null` — a API não expõe gasto acumulado               |
+| `remaining_cents` | number ou `null` | `credits.current_balance` × 100 (único campo confiável)       |
+
 ## Outros endpoints
 
 | Método | Caminho   | Corpo                                                                                                         |
@@ -266,12 +290,12 @@ HTTP 5xx só se o processo do coletor quebrar de fato.
 Uma conta só entra no array se estiver visível — o firmware **não desenha o card** de nenhuma conta que não veio no JSON, em nenhuma tela (Início lista/grade, Agora). Um provedor com array vazio (`[]`) não desenha nenhum card daquele tipo. Origens de "de fora":
 
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
-   painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go e OpenCode Zen somem ao
+   painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen e fal.ai somem ao
    apagar a última key.
 2. **Oculta no painel** — a conta **local** de Claude/GPT/Cursor (Keychain/`auth.json`/`state.vscdb`) e
-   a **primeira key** de OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`/`OPENCODE_GO_API_KEY`/`OPENCODE_ZEN_API_KEY`)
+   a **primeira key** de OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`/`OPENCODE_GO_API_KEY`/`OPENCODE_ZEN_API_KEY`/`FAL_API_KEY`)
    têm um interruptor **Mostrar na placa** que grava `CLAUDE_HIDDEN` / `GPT_HIDDEN` / `CURSOR_HIDDEN` /
-   `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` / `OPENCODE_GO_HIDDEN` / `OPENCODE_ZEN_HIDDEN` em `config.json` — a conta some do array
+   `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` / `OPENCODE_GO_HIDDEN` / `OPENCODE_ZEN_HIDDEN` / `FAL_HIDDEN` em `config.json` — a conta some do array
    (sem chamar a API), mas continua salva/logada; só o card some na ESP32. Contas
    extras coladas (`*_ACCOUNTS`) não têm esse interruptor — remover a conta no
    painel é o equivalente a "ocultar".

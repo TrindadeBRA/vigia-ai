@@ -4,6 +4,7 @@
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
+#include "assets/icons/icon_fal.h"
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
@@ -124,8 +125,9 @@ void paintNow()
   const bool showOpenRouter = g_snap.openrouterCount > 0;
   const bool showDeepSeek = g_snap.deepseekCount > 0;
   const bool showOpenCode = g_snap.opencodeCount > 0;
+  const bool showFal = g_snap.falCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCode;
+                (int)showDeepSeek + (int)showOpenCode + (int)showFal;
   if (n == 0)
   {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
@@ -189,6 +191,7 @@ void paintNow()
   const OpenRouterAccount &orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
   const OpenCodeAccount &ocAcct = g_snap.opencode[showOpenCode ? opencodeWorstIdx() : 0];
+  const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
 
   String cs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.sessionPercent));
   String cs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.weeklyPercent));
@@ -201,6 +204,7 @@ void paintNow()
   String os1 = openrouterBalance(orAcct);
   String ds1 = deepseekBalance(dsAcct);
   String oc1 = opencodeRemain(ocAcct);
+  String fal1 = falBalance(falAcct);
 
   int slot = 0;
   if (showClaude)
@@ -255,5 +259,11 @@ void paintNow()
         ocAcct.rollingPercent, compact ? String() : withResta(ocAcct.rollingPercent, ocAcct.rollingResets),
         true, t.week, ocAcct.weeklyPercent,
         compact ? String() : withResta(ocAcct.weeklyPercent, ocAcct.weeklyResets));
+  }
+  if (showFal)
+  {
+    String suffix = accountSuffixText(falAcct.label, g_snap.falCount);
+    row(slot++, "fal.ai", suffix, ICON_FAL, falAcct.ok, falAcct.error, t.credits,
+        -1, fal1, false, "", -1, "");
   }
 }

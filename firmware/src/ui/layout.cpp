@@ -29,12 +29,13 @@ int g_eyeCy = 0;
 int g_eyeR = 0;
 int g_eyeGazeX = 0;
 int g_eyeGazeY = 0;
+float g_eyeLid = 0.0f;
 View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER,
-                                       VIEW_DEEPSEEK, VIEW_OPENCODE};
-int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
-int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
-int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
-int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0};
+                                       VIEW_DEEPSEEK, VIEW_OPENCODE, VIEW_FAL};
+int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
 int g_homeCardCount = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;
@@ -239,6 +240,29 @@ int opencodeWorstIdx()
   return best;
 }
 
+// fal.ai e saldo de creditos, igual OpenCode Zen — "pior" e o saldo mais baixo.
+int falWorstIdx()
+{
+  int best = 0;
+  int bestVal = 0;
+  bool found = false;
+  for (int i = 0; i < g_snap.falCount; i++)
+  {
+    int rem = g_snap.fal[i].remainingCents;
+    if (rem < 0)
+    {
+      continue;
+    }
+    if (!found || rem < bestVal)
+    {
+      bestVal = rem;
+      best = i;
+      found = true;
+    }
+  }
+  return best;
+}
+
 static int currentProviderCount()
 {
   switch (g_view)
@@ -255,6 +279,8 @@ static int currentProviderCount()
     return g_snap.deepseekCount;
   case VIEW_OPENCODE:
     return g_snap.opencodeCount;
+  case VIEW_FAL:
+    return g_snap.falCount;
   default:
     return 0;
   }
@@ -276,6 +302,8 @@ static int *currentProviderIdx()
     return &g_deepseekIdx;
   case VIEW_OPENCODE:
     return &g_opencodeIdx;
+  case VIEW_FAL:
+    return &g_falIdx;
   default:
     return nullptr;
   }
@@ -470,7 +498,7 @@ void drawHeader()
     g_eyeCx = brandX + eyeR;
     g_eyeCy = midY;
     g_eyeR = eyeR;
-    drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY);
+    drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid);
     g_headerHomeX0 = g_hdrX0;
     g_headerHomeY0 = g_hdrY0;
     g_headerHomeX1 = brandX + eyeR * 2 + 12;
@@ -516,7 +544,7 @@ void drawHeader()
   g_eyeCx = cx;
   g_eyeCy = y + eyeR;
   g_eyeR = eyeR;
-  drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY);
+  drawEyeIcon(g_eyeCx, g_eyeCy, eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid);
   const int iconBottom = y + eyeR * 2;
   g_headerHomeX0 = g_hdrX0;
   g_headerHomeY0 = g_hdrY0;

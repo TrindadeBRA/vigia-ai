@@ -78,6 +78,7 @@ export type UsagePayload = {
   openrouter: CreditsAccount[];
   deepseek: CreditsAccount[];
   opencode: OpenCodeAccount[];
+  fal: CreditsAccount[];
 };
 
 export type AccountPublic = { id: string; label: string; suffix: string | null };

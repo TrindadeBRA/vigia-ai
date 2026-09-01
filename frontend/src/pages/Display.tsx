@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
 import { Logo } from "../components/Logo";
-import { CheckIcon, ClockIcon, CloseIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { CheckIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import "../display.css";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
@@ -235,6 +235,18 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       metrics,
     });
   }
+  for (const f of data.fal || []) {
+    const sub = f.remaining_cents != null ? t.remainMoney + fmtUsd(f.remaining_cents) : t.noCredits;
+    list.push({
+      id: `fal:${f.id}`,
+      provider: "fal",
+      ok: f.ok,
+      error: f.error,
+      title: "fal.ai",
+      label: f.label || "",
+      metrics: [{ label: t.accountCredits, pct: null, sub }],
+    });
+  }
   return list;
 }
 
@@ -322,6 +334,9 @@ function Sidebar(props: {
       <NavLink to="/display/config" className={({ isActive }) => `side-item${isActive ? " active" : ""}`} onClick={onClose}>
         <SlidersIcon size={16} /> {t.config}
       </NavLink>
+      <a className="side-item side-footer" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
+        <GitHubIcon size={16} /> GitHub
+      </a>
     </nav>
   );
 }
@@ -603,6 +618,19 @@ function OpenCodeBody({ data, account, t, pal }: { data: UsagePayload; account: 
   );
 }
 
+function FalBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
+  const f = account;
+  const remain = f.remaining_cents != null ? t.remainMoney + fmtUsd(f.remaining_cents) : t.noCredits;
+  return (
+    <>
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.credits} pct={f.percent} pal={pal} sub={remain} />
+      </MetricsGrid>
+    </>
+  );
+}
+
 function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   let body: ReactNode = null;
   if (meta.ok && account) {
@@ -612,6 +640,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "opencode") body = <OpenCodeBody data={data} account={account as OpenCodeAccount} t={t} pal={pal} />;
+    else if (meta.provider === "fal") body = <FalBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
   }
   return (
     <div className="account-page view-fade">
@@ -797,7 +826,7 @@ export default function Display() {
     if (meta) {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
-      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode";
+      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
   }
