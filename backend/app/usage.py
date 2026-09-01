@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable
 
 from app.formatting import utc_now
 from app.providers.claude import claude_fail, fetch_claude_accounts
@@ -132,67 +133,48 @@ def mock_payload() -> dict[str, Any]:
     }
 
 
+# (chave, fetch_*_accounts, *_fail, id de fallback quando a lista falha inteira)
+# — cada provedor faz sua própria chamada de rede bloqueante; ver _fetch_one().
+_PROVIDER_JOBS: list[tuple[str, Callable[[dict], list[dict[str, Any]]], Callable[[str], dict[str, Any]], str]] = [
+    ("claude", fetch_claude_accounts, claude_fail, "local"),
+    ("gpt", fetch_gpt_accounts, gpt_fail, "local"),
+    ("cursor", fetch_cursor_accounts, cursor_fail, "local"),
+    ("openrouter", fetch_openrouter_accounts, openrouter_fail, "legacy"),
+    ("deepseek", fetch_deepseek_accounts, deepseek_fail, "legacy"),
+    ("opencode_go", fetch_opencode_go_accounts, opencode_go_fail, "legacy"),
+    ("opencode_zen", fetch_opencode_zen_accounts, opencode_zen_fail, "legacy"),
+    ("fal", fetch_fal_accounts, fal_fail, "legacy"),
+]
+
+
+def _fetch_one(
+    name: str,
+    fetch_fn: Callable[[dict], list[dict[str, Any]]],
+    fail_fn: Callable[[str], dict[str, Any]],
+    fallback_id: str,
+    cfg: dict,
+) -> tuple[str, list[dict[str, Any]]]:
+    try:
+        return name, fetch_fn(cfg)
+    except Exception as exc:  # noqa: BLE001
+        return name, [{"id": fallback_id, "label": "", **fail_fn(str(exc))}]
+
+
 def build_payload() -> dict[str, Any]:
     cfg = load()
     if cfg.get("mock"):
         payload = mock_payload()
-        if provider_cfg(cfg, "claude").get("hidden"):
-            payload["claude"] = []
-        if provider_cfg(cfg, "gpt").get("hidden"):
-            payload["gpt"] = []
-        if provider_cfg(cfg, "cursor").get("hidden"):
-            payload["cursor"] = []
-        if provider_cfg(cfg, "openrouter").get("hidden"):
-            payload["openrouter"] = []
-        if provider_cfg(cfg, "deepseek").get("hidden"):
-            payload["deepseek"] = []
-        if provider_cfg(cfg, "opencode_go").get("hidden"):
-            payload["opencode_go"] = []
-        if provider_cfg(cfg, "opencode_zen").get("hidden"):
-            payload["opencode_zen"] = []
-        if provider_cfg(cfg, "fal").get("hidden"):
-            payload["fal"] = []
+        for name, *_rest in _PROVIDER_JOBS:
+            if provider_cfg(cfg, name).get("hidden"):
+                payload[name] = []
         return payload
-    try:
-        claude = fetch_claude_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        claude = [{"id": "local", "label": "", **claude_fail(str(exc))}]
-    try:
-        gpt = fetch_gpt_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        gpt = [{"id": "local", "label": "", **gpt_fail(str(exc))}]
-    try:
-        cursor = fetch_cursor_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        cursor = [{"id": "local", "label": "", **cursor_fail(str(exc))}]
-    try:
-        openrouter = fetch_openrouter_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        openrouter = [{"id": "legacy", "label": "", **openrouter_fail(str(exc))}]
-    try:
-        deepseek = fetch_deepseek_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        deepseek = [{"id": "legacy", "label": "", **deepseek_fail(str(exc))}]
-    try:
-        opencode_go = fetch_opencode_go_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        opencode_go = [{"id": "legacy", "label": "", **opencode_go_fail(str(exc))}]
-    try:
-        opencode_zen = fetch_opencode_zen_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        opencode_zen = [{"id": "legacy", "label": "", **opencode_zen_fail(str(exc))}]
-    try:
-        fal = fetch_fal_accounts(cfg)
-    except Exception as exc:  # noqa: BLE001
-        fal = [{"id": "legacy", "label": "", **fal_fail(str(exc))}]
-    return {
-        "updated_at": utc_now(),
-        "claude": claude,
-        "gpt": gpt,
-        "cursor": cursor,
-        "openrouter": openrouter,
-        "deepseek": deepseek,
-        "opencode_go": opencode_go,
-        "opencode_zen": opencode_zen,
-        "fal": fal,
-    }
+    # Cada provedor é uma chamada de rede bloqueante independente (ver
+    # app/http_util.py, timeout de 20s por request) — rodar em paralelo evita
+    # que N provedores lentos somem suas latências uma atrás da outra, o que
+    # já estourou o timeout de /health do `./dev` script no boot com 8
+    # provedores sequenciais.
+    with ThreadPoolExecutor(max_workers=len(_PROVIDER_JOBS)) as pool:
+        futures = [pool.submit(_fetch_one, name, fetch_fn, fail_fn, fallback_id, cfg)
+                   for name, fetch_fn, fail_fn, fallback_id in _PROVIDER_JOBS]
+        results = dict(future.result() for future in futures)
+    return {"updated_at": utc_now(), **results}
