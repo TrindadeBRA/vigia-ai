@@ -7,6 +7,8 @@
 
 using fs::File;
 
+#include <math.h>
+
 #include "net/parse.h"
 #include "ui/internal.h"
 #include "assets/icons/icon_claude.h"
@@ -17,13 +19,14 @@ using fs::File;
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
 
-static const char* kMetaPath = "/theme.json";
-static const char* kBgPath = "/theme_bg.raw";
+static const char *kMetaPath = "/theme.json";
+static const char *kBgPath = "/theme_bg.raw";
 // Fundo pré-misturado no gen_icons.py (ver widgets.cpp:drawIcon) — usado aqui
 // como cor sentinela de "pixel transparente" no pushImage() escalado.
 constexpr uint16_t kBakedCard = 0x1904;
 
-enum ThemeIconKind : uint8_t {
+enum ThemeIconKind : uint8_t
+{
   TICON_CLAUDE = 0,
   TICON_GPT,
   TICON_CURSOR,
@@ -35,7 +38,8 @@ enum ThemeIconKind : uint8_t {
   TICON_COUNT
 };
 
-struct ThemeIcon {
+struct ThemeIcon
+{
   ThemeIconKind kind = TICON_CLAUDE;
   float x = 0.5f;
   float y = 0.5f;
@@ -44,7 +48,8 @@ struct ThemeIcon {
   uint16_t color = 0;
 };
 
-struct ThemeText {
+struct ThemeText
+{
   float x = 0.5f;
   float y = 0.5f;
   float scale = 1.0f;
@@ -53,7 +58,8 @@ struct ThemeText {
   char text[24] = {0};
 };
 
-struct ThemeClock {
+struct ThemeClock
+{
   bool enabled = false;
   float x = 0.5f;
   float y = 0.12f;
@@ -61,14 +67,21 @@ struct ThemeClock {
   bool hasColor = false;
   uint16_t color = 0;
   bool format24h = true;
+  bool showBackground = true;
+  bool autoColor = false;
 };
 
-enum ThemeBgKind : uint8_t { TBG_COLOR = 0, TBG_IMAGE = 1 };
+enum ThemeBgKind : uint8_t
+{
+  TBG_COLOR = 0,
+  TBG_IMAGE = 1
+};
 
 constexpr int kMaxIcons = 8;
 constexpr int kMaxTexts = 4;
 
-struct CustomTheme {
+struct CustomTheme
+{
   ThemeBgKind bgKind = TBG_COLOR;
   uint16_t bgColor = 0;
   ThemeClock clock;
@@ -83,17 +96,21 @@ static bool g_active = false;
 static String g_rawJson;
 static File g_uploadFile;
 
-static float clampf(float v, float lo, float hi) {
+static float clampf(float v, float lo, float hi)
+{
   return v < lo ? lo : (v > hi ? hi : v);
 }
 
-static bool hexColorToRgb565(const String& hex, uint16_t& out) {
-  if (hex.length() != 7 || hex[0] != '#') {
+static bool hexColorToRgb565(const String &hex, uint16_t &out)
+{
+  if (hex.length() != 7 || hex[0] != '#')
+  {
     return false;
   }
-  char* end = nullptr;
+  char *end = nullptr;
   long v = strtol(hex.c_str() + 1, &end, 16);
-  if (end == nullptr || *end != '\0') {
+  if (end == nullptr || *end != '\0')
+  {
     return false;
   }
   uint8_t r = (v >> 16) & 0xFF;
@@ -103,11 +120,14 @@ static bool hexColorToRgb565(const String& hex, uint16_t& out) {
   return true;
 }
 
-static bool parseIconKind(const String& s, ThemeIconKind& out) {
-  static const char* kNames[TICON_COUNT] = {"claude",     "gpt",      "cursor", "openrouter",
-                                            "deepseek",   "opencode", "fal",    "brand"};
-  for (int i = 0; i < TICON_COUNT; i++) {
-    if (s == kNames[i]) {
+static bool parseIconKind(const String &s, ThemeIconKind &out)
+{
+  static const char *kNames[TICON_COUNT] = {"claude", "gpt", "cursor", "openrouter",
+                                            "deepseek", "opencode", "fal", "brand"};
+  for (int i = 0; i < TICON_COUNT; i++)
+  {
+    if (s == kNames[i])
+    {
       out = (ThemeIconKind)i;
       return true;
     }
@@ -117,10 +137,12 @@ static bool parseIconKind(const String& s, ThemeIconKind& out) {
 
 static String g_lastParseError;
 
-static bool parseTheme(const String& json, CustomTheme& out) {
+static bool parseTheme(const String &json, CustomTheme &out)
+{
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, json);
-  if (err) {
+  if (err)
+  {
     g_lastParseError = String(err.c_str()) + " corpo(" + String(json.length()) + ")=" + json;
     Serial.println("tema: parse falhou: " + g_lastParseError);
     return false;
@@ -133,24 +155,39 @@ static bool parseTheme(const String& json, CustomTheme& out) {
   t.bgColor = hexColorToRgb565(jsonText(bg["color"]), col) ? col : COL_BG;
 
   JsonVariantConst clk = doc["clock"];
-  if (!clk.isNull()) {
+  if (!clk.isNull())
+  {
     t.clock.enabled = clk["enabled"] | false;
     t.clock.x = clampf(clk["x"] | 0.5f, 0.0f, 1.0f);
     t.clock.y = clampf(clk["y"] | 0.12f, 0.0f, 1.0f);
     t.clock.scale = clampf(clk["scale"] | 2.0f, 0.5f, 4.0f);
     t.clock.format24h = clk["format24h"] | true;
-    if (hexColorToRgb565(jsonText(clk["color"]), col)) {
+    // showBackground: default true para compatibilidade com temas antigos
+    if (clk["showBackground"].is<bool>())
+    {
+      t.clock.showBackground = clk["showBackground"] | true;
+    }
+    else
+    {
+      t.clock.showBackground = true;
+    }
+    t.clock.autoColor = clk["autoColor"] | false;
+    if (hexColorToRgb565(jsonText(clk["color"]), col))
+    {
       t.clock.hasColor = true;
       t.clock.color = col;
     }
   }
 
-  for (JsonVariantConst it : doc["icons"].as<JsonArrayConst>()) {
-    if (t.iconCount >= kMaxIcons) {
+  for (JsonVariantConst it : doc["icons"].as<JsonArrayConst>())
+  {
+    if (t.iconCount >= kMaxIcons)
+    {
       break;
     }
     ThemeIconKind kind;
-    if (!parseIconKind(jsonText(it["provider"]), kind)) {
+    if (!parseIconKind(jsonText(it["provider"]), kind))
+    {
       continue;
     }
     ThemeIcon icon;
@@ -158,26 +195,31 @@ static bool parseTheme(const String& json, CustomTheme& out) {
     icon.x = clampf(it["x"] | 0.5f, 0.0f, 1.0f);
     icon.y = clampf(it["y"] | 0.5f, 0.0f, 1.0f);
     icon.scale = clampf(it["scale"] | 1.0f, 0.5f, 4.0f);
-    if (hexColorToRgb565(jsonText(it["color"]), col)) {
+    if (hexColorToRgb565(jsonText(it["color"]), col))
+    {
       icon.hasColor = true;
       icon.color = col;
     }
     t.icons[t.iconCount++] = icon;
   }
 
-  for (JsonVariantConst it : doc["texts"].as<JsonArrayConst>()) {
-    if (t.textCount >= kMaxTexts) {
+  for (JsonVariantConst it : doc["texts"].as<JsonArrayConst>())
+  {
+    if (t.textCount >= kMaxTexts)
+    {
       break;
     }
     String s = jsonText(it["text"]);
-    if (!s.length()) {
+    if (!s.length())
+    {
       continue;
     }
     ThemeText txt;
     txt.x = clampf(it["x"] | 0.5f, 0.0f, 1.0f);
     txt.y = clampf(it["y"] | 0.5f, 0.0f, 1.0f);
     txt.scale = clampf(it["scale"] | 1.0f, 0.5f, 4.0f);
-    if (hexColorToRgb565(jsonText(it["color"]), col)) {
+    if (hexColorToRgb565(jsonText(it["color"]), col))
+    {
       txt.hasColor = true;
       txt.color = col;
     }
@@ -193,27 +235,33 @@ static bool g_fsOk = false;
 
 bool customThemeFsOk() { return g_fsOk; }
 
-void customThemeInit() {
+void customThemeInit()
+{
   g_fsOk = LittleFS.begin(true);
-  if (!g_fsOk) {
+  if (!g_fsOk)
+  {
     Serial.println("tema: LittleFS.begin falhou");
     return;
   }
   Serial.printf("tema: LittleFS ok, total=%u usado=%u\n", (unsigned)LittleFS.totalBytes(),
-               (unsigned)LittleFS.usedBytes());
+                (unsigned)LittleFS.usedBytes());
   File f = LittleFS.open(kMetaPath, "r");
-  if (!f) {
+  if (!f)
+  {
     return;
   }
   String json = f.readString();
   f.close();
   CustomTheme t;
-  if (parseTheme(json, t)) {
+  if (parseTheme(json, t))
+  {
     g_theme = t;
     g_rawJson = json;
     g_active = true;
     Serial.println("tema: custom carregado do LittleFS");
-  } else {
+  }
+  else
+  {
     Serial.println("tema: /theme.json inválido, ignorando");
   }
 }
@@ -241,17 +289,23 @@ String customThemeLastError() { return g_lastParseError; }
 // (g_theme/g_rawJson) — a gravação em LittleFS é só pra sobreviver a um
 // reboot; se não montar (ex.: o Wokwi não monta LittleFS hoje, só a NVS do
 // Preferences), o tema continua valendo pro resto da sessão mesmo assim.
-bool customThemeApplyMeta(const String& json) {
+bool customThemeApplyMeta(const String &json)
+{
   CustomTheme t;
-  if (!parseTheme(json, t)) {
+  if (!parseTheme(json, t))
+  {
     return false;
   }
-  if (g_fsOk) {
+  if (g_fsOk)
+  {
     File f = LittleFS.open(kMetaPath, "w");
-    if (f) {
+    if (f)
+    {
       f.print(json);
       f.close();
-    } else {
+    }
+    else
+    {
       Serial.println("tema: falha ao gravar /theme.json, mantendo só em RAM");
     }
   }
@@ -273,46 +327,53 @@ bool customThemeApplyMeta(const String& json) {
 // Fundo em RAM quando não há LittleFS pra gravar (ver customThemeBeginBackgroundWrite) —
 // só cabe até kBgRamCapMax bytes; acima disso a placa real sempre tem LittleFS,
 // então essa reserva de RAM nunca chega perto do limite de heap do ESP32.
-static uint8_t* g_bgRam = nullptr;
+static uint8_t *g_bgRam = nullptr;
 static size_t g_bgRamLen = 0;
 static size_t g_bgRamCap = 0;
 static bool g_bgUsingRam = false;
 constexpr size_t kBgRamCapMax = 200000;
 
-static void freeBgRam() {
+static void freeBgRam()
+{
   free(g_bgRam);
   g_bgRam = nullptr;
   g_bgRamLen = 0;
   g_bgRamCap = 0;
 }
 
-void customThemeClearAll() {
+void customThemeClearAll()
+{
   LittleFS.remove(kMetaPath);
   LittleFS.remove(kBgPath);
   freeBgRam();
   g_active = false;
   g_rawJson = "";
-  if (g_view == VIEW_HOME) {
+  if (g_view == VIEW_HOME)
+  {
     uiPaint();
   }
 }
 
 String customThemeCurrentJson() { return g_active ? g_rawJson : String(); }
 
-bool customThemeBeginBackgroundWrite() {
+bool customThemeBeginBackgroundWrite()
+{
   freeBgRam();
-  if (g_fsOk) {
+  if (g_fsOk)
+  {
     g_bgUsingRam = false;
     g_uploadFile = LittleFS.open(kBgPath, "w");
     return (bool)g_uploadFile;
   }
   size_t need = (size_t)customThemeCanvasWidth() * (size_t)customThemeCanvasHeight() * 2;
-  if (need == 0 || need > kBgRamCapMax) {
+  if (need == 0 || need > kBgRamCapMax)
+  {
     Serial.printf("tema: sem LittleFS e fundo (%u bytes) grande demais pra RAM\n", (unsigned)need);
     return false;
   }
-  g_bgRam = (uint8_t*)malloc(need);
-  if (!g_bgRam) {
+  g_bgRam = (uint8_t *)malloc(need);
+  if (!g_bgRam)
+  {
     Serial.printf("tema: malloc do fundo (%u bytes) em RAM falhou — livre=%u maior_bloco=%u\n", (unsigned)need,
                   (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
     return false;
@@ -322,62 +383,74 @@ bool customThemeBeginBackgroundWrite() {
   return true;
 }
 
-bool customThemeWriteBackgroundChunk(const uint8_t* data, size_t n) {
-  if (g_bgUsingRam) {
-    if (g_bgRamLen + n > g_bgRamCap) {
+bool customThemeWriteBackgroundChunk(const uint8_t *data, size_t n)
+{
+  if (g_bgUsingRam)
+  {
+    if (g_bgRamLen + n > g_bgRamCap)
+    {
       return false;
     }
     memcpy(g_bgRam + g_bgRamLen, data, n);
     g_bgRamLen += n;
     return true;
   }
-  if (!g_uploadFile) {
+  if (!g_uploadFile)
+  {
     return false;
   }
   return g_uploadFile.write(data, n) == n;
 }
 
-void customThemeEndBackgroundWrite(bool ok) {
-  if (g_bgUsingRam) {
-    if (!ok) {
+void customThemeEndBackgroundWrite(bool ok)
+{
+  if (g_bgUsingRam)
+  {
+    if (!ok)
+    {
       freeBgRam();
     }
     return;
   }
-  if (g_uploadFile) {
+  if (g_uploadFile)
+  {
     g_uploadFile.close();
   }
-  if (!ok) {
+  if (!ok)
+  {
     LittleFS.remove(kBgPath);
   }
 }
 
 // --- Render ------------------------------------------------------------
 
-struct IconRef {
-  const uint16_t* data;
+struct IconRef
+{
+  const uint16_t *data;
   int w;
   int h;
 };
 
-static IconRef iconRefFor(ThemeIconKind k) {
-  switch (k) {
-    case TICON_CLAUDE:
-      return {ICON_CLAUDE, ICON_CLAUDE_W, ICON_CLAUDE_H};
-    case TICON_GPT:
-      return {ICON_GPT, ICON_GPT_W, ICON_GPT_H};
-    case TICON_CURSOR:
-      return {ICON_CURSOR, ICON_CURSOR_W, ICON_CURSOR_H};
-    case TICON_OPENROUTER:
-      return {ICON_OPENROUTER, ICON_OPENROUTER_W, ICON_OPENROUTER_H};
-    case TICON_DEEPSEEK:
-      return {ICON_DEEPSEEK, ICON_DEEPSEEK_W, ICON_DEEPSEEK_H};
-    case TICON_OPENCODE:
-      return {ICON_OPENCODE, ICON_OPENCODE_W, ICON_OPENCODE_H};
-    case TICON_FAL:
-      return {ICON_FAL, ICON_FAL_W, ICON_FAL_H};
-    default:
-      return {nullptr, 0, 0};
+static IconRef iconRefFor(ThemeIconKind k)
+{
+  switch (k)
+  {
+  case TICON_CLAUDE:
+    return {ICON_CLAUDE, ICON_CLAUDE_W, ICON_CLAUDE_H};
+  case TICON_GPT:
+    return {ICON_GPT, ICON_GPT_W, ICON_GPT_H};
+  case TICON_CURSOR:
+    return {ICON_CURSOR, ICON_CURSOR_W, ICON_CURSOR_H};
+  case TICON_OPENROUTER:
+    return {ICON_OPENROUTER, ICON_OPENROUTER_W, ICON_OPENROUTER_H};
+  case TICON_DEEPSEEK:
+    return {ICON_DEEPSEEK, ICON_DEEPSEEK_W, ICON_DEEPSEEK_H};
+  case TICON_OPENCODE:
+    return {ICON_OPENCODE, ICON_OPENCODE_W, ICON_OPENCODE_H};
+  case TICON_FAL:
+    return {ICON_FAL, ICON_FAL_W, ICON_FAL_H};
+  default:
+    return {nullptr, 0, 0};
   }
 }
 
@@ -388,59 +461,76 @@ static IconRef iconRefFor(ThemeIconKind k) {
 static uint16_t g_bgHalfRow[240];
 static uint16_t g_bgFullRowPair[480 * 2];
 
-static void drawThemeBackground(const CustomTheme& t) {
+static void drawThemeBackground(const CustomTheme &t)
+{
   const int fullW = tft.width();
   const int fullH = tft.height();
   const int halfW = customThemeCanvasWidth();
   const int halfH = customThemeCanvasHeight();
-  if (t.bgKind == TBG_IMAGE && halfW > 0 && halfW <= 240) {
+  if (t.bgKind == TBG_IMAGE && halfW > 0 && halfW <= 240)
+  {
     const size_t expected = (size_t)halfW * (size_t)halfH * 2;
     const bool useRam = g_bgRam && g_bgRamLen == expected;
     File f;
     bool useFile = false;
-    if (!useRam && g_fsOk) {
+    if (!useRam && g_fsOk)
+    {
       f = LittleFS.open(kBgPath, "r");
       useFile = (bool)f && (size_t)f.size() == expected;
-      if (f && !useFile) {
+      if (f && !useFile)
+      {
         f.close();
       }
     }
-    if (useRam || useFile) {
+    if (useRam || useFile)
+    {
       tft.setSwapBytes(true);
       bool ok = true;
-      for (int sy = 0; sy < halfH; sy++) {
-        const uint16_t* srcRow;
-        if (useRam) {
-          srcRow = (const uint16_t*)g_bgRam + (size_t)sy * halfW;
-        } else {
-          if (f.read((uint8_t*)g_bgHalfRow, (size_t)halfW * 2) != (size_t)halfW * 2) {
+      for (int sy = 0; sy < halfH; sy++)
+      {
+        const uint16_t *srcRow;
+        if (useRam)
+        {
+          srcRow = (const uint16_t *)g_bgRam + (size_t)sy * halfW;
+        }
+        else
+        {
+          if (f.read((uint8_t *)g_bgHalfRow, (size_t)halfW * 2) != (size_t)halfW * 2)
+          {
             ok = false;
             break;
           }
           srcRow = g_bgHalfRow;
         }
-        for (int x = 0; x < halfW; x++) {
+        for (int x = 0; x < halfW; x++)
+        {
           uint16_t p = srcRow[x];
           g_bgFullRowPair[x * 2] = p;
-          if (x * 2 + 1 < fullW) {
+          if (x * 2 + 1 < fullW)
+          {
             g_bgFullRowPair[x * 2 + 1] = p;
           }
         }
         const int destY = sy * 2;
         const int destRows = (destY + 1 < fullH) ? 2 : 1;
-        if (destRows == 2) {
+        if (destRows == 2)
+        {
           memcpy(g_bgFullRowPair + fullW, g_bgFullRowPair, (size_t)fullW * 2);
         }
         tft.pushImage(0, destY, fullW, destRows, g_bgFullRowPair);
       }
       tft.setSwapBytes(false);
-      if (useFile) {
+      if (useFile)
+      {
         f.close();
       }
-      if (ok) {
+      if (ok)
+      {
         return;
       }
-    } else if (g_fsOk) {
+    }
+    else if (g_fsOk)
+    {
       Serial.println("tema: sem fundo em RAM/LittleFS compatível, usando cor");
     }
   }
@@ -451,41 +541,52 @@ static void drawThemeBackground(const CustomTheme& t) {
 constexpr int kIconScaledMax = 80;
 static uint16_t g_iconScaleBuf[kIconScaledMax * kIconScaledMax];
 
-static void drawThemeIcon(const ThemeIcon& icon) {
+static void drawThemeIcon(const ThemeIcon &icon)
+{
   const int cx = (int)(icon.x * tft.width());
   const int cy = (int)(icon.y * tft.height());
-  if (icon.kind == TICON_BRAND) {
+  if (icon.kind == TICON_BRAND)
+  {
     const int r = (int)(10 * icon.scale);
     drawEyeIcon(cx, cy, r, 0, 0, 0.0f);
     return;
   }
   IconRef ref = iconRefFor(icon.kind);
-  if (!ref.data) {
+  if (!ref.data)
+  {
     return;
   }
   int targetW = constrain((int)(ref.w * icon.scale), 6, kIconScaledMax);
   int targetH = constrain((int)(ref.h * icon.scale), 6, kIconScaledMax);
-  for (int ty = 0; ty < targetH; ty++) {
+  for (int ty = 0; ty < targetH; ty++)
+  {
     int sy = ty * ref.h / targetH;
-    for (int tx = 0; tx < targetW; tx++) {
+    for (int tx = 0; tx < targetW; tx++)
+    {
       int sx = tx * ref.w / targetW;
       uint16_t p = pgm_read_word(&ref.data[sy * ref.w + sx]);
       uint16_t out;
-      if (p == kBakedCard) {
-        out = kBakedCard;  // fica transparente (pushImage abaixo pula esse valor)
-      } else if (icon.hasColor) {
+      if (p == kBakedCard)
+      {
+        out = kBakedCard; // fica transparente (pushImage abaixo pula esse valor)
+      }
+      else if (icon.hasColor)
+      {
         int r5 = (p >> 11) & 0x1F;
         int g6 = (p >> 5) & 0x3F;
         int b5 = p & 0x1F;
-        int luma = (r5 * 8 * 30 + g6 * 4 * 59 + b5 * 8 * 11) / 100;  // ~0..255
+        int luma = (r5 * 8 * 30 + g6 * 4 * 59 + b5 * 8 * 11) / 100; // ~0..255
         int tr = (icon.color >> 11) & 0x1F;
         int tg = (icon.color >> 5) & 0x3F;
         int tb = icon.color & 0x1F;
         out = (uint16_t)(((tr * luma / 255) << 11) | ((tg * luma / 255) << 5) | (tb * luma / 255));
-        if (out == kBakedCard) {
-          out ^= 0x0001;  // nunca colide com o sentinela de transparência
+        if (out == kBakedCard)
+        {
+          out ^= 0x0001; // nunca colide com o sentinela de transparência
         }
-      } else {
+      }
+      else
+      {
         out = p;
       }
       g_iconScaleBuf[ty * targetW + tx] = out;
@@ -496,58 +597,171 @@ static void drawThemeIcon(const ThemeIcon& icon) {
   tft.setSwapBytes(false);
 }
 
-static void drawThemeText(const ThemeText& t) {
+static void drawThemeText(const ThemeText &t)
+{
   const int cx = (int)(t.x * tft.width());
   const int cy = (int)(t.y * tft.height());
   const uint8_t font = t.scale >= 2.5f ? 4 : 2;
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(t.hasColor ? t.color : COL_TEXT);  // 1 arg = desenho transparente
+  tft.setTextColor(t.hasColor ? t.color : COL_TEXT); // 1 arg = desenho transparente
   tft.drawString(t.text, cx, cy, font);
 }
 
-static void drawThemeClock(const ThemeClock& c) {
+// Converte RGB565 -> luminância relativa (WCAG) e escolhe cor legível
+// sobre o fundo usando a mesma lógica do NameToColor generateReadableColor:
+// mistura a cor base (preto/branco) com a cor de fundo até atingir 4.5:1.
+static uint16_t readableOnBg(uint16_t bg565)
+{
+  uint8_t r = (bg565 >> 11) & 0x1F;
+  uint8_t g = (bg565 >> 5) & 0x3F;
+  uint8_t b = bg565 & 0x1F;
+  // Expande para 8 bits
+  uint8_t r8 = (r << 3) | (r >> 2);
+  uint8_t g8 = (g << 2) | (g >> 4);
+  uint8_t b8 = (b << 3) | (b >> 2);
+  auto toLinear = [](uint8_t ch) -> float
+  {
+    float s = ch / 255.0f;
+    return s <= 0.03928f ? s / 12.92f : powf((s + 0.055f) / 1.055f, 2.4f);
+  };
+  float bgLum = 0.2126f * toLinear(r8) + 0.7152f * toLinear(g8) + 0.0722f * toLinear(b8);
+  float contrastWhite = (1.0f + 0.05f) / (bgLum + 0.05f);
+  float contrastBlack = (bgLum + 0.05f) / (0.0f + 0.05f);
+  bool useWhite = contrastWhite >= contrastBlack;
+  uint8_t baseR = useWhite ? 255 : 0;
+  uint8_t baseG = useWhite ? 255 : 0;
+  uint8_t baseB = useWhite ? 255 : 0;
+  const float TARGET = 4.5f;
+  const float MIN_RATIO = 0.5f;
+  auto blendAndContrast = [&](float ratio, float &outContrast) -> void
+  {
+    uint8_t tr = (uint8_t)(baseR * ratio + r8 * (1.0f - ratio) + 0.5f);
+    uint8_t tg = (uint8_t)(baseG * ratio + g8 * (1.0f - ratio) + 0.5f);
+    uint8_t tb = (uint8_t)(baseB * ratio + b8 * (1.0f - ratio) + 0.5f);
+    float tLum = 0.2126f * toLinear(tr) + 0.7152f * toLinear(tg) + 0.0722f * toLinear(tb);
+    float lighter = tLum > bgLum ? tLum : bgLum;
+    float darker = tLum > bgLum ? bgLum : tLum;
+    outContrast = (lighter + 0.05f) / (darker + 0.05f);
+  };
+  float testContrast;
+  blendAndContrast(MIN_RATIO, testContrast);
+  float ratio;
+  if (testContrast >= TARGET)
+  {
+    ratio = MIN_RATIO;
+  }
+  else
+  {
+    float lo = MIN_RATIO, hi = 1.0f;
+    for (int i = 0; i < 20; i++)
+    {
+      float mid = (lo + hi) * 0.5f;
+      float midC;
+      blendAndContrast(mid, midC);
+      if (midC >= TARGET)
+        hi = mid;
+      else
+        lo = mid;
+    }
+    ratio = hi;
+  }
+  uint8_t fr = (uint8_t)(baseR * ratio + r8 * (1.0f - ratio) + 0.5f);
+  uint8_t fg = (uint8_t)(baseG * ratio + g8 * (1.0f - ratio) + 0.5f);
+  uint8_t fb = (uint8_t)(baseB * ratio + b8 * (1.0f - ratio) + 0.5f);
+  uint16_t out = (uint16_t)(((fr & 0xF8) << 8) | ((fg & 0xFC) << 3) | (fb >> 3));
+  if (out == kBakedCard)
+    out ^= 0x0001;
+  return out;
+}
+
+static void drawThemeClock(const ThemeClock &c)
+{
   int year, mo, dd, hh, mi, ss;
-  if (!wallClockNow(year, mo, dd, hh, mi, ss)) {
+  if (!wallClockNow(year, mo, dd, hh, mi, ss))
+  {
     return;
   }
   char buf[6];
   int hh12 = hh % 12;
-  if (hh12 == 0) {
+  if (hh12 == 0)
+  {
     hh12 = 12;
   }
   snprintf(buf, sizeof(buf), "%02d:%02d", c.format24h ? hh : hh12, mi);
   const uint8_t font = c.scale >= 3.0f ? 8 : (c.scale >= 1.5f ? 6 : 4);
   const int cx = (int)(c.x * tft.width());
   const int cy = (int)(c.y * tft.height());
+  // Cor: autoColor usa generateReadableColor sobre a cor de fundo; senão cor manual ou padrão
+  uint16_t fg;
+  if (c.autoColor)
+  {
+    fg = readableOnBg(g_theme.bgColor);
+  }
+  else if (c.hasColor)
+  {
+    fg = c.color;
+  }
+  else
+  {
+    fg = COL_TEXT;
+  }
+  // Fundo do relógio: quando showBackground=false, desenha transparente (1 arg);
+  // quando true, desenha com fundo semi-transparente escuro para legibilidade
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(c.hasColor ? c.color : COL_TEXT);
+  if (c.showBackground)
+  {
+    // Fundo arredondado atrás do texto — mede o texto e desenha um retângulo
+    int16_t tw = tft.textWidth(buf, font);
+    int16_t th = tft.fontHeight(font);
+    int padX = 6;
+    int padY = 3;
+    int bgW = tw + padX * 2;
+    int bgH = th + padY * 2;
+    // Cor de fundo do card: preto com alpha simulado (mistura com bgColor)
+    // Usa um cinza escuro semi-transparente aproximado
+    uint16_t bgCol = 0x1082; // ~#101010 escuro
+    tft.fillRoundRect(cx - bgW / 2, cy - bgH / 2, bgW, bgH, 6, bgCol);
+    tft.setTextColor(fg, bgCol);
+  }
+  else
+  {
+    tft.setTextColor(fg);
+  }
   tft.drawString(buf, cx, cy, font);
 }
 
-void paintCustomHome() {
-  if (!g_active) {
+void paintCustomHome()
+{
+  if (!g_active)
+  {
     return;
   }
   drawThemeBackground(g_theme);
-  if (g_theme.clock.enabled) {
+  if (g_theme.clock.enabled)
+  {
     drawThemeClock(g_theme.clock);
   }
-  for (int i = 0; i < g_theme.iconCount; i++) {
+  for (int i = 0; i < g_theme.iconCount; i++)
+  {
     drawThemeIcon(g_theme.icons[i]);
   }
-  for (int i = 0; i < g_theme.textCount; i++) {
+  for (int i = 0; i < g_theme.textCount; i++)
+  {
     drawThemeText(g_theme.texts[i]);
   }
 }
 
-void customThemeTickClock() {
-  if (!customThemeClockEnabled()) {
+void customThemeTickClock()
+{
+  if (!customThemeClockEnabled())
+  {
     return;
   }
   static int lastKey = -1;
   int year, mo, dd, hh, mi, ss;
   int key = wallClockNow(year, mo, dd, hh, mi, ss) ? (hh * 60 + mi) : -1;
-  if (key == lastKey) {
+  if (key == lastKey)
+  {
     return;
   }
   lastKey = key;

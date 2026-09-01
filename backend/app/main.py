@@ -23,6 +23,8 @@ from app.routers.config import router as config_router
 from app.routers.push import router as push_router
 from app.routers.theme import router as theme_router
 from app.routers.usage import router as usage_router
+from app.routers.wallpapers import router as wallpapers_router
+from app.routers.weather import router as weather_router
 from app.store import load
 
 
@@ -108,6 +110,8 @@ def create_app() -> FastAPI:
     app.include_router(theme_router)
     app.include_router(alarms_router)
     app.include_router(push_router)
+    app.include_router(wallpapers_router)
+    app.include_router(weather_router)
 
     dist = frontend_dist()
     if dist is not None:

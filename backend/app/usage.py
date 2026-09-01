@@ -13,6 +13,7 @@ from app.providers.fal import fal_fail, fetch_fal_accounts
 from app.providers.gpt import fetch_gpt_accounts, gpt_fail
 from app.providers.opencode import fetch_opencode_accounts, opencode_fail
 from app.providers.openrouter import fetch_openrouter_accounts, openrouter_fail
+from app.providers.weather import fetch_weather_data, mock_weather_payload
 from app.store import load, provider as provider_cfg
 
 
@@ -121,6 +122,7 @@ def mock_payload() -> dict[str, Any]:
                 "remaining_cents": 2450,
             }
         ],
+        "weather": mock_weather_payload(),
     }
 
 
@@ -150,6 +152,24 @@ def _fetch_one(
         return name, [{"id": fallback_id, "label": "", **fail_fn(str(exc))}]
 
 
+def _fetch_weather(cfg: dict) -> dict[str, Any]:
+    """Busca clima; respeita hidden/enabled e mock."""
+    weather_cfg = cfg.get("weather") or {}
+    if weather_cfg.get("hidden"):
+        return {"ok": True, "error": None, "updated_at": None, "current": None, "hourly": None, "daily": None,
+                "location": weather_cfg.get("location"), "units": weather_cfg.get("units")}
+    if not weather_cfg.get("enabled"):
+        # Quando desabilitado, não mostra widget — retorna None para o frontend esconder
+        return None  # type: ignore[return-value]
+    if cfg.get("mock"):
+        return mock_weather_payload()
+    try:
+        return fetch_weather_data(weather_cfg)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "updated_at": utc_now(), "current": None, "hourly": None, "daily": None,
+                "location": weather_cfg.get("location"), "units": weather_cfg.get("units")}
+
+
 def build_payload() -> dict[str, Any]:
     cfg = load()
     if cfg.get("mock"):
@@ -157,14 +177,23 @@ def build_payload() -> dict[str, Any]:
         for name, *_rest in _PROVIDER_JOBS:
             if provider_cfg(cfg, name).get("hidden"):
                 payload[name] = []
+        # weather mock já vem no payload; respeita hidden/enabled
+        wcfg = cfg.get("weather") or {}
+        if wcfg.get("hidden") or not wcfg.get("enabled"):
+            payload["weather"] = None
         return payload
     # Cada provedor é uma chamada de rede bloqueante independente (ver
     # app/http_util.py, timeout de 20s por request) — rodar em paralelo evita
     # que N provedores lentos somem suas latências uma atrás da outra, o que
     # já estourou o timeout de /health do `./dev` script no boot com 8
     # provedores sequenciais.
-    with ThreadPoolExecutor(max_workers=len(_PROVIDER_JOBS)) as pool:
+    with ThreadPoolExecutor(max_workers=len(_PROVIDER_JOBS) + 1) as pool:
         futures = [pool.submit(_fetch_one, name, fetch_fn, fail_fn, fallback_id, cfg)
                    for name, fetch_fn, fail_fn, fallback_id in _PROVIDER_JOBS]
+        weather_future = pool.submit(_fetch_weather, cfg)
         results = dict(future.result() for future in futures)
+        try:
+            results["weather"] = weather_future.result()
+        except Exception as exc:  # noqa: BLE001
+            results["weather"] = {"ok": False, "error": str(exc), "updated_at": utc_now(), "current": None, "hourly": None, "daily": None}
     return {"updated_at": utc_now(), **results}

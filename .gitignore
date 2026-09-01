@@ -20,6 +20,9 @@ backend/.venv
 backend/data/*.json
 backend/data/*.json.tmp
 backend/data/theme_bg.raw
+backend/data/wallpapers/
+backend/data/wallpapers.json
 frontend/node_modules
 frontend/dist
 *.egg-info/
+.vite/

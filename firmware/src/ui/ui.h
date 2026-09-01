@@ -17,16 +17,44 @@ extern uint16_t COL_BAD;
 extern uint16_t COL_BADGE_YELLOW;
 extern uint16_t COL_INVERSE; // tinta sobre selo/acento (número do countdown)
 
-enum HomeLayout : uint8_t { HOME_LAYOUT_LIST = 0, HOME_LAYOUT_GRID = 1 };
-enum UiTheme : uint8_t { THEME_DARK = 0, THEME_LIGHT = 1, THEME_CONTRAST = 2 };
-enum UiLang : uint8_t { LANG_PT = 0, LANG_EN = 1, LANG_ES = 2 };
-enum HeaderEdge : uint8_t {
+enum HomeLayout : uint8_t
+{
+  HOME_LAYOUT_LIST = 0,
+  HOME_LAYOUT_GRID = 1
+};
+enum CardSize : uint8_t
+{
+  CARD_SM = 0,
+  CARD_MD = 1,
+  CARD_LG = 2,
+  CARD_XL = 3
+};
+struct CardRect
+{
+  uint8_t w;
+  uint8_t h;
+};
+enum UiTheme : uint8_t
+{
+  THEME_DARK = 0,
+  THEME_LIGHT = 1,
+  THEME_CONTRAST = 2
+};
+enum UiLang : uint8_t
+{
+  LANG_PT = 0,
+  LANG_EN = 1,
+  LANG_ES = 2
+};
+enum HeaderEdge : uint8_t
+{
   HEADER_LEFT = 0,
   HEADER_TOP = 1,
   HEADER_RIGHT = 2,
   HEADER_BOTTOM = 3
 };
-enum UiAccent : uint8_t {
+enum UiAccent : uint8_t
+{
   ACCENT_RED = 0,
   ACCENT_ORANGE = 1,
   ACCENT_YELLOW = 2,
@@ -47,6 +75,11 @@ void uiNext();
 void uiPrev();
 void uiSetView(View v);
 void uiSetHomeLayout(HomeLayout layout);
+CardSize uiCardSize(View v);
+void uiSetCardSize(View v, CardSize s);
+void uiCycleCardSize(View v);
+CardRect cardRectFor(CardSize s, int cols);
+CardSize normalizeCardSize(uint8_t v);
 void uiSetTheme(UiTheme theme);
 UiTheme uiTheme();
 void uiSetLang(UiLang lang);

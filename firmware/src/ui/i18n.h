@@ -46,6 +46,11 @@ struct UiStrings
   const char *homeSection;
   const char *list;
   const char *grid;
+  const char *cardSizeSection;
+  const char *cardSm;
+  const char *cardMd;
+  const char *cardLg;
+  const char *cardXl;
   const char *themeSection;
   const char *dark;
   const char *light;

@@ -7,6 +7,7 @@
 #include <Preferences.h>
 
 HomeLayout g_homeLayout = HOME_LAYOUT_GRID;
+static CardSize g_cardSizeByView[VIEW_COUNT];
 static UiTheme g_theme = THEME_DARK;
 static UiLang g_lang = LANG_PT;
 static HeaderEdge g_headerEdge = HEADER_LEFT;
@@ -26,8 +27,10 @@ uint16_t COL_BAD = 0xDB6D;
 uint16_t COL_BADGE_YELLOW = 0xE1C6;
 uint16_t COL_INVERSE = 0x10A3;
 
-static uint16_t accentRgb(UiTheme theme, UiAccent accent) {
-  if (accent >= ACCENT_COUNT) {
+static uint16_t accentRgb(UiTheme theme, UiAccent accent)
+{
+  if (accent >= ACCENT_COUNT)
+  {
     accent = ACCENT_RED;
   }
   // Vermelho (padrao) + laranja, amarelo, verde, ciano, azul, violeta.
@@ -39,7 +42,8 @@ static uint16_t accentRgb(UiTheme theme, UiAccent accent) {
   return k[(uint8_t)theme][(uint8_t)accent];
 }
 
-static uint16_t inverseOnAccent(uint16_t c) {
+static uint16_t inverseOnAccent(uint16_t c)
+{
   int r = (c >> 11) & 0x1F;
   int g = (c >> 5) & 0x3F;
   int b = c & 0x1F;
@@ -47,15 +51,18 @@ static uint16_t inverseOnAccent(uint16_t c) {
   return luma > 80 ? (uint16_t)0x0000 : (uint16_t)0xFFFF;
 }
 
-static void applyAccentColors() {
+static void applyAccentColors()
+{
   COL_ACCENT = accentRgb(g_theme, g_accent);
   COL_BADGE_YELLOW = COL_ACCENT;
   COL_INVERSE = inverseOnAccent(COL_ACCENT);
 }
 
-static void applyTheme(UiTheme theme) {
+static void applyTheme(UiTheme theme)
+{
   g_theme = theme;
-  if (theme == THEME_LIGHT) {
+  if (theme == THEME_LIGHT)
+  {
     COL_BG = 0xEF5A;
     COL_CARD = 0xFFDE;
     COL_CARD_BORDER = 0xC638;
@@ -69,7 +76,8 @@ static void applyTheme(UiTheme theme) {
     applyAccentColors();
     return;
   }
-  if (theme == THEME_CONTRAST) {
+  if (theme == THEME_CONTRAST)
+  {
     COL_BG = 0x0000;
     COL_CARD = 0x0000;
     COL_CARD_BORDER = 0xFFFF;
@@ -96,9 +104,59 @@ static void applyTheme(UiTheme theme) {
   applyAccentColors();
 }
 
-static void loadUiPrefs() {
+CardSize normalizeCardSize(uint8_t v)
+{
+  if (v <= (uint8_t)CARD_XL)
+    return (CardSize)v;
+  return CARD_MD;
+}
+
+CardRect cardRectFor(CardSize s, int cols)
+{
+  s = normalizeCardSize((uint8_t)s);
+  if (s == CARD_SM || s == CARD_MD)
+    return {1, 1};
+  if (s == CARD_LG)
+    return {(uint8_t)min(2, max(1, cols)), 1};
+  return {(uint8_t)min(2, max(1, cols)), 2};
+}
+
+static void loadCardSizes(Preferences &prefs)
+{
+  for (int i = 0; i < VIEW_COUNT; i++)
+    g_cardSizeByView[i] = CARD_MD;
+  // chave "cs" = blob de VIEW_COUNT bytes (um por View). Legado: sem blob -> MD.
+  size_t len = prefs.getBytesLength("cs");
+  if (len == (size_t)VIEW_COUNT)
+  {
+    uint8_t buf[VIEW_COUNT];
+    prefs.getBytes("cs", buf, VIEW_COUNT);
+    for (int i = 0; i < VIEW_COUNT; i++)
+      g_cardSizeByView[i] = normalizeCardSize(buf[i]);
+    return;
+  }
+  // migracao: se havia "home" antigo sem cs, mantem MD para todos.
+}
+
+static void saveCardSizes()
+{
   Preferences prefs;
-  if (!prefs.begin("ui", true)) {
+  if (!prefs.begin("ui", false))
+    return;
+  uint8_t buf[VIEW_COUNT];
+  for (int i = 0; i < VIEW_COUNT; i++)
+    buf[i] = (uint8_t)g_cardSizeByView[i];
+  prefs.putBytes("cs", buf, VIEW_COUNT);
+  prefs.end();
+}
+
+static void loadUiPrefs()
+{
+  Preferences prefs;
+  if (!prefs.begin("ui", true))
+  {
+    for (int i = 0; i < VIEW_COUNT; i++)
+      g_cardSizeByView[i] = CARD_MD;
     applyTheme(THEME_DARK);
     return;
   }
@@ -107,20 +165,26 @@ static void loadUiPrefs() {
   uint8_t lang = prefs.getUChar("lang", (uint8_t)LANG_PT);
   uint8_t edge = prefs.getUChar("edge", (uint8_t)HEADER_LEFT);
   uint8_t accent = prefs.getUChar("accent", (uint8_t)ACCENT_RED);
+  loadCardSizes(prefs);
   prefs.end();
-  if (home > (uint8_t)HOME_LAYOUT_GRID) {
+  if (home > (uint8_t)HOME_LAYOUT_GRID)
+  {
     home = (uint8_t)HOME_LAYOUT_GRID;
   }
-  if (theme > (uint8_t)THEME_CONTRAST) {
+  if (theme > (uint8_t)THEME_CONTRAST)
+  {
     theme = (uint8_t)THEME_DARK;
   }
-  if (lang > (uint8_t)LANG_ES) {
+  if (lang > (uint8_t)LANG_ES)
+  {
     lang = (uint8_t)LANG_PT;
   }
-  if (edge > (uint8_t)HEADER_BOTTOM) {
+  if (edge > (uint8_t)HEADER_BOTTOM)
+  {
     edge = (uint8_t)HEADER_LEFT;
   }
-  if (accent >= (uint8_t)ACCENT_COUNT) {
+  if (accent >= (uint8_t)ACCENT_COUNT)
+  {
     accent = (uint8_t)ACCENT_RED;
   }
   g_homeLayout = (HomeLayout)home;
@@ -130,26 +194,32 @@ static void loadUiPrefs() {
   g_headerEdge = (HeaderEdge)edge;
 }
 
-static void saveUiPref(const char* key, uint8_t value) {
+static void saveUiPref(const char *key, uint8_t value)
+{
   Preferences prefs;
-  if (!prefs.begin("ui", false)) {
+  if (!prefs.begin("ui", false))
+  {
     return;
   }
   prefs.putUChar(key, value);
   prefs.end();
 }
 
-void uiInit() {
+void uiInit()
+{
   g_view = VIEW_HOME;
   loadUiPrefs();
   customThemeInit();
 }
 
-void uiSetHomeLayout(HomeLayout layout) {
-  if (layout > HOME_LAYOUT_GRID) {
+void uiSetHomeLayout(HomeLayout layout)
+{
+  if (layout > HOME_LAYOUT_GRID)
+  {
     return;
   }
-  if (layout == g_homeLayout) {
+  if (layout == g_homeLayout)
+  {
     return;
   }
   g_homeLayout = layout;
@@ -158,15 +228,47 @@ void uiSetHomeLayout(HomeLayout layout) {
   uiPaint();
 }
 
+CardSize uiCardSize(View v)
+{
+  if (v >= VIEW_COUNT)
+    return CARD_MD;
+  return normalizeCardSize((uint8_t)g_cardSizeByView[v]);
+}
+
+void uiSetCardSize(View v, CardSize s)
+{
+  if (v >= VIEW_COUNT)
+    return;
+  s = normalizeCardSize((uint8_t)s);
+  if (g_cardSizeByView[v] == s)
+    return;
+  g_cardSizeByView[v] = s;
+  saveCardSizes();
+  g_detailScroll = 0;
+  uiPaint();
+}
+
+void uiCycleCardSize(View v)
+{
+  if (v >= VIEW_COUNT)
+    return;
+  CardSize cur = uiCardSize(v);
+  CardSize nxt = (CardSize)(((uint8_t)cur + 1) % 4);
+  uiSetCardSize(v, nxt);
+}
+
 UiTheme uiTheme() { return g_theme; }
 
 UiLang uiLang() { return g_lang; }
 
-void uiSetTheme(UiTheme theme) {
-  if (theme > THEME_CONTRAST) {
+void uiSetTheme(UiTheme theme)
+{
+  if (theme > THEME_CONTRAST)
+  {
     return;
   }
-  if (theme == g_theme) {
+  if (theme == g_theme)
+  {
     return;
   }
   applyTheme(theme);
@@ -174,11 +276,14 @@ void uiSetTheme(UiTheme theme) {
   uiPaint();
 }
 
-void uiSetLang(UiLang lang) {
-  if (lang > LANG_ES) {
+void uiSetLang(UiLang lang)
+{
+  if (lang > LANG_ES)
+  {
     return;
   }
-  if (lang == g_lang) {
+  if (lang == g_lang)
+  {
     return;
   }
   g_lang = lang;
@@ -192,11 +297,14 @@ UiAccent uiAccent() { return g_accent; }
 
 uint16_t uiAccentColor(UiAccent accent) { return accentRgb(g_theme, accent); }
 
-void uiSetAccent(UiAccent accent) {
-  if (accent >= ACCENT_COUNT) {
+void uiSetAccent(UiAccent accent)
+{
+  if (accent >= ACCENT_COUNT)
+  {
     return;
   }
-  if (accent == g_accent) {
+  if (accent == g_accent)
+  {
     return;
   }
   g_accent = accent;
@@ -205,11 +313,14 @@ void uiSetAccent(UiAccent accent) {
   uiPaint();
 }
 
-void uiSetHeaderEdge(HeaderEdge edge) {
-  if (edge > HEADER_BOTTOM) {
+void uiSetHeaderEdge(HeaderEdge edge)
+{
+  if (edge > HEADER_BOTTOM)
+  {
     return;
   }
-  if (edge == g_headerEdge) {
+  if (edge == g_headerEdge)
+  {
     return;
   }
   g_headerEdge = edge;

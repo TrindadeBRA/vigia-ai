@@ -111,6 +111,44 @@ export type ConfigCopy = {
   falKeyPh: string;
   gptTokenPh: string;
   cursorTokenPh: string;
+  // Weather
+  weatherTitle: string;
+  weatherLead: string;
+  weatherEnabled: string;
+  weatherCityLabel: string;
+  weatherCityPh: string;
+  weatherSearching: string;
+  weatherNoResults: string;
+  weatherSelected: string;
+  weatherChangeCity: string;
+  weatherUnitsTitle: string;
+  weatherTempUnit: string;
+  weatherWindUnit: string;
+  weatherPrecipUnit: string;
+  weatherForecastDays: string;
+  weatherDisplayTitle: string;
+  weatherShowCurrent: string;
+  weatherShowHourly: string;
+  weatherShowDaily: string;
+  weatherHourlyCount: string;
+  weatherDailyCount: string;
+  weatherFieldsTitle: string;
+  weatherFieldTemperature: string;
+  weatherFieldFeelsLike: string;
+  weatherFieldHumidity: string;
+  weatherFieldPrecip: string;
+  weatherFieldWind: string;
+  weatherFieldPressure: string;
+  weatherFieldCloudCover: string;
+  weatherFieldUvIndex: string;
+  weatherFieldSunriseSunset: string;
+  weatherAdvancedTitle: string;
+  weatherCurrentVars: string;
+  weatherHourlyVars: string;
+  weatherDailyVars: string;
+  weatherVarsHint: string;
+  weatherNotConfigured: string;
+  weatherPoweredBy: string;
 };
 
 export const CONFIG_STR: Record<Lang, ConfigCopy> = {
@@ -224,6 +262,43 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     falKeyPh: "id:secret",
     gptTokenPh: "Token do Codex",
     cursorTokenPh: "Token da sessão",
+    weatherTitle: "Clima",
+    weatherLead: "Veja a previsão do tempo no painel. Escolha a cidade e o que mostrar no widget.",
+    weatherEnabled: "Mostrar clima no painel",
+    weatherCityLabel: "Cidade",
+    weatherCityPh: "ex.: São Paulo",
+    weatherSearching: "Buscando…",
+    weatherNoResults: "Nenhuma cidade encontrada.",
+    weatherSelected: "Selecionada",
+    weatherChangeCity: "Trocar cidade",
+    weatherUnitsTitle: "Unidades",
+    weatherTempUnit: "Temperatura",
+    weatherWindUnit: "Vento",
+    weatherPrecipUnit: "Precipitação",
+    weatherForecastDays: "Dias de previsão",
+    weatherDisplayTitle: "O que mostrar no widget",
+    weatherShowCurrent: "Condições atuais",
+    weatherShowHourly: "Próximas horas",
+    weatherShowDaily: "Próximos dias",
+    weatherHourlyCount: "Horas à frente",
+    weatherDailyCount: "Dias à frente",
+    weatherFieldsTitle: "Campos no widget",
+    weatherFieldTemperature: "Temperatura",
+    weatherFieldFeelsLike: "Sensação térmica",
+    weatherFieldHumidity: "Umidade",
+    weatherFieldPrecip: "Precipitação",
+    weatherFieldWind: "Vento",
+    weatherFieldPressure: "Pressão",
+    weatherFieldCloudCover: "Nuvens",
+    weatherFieldUvIndex: "Índice UV",
+    weatherFieldSunriseSunset: "Nascer/pôr do sol",
+    weatherAdvancedTitle: "Variáveis avançadas (Open-Meteo)",
+    weatherCurrentVars: "Variáveis atuais",
+    weatherHourlyVars: "Variáveis por hora",
+    weatherDailyVars: "Variáveis por dia",
+    weatherVarsHint: "Escolha quais dados o coletor busca no Open-Meteo. Todas as opções da API estão disponíveis.",
+    weatherNotConfigured: "Configure a cidade para ver o clima.",
+    weatherPoweredBy: "Dados por Open-Meteo.com",
   },
   en: {
     title: "Settings",
@@ -335,6 +410,43 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     falKeyPh: "id:secret",
     gptTokenPh: "Codex token",
     cursorTokenPh: "Session token",
+    weatherTitle: "Weather",
+    weatherLead: "See the forecast on the desk display. Pick the city and what to show.",
+    weatherEnabled: "Show weather on display",
+    weatherCityLabel: "City",
+    weatherCityPh: "e.g. São Paulo",
+    weatherSearching: "Searching…",
+    weatherNoResults: "No city found.",
+    weatherSelected: "Selected",
+    weatherChangeCity: "Change city",
+    weatherUnitsTitle: "Units",
+    weatherTempUnit: "Temperature",
+    weatherWindUnit: "Wind",
+    weatherPrecipUnit: "Precipitation",
+    weatherForecastDays: "Forecast days",
+    weatherDisplayTitle: "What to show on widget",
+    weatherShowCurrent: "Current conditions",
+    weatherShowHourly: "Next hours",
+    weatherShowDaily: "Next days",
+    weatherHourlyCount: "Hours ahead",
+    weatherDailyCount: "Days ahead",
+    weatherFieldsTitle: "Fields on widget",
+    weatherFieldTemperature: "Temperature",
+    weatherFieldFeelsLike: "Feels like",
+    weatherFieldHumidity: "Humidity",
+    weatherFieldPrecip: "Precipitation",
+    weatherFieldWind: "Wind",
+    weatherFieldPressure: "Pressure",
+    weatherFieldCloudCover: "Clouds",
+    weatherFieldUvIndex: "UV index",
+    weatherFieldSunriseSunset: "Sunrise/sunset",
+    weatherAdvancedTitle: "Advanced variables (Open-Meteo)",
+    weatherCurrentVars: "Current variables",
+    weatherHourlyVars: "Hourly variables",
+    weatherDailyVars: "Daily variables",
+    weatherVarsHint: "Choose which data the collector fetches from Open-Meteo. All API options are available.",
+    weatherNotConfigured: "Set the city to see the weather.",
+    weatherPoweredBy: "Data by Open-Meteo.com",
   },
   es: {
     title: "Configuración",
@@ -446,6 +558,43 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     falKeyPh: "id:secret",
     gptTokenPh: "Token de Codex",
     cursorTokenPh: "Token de sesión",
+    weatherTitle: "Clima",
+    weatherLead: "Ve la previsión en el panel de mesa. Elige la ciudad y qué mostrar.",
+    weatherEnabled: "Mostrar clima en el panel",
+    weatherCityLabel: "Ciudad",
+    weatherCityPh: "ej.: São Paulo",
+    weatherSearching: "Buscando…",
+    weatherNoResults: "Ninguna ciudad encontrada.",
+    weatherSelected: "Seleccionada",
+    weatherChangeCity: "Cambiar ciudad",
+    weatherUnitsTitle: "Unidades",
+    weatherTempUnit: "Temperatura",
+    weatherWindUnit: "Viento",
+    weatherPrecipUnit: "Precipitación",
+    weatherForecastDays: "Días de previsión",
+    weatherDisplayTitle: "Qué mostrar en el widget",
+    weatherShowCurrent: "Condiciones actuales",
+    weatherShowHourly: "Próximas horas",
+    weatherShowDaily: "Próximos días",
+    weatherHourlyCount: "Horas por delante",
+    weatherDailyCount: "Días por delante",
+    weatherFieldsTitle: "Campos en el widget",
+    weatherFieldTemperature: "Temperatura",
+    weatherFieldFeelsLike: "Sensación térmica",
+    weatherFieldHumidity: "Humedad",
+    weatherFieldPrecip: "Precipitación",
+    weatherFieldWind: "Viento",
+    weatherFieldPressure: "Presión",
+    weatherFieldCloudCover: "Nubes",
+    weatherFieldUvIndex: "Índice UV",
+    weatherFieldSunriseSunset: "Amanecer/atardecer",
+    weatherAdvancedTitle: "Variables avanzadas (Open-Meteo)",
+    weatherCurrentVars: "Variables actuales",
+    weatherHourlyVars: "Variables por hora",
+    weatherDailyVars: "Variables por día",
+    weatherVarsHint: "Elige qué datos busca el colector en Open-Meteo. Todas las opciones de la API están disponibles.",
+    weatherNotConfigured: "Configura la ciudad para ver el clima.",
+    weatherPoweredBy: "Datos por Open-Meteo.com",
   },
 };
 

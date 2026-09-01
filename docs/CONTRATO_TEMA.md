@@ -63,7 +63,7 @@ sempre converte fração → pixel na hora de desenhar, contra
 {
   "version": 1,
   "background": { "type": "color", "color": "#10151A" },
-  "clock": { "enabled": true, "x": 0.5, "y": 0.16, "scale": 2, "format24h": true, "color": "#F7F7F7" },
+  "clock": { "enabled": true, "x": 0.5, "y": 0.16, "scale": 2, "format24h": true, "color": "#F7F7F7", "showBackground": true, "autoColor": false },
   "icons": [
     { "provider": "claude", "x": 0.25, "y": 0.55, "scale": 1.5, "color": "#E1C6A0" },
     { "provider": "brand", "x": 0.75, "y": 0.55, "scale": 1.0 }
@@ -79,6 +79,8 @@ sempre converte fração → pixel na hora de desenhar, contra
   resolução atual da placa, cai pra `background.color`).
 - `background.color`, `clock.color`, `icons[].color`, `texts[].color`: hex
   `#RRGGBB` opcional (omitido ou inválido = cor padrão do tema/tela).
+- `clock.showBackground`: `boolean` (default `true`) — quando `false`, o relógio é desenhado sem o retângulo de fundo (transparente).
+- `clock.autoColor`: `boolean` (default `false`) — quando `true`, a cor do texto do relógio é calculada automaticamente via `generateReadableColor` sobre `background.color` (WCAG AA 4.5:1), ignorando `clock.color`.
 - `scale`: multiplicador de tamanho, clamp **0.5–4.0**.
 - `icons[].provider`: `claude` | `gpt` | `cursor` | `openrouter` | `deepseek`
   | `opencode` | `fal` | `brand` (o olho da marca). Item com provider
@@ -119,28 +121,58 @@ bytes.push(v & 0xff, (v >> 8) & 0xff); // little-endian
 `firmware/src/ui/widgets.cpp:drawIcon`, que já usa `setSwapBytes(true)` pra
 esse formato).
 
-## Rotas do coletor (`backend/app/routers/theme.py`)
+## Rotas do coletor (`backend/app/routers/theme.py` + `wallpapers.py`)
 
-| Rota | O que faz |
-| --- | --- |
-| `GET /api/theme` | `{ "active": bool, "theme": "<json ou null>", "has_background": bool }` |
-| `POST /api/theme/meta` | corpo = `theme.json` cru (`Content-Type` qualquer, máx. 8 KB) |
-| `POST /api/theme/background` | `multipart/form-data`, campo `bg` (máx. ~400 KB) |
-| `GET /api/theme/background` | bytes RAW, `application/octet-stream`, `404` se não houver |
-| `DELETE /api/theme` | apaga os dois arquivos |
+| Rota                                                       | O que faz                                                                                                                         |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/theme`                                           | `{ "active": bool, "theme": "<json ou null>", "has_background": bool, "slideshow": { "enabled", "interval", "order", "count" } }` |
+| `POST /api/theme/meta`                                     | corpo = `theme.json` cru (`Content-Type` qualquer, máx. 8 KB)                                                                     |
+| `POST /api/theme/background`                               | `multipart/form-data`, campo `bg` (máx. ~400 KB) — legado, ainda funciona                                                         |
+| `GET /api/theme/background`                                | bytes RAW, `application/octet-stream`, `404` se não houver. Se slideshow ativo, retorna o wallpaper atual (round-robin por tempo) |
+| `GET /api/theme/background/index`                          | `{ "enabled", "index", "count", "interval", "current_id", "order" }` — índice atual do slideshow                                  |
+| `DELETE /api/theme`                                        | apaga os dois arquivos                                                                                                            |
+| `GET /api/wallpapers`                                      | `{ "wallpapers": [...], "slideshow": {...}, "providers": {...}, "count" }`                                                        |
+| `GET /api/wallpapers/slideshow`                            | config do slideshow                                                                                                               |
+| `PUT /api/wallpapers/slideshow`                            | `{ "enabled": bool, "interval": 1-120, "order": string[] }`                                                                       |
+| `GET /api/wallpapers/providers`                            | status dos provedores                                                                                                             |
+| `PUT /api/wallpapers/providers`                            | `{ "pexels_key"?, "unsplash_key"?, "wallhaven_key"? }`                                                                            |
+| `POST /api/wallpapers/upload`                              | `multipart/form-data` campo `file` (JPEG/PNG ou RAW)                                                                              |
+| `DELETE /api/wallpapers/{id}`                              | remove wallpaper                                                                                                                  |
+| `GET /api/wallpapers/{id}/preview`                         | JPEG preview                                                                                                                      |
+| `GET /api/wallpapers/{id}/raw?w=&h=`                       | RAW do wallpaper (resolução via query ou header `X-Vigia-Screen`)                                                                 |
+| `GET /api/wallpapers/search/{provider}?q=&page=&per_page=` | busca em `pexels`/`wallhaven`/`unsplash`                                                                                          |
+| `POST /api/wallpapers/import`                              | `{ "provider", "id", "image_url", "thumb" }` — baixa, converte e salva                                                            |
 
 Não valida o schema do `theme.json` — é opaco pro coletor (quem valida é a
 placa ao aplicar, e o painel ao montar).
 
+### Slideshow
+
+- O usuário configura 1+ wallpapers e um intervalo de 1–120 minutos.
+- O coletor calcula o índice atual como `floor(now / (interval*60)) % count` — determinístico, sem estado.
+- `GET /api/theme/background` já retorna o wallpaper correto automaticamente quando slideshow ativo.
+- A placa faz polling em `GET /api/theme/background/index` a cada 30s (`themeClientPollSlideshow()` em `net/client.cpp`) e só baixa o novo fundo quando o índice muda.
+- Wallpapers são armazenados em `data/wallpapers/` como RAW RGB565 em duas resoluções (240×160 hardware + 160×120 wokwi) + JPEG preview + original.
+
+### Provedores externos
+
+| Provedor      | Base                                     | Auth                                         | Notas                                                  |
+| ------------- | ---------------------------------------- | -------------------------------------------- | ------------------------------------------------------ |
+| **Wallhaven** | `https://wallhaven.cc/api/v1/search`     | Opcional (`X-API-Key`)                       | Sem key funciona para SFW; com key libera NSFW/sketchy |
+| **Pexels**    | `https://api.pexels.com/v1/search`       | Obrigatória (`Authorization: KEY`)           | Só disponível se usuário fornecer key                  |
+| **Unsplash**  | `https://api.unsplash.com/search/photos` | Obrigatória (`Authorization: Client-ID KEY`) | Só disponível se usuário fornecer key                  |
+
+Chaves ficam em `config.json` → `wallpapers.providers.{pexels_key,unsplash_key,wallhaven_key}` (gitignored, nunca expostas no `GET /api/config`).
+
 ## Rotas da placa (`firmware/src/net/theme_server.cpp`, porta 80)
 
-| Rota | O que faz |
-| --- | --- |
-| `GET /theme` | `{ "width", "height", "active", "fs_ok", "theme" }` — resolução = tela inteira |
-| `POST /theme/meta` | mesmo corpo do coletor; aplica na hora (`VIEW_THEME`) |
-| `POST /theme/background` | `multipart/form-data`, campo `bg`, streamado direto (nunca bufferiza os ~300 KB em RAM) via `HTTPUpload` |
-| `DELETE /theme` | apaga o tema, desliga `VIEW_THEME` |
-| `GET /theme/screenshot` | BMP 24 bits da tela **de verdade**, lida pixel a pixel via SPI (`tft.readRectRGB`, precisa do `MISO` ligado — ver `docs/HARDWARE.md`). Lento (alguns segundos) e bloqueia o `loop()` enquanto captura — só pra depuração manual, nunca automático. **Não funciona no Wokwi** (o simulador não emula leitura de pixel por SPI, só escrita) — use a janela do próprio simulador pra conferir visualmente lá; a rota vale pra placa física. |
+| Rota                     | O que faz                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /theme`             | `{ "width", "height", "active", "fs_ok", "theme" }` — resolução = tela inteira                                                                                                                                                                                                                                                                                                                                                           |
+| `POST /theme/meta`       | mesmo corpo do coletor; aplica na hora (`VIEW_THEME`)                                                                                                                                                                                                                                                                                                                                                                                    |
+| `POST /theme/background` | `multipart/form-data`, campo `bg`, streamado direto (nunca bufferiza os ~300 KB em RAM) via `HTTPUpload`                                                                                                                                                                                                                                                                                                                                 |
+| `DELETE /theme`          | apaga o tema, desliga `VIEW_THEME`                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `GET /theme/screenshot`  | BMP 24 bits da tela **de verdade**, lida pixel a pixel via SPI (`tft.readRectRGB`, precisa do `MISO` ligado — ver `docs/HARDWARE.md`). Lento (alguns segundos) e bloqueia o `loop()` enquanto captura — só pra depuração manual, nunca automático. **Não funciona no Wokwi** (o simulador não emula leitura de pixel por SPI, só escrita) — use a janela do próprio simulador pra conferir visualmente lá; a rota vale pra placa física. |
 
 CORS: toda resposta leva `Access-Control-Allow-Origin: *`. `OPTIONS`
 responde `204` (preflight do `application/json` e do `DELETE`; o

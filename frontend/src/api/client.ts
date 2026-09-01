@@ -142,3 +142,44 @@ export async function testPush() {
   const res = await fetch("/api/push/test", { method: "POST" });
   return readMutate(res);
 }
+
+// ── Weather ──────────────────────────────────────────────────────────
+
+export async function fetchWeatherConfig(): Promise<import("./types").WeatherConfig> {
+  const res = await fetch("/api/weather/config", { cache: "no-store" });
+  if (!res.ok) throw new Error(`weather config HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").WeatherConfig>;
+}
+
+export async function patchWeatherConfig(body: Record<string, unknown>): Promise<MutateResult & { data?: unknown }> {
+  const res = await fetch("/api/weather/config", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as MutateResult & { detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data, res.status) };
+  return { ok: true, data };
+}
+
+export async function searchCities(q: string, count = 5): Promise<import("./types").WeatherGeocodingResult[]> {
+  const res = await fetch(`/api/weather/geocoding?q=${encodeURIComponent(q)}&count=${count}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`geocoding HTTP ${res.status}`);
+  const data = (await res.json()) as { results?: import("./types").WeatherGeocodingResult[] };
+  return data.results || [];
+}
+
+export async function setWeatherLocation(body: { name: string; latitude: number; longitude: number; country?: string; country_code?: string; timezone?: string; elevation?: number | null }): Promise<MutateResult> {
+  const res = await fetch("/api/weather/location", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res);
+}
+
+export async function fetchWeather(): Promise<import("./types").WeatherPayload> {
+  const res = await fetch("/api/weather", { cache: "no-store" });
+  if (!res.ok) throw new Error(`weather HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").WeatherPayload>;
+}

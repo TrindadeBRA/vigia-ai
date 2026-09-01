@@ -182,6 +182,204 @@ class OpenCodeAccount(AccountBase):
     remaining_cents: int | None = Field(default=None, description="Saldo do Zen em centavos.")
 
 
+# ── Weather (Open-Meteo) ──────────────────────────────────────────────
+
+class WeatherLocation(BaseModel):
+    name: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
+    country: str = ""
+    country_code: str = ""
+    timezone: str = "auto"
+    elevation: float | None = None
+
+
+class WeatherUnits(BaseModel):
+    temperature_unit: str = "celsius"
+    wind_speed_unit: str = "kmh"
+    precipitation_unit: str = "mm"
+
+
+class WeatherDisplayFields(BaseModel):
+    temperature: bool = True
+    feels_like: bool = True
+    humidity: bool = True
+    precipitation: bool = True
+    wind: bool = True
+    pressure: bool = True
+    cloud_cover: bool = True
+    uv_index: bool = True
+    sunrise_sunset: bool = True
+
+
+class WeatherDisplay(BaseModel):
+    show_current: bool = True
+    show_hourly: bool = True
+    show_daily: bool = True
+    hourly_count: int = 12
+    daily_count: int = 7
+    fields: WeatherDisplayFields = Field(default_factory=WeatherDisplayFields)
+
+
+class WeatherConfig(BaseModel):
+    enabled: bool = False
+    hidden: bool = False
+    location: WeatherLocation = Field(default_factory=WeatherLocation)
+    units: WeatherUnits = Field(default_factory=WeatherUnits)
+    forecast_days: int = Field(default=7, ge=1, le=16)
+    past_days: int = Field(default=0, ge=0, le=2)
+    timezone: str = "auto"
+    current: list[str] = Field(default_factory=list)
+    hourly: list[str] = Field(default_factory=list)
+    daily: list[str] = Field(default_factory=list)
+    display: WeatherDisplay = Field(default_factory=WeatherDisplay)
+
+
+class WeatherCurrent(BaseModel):
+    time: str | None = None
+    interval: int | None = None
+    temperature_2m: float | None = None
+    relative_humidity_2m: float | None = None
+    apparent_temperature: float | None = None
+    is_day: int | None = None
+    precipitation: float | None = None
+    rain: float | None = None
+    showers: float | None = None
+    snowfall: float | None = None
+    weather_code: int | None = None
+    cloud_cover: float | None = None
+    pressure_msl: float | None = None
+    surface_pressure: float | None = None
+    wind_speed_10m: float | None = None
+    wind_direction_10m: float | None = None
+    wind_gusts_10m: float | None = None
+    visibility: float | None = None
+    uv_index: float | None = None
+    dew_point_2m: float | None = None
+    vapour_pressure_deficit: float | None = None
+    et0_fao_evapotranspiration: float | None = None
+    shortwave_radiation: float | None = None
+
+
+class WeatherHourly(BaseModel):
+    time: list[str] = Field(default_factory=list)
+    temperature_2m: list[float | None] | None = None
+    relative_humidity_2m: list[float | None] | None = None
+    dew_point_2m: list[float | None] | None = None
+    apparent_temperature: list[float | None] | None = None
+    precipitation_probability: list[float | None] | None = None
+    precipitation: list[float | None] | None = None
+    rain: list[float | None] | None = None
+    showers: list[float | None] | None = None
+    snowfall: list[float | None] | None = None
+    weather_code: list[int | None] | None = None
+    pressure_msl: list[float | None] | None = None
+    cloud_cover: list[float | None] | None = None
+    visibility: list[float | None] | None = None
+    wind_speed_10m: list[float | None] | None = None
+    wind_direction_10m: list[float | None] | None = None
+    wind_gusts_10m: list[float | None] | None = None
+    uv_index: list[float | None] | None = None
+    is_day: list[int | None] | None = None
+    sunshine_duration: list[float | None] | None = None
+    shortwave_radiation: list[float | None] | None = None
+
+
+class WeatherDaily(BaseModel):
+    time: list[str] = Field(default_factory=list)
+    weather_code: list[int | None] | None = None
+    temperature_2m_max: list[float | None] | None = None
+    temperature_2m_min: list[float | None] | None = None
+    apparent_temperature_max: list[float | None] | None = None
+    apparent_temperature_min: list[float | None] | None = None
+    sunrise: list[str | None] | None = None
+    sunset: list[str | None] | None = None
+    daylight_duration: list[float | None] | None = None
+    sunshine_duration: list[float | None] | None = None
+    uv_index_max: list[float | None] | None = None
+    uv_index_clear_sky_max: list[float | None] | None = None
+    precipitation_sum: list[float | None] | None = None
+    rain_sum: list[float | None] | None = None
+    showers_sum: list[float | None] | None = None
+    snowfall_sum: list[float | None] | None = None
+    precipitation_hours: list[float | None] | None = None
+    precipitation_probability_max: list[float | None] | None = None
+    wind_speed_10m_max: list[float | None] | None = None
+    wind_gusts_10m_max: list[float | None] | None = None
+    wind_direction_10m_dominant: list[float | None] | None = None
+    shortwave_radiation_sum: list[float | None] | None = None
+    et0_fao_evapotranspiration: list[float | None] | None = None
+
+
+class WeatherPayload(BaseModel):
+    ok: bool = True
+    error: str | None = None
+    updated_at: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    elevation: float | None = None
+    timezone: str | None = None
+    timezone_abbreviation: str | None = None
+    utc_offset_seconds: int | None = None
+    current: WeatherCurrent | None = None
+    current_units: dict[str, str] | None = None
+    hourly: WeatherHourly | None = None
+    hourly_units: dict[str, str] | None = None
+    daily: WeatherDaily | None = None
+    daily_units: dict[str, str] | None = None
+    location: WeatherLocation | None = None
+    units: WeatherUnits | None = None
+
+
+class WeatherGeocodingResult(BaseModel):
+    id: int | None = None
+    name: str
+    latitude: float
+    longitude: float
+    country: str | None = None
+    country_code: str | None = None
+    admin1: str | None = None
+    admin2: str | None = None
+    admin3: str | None = None
+    admin4: str | None = None
+    timezone: str | None = None
+    elevation: float | None = None
+    population: int | None = None
+    feature_code: str | None = None
+    postcodes: list[str] | None = None
+
+
+class WeatherGeocodingResponse(BaseModel):
+    results: list[WeatherGeocodingResult] | None = None
+    generationtime_ms: float | None = None
+
+
+class WeatherPatch(BaseModel):
+    enabled: bool | None = None
+    hidden: bool | None = None
+    name: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    country: str | None = None
+    country_code: str | None = None
+    timezone: str | None = None
+    elevation: float | None = None
+    temperature_unit: str | None = None
+    wind_speed_unit: str | None = None
+    precipitation_unit: str | None = None
+    forecast_days: int | None = Field(default=None, ge=1, le=16)
+    past_days: int | None = Field(default=None, ge=0, le=2)
+    current: list[str] | None = None
+    hourly: list[str] | None = None
+    daily: list[str] | None = None
+    display_show_current: bool | None = None
+    display_show_hourly: bool | None = None
+    display_show_daily: bool | None = None
+    display_hourly_count: int | None = Field(default=None, ge=1, le=48)
+    display_daily_count: int | None = Field(default=None, ge=1, le=16)
+    display_fields: dict[str, bool] | None = None
+
+
 class UsagePayload(BaseModel):
     """Contrato da placa e do mostrador. Mesmo JSON em GET /usage e no evento SSE `usage`."""
 
@@ -195,6 +393,7 @@ class UsagePayload(BaseModel):
     deepseek: list[CreditsAccount]
     opencode: list[OpenCodeAccount]
     fal: list[CreditsAccount]
+    weather: WeatherPayload | None = Field(default=None, description="Dados meteorológicos Open-Meteo, se configurado.")
 
 
 class HealthPayload(BaseModel):
@@ -262,6 +461,7 @@ class ConfigPublic(BaseModel):
     lan_ips: list[str]
     restart_needed_for_port: bool = False
     providers: dict[str, ProviderCardPublic]
+    weather: WeatherConfig = Field(default_factory=WeatherConfig)
     device: DevicePublic = Field(default_factory=DevicePublic)
 
 

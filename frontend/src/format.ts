@@ -127,3 +127,87 @@ export function prefersReducedMotion(): boolean {
     return false;
   }
 }
+
+// ── Weather helpers ──────────────────────────────────────────────────
+
+export const WMO_LABELS: Record<number, string> = {
+  0: "Céu limpo", 1: "Predom. limpo", 2: "Parcial. nublado", 3: "Encoberto",
+  45: "Nevoeiro", 48: "Nevoeiro c/ geada",
+  51: "Chuvisco fraco", 53: "Chuvisco", 55: "Chuvisco forte", 56: "Chuvisco congelante", 57: "Chuvisco congelante forte",
+  61: "Chuva fraca", 63: "Chuva", 65: "Chuva forte", 66: "Chuva congelante", 67: "Chuva congelante forte",
+  71: "Neve fraca", 73: "Neve", 75: "Neve forte", 77: "Grãos de neve",
+  80: "Pancadas fracas", 81: "Pancadas", 82: "Pancadas fortes", 85: "Pancadas de neve", 86: "Pancadas de neve fortes",
+  95: "Trovoada", 96: "Trovoada c/ granizo", 99: "Trovoada c/ granizo forte",
+};
+
+export const WMO_EMOJI: Record<number, string> = {
+  0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
+  45: "🌫️", 48: "🌫️",
+  51: "🌦️", 53: "🌦️", 55: "🌧️", 56: "🌧️", 57: "🌧️",
+  61: "🌧️", 63: "🌧️", 65: "🌧️", 66: "🌧️", 67: "🌧️",
+  71: "🌨️", 73: "🌨️", 75: "❄️", 77: "❄️",
+  80: "🌦️", 81: "🌦️", 82: "⛈️", 85: "🌨️", 86: "❄️",
+  95: "⛈️", 96: "⛈️", 99: "⛈️",
+};
+
+export function wmoLabel(code: number | null | undefined): string {
+  if (code == null) return "--";
+  return WMO_LABELS[code] || `Código ${code}`;
+}
+
+export function wmoEmoji(code: number | null | undefined): string {
+  if (code == null) return "🌡️";
+  return WMO_EMOJI[code] || "🌡️";
+}
+
+export function fmtTemp(v: number | null | undefined, unit = "°C"): string {
+  if (v == null) return "--";
+  return `${Math.round(v)}${unit}`;
+}
+
+export function fmtWind(v: number | null | undefined, unit = "km/h"): string {
+  if (v == null) return "--";
+  return `${Math.round(v)} ${unit}`;
+}
+
+export function fmtPrecip(v: number | null | undefined, unit = "mm"): string {
+  if (v == null) return "--";
+  return `${v.toFixed(1)} ${unit}`;
+}
+
+export function fmtHumidity(v: number | null | undefined): string {
+  if (v == null) return "--";
+  return `${Math.round(v)}%`;
+}
+
+export function fmtPressure(v: number | null | undefined): string {
+  if (v == null) return "--";
+  return `${Math.round(v)} hPa`;
+}
+
+export function windDir(deg: number | null | undefined): string {
+  if (deg == null) return "--";
+  const dirs = ["N", "NE", "L", "SE", "S", "SO", "O", "NO"];
+  const idx = Math.round(deg / 45) % 8;
+  return dirs[idx];
+}
+
+export function fmtHourLabel(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso.slice(11, 16) || iso;
+    return `${String(d.getHours()).padStart(2, "0")}h`;
+  } catch {
+    return iso.slice(11, 16) || iso;
+  }
+}
+
+export function fmtDayLabel(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso.slice(5, 10) || iso;
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  } catch {
+    return iso.slice(5, 10) || iso;
+  }
+}

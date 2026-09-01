@@ -336,6 +336,20 @@ void uiHandleTap(int16_t x, int16_t y)
       uiSetHomeLayout(x < g_layoutMidX ? HOME_LAYOUT_LIST : HOME_LAYOUT_GRID);
       return;
     }
+    if (inRow(g_cardSizeBtnY, g_cardSizeBtnH))
+    {
+      CardSize ns = CARD_MD;
+      if (x < g_cardSizeSplit1)
+        ns = CARD_SM;
+      else if (x < g_cardSizeSplit2)
+        ns = CARD_MD;
+      else if (x < g_cardSizeSplit3)
+        ns = CARD_LG;
+      else
+        ns = CARD_XL;
+      uiSetCardSize(g_cardSizeView, ns);
+      return;
+    }
     if (inRow(g_themeBtnY, g_themeBtnH))
     {
       if (x < g_themeSplit1)

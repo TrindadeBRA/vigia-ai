@@ -1,6 +1,8 @@
-export type CardSize = "lg" | "sm";
+export type CardSize = "sm" | "md" | "lg" | "xl";
 
 export type Cell = { r: number; c: number };
+
+export type Rect = { w: number; h: number };
 
 export type BoardLayout = {
   size: Record<string, CardSize>;
@@ -31,8 +33,22 @@ export function colsForWidth(width: number): number {
   return Math.max(1, Math.floor((width + CELL_GAP) / (CELL_MIN + CELL_GAP)));
 }
 
+export function normalizeSize(s: string | undefined): CardSize {
+  if (s === "sm" || s === "md" || s === "lg" || s === "xl") return s;
+  // migração: "lg" antigo (2×2) vira "xl" (extra grande), resto vira "md" (normal)
+  if (s === "lg") return "xl";
+  return "md";
+}
+
+export function rectFor(size: CardSize | undefined, cols: number): Rect {
+  const s = normalizeSize(size);
+  if (s === "sm" || s === "md") return { w: 1, h: 1 };
+  if (s === "lg") return { w: Math.min(2, Math.max(1, cols)), h: 1 };
+  return { w: Math.min(2, Math.max(1, cols)), h: 2 };
+}
+
 export function spanFor(size: CardSize | undefined, cols: number): number {
-  return size === "sm" ? 1 : Math.min(2, Math.max(1, cols));
+  return rectFor(size, cols).w;
 }
 
 export function slotKey(r: number, c: number): string {
@@ -45,14 +61,14 @@ export function parseSlot(id: string): Cell | null {
   return { r: Number(m[1]), c: Number(m[2]) };
 }
 
-function visitRect(origin: Cell, span: number, fn: (r: number, c: number) => void) {
-  for (let r = origin.r; r < origin.r + span; r++) {
-    for (let c = origin.c; c < origin.c + span; c++) fn(r, c);
+function visitRect(origin: Cell, rect: Rect, fn: (r: number, c: number) => void) {
+  for (let r = origin.r; r < origin.r + rect.h; r++) {
+    for (let c = origin.c; c < origin.c + rect.w; c++) fn(r, c);
   }
 }
 
-function clampCell(cell: Cell, span: number, cols: number): Cell {
-  const c = Math.max(0, Math.min(cell.c, Math.max(0, cols - span)));
+function clampCell(cell: Cell, rect: Rect, cols: number): Cell {
+  const c = Math.max(0, Math.min(cell.c, Math.max(0, cols - rect.w)));
   return { r: Math.max(0, cell.r), c };
 }
 
@@ -61,16 +77,16 @@ export function occupancy(ids: string[], board: BoardLayout, cols: number): Map<
   for (const id of ids) {
     const pos = board.pos[id];
     if (!pos) continue;
-    const span = spanFor(board.size[id], cols);
-    visitRect(pos, span, (r, c) => occ.set(`${r}:${c}`, id));
+    const rect = rectFor(board.size[id], cols);
+    visitRect(pos, rect, (r, c) => occ.set(`${r}:${c}`, id));
   }
   return occ;
 }
 
-function isFree(occ: Map<string, string>, cell: Cell, span: number, cols: number, ignore?: string): boolean {
-  if (cell.c < 0 || cell.r < 0 || cell.c + span > cols) return false;
+function isFree(occ: Map<string, string>, cell: Cell, rect: Rect, cols: number, ignore?: string): boolean {
+  if (cell.c < 0 || cell.r < 0 || cell.c + rect.w > cols) return false;
   let ok = true;
-  visitRect(cell, span, (r, c) => {
+  visitRect(cell, rect, (r, c) => {
     const owner = occ.get(`${r}:${c}`);
     if (owner && owner !== ignore) ok = false;
   });
@@ -82,7 +98,7 @@ function maxRowOf(ids: string[], board: BoardLayout, cols: number): number {
   for (const id of ids) {
     const pos = board.pos[id];
     if (!pos) continue;
-    max = Math.max(max, pos.r + spanFor(board.size[id], cols) - 1);
+    max = Math.max(max, pos.r + rectFor(board.size[id], cols).h - 1);
   }
   return max;
 }
@@ -101,11 +117,11 @@ export function padRowsForHeight(leftoverPx: number, cellPx = SLOT_MIN): number 
   return Math.max(MIN_PAD_ROWS, Math.ceil((leftoverPx + CELL_GAP) / rowH));
 }
 
-function firstFree(occ: Map<string, string>, span: number, cols: number, rows: number): Cell {
+function firstFree(occ: Map<string, string>, rect: Rect, cols: number, rows: number): Cell {
   const limit = Math.max(rows, 8);
   for (let r = 0; r < limit; r++) {
-    for (let c = 0; c <= cols - span; c++) {
-      if (isFree(occ, { r, c }, span, cols)) return { r, c };
+    for (let c = 0; c <= cols - rect.w; c++) {
+      if (isFree(occ, { r, c }, rect, cols)) return { r, c };
     }
   }
   return { r: limit, c: 0 };
@@ -115,17 +131,17 @@ function packRowMajor(ids: string[], size: Record<string, CardSize>, cols: numbe
   const occ = new Map<string, string>();
   const pos: Record<string, Cell> = {};
   for (const id of ids) {
-    const span = spanFor(size[id], cols);
-    const cell = firstFree(occ, span, cols, 32);
+    const rect = rectFor(size[id], cols);
+    const cell = firstFree(occ, rect, cols, 32);
     pos[id] = cell;
-    visitRect(cell, span, (r, c) => occ.set(`${r}:${c}`, id));
+    visitRect(cell, rect, (r, c) => occ.set(`${r}:${c}`, id));
   }
   return pos;
 }
 
 export function packBoard(ids: string[], board: BoardLayout, cols: number): BoardLayout {
   const size: Record<string, CardSize> = {};
-  for (const id of ids) size[id] = board.size[id] === "sm" ? "sm" : "lg";
+  for (const id of ids) size[id] = normalizeSize(board.size[id]);
   return { size, pos: packRowMajor(ids, size, cols), layoutCols: cols };
 }
 
@@ -139,7 +155,7 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
   const prev = board || emptyBoard();
   const seen = new Set(ids);
   const size: Record<string, CardSize> = {};
-  for (const id of ids) size[id] = prev.size[id] === "sm" ? "sm" : "lg";
+  for (const id of ids) size[id] = normalizeSize(prev.size[id]);
 
   let pos: Record<string, Cell> = {};
   const hasPos = ids.some((id) => prev.pos?.[id]);
@@ -153,10 +169,10 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
     if (missing.length) {
       const occ = occupancy(ids.filter((id) => pos[id]), { size, pos }, cols);
       for (const id of missing) {
-        const span = spanFor(size[id], cols);
-        const cell = firstFree(occ, span, cols, 32);
+        const rect = rectFor(size[id], cols);
+        const cell = firstFree(occ, rect, cols, 32);
         pos[id] = cell;
-        visitRect(cell, span, (r, c) => occ.set(`${r}:${c}`, id));
+        visitRect(cell, rect, (r, c) => occ.set(`${r}:${c}`, id));
       }
     }
   }
@@ -172,9 +188,9 @@ function overlaps(ids: string[], board: BoardLayout, cols: number): boolean {
   for (const id of ids) {
     const pos = board.pos[id];
     if (!pos) return true;
-    const span = spanFor(board.size[id], cols);
+    const rect = rectFor(board.size[id], cols);
     let hit = false;
-    visitRect(pos, span, (r, c) => {
+    visitRect(pos, rect, (r, c) => {
       const key = `${r}:${c}`;
       if (seen.has(key)) hit = true;
       seen.add(key);
@@ -196,7 +212,7 @@ function cardsFit(ids: string[], board: BoardLayout, cols: number): boolean {
   return ids.every((id) => {
     const pos = board.pos[id];
     if (!pos) return false;
-    return pos.c + spanFor(board.size[id], cols) <= cols;
+    return pos.c + rectFor(board.size[id], cols).w <= cols;
   });
 }
 
@@ -220,7 +236,7 @@ export function fitBoard(ids: string[], board: BoardLayout, cols: number): Board
   for (const id of ids) {
     const cur = pos[id];
     if (!cur) continue;
-    pos[id] = clampCell(cur, spanFor(next.size[id], cols), cols);
+    pos[id] = clampCell(cur, rectFor(next.size[id], cols), cols);
   }
   const owners = new Map<string, string[]>();
   occupancy(ids, { ...next, pos }, cols).forEach((id, key) => {
@@ -240,10 +256,10 @@ export function fitBoard(ids: string[], board: BoardLayout, cols: number): Board
     );
     for (const id of ids) {
       if (!conflicted.has(id)) continue;
-      const span = spanFor(next.size[id], cols);
-      const cell = firstFree(fresh, span, cols, 32);
+      const rect = rectFor(next.size[id], cols);
+      const cell = firstFree(fresh, rect, cols, 32);
       pos[id] = cell;
-      visitRect(cell, span, (r, c) => fresh.set(`${r}:${c}`, id));
+      visitRect(cell, rect, (r, c) => fresh.set(`${r}:${c}`, id));
     }
   }
   const fitted = { ...next, pos };
@@ -263,13 +279,13 @@ export function sameBoard(a: BoardLayout | undefined, b: BoardLayout, ids: strin
 
 export function placeCard(ids: string[], board: BoardLayout, id: string, target: Cell, cols: number): BoardLayout {
   if (!ids.includes(id)) return board;
-  const span = spanFor(board.size[id], cols);
-  const dest = clampCell(target, span, cols);
+  const rect = rectFor(board.size[id], cols);
+  const dest = clampCell(target, rect, cols);
   const from = board.pos[id] || dest;
   const others = ids.filter((x) => x !== id);
   const occ = occupancy(others, board, cols);
   const hit = new Set<string>();
-  visitRect(dest, span, (r, c) => {
+  visitRect(dest, rect, (r, c) => {
     const owner = occ.get(`${r}:${c}`);
     if (owner) hit.add(owner);
   });
@@ -277,16 +293,16 @@ export function placeCard(ids: string[], board: BoardLayout, id: string, target:
 
   const pos: Record<string, Cell> = { ...board.pos, [id]: dest };
   for (const other of hit) {
-    const oSpan = spanFor(board.size[other], cols);
+    const oRect = rectFor(board.size[other], cols);
     const ignoreOcc = occupancy(
       ids.filter((x) => x !== other),
       { ...board, pos },
       cols,
     );
-    if (isFree(ignoreOcc, from, oSpan, cols)) {
-      pos[other] = clampCell(from, oSpan, cols);
+    if (isFree(ignoreOcc, from, oRect, cols)) {
+      pos[other] = clampCell(from, oRect, cols);
     } else {
-      pos[other] = firstFree(ignoreOcc, oSpan, cols, Math.max(8, dest.r + 3));
+      pos[other] = firstFree(ignoreOcc, oRect, cols, Math.max(8, dest.r + 3));
     }
   }
   const next = { ...board, pos };
@@ -297,9 +313,9 @@ export function setCardSize(ids: string[], board: BoardLayout, id: string, size:
   const next = { ...board, size: { ...board.size, [id]: size } };
   const pos = board.pos[id];
   if (!pos) return next;
-  const span = spanFor(size, cols);
-  const dest = clampCell(pos, span, cols);
-  if (span === 1) return withLayoutCols({ ...next, pos: { ...board.pos, [id]: dest } }, cols);
+  const rect = rectFor(size, cols);
+  const dest = clampCell(pos, rect, cols);
+  if (rect.w === 1 && rect.h === 1) return withLayoutCols({ ...next, pos: { ...board.pos, [id]: dest } }, cols);
   return placeCard(ids, next, id, dest, cols);
 }
 

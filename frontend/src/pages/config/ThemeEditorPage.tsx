@@ -3,20 +3,23 @@ import { useOutletContext } from "react-router-dom";
 import { cn } from "../../cn";
 import { Logo } from "../../components/Logo";
 import { Skeleton } from "../../components/Skeleton";
+import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgGrid, cfgStatus, pageCol, viewFade } from "../../tw";
+import { NameToColorPicker } from "./NameToColorPicker";
 import { THEME_STR } from "./themeCopy";
 import { Button, Card, Checkbox, FieldStatus, TextField } from "./ui";
 import type { ConfigOutlet } from "./usePublicConfig";
 import { usePublicConfig } from "./usePublicConfig";
+import { WallpaperManager } from "./WallpaperManager";
 
 type Provider = "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "brand";
 
 type ThemeIcon = { id: string; provider: Provider; x: number; y: number; scale: number; color: string | null };
 type ThemeText = { id: string; x: number; y: number; scale: number; color: string | null; text: string };
-type ThemeClock = { enabled: boolean; x: number; y: number; scale: number; color: string | null; format24h: boolean };
-type ThemeBg = { type: "color" | "image"; color: string };
+type ThemeClock = { enabled: boolean; x: number; y: number; scale: number; color: string | null; format24h: boolean; showBackground: boolean; autoColor: boolean };
+type ThemeBg = { color: string };
 type ThemeState = { background: ThemeBg; clock: ThemeClock; icons: ThemeIcon[]; texts: ThemeText[] };
 
 const ICON_PROVIDERS: { id: Provider; label: string }[] = [
@@ -31,8 +34,8 @@ const ICON_PROVIDERS: { id: Provider; label: string }[] = [
 ];
 
 const DEFAULT_THEME: ThemeState = {
-  background: { type: "color", color: "#10151a" },
-  clock: { enabled: true, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true },
+  background: { color: "#10151a" },
+  clock: { enabled: true, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
   icons: [],
   texts: [],
 };
@@ -67,11 +70,21 @@ function formatClock(d: Date, format24h: boolean): string {
   return `${String(h).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function migrateTheme(raw: Partial<ThemeState>): ThemeState {
+  const merged = { ...DEFAULT_THEME, ...raw } as ThemeState;
+  // Migração: campos novos do relógio (showBackground, autoColor) para drafts antigos
+  if (merged.clock) {
+    if (typeof merged.clock.showBackground !== "boolean") merged.clock.showBackground = DEFAULT_THEME.clock.showBackground;
+    if (typeof merged.clock.autoColor !== "boolean") merged.clock.autoColor = DEFAULT_THEME.clock.autoColor;
+  }
+  return merged;
+}
+
 function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState) => void] {
   const [theme, setTheme] = useState<ThemeState>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return { ...DEFAULT_THEME, ...(JSON.parse(raw) as Partial<ThemeState>) };
+      if (raw) return migrateTheme(JSON.parse(raw) as Partial<ThemeState>);
     } catch {
       /* ignore */
     }
@@ -87,33 +100,18 @@ function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState) => vo
   return [theme, (fn) => setTheme(fn)];
 }
 
-// Canvas -> bytes RGB565 little-endian (mesma convenção dos ícones PROGMEM do
-// firmware, ver ui/widgets.cpp:drawIcon + docs/CONTRATO_TEMA.md).
-function rgb565Bytes(imageData: ImageData): Uint8Array {
-  const { data, width, height } = imageData;
-  const out = new Uint8Array(width * height * 2);
-  let o = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const v = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
-    out[o++] = v & 0xff;
-    out[o++] = (v >> 8) & 0xff;
-  }
-  return out;
-}
-
 function themeToJson(t: ThemeState) {
   return {
     version: 1,
-    background: { type: t.background.type, color: t.background.color },
+    background: { type: "color", color: t.background.color },
     clock: {
       enabled: t.clock.enabled,
       x: t.clock.x,
       y: t.clock.y,
       scale: t.clock.scale,
       format24h: t.clock.format24h,
+      showBackground: t.clock.showBackground,
+      autoColor: t.clock.autoColor,
       ...(t.clock.color ? { color: t.clock.color } : {}),
     },
     icons: t.icons.map((i) => ({ provider: i.provider, x: i.x, y: i.y, scale: i.scale, ...(i.color ? { color: i.color } : {}) })),
@@ -226,26 +224,39 @@ function ColorField({
   value,
   onChange,
   noneLabel,
+  lang,
 }: {
   label: string;
   value: string | null;
   onChange: (v: string | null) => void;
   noneLabel: string;
+  lang: "pt" | "en" | "es";
 }) {
+  const [showNtc, setShowNtc] = useState(false);
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <span className={cfgFieldLabel}>{label}</span>
       <div className="flex items-center gap-3">
         <ColorSwatch value={value} onChange={onChange} />
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className={cn("font-mono text-[13px]", value ? "text-ink" : "text-ink3")}>{value ? value.toUpperCase() : noneLabel}</span>
-          {value ? (
-            <button type="button" className="w-fit text-[11.5px] text-ink3 underline decoration-dotted underline-offset-2 hover:text-ink2" onClick={() => onChange(null)}>
-              {noneLabel}
+          <div className="flex flex-wrap items-center gap-2">
+            {value ? (
+              <button type="button" className="w-fit text-[11.5px] text-ink3 underline decoration-dotted underline-offset-2 hover:text-ink2" onClick={() => onChange(null)}>
+                {noneLabel}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setShowNtc((v) => !v)}
+              className="rounded-full border border-edge bg-panel px-2.5 py-1 text-[11px] font-[650] text-ink hover:bg-chip"
+            >
+              {showNtc ? "✕" : "🎨"} NameToColor
             </button>
-          ) : null}
+          </div>
         </div>
       </div>
+      {showNtc ? <NameToColorPicker value={value} onChange={onChange} lang={lang} /> : null}
     </div>
   );
 }
@@ -259,8 +270,6 @@ export default function ThemeEditorPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 480, height: 320 });
   const [canvasKnown, setCanvasKnown] = useState(false);
-  const [bgPreviewUrl, setBgPreviewUrl] = useState<string | null>(null);
-  const [bgBytes, setBgBytes] = useState<Uint8Array | null>(null);
   const [deviceIp, setDeviceIp] = useState("");
   const [ipTouched, setIpTouched] = useState(false);
   const [canvasRenderedW, setCanvasRenderedW] = useState(0);
@@ -269,7 +278,6 @@ export default function ThemeEditorPage() {
   const [screenshotFullscreen, setScreenshotFullscreen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const canvasRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const send = useRequest();
   const remove = useRequest();
   const screenshot = useRequest();
@@ -358,48 +366,10 @@ export default function ThemeEditorPage() {
     setSelected(null);
   }
 
-  async function handleBackgroundFile(file: File) {
-    // Metade da resolução da tela — a placa desenha com upscale 2x nearest
-    // neighbor (ver customThemeCanvasWidth/Height em customtheme.cpp). Um
-    // fundo em resolução cheia não cabe num bloco contíguo de RAM depois
-    // do WiFi/HTTPClient fragmentarem o heap (confirmado no Wokwi).
-    const targetW = Math.max(1, Math.floor(canvasSize.width / 2));
-    const targetH = Math.max(1, Math.floor(canvasSize.height / 2));
-    const bitmap = await createImageBitmap(file);
-    const canvas = document.createElement("canvas");
-    canvas.width = targetW;
-    canvas.height = targetH;
-    const ctx2d = canvas.getContext("2d");
-    if (!ctx2d) return;
-    const scale = Math.max(targetW / bitmap.width, targetH / bitmap.height);
-    const sw = targetW / scale;
-    const sh = targetH / scale;
-    const sx = (bitmap.width - sw) / 2;
-    const sy = (bitmap.height - sh) / 2;
-    ctx2d.drawImage(bitmap, sx, sy, sw, sh, 0, 0, targetW, targetH);
-    const bytes = rgb565Bytes(ctx2d.getImageData(0, 0, targetW, targetH));
-    setBgPreviewUrl(canvas.toDataURL());
-    setBgBytes(bytes);
-    setTheme((t) => ({ ...t, background: { ...t.background, type: "image" } }));
-  }
-
-  function clearBackgroundImage() {
-    setBgPreviewUrl(null);
-    setBgBytes(null);
-    setTheme((t) => ({ ...t, background: { ...t.background, type: "color" } }));
-  }
-
   // Salva no coletor (mesma origem do painel — sem CORS, sem IP da placa).
   // A placa é quem busca (botão de recarregar no header, ver
   // firmware/src/net/client.cpp:themeClientReload e docs/CONTRATO_TEMA.md).
   async function saveTheme() {
-    if (theme.background.type === "image" && bgBytes) {
-      const fd = new FormData();
-      fd.append("bg", new Blob([bgBytes.buffer as ArrayBuffer], { type: "application/octet-stream" }), "bg.raw");
-      const r = await fetch("/api/theme/background", { method: "POST", body: fd });
-      const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
-      if (!j.ok) return { ok: false, error: j.error || c.saveError };
-    }
     const r2 = await fetch("/api/theme/meta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -432,9 +402,6 @@ export default function ThemeEditorPage() {
     );
   }
 
-  const showBgImage = theme.background.type === "image" && bgPreviewUrl;
-  const backgroundNeedsUpload = theme.background.type === "image" && !bgBytes;
-
   return (
     <div className={`${pageCol} ${viewFade}`}>
       <header className="w-full">
@@ -449,7 +416,7 @@ export default function ThemeEditorPage() {
           className="relative mx-auto w-full max-w-[560px] touch-none select-none overflow-hidden rounded-[14px] border border-edge"
           style={{
             aspectRatio: `${canvasSize.width} / ${canvasSize.height}`,
-            background: showBgImage ? `url(${bgPreviewUrl}) center / cover no-repeat` : theme.background.color,
+            background: theme.background.color,
           }}
           onPointerDown={() => setSelected(null)}
         >
@@ -463,12 +430,20 @@ export default function ThemeEditorPage() {
               onSelect={() => setSelected("clock")}
               onDrag={(x, y) => setTheme((t) => ({ ...t, clock: { ...t.clock, x, y } }))}
             >
-              <span
-                className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-mono font-bold text-white"
-                style={{ color: theme.clock.color || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
-              >
-                {formatClock(now, theme.clock.format24h)}
-              </span>
+              {(() => {
+                const autoPair = theme.clock.autoColor ? ntcGenerateReadableColor(theme.background.color) : null;
+                const autoTextColor = autoPair ? autoPair[0] : null;
+                const effectiveColor = theme.clock.autoColor ? (autoTextColor || theme.clock.color) : theme.clock.color;
+                const bgClass = theme.clock.showBackground ? "bg-black/35" : "bg-transparent";
+                return (
+                  <span
+                    className={`whitespace-nowrap rounded-md px-2 py-1 font-mono font-bold text-white ${bgClass}`}
+                    style={{ color: effectiveColor || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
+                  >
+                    {formatClock(now, theme.clock.format24h)}
+                  </span>
+                );
+              })()}
             </CanvasDot>
           ) : null}
           {theme.icons.map((icon) => (
@@ -524,69 +499,13 @@ export default function ThemeEditorPage() {
 
       <div className={cfgGrid}>
         <Card title={c.background}>
-          <div className="inline-flex w-fit items-center gap-0.5 rounded-full bg-canvas p-1 shadow-[inset_0_0_0_1px_var(--card-border)]">
-            <button
-              type="button"
-              onClick={() => setTheme((t) => ({ ...t, background: { ...t.background, type: "color" } }))}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-[12.5px] font-[650] transition-colors",
-                theme.background.type === "color" ? "bg-accent text-accent-ink" : "text-ink2 hover:text-ink",
-              )}
-            >
-              {c.backgroundColor}
-            </button>
-            <button
-              type="button"
-              disabled={!bgPreviewUrl}
-              onClick={() => setTheme((t) => ({ ...t, background: { ...t.background, type: "image" } }))}
-              title={!bgPreviewUrl ? c.backgroundUpload : undefined}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-[12.5px] font-[650] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                theme.background.type === "image" ? "bg-accent text-accent-ink" : "text-ink2 hover:text-ink",
-              )}
-            >
-              {c.backgroundImage}
-            </button>
-          </div>
-
-          {theme.background.type === "color" ? (
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
               <ColorSwatch value={theme.background.color} onChange={(v) => setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} size={40} />
               <span className="font-mono text-[13px] text-ink">{theme.background.color.toUpperCase()}</span>
             </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {bgPreviewUrl ? (
-                <img src={bgPreviewUrl} alt="" className="size-14 shrink-0 rounded-[10px] border border-edge object-cover" />
-              ) : (
-                <div className="flex size-14 shrink-0 items-center justify-center rounded-[10px] border border-dashed border-edge text-center text-[10px] leading-tight text-ink3">
-                  {c.backgroundImage}
-                </div>
-              )}
-              <span className="text-[12.5px] text-ink3">{bgPreviewUrl ? c.backgroundImage : c.backgroundEmpty}</span>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-3 border-t border-edge pt-3">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleBackgroundFile(f);
-                e.target.value = "";
-              }}
-            />
-            <Button variant="secondary" onClick={() => fileRef.current?.click()}>{bgPreviewUrl ? c.backgroundReplace : c.backgroundUpload}</Button>
-            {bgPreviewUrl ? (
-              <button type="button" className="text-[12px] text-ink3 underline decoration-dotted underline-offset-2 hover:text-ink2" onClick={clearBackgroundImage}>
-                {c.backgroundClear}
-              </button>
-            ) : null}
+            <NameToColorPicker value={theme.background.color} onChange={(v) => v && setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} lang={ctx?.lang || "pt"} allowClear={false} />
           </div>
-          {backgroundNeedsUpload ? <p className={`${cfgStatus} text-warn`}>{c.backgroundNoBytes}</p> : null}
         </Card>
 
         <Card title={c.icons} action={<Button variant="secondary" onClick={addIcon} disabled={theme.icons.length >= MAX_ICONS}>{c.addIcon}</Button>}>
@@ -610,7 +529,7 @@ export default function ThemeEditorPage() {
                     </select>
                   </label>
                   <ScaleField label={c.size} value={icon.scale} onChange={(v) => updateIcon(id, { scale: v })} />
-                  <ColorField label={c.color} value={icon.color} onChange={(v) => updateIcon(id, { color: v })} noneLabel={c.colorNone} />
+                  <ColorField label={c.color} value={icon.color} onChange={(v) => updateIcon(id, { color: v })} noneLabel={c.colorNone} lang={ctx?.lang || "pt"} />
                   <Button variant="ghost" onClick={() => removeIcon(id)}>{c.removeIcon}</Button>
                 </div>
               );
@@ -623,8 +542,28 @@ export default function ThemeEditorPage() {
         <Card title={c.clock}>
           <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: e.target.checked } }))} />
           <Checkbox label={c.clockFormat24h} checked={theme.clock.format24h} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, format24h: e.target.checked } }))} />
+          <Checkbox label={c.clockShowBackground} checked={theme.clock.showBackground} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, showBackground: e.target.checked } }))} />
+          <Checkbox label={c.clockAutoColor} checked={theme.clock.autoColor} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, autoColor: e.target.checked } }))} />
+          {theme.clock.autoColor ? <p className={`${cfgStatus} text-accent`}>{c.clockAutoColorActive}</p> : null}
+          {theme.clock.autoColor ? <p className={cfgStatus}>{c.clockAutoColorHint}</p> : null}
+          {theme.clock.autoColor ? (
+            (() => {
+              const pair = ntcGenerateReadableColor(theme.background.color);
+              return pair ? (
+                <div className="flex items-center gap-2 rounded-[10px] border border-edge bg-panel px-3 py-2">
+                  <span className="size-6 shrink-0 rounded-full border border-edge" style={{ background: pair[0] }} aria-hidden />
+                  <span className="font-mono text-[12px] text-ink">{pair[0].toUpperCase()}</span>
+                  <span className="text-[11px] text-ink3">sobre {theme.background.color.toUpperCase()}</span>
+                </div>
+              ) : (
+                <p className={`${cfgStatus} text-warn`}>{c.ntcLoading}</p>
+              );
+            })()
+          ) : null}
           <ScaleField label={c.size} value={theme.clock.scale} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, scale: v } }))} />
-          <ColorField label={c.color} value={theme.clock.color} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, color: v } }))} noneLabel={c.colorNone} />
+          <div className={theme.clock.autoColor ? "opacity-50 pointer-events-none" : ""}>
+            <ColorField label={c.color} value={theme.clock.color} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, color: v } }))} noneLabel={c.colorNone} lang={ctx?.lang || "pt"} />
+          </div>
         </Card>
 
         <Card title={c.texts} action={<Button variant="secondary" onClick={addText} disabled={theme.texts.length >= MAX_TEXTS}>{c.addText}</Button>}>
@@ -637,7 +576,7 @@ export default function ThemeEditorPage() {
                 <div className="flex flex-col gap-3">
                   <TextField label={c.texts} value={txt.text} maxLength={23} placeholder={c.textPh} onChange={(e) => updateText(id, { text: e.target.value })} />
                   <ScaleField label={c.size} value={txt.scale} onChange={(v) => updateText(id, { scale: v })} />
-                  <ColorField label={c.color} value={txt.color} onChange={(v) => updateText(id, { color: v })} noneLabel={c.colorNone} />
+                  <ColorField label={c.color} value={txt.color} onChange={(v) => updateText(id, { color: v })} noneLabel={c.colorNone} lang={ctx?.lang || "pt"} />
                   <Button variant="ghost" onClick={() => removeText(id)}>{c.removeText}</Button>
                 </div>
               );
@@ -659,6 +598,10 @@ export default function ThemeEditorPage() {
           <FieldStatus status={send.status} message={send.message} />
           <FieldStatus status={remove.status} message={remove.message} />
         </Card>
+
+        <div className="col-span-full">
+          <WallpaperManager lang={ctx?.lang || "pt"} />
+        </div>
 
         <Card title={c.debugTitle} lead={c.debugLead}>
           <TextField

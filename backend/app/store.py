@@ -22,6 +22,84 @@ _EMPTY_PROVIDER: dict[str, Any] = {
     "accounts": [],
 }
 
+_WEATHER_DEFAULT: dict[str, Any] = {
+    "enabled": False,
+    "hidden": False,
+    "location": {
+        "name": "",
+        "latitude": None,
+        "longitude": None,
+        "country": "",
+        "country_code": "",
+        "timezone": "auto",
+        "elevation": None,
+    },
+    "units": {
+        "temperature_unit": "celsius",
+        "wind_speed_unit": "kmh",
+        "precipitation_unit": "mm",
+    },
+    "forecast_days": 7,
+    "past_days": 0,
+    "timezone": "auto",
+    "current": [
+        "temperature_2m",
+        "relative_humidity_2m",
+        "apparent_temperature",
+        "weather_code",
+        "wind_speed_10m",
+        "precipitation",
+    ],
+    "hourly": [
+        "temperature_2m",
+        "precipitation_probability",
+        "weather_code",
+        "wind_speed_10m",
+    ],
+    "daily": [
+        "weather_code",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "precipitation_sum",
+        "precipitation_probability_max",
+        "wind_speed_10m_max",
+        "sunrise",
+        "sunset",
+        "uv_index_max",
+    ],
+    "display": {
+        "show_current": True,
+        "show_hourly": True,
+        "show_daily": True,
+        "hourly_count": 12,
+        "daily_count": 7,
+        "fields": {
+            "temperature": True,
+            "feels_like": True,
+            "humidity": True,
+            "precipitation": True,
+            "wind": True,
+            "pressure": True,
+            "cloud_cover": True,
+            "uv_index": True,
+            "sunrise_sunset": True,
+        },
+    },
+}
+
+
+_WALLPAPER_PROVIDERS_DEFAULT: dict[str, Any] = {
+    "pexels_key": "",
+    "unsplash_key": "",
+    "wallhaven_key": "",
+}
+
+_SLIDESHOW_DEFAULT: dict[str, Any] = {
+    "enabled": False,
+    "interval": 5,
+    "order": [],
+}
+
 
 def default_config() -> dict[str, Any]:
     return {
@@ -32,6 +110,11 @@ def default_config() -> dict[str, Any]:
         "providers": {name: deepcopy(_EMPTY_PROVIDER) for name in PROVIDERS},
         "push": {"vapid_public_key": "", "vapid_private_key": "", "subscriptions": []},
         "alarms": [],
+        "weather": deepcopy(_WEATHER_DEFAULT),
+        "wallpapers": {
+            "providers": deepcopy(_WALLPAPER_PROVIDERS_DEFAULT),
+            "slideshow": deepcopy(_SLIDESHOW_DEFAULT),
+        },
     }
 
 
@@ -212,6 +295,98 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
     cfg["push"]["vapid_private_key"] = str(push_raw.get("vapid_private_key") or "")
     cfg["push"]["subscriptions"] = _parse_subscriptions(push_raw.get("subscriptions") or [])
     cfg["alarms"] = _parse_alarms(raw.get("alarms") or [])
+    # Weather
+    raw_weather = raw.get("weather") if isinstance(raw.get("weather"), dict) else {}
+    weather = cfg["weather"]
+    weather["enabled"] = bool(raw_weather.get("enabled", weather["enabled"]))
+    weather["hidden"] = bool(raw_weather.get("hidden", weather["hidden"]))
+    # location
+    raw_loc = raw_weather.get("location") if isinstance(raw_weather.get("location"), dict) else {}
+    loc = weather["location"]
+    loc["name"] = str(raw_loc.get("name") or loc["name"] or "")
+    loc["country"] = str(raw_loc.get("country") or loc["country"] or "")
+    loc["country_code"] = str(raw_loc.get("country_code") or loc["country_code"] or "")
+    loc["timezone"] = str(raw_loc.get("timezone") or loc["timezone"] or "auto")
+    try:
+        lat = raw_loc.get("latitude")
+        loc["latitude"] = float(lat) if lat is not None and str(lat).strip() != "" else None
+    except (TypeError, ValueError):
+        loc["latitude"] = None
+    try:
+        lon = raw_loc.get("longitude")
+        loc["longitude"] = float(lon) if lon is not None and str(lon).strip() != "" else None
+    except (TypeError, ValueError):
+        loc["longitude"] = None
+    try:
+        elev = raw_loc.get("elevation")
+        loc["elevation"] = float(elev) if elev is not None and str(elev).strip() != "" else None
+    except (TypeError, ValueError):
+        loc["elevation"] = None
+    # units
+    raw_units = raw_weather.get("units") if isinstance(raw_weather.get("units"), dict) else {}
+    units = weather["units"]
+    for k in ("temperature_unit", "wind_speed_unit", "precipitation_unit"):
+        if k in raw_units and isinstance(raw_units[k], str) and raw_units[k].strip():
+            units[k] = str(raw_units[k]).strip()
+    # forecast_days / past_days / timezone
+    try:
+        fd = int(raw_weather.get("forecast_days", weather["forecast_days"]))
+        weather["forecast_days"] = max(1, min(16, fd))
+    except (TypeError, ValueError):
+        pass
+    try:
+        pd = int(raw_weather.get("past_days", weather["past_days"]))
+        weather["past_days"] = max(0, min(2, pd))
+    except (TypeError, ValueError):
+        pass
+    if isinstance(raw_weather.get("timezone"), str) and raw_weather["timezone"].strip():
+        weather["timezone"] = str(raw_weather["timezone"]).strip()
+    # current / hourly / daily arrays
+    for key in ("current", "hourly", "daily"):
+        raw_list = raw_weather.get(key)
+        if isinstance(raw_list, list):
+            cleaned = [str(x).strip() for x in raw_list if isinstance(x, str) and str(x).strip()]
+            if cleaned:
+                weather[key] = cleaned
+    # display
+    raw_display = raw_weather.get("display") if isinstance(raw_weather.get("display"), dict) else {}
+    disp = weather["display"]
+    for k in ("show_current", "show_hourly", "show_daily"):
+        if k in raw_display:
+            disp[k] = bool(raw_display[k])
+    for k in ("hourly_count", "daily_count"):
+        if k in raw_display:
+            try:
+                v = int(raw_display[k])
+                if k == "hourly_count":
+                    disp[k] = max(1, min(48, v))
+                else:
+                    disp[k] = max(1, min(16, v))
+            except (TypeError, ValueError):
+                pass
+    raw_fields = raw_display.get("fields") if isinstance(raw_display.get("fields"), dict) else {}
+    for fk, fv in raw_fields.items():
+        if fk in disp["fields"]:
+            disp["fields"][fk] = bool(fv)
+    # Wallpapers / slideshow
+    raw_wp = raw.get("wallpapers") if isinstance(raw.get("wallpapers"), dict) else {}
+    wp = cfg["wallpapers"]
+    raw_prov = raw_wp.get("providers") if isinstance(raw_wp.get("providers"), dict) else {}
+    for k in ("pexels_key", "unsplash_key", "wallhaven_key"):
+        if k in raw_prov and isinstance(raw_prov[k], str):
+            wp["providers"][k] = raw_prov[k].strip()
+    raw_sl = raw_wp.get("slideshow") if isinstance(raw_wp.get("slideshow"), dict) else {}
+    if "enabled" in raw_sl:
+        wp["slideshow"]["enabled"] = bool(raw_sl["enabled"])
+    if "interval" in raw_sl:
+        try:
+            iv = int(raw_sl["interval"])
+            wp["slideshow"]["interval"] = max(1, min(120, iv))
+        except (TypeError, ValueError):
+            pass
+    if isinstance(raw_sl.get("order"), list):
+        cleaned = [str(x).strip() for x in raw_sl["order"] if isinstance(x, str) and str(x).strip()]
+        wp["slideshow"]["order"] = cleaned
     return cfg
 
 

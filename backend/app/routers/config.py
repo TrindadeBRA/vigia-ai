@@ -30,6 +30,7 @@ from app.schemas import (
     OkResult,
     ProviderCardPublic,
     UrlsPublic,
+    WeatherConfig,
 )
 from app.store import load, provider as provider_cfg, update
 
@@ -337,6 +338,11 @@ def config_public(listen_host: str, listen_port: int, hub: Any = None) -> Config
     usage_local = f"http://127.0.0.1:{listen_port}/usage"
     usage_lan = f"http://{ips[0]}:{listen_port}/usage" if ips else usage_local
     stored_port = int(cfg["listen"]["port"])
+    weather_raw = cfg.get("weather") or {}
+    try:
+        weather_cfg = WeatherConfig.model_validate(weather_raw)
+    except Exception:
+        weather_cfg = WeatherConfig()
     return ConfigPublic(
         in_docker=in_docker(),
         mock=bool(cfg.get("mock")),
@@ -361,6 +367,7 @@ def config_public(listen_host: str, listen_port: int, hub: Any = None) -> Config
             "opencode": _key_card(cfg, "opencode"),
             "fal": _key_card(cfg, "fal"),
         },
+        weather=weather_cfg,
         device=_device_public(hub),
     )
 

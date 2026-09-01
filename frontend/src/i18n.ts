@@ -67,10 +67,31 @@ type Strings = {
   tema: string;
   alarms: string;
   configCta: string;
-  cardLarge: string;
   cardSmall: string;
+  cardNormal: string;
+  cardLarge: string;
+  cardXl: string;
   dragCard: string;
   resetLayout: string;
+  // Weather
+  weather: string;
+  weatherCurrent: string;
+  weatherHourly: string;
+  weatherDaily: string;
+  weatherNoLocation: string;
+  weatherTemp: string;
+  weatherFeelsLike: string;
+  weatherHumidity: string;
+  weatherPrecip: string;
+  weatherWind: string;
+  weatherPressure: string;
+  weatherCloudCover: string;
+  weatherUvIndex: string;
+  weatherSunrise: string;
+  weatherSunset: string;
+  weatherHigh: string;
+  weatherLow: string;
+  weatherRainProb: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -135,10 +156,30 @@ export const STR: Record<Lang, Strings> = {
     tema: "Tema",
     alarms: "Alarmes",
     configCta: "Configurar contas",
-    cardLarge: "Card grande",
     cardSmall: "Card pequeno",
+    cardNormal: "Card normal",
+    cardLarge: "Card grande",
+    cardXl: "Card extra grande",
     dragCard: "Arrastar",
     resetLayout: "Redefinir grade",
+    weather: "Clima",
+    weatherCurrent: "Agora",
+    weatherHourly: "Próximas horas",
+    weatherDaily: "Próximos dias",
+    weatherNoLocation: "Configure a cidade nas configurações.",
+    weatherTemp: "Temperatura",
+    weatherFeelsLike: "Sensação",
+    weatherHumidity: "Umidade",
+    weatherPrecip: "Precipitação",
+    weatherWind: "Vento",
+    weatherPressure: "Pressão",
+    weatherCloudCover: "Nuvens",
+    weatherUvIndex: "Índice UV",
+    weatherSunrise: "Nascer do sol",
+    weatherSunset: "Pôr do sol",
+    weatherHigh: "Máx",
+    weatherLow: "Mín",
+    weatherRainProb: "Chuva",
   },
   en: {
     overview: "Overview",
@@ -201,10 +242,30 @@ export const STR: Record<Lang, Strings> = {
     tema: "Theme",
     alarms: "Alarms",
     configCta: "Set up accounts",
-    cardLarge: "Large card",
     cardSmall: "Small card",
+    cardNormal: "Normal card",
+    cardLarge: "Large card",
+    cardXl: "Extra large card",
     dragCard: "Drag",
     resetLayout: "Reset layout",
+    weather: "Weather",
+    weatherCurrent: "Now",
+    weatherHourly: "Next hours",
+    weatherDaily: "Next days",
+    weatherNoLocation: "Set the city in settings.",
+    weatherTemp: "Temperature",
+    weatherFeelsLike: "Feels like",
+    weatherHumidity: "Humidity",
+    weatherPrecip: "Precipitation",
+    weatherWind: "Wind",
+    weatherPressure: "Pressure",
+    weatherCloudCover: "Clouds",
+    weatherUvIndex: "UV index",
+    weatherSunrise: "Sunrise",
+    weatherSunset: "Sunset",
+    weatherHigh: "High",
+    weatherLow: "Low",
+    weatherRainProb: "Rain",
   },
   es: {
     overview: "Resumen",
@@ -267,10 +328,30 @@ export const STR: Record<Lang, Strings> = {
     tema: "Tema",
     alarms: "Alarmas",
     configCta: "Configurar cuentas",
-    cardLarge: "Card grande",
     cardSmall: "Card pequeño",
+    cardNormal: "Card normal",
+    cardLarge: "Card grande",
+    cardXl: "Card extra grande",
     dragCard: "Arrastrar",
     resetLayout: "Restablecer cuadrícula",
+    weather: "Clima",
+    weatherCurrent: "Ahora",
+    weatherHourly: "Próximas horas",
+    weatherDaily: "Próximos días",
+    weatherNoLocation: "Configura la ciudad en ajustes.",
+    weatherTemp: "Temperatura",
+    weatherFeelsLike: "Sensación",
+    weatherHumidity: "Humedad",
+    weatherPrecip: "Precipitación",
+    weatherWind: "Viento",
+    weatherPressure: "Presión",
+    weatherCloudCover: "Nubes",
+    weatherUvIndex: "Índice UV",
+    weatherSunrise: "Amanecer",
+    weatherSunset: "Atardecer",
+    weatherHigh: "Máx",
+    weatherLow: "Mín",
+    weatherRainProb: "Lluvia",
   },
 };
 

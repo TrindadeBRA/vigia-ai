@@ -1,20 +1,21 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
-import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
-import { Skeleton } from "../components/Skeleton";
-import { Logo } from "../components/Logo";
-import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
+import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
 import { cn } from "../cn";
+import { Logo } from "../components/Logo";
+import { Skeleton } from "../components/Skeleton";
+import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
+import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { ConfigOutlet } from "./config/ConfigPage";
-import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, packBoard, padRowsForHeight, placeCard, rowPxFor, sameBoard, setCardSize, slotKey, spanFor, syncBoard, type BoardLayout, type CardSize } from "../board";
 
-const boardCollision: CollisionDetection = (args) => {
+const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
   const hits = pointerWithin(args);
   return hits.length ? hits : closestCorners(args);
 };
@@ -30,6 +31,9 @@ type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
+  kind?: "provider" | "weather";
+  weather?: WeatherPayload | null;
+  weatherConfig?: WeatherConfig | null;
 };
 
 function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
@@ -103,14 +107,20 @@ function compactMoney(sub: string | null, t: T): string | null {
 function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t, value }: Metric & { pal: Pal; compact?: boolean; nowMs?: number; t: T }) {
   const clock = countdownAt ? fmtCountdown(countdownAt, nowMs) : null;
   const name = compact ? shortMetricLabel(label, t) : label;
+  const pctText = pct != null ? fmtPct(pct) : null;
+  const remainText = pct != null ? fmtRemain(pct) : null;
+
   if (pct == null) {
     const money = compact ? (value || compactMoney(sub, t)) : (value || sub);
     const display = clock || money || sub || "--";
+    const showClockBelow = Boolean(clock && money && clock !== money);
     if (compact) {
       return (
         <div className="mt-1.5 flex min-w-0 flex-col gap-1 first:mt-0">
           <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-none text-ink3">{name}</span>
           <span className={cn(num, "min-w-0 text-[15px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]")}>{display}</span>
+          {showClockBelow ? <span className={cn(num, "overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-[550] text-ink2")}>{t.resetIn} {clock}</span> : null}
+          {sub && display !== sub && !showClockBelow ? <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{sub}</span> : null}
         </div>
       );
     }
@@ -118,42 +128,55 @@ function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t, value
       <div className="mt-3 first:mt-0">
         <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{name}</span>
+          {clock ? <span className={cn(num, "shrink-0 text-[12px] font-[550] text-ink2")}>{t.resetIn} {clock}</span> : null}
         </div>
         <div className={cn(num, "text-[15px] font-bold")}>{display}</div>
+        {sub && display !== sub ? <div className="mt-1 text-[11.5px] leading-snug text-ink3">{sub}</div> : null}
+        {clock && display !== clock && sub !== `${t.resetIn} ${clock}` ? <div className={cn(num, "mt-1 text-[11.5px] font-[550] text-ink2")}>{t.resetIn} {clock}</div> : null}
       </div>
     );
   }
+
+  const headerValue = value ? `${pctText} · ${value}` : pctText;
+  const footerRemain = remainText ? `${t.left} ${remainText}` : null;
+  const footerClock = clock ? `${t.resetIn} ${clock}` : null;
+  const footerSub = sub && sub !== footerRemain ? sub : null;
+  const footerParts = [footerRemain, footerClock, footerSub].filter(Boolean) as string[];
+
   if (compact) {
-    const extra = countdownAt ? clock : value || compactMoney(sub, t);
+    const compactExtra = clock ? `${t.resetIn} ${clock}` : value ? value : footerRemain || sub;
+    const compactSecondLine = value && clock ? value : null;
     return (
       <div className="mt-1.5 min-w-0 first:mt-0">
         <div className="mb-1 flex items-baseline justify-between gap-1.5 text-[11px] leading-none">
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink3">{name}</span>
-          <span className={`${num} shrink-0 text-[12px] font-bold text-ink`}>{fmtPct(pct)}</span>
+          <span className={`${num} shrink-0 text-[12px] font-bold text-ink`}>{pctText}</span>
         </div>
         <div className={cn(barTrack, "h-[5px]")}>
           <div className={barFill} style={barFillStyle(pct, pal)} />
         </div>
-        {extra ? <div className={cn(num, "mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-[550] text-ink2")}>{extra}</div> : null}
+        {compactExtra ? <div className={cn(num, "mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-[550] text-ink2")}>{compactExtra}</div> : null}
+        {compactSecondLine ? <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] leading-none text-ink3">{compactSecondLine}</div> : null}
+        {footerSub && !clock && !value ? <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] leading-none text-ink3">{footerSub}</div> : null}
       </div>
     );
   }
-  const largeClock = clock;
+
   return (
     <div className="min-w-0">
       <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
-        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
-        <span className={`${num} shrink-0 text-sm font-bold`}>{value || fmtPct(pct)}</span>
+        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{name}</span>
+        <span className={`${num} shrink-0 text-sm font-bold`}>{headerValue}</span>
       </div>
       <div className={barTrack}>
         <div className={barFill} style={barFillStyle(pct, pal)} />
       </div>
-      {largeClock ? (
-        <div className={cn(num, "mt-[5px] text-[12.5px] font-[550] text-ink2")}>
-          {t.resetIn} {largeClock}
+      {footerParts.length ? (
+        <div className="mt-[5px] flex flex-wrap gap-x-1.5 gap-y-0.5 text-[11.5px] leading-tight text-ink3">
+          {footerParts.map((part, i) => (
+            <span key={i} className={cn(i === 1 && footerClock ? "font-[550] text-ink2" : "", i === 1 && footerClock ? num : "")}>{part}{i < footerParts.length - 1 ? " ·" : ""}</span>
+          ))}
         </div>
-      ) : sub ? (
-        <div className="mt-[5px] text-[11.5px] text-ink3">{sub}</div>
       ) : null}
     </div>
   );
@@ -166,11 +189,14 @@ function creditsMetric(
   const bits: string[] = [];
   if (acc.used_cents != null) bits.push(`${t.used} ${fmtUsd(acc.used_cents)}`);
   if (acc.limit_cents != null) bits.push(`${t.cap} ${fmtUsd(acc.limit_cents)}`);
+  const hasLimits = bits.length > 0;
+  // Evita duplicar "restam $X" quando value já é "$X" e não há limites
+  const sub = hasLimits ? bits.join(" · ") : acc.percent == null && acc.remaining_cents != null ? null : acc.remaining_cents != null ? t.remainMoney + fmtUsd(acc.remaining_cents) : t.noCredits;
   return {
     label: t.credits,
     pct: acc.percent,
     value: acc.remaining_cents != null ? fmtUsd(acc.remaining_cents) : null,
-    sub: bits.length ? bits.join(" · ") : acc.remaining_cents != null ? t.remainMoney + fmtUsd(acc.remaining_cents) : t.noCredits,
+    sub,
   };
 }
 
@@ -194,7 +220,8 @@ function gptSessionMetric(g: GptAccount, t: T, nowMs: number): Metric {
     return {
       label: t.session5h,
       pct: g.session_percent,
-      sub: t.remainingPrefix + fmtRemain(g.session_percent) + (g.session_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.session_resets_at)}` : ""),
+      sub: t.remainingPrefix + fmtRemain(g.session_percent),
+      countdownAt: g.session_resets_at,
     };
   }
   const until = g.session_resets_at || g.weekly_resets_at;
@@ -204,6 +231,42 @@ function gptSessionMetric(g: GptAccount, t: T, nowMs: number): Metric {
 function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderMeta[] {
   const list: ProviderMeta[] = [];
   for (const c of data.claude || []) {
+    const metrics: Metric[] = [];
+    if (c.session_percent != null || c.session_resets_at) {
+      metrics.push({
+        label: t.session5h,
+        pct: c.session_percent,
+        sub: c.session_percent != null ? t.remainingPrefix + fmtRemain(c.session_percent) : null,
+        countdownAt: c.session_resets_at,
+      });
+    }
+    if (c.weekly_percent != null || c.weekly_resets_at) {
+      metrics.push({
+        label: t.weekLimit,
+        pct: c.weekly_percent,
+        sub: c.weekly_percent != null ? t.remainingPrefix + fmtRemain(c.weekly_percent) : null,
+        countdownAt: c.weekly_resets_at,
+      });
+    }
+    if (c.sonnet_percent != null) {
+      metrics.push({
+        label: t.sonnetWeek,
+        pct: c.sonnet_percent,
+        sub: t.remainingPrefix + fmtRemain(c.sonnet_percent),
+        countdownAt: c.sonnet_resets_at,
+      });
+    }
+    if (c.opus_percent != null) {
+      metrics.push({
+        label: t.opusWeek,
+        pct: c.opus_percent,
+        sub: t.remainingPrefix + fmtRemain(c.opus_percent),
+        countdownAt: c.opus_resets_at,
+      });
+    }
+    if (!metrics.length) {
+      metrics.push({ label: t.session5h, pct: null, sub: t.noData });
+    }
     list.push({
       id: `claude:${c.id}`,
       provider: "claude",
@@ -211,22 +274,19 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: c.error,
       title: "Claude",
       label: c.label || "",
-      metrics: [
-        {
-          label: t.session5h,
-          pct: c.session_percent,
-          sub: c.session_percent != null ? t.remainingPrefix + fmtRemain(c.session_percent) : null,
-          countdownAt: c.session_resets_at,
-        },
-        {
-          label: t.weekLimit,
-          pct: c.weekly_percent,
-          sub: c.weekly_percent != null ? t.remainingPrefix + fmtRemain(c.weekly_percent) + (c.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(c.weekly_resets_at)}` : "") : null,
-        },
-      ],
+      metrics,
     });
   }
   for (const g of data.gpt || []) {
+    const metrics: Metric[] = [gptSessionMetric(g, t, nowMs)];
+    if (g.weekly_percent != null || g.weekly_resets_at) {
+      metrics.push({
+        label: t.weekLimit,
+        pct: g.weekly_percent,
+        sub: g.weekly_percent != null ? t.remainingPrefix + fmtRemain(g.weekly_percent) : null,
+        countdownAt: g.weekly_resets_at,
+      });
+    }
     list.push({
       id: `gpt:${g.id}`,
       provider: "gpt",
@@ -234,20 +294,28 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: g.error,
       title: g.plan ? `GPT ${g.plan}` : "GPT",
       label: g.label || "",
-      metrics: [
-        gptSessionMetric(g, t, nowMs),
-        {
-          label: t.weekLimit,
-          pct: g.weekly_percent,
-          sub: g.weekly_percent != null ? t.remainingPrefix + fmtRemain(g.weekly_percent) + (g.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(g.weekly_resets_at)}` : "") : null,
-        },
-      ],
+      metrics,
     });
   }
   for (const c of data.cursor || []) {
-    let ondemand = "";
-    if (c.used_cents != null && c.limit_cents != null) ondemand = `${fmtUsd(c.used_cents)} / ${fmtUsd(c.limit_cents)}`;
-    if ((c.bonus_cents || 0) > 0) ondemand += (ondemand ? "  " : "") + t.bonusPrefix + fmtUsd(c.bonus_cents);
+    const ondemandBits: string[] = [];
+    if (c.used_cents != null && c.limit_cents != null) ondemandBits.push(`${fmtUsd(c.used_cents)} / ${fmtUsd(c.limit_cents)}`);
+    else if (c.used_cents != null) ondemandBits.push(`${t.used} ${fmtUsd(c.used_cents)}`);
+    else if (c.limit_cents != null) ondemandBits.push(`${t.cap} ${fmtUsd(c.limit_cents)}`);
+    if (c.remaining_cents != null) ondemandBits.push(`${t.left} ${fmtUsd(c.remaining_cents)}`);
+    if ((c.bonus_cents || 0) > 0) ondemandBits.push(`${t.bonusPrefix}${fmtUsd(c.bonus_cents)}`);
+    const ondemand = ondemandBits.join(" · ") || null;
+    const cursorMetrics: Metric[] = [];
+    if (c.percent != null || c.cycle_end) {
+      cursorMetrics.push({ label: t.cursorModels, pct: c.percent, sub: t.remainingPrefix + (c.percent != null ? fmtRemain(c.percent) : ""), countdownAt: c.cycle_end });
+    }
+    if (c.other_percent != null) {
+      cursorMetrics.push({ label: t.otherModels, pct: c.other_percent, sub: t.remainingPrefix + fmtRemain(c.other_percent) });
+    }
+    if (ondemand) {
+      cursorMetrics.push({ label: t.ondemand, pct: null, sub: ondemand });
+    }
+    if (!cursorMetrics.length) cursorMetrics.push({ label: t.cursorModels, pct: null, sub: t.noData });
     list.push({
       id: `cursor:${c.id}`,
       provider: "cursor",
@@ -255,10 +323,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: c.error,
       title: c.plan ? `Cursor ${c.plan}` : "Cursor",
       label: c.label || "",
-      metrics: [
-        { label: t.cursorModels, pct: c.percent, sub: c.cycle_end ? t.resetPrefix + fmtWhen(c.cycle_end) : null, countdownAt: c.cycle_end },
-        { label: t.otherModels, pct: c.other_percent, sub: ondemand || null },
-      ],
+      metrics: cursorMetrics,
     });
   }
   for (const o of data.openrouter || []) {
@@ -289,30 +354,35 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       metrics.push({
         label: t.rolling,
         pct: o.rolling_percent,
-        sub: t.remainingPrefix + fmtRemain(o.rolling_percent) + (o.rolling_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(o.rolling_resets_at)}` : ""),
+        sub: t.remainingPrefix + fmtRemain(o.rolling_percent),
+        countdownAt: o.rolling_resets_at,
       });
     }
     if (o.weekly_percent != null) {
       metrics.push({
         label: t.weekLimit,
         pct: o.weekly_percent,
-        sub: t.remainingPrefix + fmtRemain(o.weekly_percent) + (o.weekly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(o.weekly_resets_at)}` : ""),
+        sub: t.remainingPrefix + fmtRemain(o.weekly_percent),
+        countdownAt: o.weekly_resets_at,
       });
     }
     if (o.monthly_percent != null) {
       metrics.push({
         label: t.monthLimit,
         pct: o.monthly_percent,
-        sub: t.remainingPrefix + fmtRemain(o.monthly_percent) + (o.monthly_resets_at ? `  ·  ${t.resetPrefix}${fmtWhen(o.monthly_resets_at)}` : ""),
+        sub: t.remainingPrefix + fmtRemain(o.monthly_percent),
+        countdownAt: o.monthly_resets_at,
       });
     }
     if (o.remaining_cents != null) {
       metrics.push({
         label: t.accountCredits,
-        pct: null,
-        sub: t.remainMoney + fmtUsd(o.remaining_cents),
+        pct: o.percent,
+        value: fmtUsd(o.remaining_cents),
+        sub: o.limit_cents != null ? `${t.cap} ${fmtUsd(o.limit_cents)}` : t.remainMoney + fmtUsd(o.remaining_cents),
       });
     }
+    if (!metrics.length) metrics.push({ label: t.rolling, pct: null, sub: t.noData });
     list.push({
       id: `opencode:${o.id}`,
       provider: "opencode",
@@ -334,12 +404,77 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       metrics: [creditsMetric(t, f)],
     });
   }
+  // Weather widget — só aparece se habilitado e não oculto
+  const w = data.weather;
+  if (w) {
+    const locName = w.location?.name || "";
+    const hasData = w.ok && w.current;
+    const hasError = !w.ok && w.error;
+    // Se weather existe no payload, mostra o card (mesmo com erro, para feedback)
+    // O backend já filtra hidden/enabled; se chegou aqui, deve mostrar
+    const weatherOk = w.ok;
+    const weatherError = w.error || null;
+    // Só adiciona se tem localização configurada ou se tem erro para mostrar
+    if (locName || hasData || hasError) {
+      list.push({
+        id: "weather:main",
+        provider: "weather",
+        ok: weatherOk,
+        error: weatherError,
+        title: locName ? `${t.weather} · ${locName}` : t.weather,
+        label: w.timezone || "",
+        metrics: hasData
+          ? [
+            {
+              label: t.weatherTemp,
+              pct: null,
+              value: w.current?.temperature_2m != null ? `${Math.round(w.current.temperature_2m)}${w.current_units?.["temperature_2m"] || "°C"}` : "--",
+              sub: w.current?.weather_code != null ? wmoLabel(w.current.weather_code) : null,
+            },
+          ]
+          : [],
+        kind: "weather",
+        weather: w,
+        weatherConfig: null,
+      });
+    }
+  }
   return list;
 }
 
+function wmoLabel(code: number | null | undefined): string {
+  if (code == null) return "--";
+  const map: Record<number, string> = {
+    0: "Céu limpo", 1: "Predom. limpo", 2: "Parcial. nublado", 3: "Encoberto",
+    45: "Nevoeiro", 48: "Nevoeiro c/ geada",
+    51: "Chuvisco fraco", 53: "Chuvisco", 55: "Chuvisco forte",
+    61: "Chuva fraca", 63: "Chuva", 65: "Chuva forte",
+    71: "Neve fraca", 73: "Neve", 75: "Neve forte",
+    80: "Pancadas fracas", 81: "Pancadas", 82: "Pancadas fortes",
+    95: "Trovoada", 96: "Trovoada c/ granizo", 99: "Trovoada c/ granizo forte",
+  };
+  return map[code] || `Código ${code}`;
+}
+
+const CARD_ORDER: CardSize[] = ["sm", "md", "lg", "xl"];
+
+function nextSize(cur: CardSize): CardSize {
+  const idx = CARD_ORDER.indexOf(normalizeSize(cur));
+  return CARD_ORDER[(idx + 1) % CARD_ORDER.length];
+}
+
+function sizeLabel(size: CardSize, t: T): string {
+  const s = normalizeSize(size);
+  if (s === "sm") return t.cardSmall;
+  if (s === "md") return t.cardNormal;
+  if (s === "lg") return t.cardLarge;
+  return t.cardXl;
+}
+
 function SizeToggle({ size, t, onChange }: { size: CardSize; t: T; onChange: (next: CardSize) => void }) {
-  const next = size === "sm" ? "lg" : "sm";
-  const label = next === "lg" ? t.cardLarge : t.cardSmall;
+  const cur = normalizeSize(size);
+  const nxt = nextSize(cur);
+  const label = sizeLabel(nxt, t);
   return (
     <button
       type="button"
@@ -348,11 +483,18 @@ function SizeToggle({ size, t, onChange }: { size: CardSize; t: T; onChange: (ne
       aria-label={label}
       onClick={(e) => {
         e.stopPropagation();
-        onChange(next);
+        onChange(nxt);
       }}
     >
-      {size === "sm" ? (
+      {cur === "sm" ? (
         <span className="block size-[7px] rounded-[2px] border-[1.5px] border-current" />
+      ) : cur === "md" ? (
+        <span className="block size-[11px] rounded-[2px] border-[1.5px] border-current" />
+      ) : cur === "lg" ? (
+        <span className="flex size-[11px] gap-px">
+          <span className="flex-1 rounded-[1px] border-[1.4px] border-current" />
+          <span className="flex-1 rounded-[1px] border-[1.4px] border-current" />
+        </span>
       ) : (
         <span className="grid size-[11px] grid-cols-2 gap-px">
           <span className="rounded-[1px] border-[1.4px] border-current" />
@@ -362,6 +504,31 @@ function SizeToggle({ size, t, onChange }: { size: CardSize; t: T; onChange: (ne
         </span>
       )}
     </button>
+  );
+}
+
+function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void }) {
+  const sm = normalizeSize(size) === "sm";
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-3 pb-2.5 pt-2.5" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          <SizeToggle size={size} t={t} onChange={onSetSize} />
+        </div>
+      ) : null}
+      <WeatherBoardCard weather={p.weather} config={null} t={t} compact={sm} onOpen={onOpen} />
+    </div>
   );
 }
 
@@ -388,7 +555,11 @@ function ProviderCard({
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
 }) {
-  const sm = size === "sm";
+  // Weather tem seu próprio card
+  if (p.provider === "weather" || p.kind === "weather") {
+    return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} />;
+  }
+  const sm = normalizeSize(size) === "sm";
   return (
     <div
       className={cn(
@@ -402,24 +573,24 @@ function ProviderCard({
       )}
     >
       {!lifted ? (
-      <div
-        className={cn(
-          "absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip",
-          "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100",
-          "max-[860px]:pointer-events-auto max-[860px]:opacity-100",
-        )}
-      >
-        <button
-          type="button"
-          className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing"
-          aria-label={t.dragCard}
-          title={t.dragCard}
-          {...grip}
+        <div
+          className={cn(
+            "absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip",
+            "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100",
+            "max-[860px]:pointer-events-auto max-[860px]:opacity-100",
+          )}
         >
-          <GripIcon size={14} />
-        </button>
-        <SizeToggle size={size} t={t} onChange={onSetSize} />
-      </div>
+          <button
+            type="button"
+            className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing"
+            aria-label={t.dragCard}
+            title={t.dragCard}
+            {...grip}
+          >
+            <GripIcon size={14} />
+          </button>
+          <SizeToggle size={size} t={t} onChange={onSetSize} />
+        </div>
       ) : null}
       <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
         <div className="relative shrink-0">
@@ -435,16 +606,20 @@ function ProviderCard({
         type="button"
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink",
-          sm ? "justify-center gap-0" : p.metrics.length > 1 ? "justify-evenly" : "justify-center",
+          sm ? "justify-center gap-0" : normalizeSize(size) === "xl" ? "justify-evenly gap-1" : normalizeSize(size) === "lg" ? "justify-center gap-1" : p.metrics.length > 1 ? "justify-evenly" : "justify-center",
         )}
         onClick={onOpen}
       >
         {!p.ok ? (
           <div className={cn(errorText, sm && "text-[11px] leading-snug")}>{p.error || ""}</div>
         ) : (
-          (sm ? p.metrics.slice(0, 2) : p.metrics).map((m, i) => (
-            <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} t={t} />
-          ))
+          (() => {
+            const ns = normalizeSize(size);
+            const slice = sm ? 2 : ns === "lg" ? 2 : ns === "xl" ? 4 : p.metrics.length;
+            return p.metrics.slice(0, slice).map((m, i) => (
+              <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} t={t} />
+            ));
+          })()
         )}
       </button>
     </div>
@@ -473,7 +648,7 @@ function BoardTile({
   nowMs,
   col,
   row,
-  span,
+  rect,
   onOpen,
   onSetSize,
 }: {
@@ -484,7 +659,7 @@ function BoardTile({
   nowMs: number;
   col: number;
   row: number;
-  span: number;
+  rect: { w: number; h: number };
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
 }) {
@@ -496,7 +671,7 @@ function BoardTile({
         setDragRef(node);
         setDropRef(node);
       }}
-      style={{ gridColumn: `${col + 1} / span ${span}`, gridRow: `${row + 1} / span ${span}`, zIndex: isDragging ? 2 : 1 }}
+      style={{ gridColumn: `${col + 1} / span ${rect.w}`, gridRow: `${row + 1} / span ${rect.h}`, zIndex: isDragging ? 2 : 1 }}
       className="min-h-0 min-w-0 h-full"
     >
       <ProviderCard
@@ -634,7 +809,7 @@ function Overview({
   const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
   const active = activeId ? byId.get(activeId) : null;
-  const activeSize: CardSize = activeId && layout.size[activeId] === "sm" ? "sm" : "lg";
+  const activeSize: CardSize = activeId ? normalizeSize(layout.size[activeId]) : "md";
 
   useEffect(() => {
     const el = gridRef.current;
@@ -745,7 +920,7 @@ function Overview({
               const p = byId.get(id);
               const pos = layout.pos[id];
               if (!p || !pos) return null;
-              const size = layout.size[id] === "sm" ? "sm" : "lg";
+              const size = normalizeSize(layout.size[id]);
               return (
                 <BoardTile
                   key={id}
@@ -756,7 +931,7 @@ function Overview({
                   nowMs={now}
                   col={pos.c}
                   row={pos.r}
-                  span={spanFor(size, cols)}
+                  rect={rectFor(size, cols)}
                   onOpen={() => onOpen(id)}
                   onSetSize={(next) => onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols))}
                 />
@@ -767,9 +942,9 @@ function Overview({
             {active ? (
               <div
                 className="pointer-events-none cursor-grabbing"
-                style={{ width: liftSize?.w || (activeSize === "sm" ? cellPx : cellPx * 2 + CELL_GAP), height: liftSize?.h || (activeSize === "sm" ? rowPx : rowPx * 2 + CELL_GAP) }}
+                style={(() => { const r = rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * rowPx + (r.h - 1) * CELL_GAP) }; })()}
               >
-                <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => {}} onSetSize={() => {}} />
+                <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => { }} onSetSize={() => { }} />
               </div>
             ) : null}
           </DragOverlay>
@@ -1046,7 +1221,29 @@ function FalBody({ data, account, t, pal }: { data: UsagePayload; account: Credi
   );
 }
 
+function WeatherAccountPage({ data, t }: { data: UsagePayload; t: T }) {
+  const w = data.weather;
+  // Busca config do weather via payload (location/units) — se não tiver, usa defaults
+  const cfg: WeatherConfig | null = w?.location ? { enabled: true, hidden: false, location: w.location as WeatherConfig["location"], units: (w.units as WeatherConfig["units"]) || { temperature_unit: "celsius", wind_speed_unit: "kmh", precipitation_unit: "mm" }, forecast_days: 7, past_days: 0, timezone: w.timezone || "auto", current: [], hourly: [], daily: [], display: { show_current: true, show_hourly: true, show_daily: true, hourly_count: 12, daily_count: 7, fields: { temperature: true, feels_like: true, humidity: true, precipitation: true, wind: true, pressure: true, cloud_cover: true, uv_index: true, sunrise_sunset: true } } } : null;
+  return (
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="text-[28px] leading-none">🌤️</span>
+        <div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.weather}</div>
+          {w?.location?.name ? <div className={cardLabel}>{w.location.name}{w.location.country ? `, ${w.location.country}` : ""}</div> : null}
+        </div>
+      </div>
+      <WeatherDetail weather={w} config={cfg} t={t} />
+    </div>
+  );
+}
+
 function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
+  // Weather tem página própria
+  if (meta.provider === "weather" || meta.kind === "weather") {
+    return <WeatherAccountPage data={data} t={t} />;
+  }
   let body: ReactNode = null;
   if (meta.ok && account) {
     if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} nowMs={nowMs} />;
@@ -1265,7 +1462,7 @@ export default function Display() {
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null = null;
   if (data && section === "account") {
     meta = providers.find((p) => p.id === selectedId) || null;
-    if (meta) {
+    if (meta && meta.provider !== "weather" && meta.kind !== "weather") {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
       const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal";

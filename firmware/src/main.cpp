@@ -28,7 +28,8 @@ uint32_t g_pollMs = USAGE_POLL_MS;
 bool g_hasFetchedOk = false;
 uint32_t g_lastFetchOkMs = 0;
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
   delay(200);
 
@@ -54,7 +55,8 @@ void setup() {
   uiPaint();
 }
 
-void loop() {
+void loop()
+{
   inputPoll();
   uiTickClock();
   uiTickEye();
@@ -62,14 +64,19 @@ void loop() {
 
   usageClientEnsureWifi();
   uint32_t now = millis();
-  if (WiFi.status() == WL_CONNECTED) {
-    if (g_requestRefresh) {
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    if (g_requestRefresh)
+    {
       Serial.println("refresh pedido (tela/serial r)");
       g_requestRefresh = false;
       usageClientFetch();
     }
     usageClientPoll();
-  } else if (now - g_lastFetchMs > 5000) {
+    themeClientPollSlideshow();
+  }
+  else if (now - g_lastFetchMs > 5000)
+  {
     Serial.printf("aguardando Wi-Fi (status=%d)\n", (int)WiFi.status());
     g_lastFetchMs = now;
     g_snap.statusLine = "Wi-Fi";
