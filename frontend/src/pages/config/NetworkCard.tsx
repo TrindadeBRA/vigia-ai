@@ -34,7 +34,7 @@ export function NetworkCard({ cfg, c, onReload }: { cfg: ConfigPublic; c: Config
   return (
     <form onSubmit={onSubmit}>
       <Card title={c.netTitle} lead={c.netLead}>
-        <div className="cfg-grid-2">
+        <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-2">
           <TextField label={c.netPort} type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} />
           <TextField label={c.netHost} value={host} onChange={(e) => setHost(e.target.value)} hint={c.netHostHint} />
         </div>
@@ -43,8 +43,8 @@ export function NetworkCard({ cfg, c, onReload }: { cfg: ConfigPublic; c: Config
           {save.busy ? c.saving : c.save}
         </Button>
         <FieldStatus status={save.status} message={save.message} />
-        <p className="cfg-docs">
-          <a href="/docs" target="_blank" rel="noreferrer">
+        <p className="mb-0 mt-1 text-[12.5px]">
+          <a className="text-accent" href="/docs" target="_blank" rel="noreferrer">
             {c.netDocs} ↗
           </a>
         </p>

@@ -3,6 +3,8 @@ import { fetchUsage } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { useRequest } from "../../hooks/useRequest";
 import type { ConfigCopy } from "./copy";
+import { cn } from "../../cn";
+import { cfgStatus } from "../../tw";
 import { Button, Card } from "./ui";
 
 const NAMES = ["claude", "gpt", "cursor", "openrouter", "deepseek"] as const;
@@ -40,24 +42,30 @@ export function UsageCheck({ c }: { c: ConfigCopy }) {
         </Button>
       }
     >
-      {req.status === "error" && req.message ? <p className="cfg-status err">{req.message}</p> : null}
+      {req.status === "error" && req.message ? <p className={`${cfgStatus} text-bad`}>{req.message}</p> : null}
       {test ? (
-        <div className="cfg-usage-grid">
+        <div className="flex flex-wrap gap-2">
           {NAMES.map((name) => {
             const list = test[name] || [];
             const title = titleOf(name);
             if (!list.length) {
               return (
-                <div key={name} className="cfg-usage-cell muted">
-                  <p className="cfg-usage-name">{title}</p>
-                  <p className="cfg-usage-val">{c.checkHidden}</p>
+                <div key={name} className="flex-[1_1_140px] rounded-xl border border-edge bg-canvas px-3 py-2.5 opacity-70">
+                  <p className="m-0 text-[13px] font-[650]">{title}</p>
+                  <p className="mb-0 mt-1 text-xs text-ink2">{c.checkHidden}</p>
                 </div>
               );
             }
             return list.map((b) => (
-              <div key={`${name}-${b.id}`} className={`cfg-usage-cell ${b.ok ? "ok" : "bad"}`}>
-                <p className="cfg-usage-name">{b.label ? `${title} · ${b.label}` : title}</p>
-                <p className="cfg-usage-val">
+              <div
+                key={`${name}-${b.id}`}
+                className={cn(
+                  "flex-[1_1_140px] rounded-xl border bg-canvas px-3 py-2.5",
+                  b.ok ? "border-[color-mix(in_srgb,var(--good)_40%,var(--card-border))]" : "border-[color-mix(in_srgb,var(--bad)_40%,var(--card-border))]",
+                )}
+              >
+                <p className="m-0 text-[13px] font-[650]">{b.label ? `${title} · ${b.label}` : title}</p>
+                <p className={cn("mb-0 mt-1 text-xs", b.ok ? "text-good" : "text-bad")}>
                   {b.ok
                     ? name === "claude" || name === "gpt"
                       ? `${(b as { session_percent?: number }).session_percent ?? "—"}%`

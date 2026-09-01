@@ -9,7 +9,6 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
 
   return (
     <Card
-      className="cfg-board"
       title={c.boardTitle}
       lead={c.boardLead}
       action={
@@ -35,11 +34,11 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
         </Button>
       }
     >
-      {!cfg.urls.board_ok ? <p className="cfg-warn">{c.boardNoIp}</p> : null}
-      <div className="cfg-url-row">
-        <div className="cfg-url">
-          <span className="cfg-field-label">{c.boardUrlLabel}</span>
-          <code>{cfg.urls.usage_lan}</code>
+      {!cfg.urls.board_ok ? <p className="m-0 text-[12.5px] leading-normal text-warn">{c.boardNoIp}</p> : null}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="m-0 flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-[11.5px] font-[650] uppercase tracking-[.4px] text-ink3">{c.boardUrlLabel}</span>
+          <code className="break-all text-[12.5px] text-accent">{cfg.urls.usage_lan}</code>
         </div>
         <Button
           variant="ghost"

@@ -4,10 +4,11 @@ import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
 import { Logo } from "../components/Logo";
 import { CheckIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
-import "../display.css";
+import { cn } from "../cn";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
+import { accentLink, barFill, barTrack, cardLabel, cfgGrid, cfgSkel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, num, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { ConfigOutlet } from "./config/ConfigPage";
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang };
@@ -46,17 +47,22 @@ function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
 function Badge({ secs, total, showCheck, pal, onClick }: { secs: number; total: number; showCheck: boolean; pal: Pal; onClick?: () => void }) {
   const pct = showCheck ? 100 : clamp(((total - secs) / total) * 100, 0, 100);
   const ringColor = showCheck ? pal.good : "var(--accent)";
-  const inner = <div className="badge-inner">{showCheck ? <CheckIcon size={12} /> : <span className="num">{Math.min(99, secs)}</span>}</div>;
+  const inner = (
+    <div className="flex size-full items-center justify-center rounded-full bg-canvas text-[10px] font-bold text-ink">
+      {showCheck ? <CheckIcon size={12} /> : <span className={num}>{Math.min(99, secs)}</span>}
+    </div>
+  );
   const style = { background: `conic-gradient(${ringColor} ${pct}%, var(--track) 0)` };
+  const ring = "ml-0.5 size-[26px] shrink-0 rounded-full p-[3px]";
   if (onClick) {
     return (
-      <button className="badge-ring" style={style} onClick={onClick} title="Atualizar agora" aria-label="Atualizar agora">
+      <button className={`${ring} cursor-pointer border-0 bg-clip-padding transition-transform duration-100 hover:scale-110 active:scale-95`} style={style} onClick={onClick} title="Atualizar agora" aria-label="Atualizar agora">
         {inner}
       </button>
     );
   }
   return (
-    <div className="badge-ring" style={style}>
+    <div className={ring} style={style}>
       {inner}
     </div>
   );
@@ -70,32 +76,32 @@ function barFillStyle(pct: number, pal: Pal) {
 function MetricRow({ label, pct, sub, pal }: Metric & { pal: Pal }) {
   if (pct == null) {
     return (
-      <div className="metric">
-        <div className="metric-top">
-          <span className="label">{label}</span>
+      <div className="mt-3 first:mt-0">
+        <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
+          <span className="text-ink2">{label}</span>
         </div>
-        <div className="metric-plain num">{sub || "--"}</div>
+        <div className={`${num} text-[15px] font-bold`}>{sub || "--"}</div>
       </div>
     );
   }
   return (
-    <div className="metric">
-      <div className="metric-top">
-        <span className="label">{label}</span>
-        <span className="val num">{fmtPct(pct)}</span>
+    <div className="mt-3 first:mt-0">
+      <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
+        <span className="text-ink2">{label}</span>
+        <span className={`${num} text-sm font-bold`}>{fmtPct(pct)}</span>
       </div>
-      <div className="bar-track">
-        <div className="bar-fill" style={barFillStyle(pct, pal)} />
+      <div className={barTrack}>
+        <div className={barFill} style={barFillStyle(pct, pal)} />
       </div>
-      {sub ? <div className="metric-sub">{sub}</div> : null}
+      {sub ? <div className="mt-[5px] text-[11.5px] text-ink3">{sub}</div> : null}
     </div>
   );
 }
 
-function Icon({ id }: { id: string }) {
+function Icon({ id, large }: { id: string; large?: boolean }) {
   return (
-    <div className="icon-chip">
-      <img className="icon-img" src={PROVIDER_ICON[id]} alt={id} draggable={false} />
+    <div className={large ? "flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]" : iconChip}>
+      <img className={large ? "size-[23px] object-contain" : iconImg} src={PROVIDER_ICON[id]} alt={id} draggable={false} />
     </div>
   );
 }
@@ -252,19 +258,27 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
 
 function ProviderCard({ p, pal, onOpen }: { p: ProviderMeta; pal: Pal; onOpen: () => void }) {
   return (
-    <div className="card view-fade" onClick={onOpen}>
-      <div className="card-head">
+    <div
+      className={cn(
+        "flex flex-[1_1_280px] cursor-pointer flex-col rounded-2xl border border-edge bg-panel p-4 shadow-card transition-[transform,box-shadow,border-color] duration-150",
+        "hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover active:translate-y-0",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0",
+        viewFade,
+      )}
+      onClick={onOpen}
+    >
+      <div className="mb-3.5 flex items-center gap-[11px]">
         <Icon id={p.provider} />
-        <div className="card-title-wrap">
-          <div className="card-title">
-            <span className="txt">{p.title}</span>
-            <span className={`status-dot ${p.ok ? "ok" : "bad"}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-[7px] text-[14.5px] font-[650]">
+            <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{p.title}</span>
+            <span className={cn("size-1.5 shrink-0 rounded-full", p.ok ? "bg-good" : "bg-bad")} />
           </div>
-          {p.label ? <div className="card-label">{p.label}</div> : null}
+          {p.label ? <div className={cardLabel}>{p.label}</div> : null}
         </div>
       </div>
-      <div className="card-metrics">
-        {!p.ok ? <div className="error-text">{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} />)}
+      <div className="flex flex-1 flex-col justify-center">
+        {!p.ok ? <div className={errorText}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} />)}
       </div>
     </div>
   );
@@ -285,40 +299,46 @@ function Sidebar(props: {
 }) {
   const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, t } = props;
   return (
-    <nav className={`sidebar${open ? " open" : ""}`}>
-      <button className={`side-item${section === "overview" && !nowActive && !configActive ? " active" : ""}`} onClick={() => { onOverview(); onClose(); }}>
+    <nav
+      className={cn(
+        "flex w-[264px] shrink-0 flex-col gap-px overflow-y-auto border-r border-edge px-2 pb-4 pt-3",
+        "max-[860px]:fixed max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:top-14 max-[860px]:z-30 max-[860px]:w-[82vw] max-[860px]:max-w-[320px] max-[860px]:-translate-x-full max-[860px]:bg-canvas max-[860px]:transition-transform max-[860px]:duration-200",
+        open && "max-[860px]:translate-x-0",
+      )}
+    >
+      <button className={cn(sideItem, section === "overview" && !nowActive && !configActive && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
         <GridIcon size={16} /> {t.overview}
       </button>
-      <button className={`side-item${nowActive ? " active" : ""}`} onClick={() => { onNow(); onClose(); }}>
+      <button className={cn(sideItem, nowActive && sideItemActive)} onClick={() => { onNow(); onClose(); }}>
         <ClockIcon size={16} /> {t.now}
       </button>
-      <div className="side-section-title">{t.accounts}</div>
+      <div className="mb-[5px] ml-[9px] mr-[9px] mt-4 text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3">{t.accounts}</div>
       {providers.length === 0 ? (
-        <div className="side-empty">
+        <div className="px-[9px] py-1.5 text-[12.5px] text-ink3">
           {t.noProviders}{" "}
-          <NavLink to="/display/config" className="side-inline-link" onClick={onClose}>
+          <NavLink to="/display/config" className={accentLink} onClick={onClose}>
             {t.configCta}
           </NavLink>
         </div>
       ) : (
         providers.map((p) => (
-          <button key={p.id} className={`side-item${section === "account" && selectedId === p.id && !configActive ? " active" : ""}`} onClick={() => { onSelect(p.id); onClose(); }}>
-            <div className="icon-chip side-account-icon">
-              <img src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
+          <button key={p.id} className={cn(sideItem, section === "account" && selectedId === p.id && !configActive && sideItemActive)} onClick={() => { onSelect(p.id); onClose(); }}>
+            <div className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
+              <img className="size-[13px] object-contain" src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
             </div>
-            <div className="side-account-text">
-              <div className="side-account-name">{p.title}</div>
-              {p.label ? <div className="side-account-label">{p.label}</div> : null}
+            <div className="min-w-0 flex-1">
+              <div className="overflow-hidden text-ellipsis whitespace-nowrap font-semibold">{p.title}</div>
+              {p.label ? <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{p.label}</div> : null}
             </div>
-            <span className={`side-dot ${p.ok ? "ok" : "bad"}`} />
+            <span className={cn("size-1.5 shrink-0 rounded-full", p.ok ? "bg-good" : "bg-bad")} />
           </button>
         ))
       )}
-      <div className="side-section-title">{t.setup}</div>
-      <NavLink to="/display/config" className={({ isActive }) => `side-item${isActive ? " active" : ""}`} onClick={onClose}>
+      <div className="mb-[5px] ml-[9px] mr-[9px] mt-4 text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3">{t.setup}</div>
+      <NavLink to="/display/config" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
         <SlidersIcon size={16} /> {t.config}
       </NavLink>
-      <a className="side-item side-footer" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
+      <a className={sideItem} href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
         <GitHubIcon size={16} /> GitHub
       </a>
     </nav>
@@ -331,23 +351,23 @@ function Overview({ providers, updatedAt, now, t, pal, onOpen }: { providers: Pr
   const agoS = age == null ? null : Math.max(0, Math.round(age / 1000));
   return (
     <>
-      <div className="overview-head">
-        <h1>{t.overview}</h1>
-        <div className="overview-stat">
-          <span className={`who-dot ${failing ? "bad" : "ok"}`} />
+      <div className="mb-[18px] flex w-full flex-wrap items-end justify-between gap-3">
+        <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px] max-[860px]:text-[19px]">{t.overview}</h1>
+        <div className="flex items-center gap-2 text-[12.5px] text-ink2">
+          <span className={cn("size-[7px] shrink-0 rounded-full", failing ? "bg-bad shadow-[0_0_5px_var(--bad)]" : "bg-good shadow-[0_0_5px_var(--good)]", "[.flat_&]:shadow-none")} />
           <span>{failing ? t.errorsCount(failing) : t.allOk}</span>
-          <span className="num">{agoS != null ? `· ${agoS < 3 ? t.agoNow : t.agoSecs(agoS)}` : ""}</span>
+          <span className={num}>{agoS != null ? `· ${agoS < 3 ? t.agoNow : t.agoSecs(agoS)}` : ""}</span>
         </div>
       </div>
       {providers.length === 0 ? (
-        <div className="empty-note">
+        <div className={emptyNote}>
           {t.noProviders}{" "}
-          <Link to="/display/config" className="empty-link">
+          <Link to="/display/config" className={accentLink}>
             {t.configCta}
           </Link>
         </div>
       ) : (
-        <div className="overview-grid">
+        <div className="flex w-full flex-wrap items-stretch gap-[14px]">
           {providers.map((p) => (
             <ProviderCard key={p.id} p={p} pal={pal} onOpen={() => onOpen(p.id)} />
           ))}
@@ -360,30 +380,30 @@ function Overview({ providers, updatedAt, now, t, pal, onOpen }: { providers: Pr
 function NowRow({ p, pal }: { p: ProviderMeta; pal: Pal }) {
   const half = p.metrics.length === 1;
   return (
-    <div className={`now-row${half ? " half" : ""}`}>
-      <div className="now-row-head">
+    <div className={cn("min-w-0 flex-[1_1_100%] rounded-[13px] border border-edge bg-panel px-3.5 py-3 shadow-now [.flat_&]:shadow-none", half && "basis-[calc(50%-4.5px)]")}>
+      <div className="mb-2.5 flex items-center gap-[9px]">
         <Icon id={p.provider} />
-        <div className="now-row-title-wrap">
-          <div className="now-row-title">{p.title}</div>
-          {p.label ? <div className="card-label">{p.label}</div> : null}
+        <div className="min-w-0 flex-1">
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">{p.title}</div>
+          {p.label ? <div className={cardLabel}>{p.label}</div> : null}
         </div>
       </div>
       {!p.ok ? (
-        <div className="error-text">{p.error || ""}</div>
+        <div className={errorText}>{p.error || ""}</div>
       ) : (
-        <div className="now-row-metrics">
+        <div className="flex gap-[18px]">
           {p.metrics.map((m, i) => (
-            <div key={i} className="now-metric">
-              <div className="now-metric-top">
-                <span className="label">{m.label}</span>
-                {m.pct != null ? <span className="val num">{fmtPct(m.pct)}</span> : null}
+            <div key={i} className="min-w-0 flex-1">
+              <div className="mb-[5px] flex justify-between text-xs">
+                <span className="text-ink2">{m.label}</span>
+                {m.pct != null ? <span className={`${num} font-bold`}>{fmtPct(m.pct)}</span> : null}
               </div>
               {m.pct != null ? (
-                <div className="bar-track">
-                  <div className="bar-fill" style={barFillStyle(m.pct, pal)} />
+                <div className={barTrack}>
+                  <div className={barFill} style={barFillStyle(m.pct, pal)} />
                 </div>
               ) : (
-                <div className="now-metric-plain num">{m.sub || "--"}</div>
+                <div className={`${num} text-[13.5px] font-bold`}>{m.sub || "--"}</div>
               )}
             </div>
           ))}
@@ -401,14 +421,14 @@ function NowView({ data, prefs, t, pal, nowMs, driftMs, secs, pollS, showCheck, 
   const dateStr = `${weekday}  ${pad2(clockNow.getDate())}/${pad2(clockNow.getMonth() + 1)}/${clockNow.getFullYear()}`;
   const providers = buildProviders(data, t, nowMs);
   return (
-    <div className="now-view" onClick={onClose}>
-      <div className="now-badge">
+    <div className="relative flex min-h-screen w-full cursor-pointer flex-col items-center justify-center bg-[radial-gradient(900px_420px_at_50%_30%,var(--glow),transparent_65%),var(--bg)] px-3.5 py-7" onClick={onClose}>
+      <div className="absolute right-3.5 top-3.5">
         <Badge secs={secs} total={pollS} showCheck={showCheck} pal={pal} />
       </div>
-      <div className="now-clock">{timeStr}</div>
-      <div className="now-date">{dateStr}</div>
-      <div className="now-rows">
-        {providers.length === 0 ? <div className="empty-note">{t.noProviders}</div> : providers.map((p) => <NowRow key={p.id} p={p} pal={pal} />)}
+      <div className={`${num} text-[clamp(42px,12vw,66px)] font-[620] tracking-[-1px] [text-shadow:0_0_40px_var(--glow)] [.flat_&]:[text-shadow:none]`}>{timeStr}</div>
+      <div className="mb-[26px] mt-1.5 text-sm capitalize tracking-[.2px] text-ink2">{dateStr}</div>
+      <div className="flex w-full max-w-[480px] flex-wrap gap-[9px]">
+        {providers.length === 0 ? <div className={emptyNote}>{t.noProviders}</div> : providers.map((p) => <NowRow key={p.id} p={p} pal={pal} />)}
       </div>
     </div>
   );
@@ -428,11 +448,11 @@ function MetaChips({ items }: { items: { k: string; v: ReactNode }[] }) {
   const shown = items.filter((i) => i.v !== null && i.v !== undefined && i.v !== "");
   if (!shown.length) return null;
   return (
-    <div className="account-meta">
+    <div className="grid w-full overflow-hidden rounded-2xl border border-edge bg-edge [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))] gap-px">
       {shown.map((i) => (
-        <div className="meta-chip" key={i.k}>
-          <span className="k">{i.k}</span>
-          <span className="v num">{i.v}</span>
+        <div className="flex min-w-0 flex-col gap-1 bg-panel px-4 py-3" key={i.k}>
+          <span className="text-[11px] font-[650] uppercase tracking-[.45px] text-ink3">{i.k}</span>
+          <span className={`${num} overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-[650]`}>{i.v}</span>
         </div>
       ))}
     </div>
@@ -456,34 +476,34 @@ function MetricCard({
 }) {
   const display = value ?? (pct != null ? fmtPct(pct) : null);
   return (
-    <div className="metric-card">
-      <div className="detail-bar-top">
-        <span className="label">{label}</span>
-        {display ? <span className="val num">{display}</span> : null}
+    <div className={metricCard}>
+      <div className="mb-2.5 flex items-baseline justify-between gap-3 text-[13.5px]">
+        <span className="text-ink2">{label}</span>
+        {display ? <span className={`${num} text-[22px] font-[750]`}>{display}</span> : null}
       </div>
       {pct != null ? (
-        <div className="bar-track">
-          <div className="bar-fill" style={barFillStyle(pct, pal)} />
+        <div className={`${barTrack} h-[9px]`}>
+          <div className={barFill} style={barFillStyle(pct, pal)} />
         </div>
       ) : !display && sub ? (
-        <div className="detail-plain-val num">{sub}</div>
+        <div className={`${num} mt-0.5 text-[22px] font-[750]`}>{sub}</div>
       ) : null}
-      {sub && (pct != null || display) ? <div className="metric-sub">{sub}</div> : null}
+      {sub && (pct != null || display) ? <div className="mt-2.5 text-[12.5px] text-ink3">{sub}</div> : null}
       {children}
     </div>
   );
 }
 
 function MetricsGrid({ children }: { children: ReactNode }) {
-  return <div className="account-metrics">{children}</div>;
+  return <div className="flex w-full flex-wrap items-stretch gap-[14px] [&>*]:flex-[1_1_260px]">{children}</div>;
 }
 
 function Kv({ k, v }: { k: string; v: ReactNode }) {
   if (v === null || v === undefined || v === "") return null;
   return (
-    <div className="kv">
-      <span className="k">{k}</span>
-      <span className="v num">{v}</span>
+    <div className="flex justify-between gap-3 border-b border-surface py-2 text-sm last:border-b-0">
+      <span className="text-ink3">{k}</span>
+      <span className={`${num} text-right font-[550] text-ink`}>{v}</span>
     </div>
   );
 }
@@ -544,8 +564,8 @@ function CursorBody({ data, account, t, pal }: { data: UsagePayload; account: Cu
         />
       </MetricsGrid>
       {hasLegacy ? (
-        <div className="account-extra metric-card">
-          <div className="note">{t.requestsLegacy}</div>
+        <div className={`${metricCard} w-full`}>
+          <div className="mb-1.5 text-[12.5px] tracking-[.1px] text-ink3">{t.requestsLegacy}</div>
           <Kv k={t.usedCount} v={String(c.requests_used)} />
           <Kv k={t.limit} v={String(c.requests_limit)} />
         </div>
@@ -563,7 +583,7 @@ function OpenRouterBody({ data, account, t, pal }: { data: UsagePayload; account
   ) || (o.remaining_cents != null ? t.remainMoney + fmtUsd(o.remaining_cents) : t.noCredits);
   return (
     <>
-      <div className="account-note">{t.allKeysNote}</div>
+      <div className="px-0.5 text-[12.5px] tracking-[.1px] text-ink3">{t.allKeysNote}</div>
       <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
       <MetricsGrid>
         <MetricCard label={t.credits} pct={o.percent} pal={pal} sub={sub} />
@@ -626,15 +646,15 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "fal") body = <FalBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
   }
   return (
-    <div className="account-page view-fade">
-      <div className="account-header">
-        <Icon id={meta.provider} />
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <Icon id={meta.provider} large />
         <div>
-          <div className="account-title">{meta.title}</div>
-          {meta.label ? <div className="card-label">{meta.label}</div> : null}
+          <div className="text-[19px] font-[750] tracking-[-.1px]">{meta.title}</div>
+          {meta.label ? <div className={cardLabel}>{meta.label}</div> : null}
         </div>
       </div>
-      <div className="account-content">{!meta.ok ? <div className="metric-card"><div className="error-text">{meta.error || t.noData}</div></div> : body}</div>
+      <div className="flex w-full flex-col gap-[14px]">{!meta.ok ? <div className={metricCard}><div className={errorText}>{meta.error || t.noData}</div></div> : body}</div>
     </div>
   );
 }
@@ -643,43 +663,66 @@ function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetch
   const accents = ACCENTS[prefs.theme];
   return (
     <>
-      <div className="settings-scrim" onClick={onClose} />
-      <div className="settings-drawer">
-        <div className="settings-head">
-          <h2>{t.settings}</h2>
-          <button className="icon-btn" onClick={onClose} title={t.closeSettings}>
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      <div className="fixed bottom-0 right-0 top-0 z-[41] w-[340px] max-w-[88vw] animate-slide-in overflow-y-auto border-l border-edge bg-panel px-[18px] pb-6 pt-4 shadow-drawer [.flat_&]:shadow-none">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="m-0 text-base font-[750]">{t.settings}</h2>
+          <button className={iconBtn} onClick={onClose} title={t.closeSettings}>
             <CloseIcon size={18} />
           </button>
         </div>
         <Kv k={t.updated} v={data ? fmtWhen(data.updated_at) : "—"} />
-        <div className="section-title">{t.themeSection}</div>
-        <div className="segmented">
+        <div className="mb-[9px] mt-5 text-[11.5px] font-[650] uppercase tracking-[.6px] text-ink3">{t.themeSection}</div>
+        <div className="flex gap-[3px] rounded-xl border border-edge bg-chip p-[3px]">
           {(["dark", "light", "contrast"] as ThemeName[]).map((k) => (
-            <button key={k} className={prefs.theme === k ? "active" : ""} onClick={() => setPrefs((p) => ({ ...p, theme: k }))}>
+            <button
+              key={k}
+              className={cn(
+                "flex-1 cursor-pointer rounded-[9px] border-0 bg-transparent px-1.5 py-[9px] text-[13px] font-semibold text-ink2 transition-[background-color,color,box-shadow] duration-150 hover:text-ink",
+                prefs.theme === k && "bg-panel text-accent shadow-seg [.flat_&]:shadow-[inset_0_0_0_1.5px_var(--accent)]",
+              )}
+              onClick={() => setPrefs((p) => ({ ...p, theme: k }))}
+            >
               {t[k]}
             </button>
           ))}
         </div>
-        <div className="section-title">{t.accentSection}</div>
-        <div className="swatch-row">
+        <div className="mb-[9px] mt-5 text-[11.5px] font-[650] uppercase tracking-[.6px] text-ink3">{t.accentSection}</div>
+        <div className="flex flex-wrap gap-[9px]">
           {accents.map((c, i) => (
-            <button key={i} className={`swatch${prefs.accent === i ? " active" : ""}`} aria-label={`${t.accentSection} ${i + 1}`} style={{ background: c }} onClick={() => setPrefs((p) => ({ ...p, accent: i }))}>
+            <button
+              key={i}
+              className={cn(
+                "flex size-8 cursor-pointer items-center justify-center rounded-[10px] border-2 border-transparent p-0 transition-[transform,border-color] duration-150 hover:-translate-y-px",
+                prefs.accent === i && "border-ink",
+              )}
+              aria-label={`${t.accentSection} ${i + 1}`}
+              style={{ background: c }}
+              onClick={() => setPrefs((p) => ({ ...p, accent: i }))}
+            >
               {prefs.accent === i ? <CheckIcon size={14} stroke={inverseOn(c)} /> : null}
             </button>
           ))}
         </div>
-        <div className="section-title">{t.langSection}</div>
-        <div className="segmented">
+        <div className="mb-[9px] mt-5 text-[11.5px] font-[650] uppercase tracking-[.6px] text-ink3">{t.langSection}</div>
+        <div className="flex gap-[3px] rounded-xl border border-edge bg-chip p-[3px]">
           {([["pt", "PT"], ["en", "EN"], ["es", "ES"]] as const).map(([k, label]) => (
-            <button key={k} className={prefs.lang === k ? "active" : ""} onClick={() => setPrefs((p) => ({ ...p, lang: k }))}>
+            <button
+              key={k}
+              className={cn(
+                "flex-1 cursor-pointer rounded-[9px] border-0 bg-transparent px-1.5 py-[9px] text-[13px] font-semibold text-ink2 transition-[background-color,color,box-shadow] duration-150 hover:text-ink",
+                prefs.lang === k && "bg-panel text-accent shadow-seg [.flat_&]:shadow-[inset_0_0_0_1.5px_var(--accent)]",
+              )}
+              onClick={() => setPrefs((p) => ({ ...p, lang: k }))}
+            >
               {label}
             </button>
           ))}
         </div>
-        <div className="section-title">{t.refreshSection}</div>
-        <button className="btn-primary" onClick={onRefresh}>{refreshing ? "…" : t.refreshNow}</button>
-        <div className="status-note">{t.autoNote()}</div>
-        {fetchFailed ? <div className="fetch-fail-note">{t.fetchFail}</div> : null}
+        <div className="mb-[9px] mt-5 text-[11.5px] font-[650] uppercase tracking-[.6px] text-ink3">{t.refreshSection}</div>
+        <button className="w-full cursor-pointer rounded-xl border-0 bg-accent p-[13px] text-[14.5px] font-bold text-accent-ink shadow-btn transition-[transform,box-shadow,opacity] duration-100 hover:-translate-y-px active:translate-y-0 active:opacity-90 [.flat_&]:shadow-none" onClick={onRefresh}>{refreshing ? "…" : t.refreshNow}</button>
+        <div className="mt-3 text-xs leading-[1.55] text-ink3">{t.autoNote()}</div>
+        {fetchFailed ? <div className="mt-1.5 text-xs text-bad">{t.fetchFail}</div> : null}
       </div>
     </>
   );
@@ -711,7 +754,7 @@ export default function Display() {
   const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
   const t = STR[prefs.lang];
   const outlet: ConfigOutlet = { lang: prefs.lang };
-  const shellClass = `shell${flat ? " flat" : ""}`;
+  const shellClass = cn(shell, flat && "flat");
   const pollS = pollMs / 1000;
   const showCheck = Boolean(okFlashAt && now - okFlashAt < FETCH_OK_FLASH_MS);
   const secsLeft = countdownSecs(nextFetchAt, now, pollS);
@@ -816,23 +859,23 @@ export default function Display() {
 
   return (
     <div className={shellClass}>
-      <div className="topbar">
-        <button className="icon-btn menu-btn" onClick={() => setSidebarOpen(true)}><MenuIcon size={19} /></button>
-        <button className="brand-btn" onClick={goOverview}>
+      <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none">
+        <button className={`${iconBtn} hidden max-[860px]:flex`} onClick={() => setSidebarOpen(true)}><MenuIcon size={19} /></button>
+        <button className="group/brand flex cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
           <Logo size={28} />
         </button>
-        <div className="spacer" />
-        <button className="clock-btn num" onClick={() => { if (data) setNowOpen(true); }} title={t.now}>
-          <span className="clock-dot" />
+        <div className="flex-1" />
+        <button className={`${num} flex cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2.5 py-[7px] text-[14.5px] font-semibold text-ink transition-colors duration-150 hover:bg-chip`} onClick={() => { if (data) setNowOpen(true); }} title={t.now}>
+          <span className="size-1.5 shrink-0 rounded-full bg-good shadow-[0_0_5px_var(--good)] [.flat_&]:shadow-none" />
           {fmtClock(now + driftMs)}
         </button>
-        <button className={`icon-btn${settingsOpen ? " on" : ""}`} onClick={() => setSettingsOpen((v) => !v)} title={t.settings}>
+        <button className={cn(iconBtn, settingsOpen && "text-accent")} onClick={() => setSettingsOpen((v) => !v)} title={t.settings}>
           <SettingsIcon size={19} />
         </button>
         <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} onClick={() => void loadUsage()} />
       </div>
-      <div className="shell-body">
-        {sidebarOpen ? <div className="scrim" onClick={() => setSidebarOpen(false)} /> : null}
+      <div className="flex min-h-0 flex-1">
+        {sidebarOpen ? <div className="fixed inset-x-0 bottom-0 top-14 z-[25] bg-black/45 min-[861px]:hidden" onClick={() => setSidebarOpen(false)} /> : null}
         <Sidebar
           providers={providers}
           section={section}
@@ -846,18 +889,18 @@ export default function Display() {
           onNow={() => { if (data) setNowOpen(true); }}
           onClose={() => setSidebarOpen(false)}
         />
-        <main className="content-area">
+        <main className="min-w-0 flex-1 overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]">
           {isConfig ? (
             <Outlet context={outlet} />
           ) : !data ? (
             fetchFailed ? (
-              <div className="empty-note">{t.fetchFail}</div>
+              <div className={emptyNote}>{t.fetchFail}</div>
             ) : (
-              <div className="cfg-skel-page view-fade" aria-hidden>
-                <div className="cfg-skel cfg-skel-lead" />
-                <div className="cfg-grid">
+              <div className={`flex w-full flex-col gap-[14px] ${viewFade}`} aria-hidden>
+                <div className={`${cfgSkel} h-11`} />
+                <div className={cfgGrid}>
                   {Array.from({ length: 5 }, (_, i) => (
-                    <div key={i} className="cfg-skel cfg-skel-card" />
+                    <div key={i} className={`${cfgSkel} h-[172px]`} />
                   ))}
                 </div>
               </div>

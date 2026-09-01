@@ -7,6 +7,7 @@ import { BoardCard } from "./BoardCard";
 import { CONFIG_STR } from "./copy";
 import { NetworkCard } from "./NetworkCard";
 import { ProviderCard } from "./ProviderCard";
+import { cfgGrid, cfgHint, cfgStatus, viewFade } from "../../tw";
 import { Button, Fold, Skeleton } from "./ui";
 import { UsageCheck } from "./UsageCheck";
 
@@ -41,9 +42,9 @@ export default function ConfigPage() {
 
   if (phase === "loading" && !cfg) {
     return (
-      <div className="cfg-page view-fade">
-        <header className="cfg-head">
-          <h1>{c.title}</h1>
+      <div className={`flex w-full flex-col gap-[14px] ${viewFade}`}>
+        <header className="w-full">
+          <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
         </header>
         <Skeleton />
       </div>
@@ -52,12 +53,12 @@ export default function ConfigPage() {
 
   if (phase === "error" && !cfg) {
     return (
-      <div className="cfg-page view-fade">
-        <header className="cfg-head">
-          <h1>{c.title}</h1>
-          <p className="cfg-lead">{c.loadError}</p>
+      <div className={`flex w-full flex-col gap-[14px] ${viewFade}`}>
+        <header className="w-full">
+          <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
+          <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
         </header>
-        <p className="cfg-status err">{c.offline}</p>
+        <p className={`${cfgStatus} text-bad`}>{c.offline}</p>
         <Button onClick={() => { setPhase("loading"); void reload(); }}>{c.retry}</Button>
       </div>
     );
@@ -68,18 +69,18 @@ export default function ConfigPage() {
   const common = { inDocker: cfg.in_docker, c, onReload: reload };
 
   return (
-    <div className="cfg-page view-fade">
-      <header className="cfg-head">
-        <h1>{c.title}</h1>
-        <p className="cfg-lead">{c.lead}</p>
+    <div className={`flex w-full flex-col gap-[14px] ${viewFade}`}>
+      <header className="w-full">
+        <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
+        <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
       </header>
 
-      <div className="cfg-section-head">
-        <h2>{c.accountsTitle}</h2>
-        <p>{c.accountsLead}</p>
+      <div className="mt-2 w-full">
+        <h2 className="mb-1 mt-0 text-base font-bold">{c.accountsTitle}</h2>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.accountsLead}</p>
       </div>
 
-      <div className="cfg-grid">
+      <div className={cfgGrid}>
         <ProviderCard
           title="Claude"
           blurb={c.claudeBlurb}
@@ -117,8 +118,8 @@ export default function ConfigPage() {
           {...common}
         >
           <Fold summary={c.cursorAdvanced}>
-            <p className="cfg-hint">{c.cursorHint}</p>
-            <pre className="cfg-pre">{CURSOR_CMD}</pre>
+            <p className={cfgHint}>{c.cursorHint}</p>
+            <pre className="mb-0 mt-2 overflow-x-auto rounded-[10px] bg-canvas px-3 py-2.5 text-[11.5px] leading-[1.45] text-ink2">{CURSOR_CMD}</pre>
           </Fold>
         </ProviderCard>
         <ProviderCard
@@ -171,14 +172,14 @@ export default function ConfigPage() {
         />
       </div>
 
-      <div className="cfg-section-head">
-        <h2>{c.toolsTitle}</h2>
-        <p>{c.toolsLead}</p>
+      <div className="mt-2 w-full">
+        <h2 className="mb-1 mt-0 text-base font-bold">{c.toolsTitle}</h2>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.toolsLead}</p>
       </div>
 
       <BoardCard cfg={cfg} c={c} />
 
-      <div className="cfg-grid">
+      <div className={cfgGrid}>
         <UsageCheck c={c} />
         <NetworkCard cfg={cfg} c={c} onReload={reload} />
       </div>

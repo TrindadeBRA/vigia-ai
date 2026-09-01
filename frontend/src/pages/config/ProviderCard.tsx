@@ -3,6 +3,7 @@ import { clearSecret, patchConfig } from "../../api/client";
 import type { ProviderCardPublic } from "../../api/types";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
+import { cfgCard, cfgHint, iconChip, iconImg } from "../../tw";
 import { ExtraAccounts } from "./ExtraAccounts";
 import { badgeOf, connectionHint, type ConfigCopy } from "./copy";
 import { ActionRow, Button, FieldStatus, Fold, StatusPill, Switch, TextField } from "./ui";
@@ -72,18 +73,18 @@ export function ProviderCard({
       : null;
 
   return (
-    <article className="cfg-card cfg-provider">
-      <div className="cfg-provider-head">
-        <div className="cfg-provider-id">
-          <div className="icon-chip">
-            <img className="icon-img" src={PROVIDER_ICON[providerId]} alt="" draggable={false} />
+    <article className={`${cfgCard} gap-3`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className={iconChip}>
+            <img className={iconImg} src={PROVIDER_ICON[providerId]} alt="" draggable={false} />
           </div>
-          <div className="cfg-provider-meta">
-            <div className="cfg-provider-title-row">
-              <h3 className="cfg-provider-title">{title}</h3>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="m-0 text-[15.5px] font-bold">{title}</h3>
               <StatusPill state={b.state} label={b.text} />
             </div>
-            <p className="cfg-provider-hint">{hint}</p>
+            <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
           </div>
         </div>
         <Switch
@@ -106,7 +107,7 @@ export function ProviderCard({
         />
       </div>
 
-      {!p.configured ? <p className="cfg-hint">{blurb}</p> : null}
+      {!p.configured ? <p className={cfgHint}>{blurb}</p> : null}
 
       <ActionRow>
         <TextField label={c.nickname} placeholder={c.nicknamePh} value={label} onChange={(e) => setLabel(e.target.value)} autoComplete="off" />

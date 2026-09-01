@@ -123,7 +123,7 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
   return (
     <svg
       ref={svgRef}
-      className="eye-mark"
+      className="block shrink-0 overflow-visible drop-shadow-[0_2px_4px_var(--shadow)] transition-transform duration-[180ms] ease-out group-hover/brand:scale-[1.08] [.flat_&]:drop-shadow-none"
       width={size}
       height={size}
       viewBox="0 0 100 100"
@@ -135,18 +135,18 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
           <circle cx={50} cy={50} r={EYE_R} />
         </clipPath>
       </defs>
-      <circle className="eye-white" cx={50} cy={50} r={EYE_R} />
+      <circle className="fill-white" cx={50} cy={50} r={EYE_R} />
       <g clipPath={`url(#${clipId})`}>
-        <g className="eye-iris" ref={irisRef} transform="translate(50 50)">
-          <circle className="iris-disc" r={IRIS_R} />
-          <circle className="iris-core" r={7.5} />
-          <circle className="iris-spec" cx={-6} cy={-6.5} r={4.4} />
-          <circle className="iris-spec sm" cx={6.5} cy={7} r={2.1} />
+        <g className="drop-shadow-[0_0_4px_var(--glow)] [.flat_&]:drop-shadow-none" ref={irisRef} transform="translate(50 50)">
+          <circle className="fill-accent" r={IRIS_R} />
+          <circle className="fill-black/55" r={7.5} />
+          <circle className="fill-white opacity-[.92]" cx={-6} cy={-6.5} r={4.4} />
+          <circle className="fill-white opacity-45" cx={6.5} cy={7} r={2.1} />
         </g>
-        <rect className="eye-lid" ref={topLidRef} x={-10} y={-104} width={120} height={104} />
-        <rect className="eye-lid" ref={botLidRef} x={-10} y={100} width={120} height={104} />
+        <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={topLidRef} x={-10} y={-104} width={120} height={104} />
+        <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={botLidRef} x={-10} y={100} width={120} height={104} />
       </g>
-      <circle className="eye-ring" cx={50} cy={50} r={EYE_R} />
+      <circle className="fill-none stroke-ink2 [stroke-width:2.5]" cx={50} cy={50} r={EYE_R} />
     </svg>
   );
 }
@@ -155,8 +155,8 @@ export function Logo({ size = 28 }: { size?: number }) {
   return (
     <>
       <EyeMark size={size} />
-      <div className="brand">
-        VIGIA<span className="ai"> AI</span>
+      <div className="whitespace-nowrap text-[15px] font-extrabold tracking-[.2px]">
+        VIGIA<span className="text-accent"> AI</span>
       </div>
     </>
   );

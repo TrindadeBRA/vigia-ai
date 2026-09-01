@@ -27,14 +27,14 @@ export function ExtraAccounts({
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   return (
-    <div className="cfg-extra">
+    <div className="flex flex-col gap-2">
       {accounts.length ? (
-        <ul className="cfg-extra-list">
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
           {accounts.map((a) => (
-            <li key={a.id} className="cfg-extra-item">
-              <div className="cfg-extra-meta">
-                <p className="cfg-extra-name">{a.label || "—"}</p>
-                <p className="cfg-extra-suffix">•••• {a.suffix || "----"}</p>
+            <li key={a.id} className="flex items-center justify-between gap-2.5 rounded-[10px] border border-edge bg-canvas px-2.5 py-2">
+              <div className="min-w-0">
+                <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">{a.label || "—"}</p>
+                <p className="mb-0 mt-0.5 text-[11.5px] text-ink3">•••• {a.suffix || "----"}</p>
               </div>
               <Button
                 variant="ghost"
