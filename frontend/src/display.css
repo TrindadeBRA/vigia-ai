@@ -125,14 +125,14 @@
   .overview-stat .who-dot.ok { background: var(--good); box-shadow: 0 0 5px var(--good); }
   .overview-stat .who-dot.bad { background: var(--bad); box-shadow: 0 0 5px var(--bad); }
   .flat .overview-stat .who-dot { box-shadow: none; }
-  /* align-items:stretch (padrão do grid) já igualaria a altura dos cards na
-     mesma linha — deixo explícito, e o card vira flex column por dentro pra
-     um card com 1 métrica só (saldo) não ficar com o conteúdo colado no
-     topo e um vão vazio embaixo: centraliza dentro do espaço que sobra. */
+  /* grid (não flex-wrap) pra um card órfão na última linha não esticar pra
+     ocupar o espaço livre: cada card fica preso à largura da coluna. O card
+     vira flex column por dentro pra um card com 1 métrica só (saldo) não
+     ficar com o conteúdo colado no topo e um vão vazio embaixo: centraliza
+     dentro do espaço que sobra. */
   .overview-grid {
-    display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px; width: 100%;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; width: 100%;
   }
-  .overview-grid > .card { flex: 1 1 280px; }
 
   .card {
     background: var(--card); border: 1px solid var(--card-border); border-radius: 16px;
