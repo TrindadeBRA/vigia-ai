@@ -5,14 +5,16 @@ export type Cell = { r: number; c: number };
 export type BoardLayout = {
   size: Record<string, CardSize>;
   pos: Record<string, Cell>;
+  /** Colunas no momento em que o usuário posicionou os cards. Resize não altera isso. */
+  layoutCols?: number;
   /** Layout antigo (lista). Lido só na migração. */
   order?: string[];
 };
 
-export const CELL_MIN = 128;
+export const CELL_MIN = 168;
 export const CELL_GAP = 14;
 export const SLOT_MIN = 104;
-export const CELL_ROW = 0.88;
+export const CELL_ROW = 0.96;
 
 export function rowPxFor(cellPx: number): number {
   return Math.max(88, Math.round(cellPx * CELL_ROW));
@@ -124,7 +126,7 @@ function packRowMajor(ids: string[], size: Record<string, CardSize>, cols: numbe
 export function packBoard(ids: string[], board: BoardLayout, cols: number): BoardLayout {
   const size: Record<string, CardSize> = {};
   for (const id of ids) size[id] = board.size[id] === "sm" ? "sm" : "lg";
-  return { size, pos: packRowMajor(ids, size, cols) };
+  return { size, pos: packRowMajor(ids, size, cols), layoutCols: cols };
 }
 
 function migrateOrder(ids: string[], prev: BoardLayout, cols: number): Record<string, Cell> {
@@ -162,7 +164,54 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
   for (const id of Object.keys(pos)) {
     if (!seen.has(id)) delete pos[id];
   }
-  return { size, pos };
+  return { size, pos, layoutCols: prev.layoutCols };
+}
+
+function overlaps(ids: string[], board: BoardLayout, cols: number): boolean {
+  const seen = new Set<string>();
+  for (const id of ids) {
+    const pos = board.pos[id];
+    if (!pos) return true;
+    const span = spanFor(board.size[id], cols);
+    let hit = false;
+    visitRect(pos, span, (r, c) => {
+      const key = `${r}:${c}`;
+      if (seen.has(key)) hit = true;
+      seen.add(key);
+    });
+    if (hit) return true;
+  }
+  return false;
+}
+
+function readingOrder(ids: string[], board: BoardLayout): string[] {
+  return [...ids].sort((a, b) => {
+    const pa = board.pos[a] || { r: 0, c: 0 };
+    const pb = board.pos[b] || { r: 0, c: 0 };
+    return pa.r - pb.r || pa.c - pb.c;
+  });
+}
+
+function cardsFit(ids: string[], board: BoardLayout, cols: number): boolean {
+  return ids.every((id) => {
+    const pos = board.pos[id];
+    if (!pos) return false;
+    return pos.c + spanFor(board.size[id], cols) <= cols;
+  });
+}
+
+/** Layout só para desenhar: se a largura mudou, reempilha sem gravar o localStorage. */
+export function displayBoard(ids: string[], board: BoardLayout, cols: number): BoardLayout {
+  const synced = syncBoard(ids, board, cols);
+  const savedCols = board.layoutCols;
+  const sameCols = savedCols == null || savedCols === cols;
+  if (sameCols && cardsFit(ids, synced, cols) && !overlaps(ids, synced, cols)) return synced;
+  const ordered = readingOrder(ids, synced);
+  return { size: synced.size, pos: packRowMajor(ordered, synced.size, cols), layoutCols: savedCols };
+}
+
+export function withLayoutCols(board: BoardLayout, cols: number): BoardLayout {
+  return { ...board, layoutCols: cols };
 }
 
 export function fitBoard(ids: string[], board: BoardLayout, cols: number): BoardLayout {
@@ -241,7 +290,7 @@ export function placeCard(ids: string[], board: BoardLayout, id: string, target:
     }
   }
   const next = { ...board, pos };
-  return sameBoard(board, next, ids) ? board : next;
+  return sameBoard(board, next, ids) ? board : withLayoutCols(next, cols);
 }
 
 export function setCardSize(ids: string[], board: BoardLayout, id: string, size: CardSize, cols: number): BoardLayout {
@@ -250,7 +299,7 @@ export function setCardSize(ids: string[], board: BoardLayout, id: string, size:
   if (!pos) return next;
   const span = spanFor(size, cols);
   const dest = clampCell(pos, span, cols);
-  if (span === 1) return { ...next, pos: { ...board.pos, [id]: dest } };
+  if (span === 1) return withLayoutCols({ ...next, pos: { ...board.pos, [id]: dest } }, cols);
   return placeCard(ids, next, id, dest, cols);
 }
 

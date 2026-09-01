@@ -12,7 +12,7 @@ import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { ConfigOutlet } from "./config/ConfigPage";
-import { CELL_GAP, colsForWidth, dropTarget, emptyBoard, emptyCells, fitBoard, packBoard, padRowsForHeight, placeCard, rowPxFor, sameBoard, setCardSize, slotKey, spanFor, syncBoard, type BoardLayout, type CardSize } from "../board";
+import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, packBoard, padRowsForHeight, placeCard, rowPxFor, sameBoard, setCardSize, slotKey, spanFor, syncBoard, type BoardLayout, type CardSize } from "../board";
 
 const boardCollision: CollisionDetection = (args) => {
   const hits = pointerWithin(args);
@@ -21,7 +21,7 @@ const boardCollision: CollisionDetection = (args) => {
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout };
 type Pal = (typeof PALETTES)[ThemeName];
-type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null };
+type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null; value?: string | null };
 type ProviderMeta = {
   id: string;
   provider: string;
@@ -81,59 +81,97 @@ function barFillStyle(pct: number, pal: Pal) {
   return { width: `${v}%`, minWidth: v > 0 ? 7 : 0, background: barColor(pct, pal), boxShadow: barGlow(pct, pal) };
 }
 
-function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, resetIn }: Metric & { pal: Pal; compact?: boolean; nowMs?: number; resetIn?: string }) {
+function shortMetricLabel(label: string, t: T): string {
+  if (label === t.accountCredits) return t.credits;
+  if (label === t.weekLimit) return t.week;
+  if (label === t.resetIn) return t.reset;
+  if (label === t.session5h) return "5h";
+  if (label === t.monthLimit) return t.monthLimit.split(/\s+/).pop() || label;
+  if (label === t.cursorModels) return "Cursor";
+  if (label === t.otherModels) return t.otherModels.split(/\s+/)[0] || label;
+  return label;
+}
+
+function compactMoney(sub: string | null, t: T): string | null {
+  if (!sub) return null;
+  if (sub === t.noCredits) return "—";
+  if (sub.startsWith(t.remainMoney)) return sub.slice(t.remainMoney.length).trim();
+  if (sub.startsWith("$")) return sub;
+  return null;
+}
+
+function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t, value }: Metric & { pal: Pal; compact?: boolean; nowMs?: number; t: T }) {
   const clock = countdownAt ? fmtCountdown(countdownAt, nowMs) : null;
+  const name = compact ? shortMetricLabel(label, t) : label;
   if (pct == null) {
-    const value = clock || sub || "--";
+    const money = compact ? (value || compactMoney(sub, t)) : (value || sub);
+    const display = clock || money || sub || "--";
     if (compact) {
       return (
-        <div className="mt-1 flex min-w-0 items-baseline justify-between gap-1.5 first:mt-0">
-          <span className="shrink-0 text-[11px] leading-none text-ink2">{label}</span>
-          <span className={cn(num, "min-w-0 truncate text-[12px] font-bold leading-none")}>{value}</span>
+        <div className="mt-1.5 flex min-w-0 flex-col gap-1 first:mt-0">
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-none text-ink3">{name}</span>
+          <span className={cn(num, "min-w-0 text-[15px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]")}>{display}</span>
         </div>
       );
     }
     return (
       <div className="mt-3 first:mt-0">
         <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
-          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{name}</span>
         </div>
-        <div className={cn(num, "text-[15px] font-bold")}>{value}</div>
+        <div className={cn(num, "text-[15px] font-bold")}>{display}</div>
       </div>
     );
   }
   if (compact) {
+    const extra = countdownAt ? clock : value || compactMoney(sub, t);
     return (
-      <div className="mt-1.5 first:mt-0">
-        <div className="mb-0.5 flex items-baseline justify-between gap-1 text-[11px] leading-none">
-          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
-          <span className={`${num} shrink-0 font-bold`}>{fmtPct(pct)}</span>
+      <div className="mt-1.5 min-w-0 first:mt-0">
+        <div className="mb-1 flex items-baseline justify-between gap-1.5 text-[11px] leading-none">
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink3">{name}</span>
+          <span className={`${num} shrink-0 text-[12px] font-bold text-ink`}>{fmtPct(pct)}</span>
         </div>
         <div className={cn(barTrack, "h-[5px]")}>
           <div className={barFill} style={barFillStyle(pct, pal)} />
         </div>
+        {extra ? <div className={cn(num, "mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-[550] text-ink2")}>{extra}</div> : null}
       </div>
     );
   }
   const largeClock = clock;
   return (
-    <div className="mt-3 first:mt-0">
+    <div className="min-w-0">
       <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
         <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
-        <span className={`${num} shrink-0 text-sm font-bold`}>{fmtPct(pct)}</span>
+        <span className={`${num} shrink-0 text-sm font-bold`}>{value || fmtPct(pct)}</span>
       </div>
       <div className={barTrack}>
         <div className={barFill} style={barFillStyle(pct, pal)} />
       </div>
       {largeClock ? (
         <div className={cn(num, "mt-[5px] text-[12.5px] font-[550] text-ink2")}>
-          {resetIn ? `${resetIn} ${largeClock}` : largeClock}
+          {t.resetIn} {largeClock}
         </div>
       ) : sub ? (
         <div className="mt-[5px] text-[11.5px] text-ink3">{sub}</div>
       ) : null}
     </div>
   );
+}
+
+function creditsMetric(
+  t: T,
+  acc: { percent: number | null; remaining_cents: number | null; used_cents: number | null; limit_cents: number | null },
+): Metric {
+  const bits: string[] = [];
+  if (acc.used_cents != null) bits.push(`${t.used} ${fmtUsd(acc.used_cents)}`);
+  if (acc.limit_cents != null) bits.push(`${t.cap} ${fmtUsd(acc.limit_cents)}`);
+  return {
+    label: t.credits,
+    pct: acc.percent,
+    value: acc.remaining_cents != null ? fmtUsd(acc.remaining_cents) : null,
+    sub: bits.length ? bits.join(" · ") : acc.remaining_cents != null ? t.remainMoney + fmtUsd(acc.remaining_cents) : t.noCredits,
+  };
 }
 
 function Icon({ id, large, compact }: { id: string; large?: boolean; compact?: boolean }) {
@@ -224,7 +262,6 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
     });
   }
   for (const o of data.openrouter || []) {
-    const sub = o.remaining_cents != null ? t.remainMoney + fmtUsd(o.remaining_cents) : t.noCredits;
     list.push({
       id: `openrouter:${o.id}`,
       provider: "openrouter",
@@ -232,11 +269,10 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: o.error,
       title: "OpenRouter",
       label: o.label || "",
-      metrics: [{ label: t.accountCredits, pct: null, sub }],
+      metrics: [creditsMetric(t, o)],
     });
   }
   for (const d of data.deepseek || []) {
-    const sub = d.remaining_cents != null ? t.remainMoney + fmtUsd(d.remaining_cents) : t.noCredits;
     list.push({
       id: `deepseek:${d.id}`,
       provider: "deepseek",
@@ -244,7 +280,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: d.error,
       title: "DeepSeek",
       label: d.label || "",
-      metrics: [{ label: t.accountCredits, pct: d.percent, sub }],
+      metrics: [creditsMetric(t, d)],
     });
   }
   for (const o of data.opencode || []) {
@@ -288,7 +324,6 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
     });
   }
   for (const f of data.fal || []) {
-    const sub = f.remaining_cents != null ? t.remainMoney + fmtUsd(f.remaining_cents) : t.noCredits;
     list.push({
       id: `fal:${f.id}`,
       provider: "fal",
@@ -296,7 +331,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: f.error,
       title: "fal.ai",
       label: f.label || "",
-      metrics: [{ label: t.accountCredits, pct: null, sub }],
+      metrics: [creditsMetric(t, f)],
     });
   }
   return list;
@@ -388,7 +423,7 @@ function ProviderCard({
       ) : null}
       <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
         <div className="relative shrink-0">
-          <Icon id={p.provider} compact={sm} />
+          <Icon id={p.provider} compact={sm} large={!sm} />
           <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", p.ok ? "bg-good" : "bg-bad")} />
         </div>
         <div className="min-w-0 flex-1">
@@ -396,8 +431,21 @@ function ProviderCard({
           {p.label ? <div className={cardLabel}>{p.label}</div> : null}
         </div>
       </button>
-      <button type="button" className={cn("flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink", sm ? "justify-start" : "justify-center")} onClick={onOpen}>
-        {!p.ok ? <div className={cn(errorText, sm && "text-[11px] leading-snug")}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} resetIn={t.resetIn} />)}
+      <button
+        type="button"
+        className={cn(
+          "flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink",
+          sm ? "justify-center gap-0" : p.metrics.length > 1 ? "justify-evenly" : "justify-center",
+        )}
+        onClick={onOpen}
+      >
+        {!p.ok ? (
+          <div className={cn(errorText, sm && "text-[11px] leading-snug")}>{p.error || ""}</div>
+        ) : (
+          (sm ? p.metrics.slice(0, 2) : p.metrics).map((m, i) => (
+            <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} t={t} />
+          ))
+        )}
       </button>
     </div>
   );
@@ -575,7 +623,7 @@ function Overview({
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
   const rowPx = rowPxFor(cellPx);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-  const layout = fitBoard(ids, syncBoard(ids, board, cols), cols);
+  const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
   const active = activeId ? byId.get(activeId) : null;
   const activeSize: CardSize = activeId && layout.size[activeId] === "sm" ? "sm" : "lg";
@@ -584,6 +632,7 @@ function Overview({
     const el = gridRef.current;
     if (!el) return;
     const measure = () => {
+      if (el.clientWidth < 1) return;
       const nextCols = colsForWidth(el.clientWidth);
       setCols(nextCols);
       const cell = Math.max(80, Math.floor((el.clientWidth - CELL_GAP * Math.max(0, nextCols - 1)) / Math.max(1, nextCols)));
@@ -609,8 +658,8 @@ function Overview({
   }, [idsKey]);
 
   useEffect(() => {
-    onBoard((b) => fitBoard(ids, syncBoard(ids, b, cols), cols));
-  }, [cols, idsKey]);
+    onBoard((b) => syncBoard(ids, b, b.layoutCols || cols));
+  }, [idsKey]);
 
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
@@ -627,7 +676,7 @@ function Overview({
     const dest = dropTarget(over, layout);
     if (!dest) return;
     onBoard((b) => {
-      const cur = fitBoard(ids, syncBoard(ids, b, cols), cols);
+      const cur = displayBoard(ids, b, cols);
       return placeCard(ids, cur, from, dest, cols);
     });
   }
@@ -644,7 +693,7 @@ function Overview({
             type="button"
             className="ml-1 cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
             title={t.resetLayout}
-            onClick={() => onBoard((b) => packBoard(ids, fitBoard(ids, syncBoard(ids, b, cols), cols), cols))}
+            onClick={() => onBoard((b) => packBoard(ids, displayBoard(ids, b, cols), cols))}
           >
             {t.resetLayout}
           </button>
@@ -701,7 +750,7 @@ function Overview({
                   row={pos.r}
                   span={spanFor(size, cols)}
                   onOpen={() => onOpen(id)}
-                  onSetSize={(next) => onBoard((b) => setCardSize(ids, fitBoard(ids, syncBoard(ids, b, cols), cols), id, next, cols))}
+                  onSetSize={(next) => onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols))}
                 />
               );
             })}
