@@ -54,10 +54,28 @@ def catalog_public() -> dict[str, list[AlarmMetric]]:
     }
 
 
+PROVIDER_NAMES: dict[str, str] = {
+    "claude": "Claude",
+    "gpt": "GPT",
+    "cursor": "Cursor",
+    "openrouter": "OpenRouter",
+    "deepseek": "DeepSeek",
+    "opencode": "OpenCode",
+    "fal": "fal.ai",
+}
+
+
 def metric_kind(provider: str, metric: str) -> str | None:
     for key, _label, kind in METRICS.get(provider, []):
         if key == metric:
             return kind
+    return None
+
+
+def metric_label(provider: str, metric: str) -> str | None:
+    for key, label, _kind in METRICS.get(provider, []):
+        if key == metric:
+            return label
     return None
 
 
@@ -104,15 +122,23 @@ def evaluate(payload: dict[str, Any], rules: list[dict[str, Any]], armed: dict[s
 
 
 def _event_message(event: dict[str, Any]) -> tuple[str, str]:
+    """Título curto = provedor + métrica; corpo = só o limite cruzado.
+
+    O nome (auto-sugerido ou digitado pela regra) é ótimo pra lista na UI, mas
+    é longo demais pra caber numa notificação do sistema sem cortar — por
+    isso o título do push é sempre reconstruído a partir do catálogo.
+    """
     rule = event["rule"]
-    kind = metric_kind(event["provider"], rule["metric"]) or "percent"
-    label = rule.get("label") or f"{event['provider']} · {rule['metric']}"
-    who = f" ({event['account_label']})" if event["account_label"] else ""
+    provider = event["provider"]
+    kind = metric_kind(provider, rule["metric"]) or "percent"
+    provider_name = PROVIDER_NAMES.get(provider, provider)
+    metric_name = metric_label(provider, rule["metric"]) or rule["metric"]
+    title = f"{provider_name} · {metric_name}"
     if kind == "percent":
-        body = f"{label}{who}: {event['value']:.0f}% (limiar {rule['threshold']:.0f}%)"
+        body = f"Uso chegou a {event['value']:.0f}% (limiar {rule['threshold']:.0f}%)"
     else:
-        body = f"{label}{who}: saldo em ${event['value'] / 100:.2f} (limiar ${rule['threshold'] / 100:.2f})"
-    return "Vigia AI — alarme", body
+        body = f"Saldo em ${event['value'] / 100:.2f} (limiar ${rule['threshold'] / 100:.2f})"
+    return title, body
 
 
 class AlarmEngine:
