@@ -8,8 +8,7 @@ int g_gptIdx = 0;
 int g_cursorIdx = 0;
 int g_openrouterIdx = 0;
 int g_deepseekIdx = 0;
-int g_opencodeGoIdx = 0;
-int g_opencodeZenIdx = 0;
+int g_opencodeIdx = 0;
 int g_falIdx = 0;
 
 static bool viewProviderVisible(View v)
@@ -26,10 +25,8 @@ static bool viewProviderVisible(View v)
     return g_snap.openrouterCount > 0;
   case VIEW_DEEPSEEK:
     return g_snap.deepseekCount > 0;
-  case VIEW_OPENCODE_GO:
-    return g_snap.opencode_goCount > 0;
-  case VIEW_OPENCODE_ZEN:
-    return g_snap.opencode_zenCount > 0;
+  case VIEW_OPENCODE:
+    return g_snap.opencodeCount > 0;
   case VIEW_FAL:
     return g_snap.falCount > 0;
   default:
@@ -75,13 +72,9 @@ void uiSetView(View v)
   {
     g_deepseekIdx = deepseekWorstIdx();
   }
-  else if (v == VIEW_OPENCODE_GO)
+  else if (v == VIEW_OPENCODE)
   {
-    g_opencodeGoIdx = opencodeGoWorstIdx();
-  }
-  else if (v == VIEW_OPENCODE_ZEN)
-  {
-    g_opencodeZenIdx = opencodeZenWorstIdx();
+    g_opencodeIdx = opencodeWorstIdx();
   }
   else if (v == VIEW_FAL)
   {
@@ -97,8 +90,7 @@ static bool viewHasScroll()
 {
   return g_view == VIEW_HOME || g_view == VIEW_CLAUDE || g_view == VIEW_GPT ||
          g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK ||
-         g_view == VIEW_OPENCODE_GO || g_view == VIEW_OPENCODE_ZEN || g_view == VIEW_FAL ||
-         g_view == VIEW_STATUS;
+         g_view == VIEW_OPENCODE || g_view == VIEW_FAL || g_view == VIEW_STATUS;
 }
 
 bool uiCanScroll() { return viewHasScroll() && g_detailCanScroll; }
@@ -173,11 +165,8 @@ void uiRefreshData()
   case VIEW_DEEPSEEK:
     paintDeepSeek();
     break;
-  case VIEW_OPENCODE_GO:
-    paintOpenCodeGo();
-    break;
-  case VIEW_OPENCODE_ZEN:
-    paintOpenCodeZen();
+  case VIEW_OPENCODE:
+    paintOpenCode();
     break;
   case VIEW_FAL:
     paintFal();
@@ -249,10 +238,12 @@ void uiHandleTap(int16_t x, int16_t y)
       uiSetView(VIEW_STATUS);
       return;
     }
-    if (g_clockIconR > 0) {
+    if (g_clockIconR > 0)
+    {
       const int hit = g_clockIconR + 8;
       if (x >= g_clockIconCx - hit && x < g_clockIconCx + hit && y >= g_clockIconCy - hit &&
-          y < g_clockIconCy + hit) {
+          y < g_clockIconCy + hit)
+      {
         uiSetView(VIEW_NOW);
         return;
       }

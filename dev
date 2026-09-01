@@ -8,7 +8,17 @@ MONITOR_BAUD=115200
 BACKEND_PORT=8787
 FRONTEND_PORT=5173
 WOKWIGW_BIN="$ROOT_DIR/.tools/wokwigw"
-WOKWIGW_URL="https://github.com/wokwi/wokwigw/releases/latest/download/wokwigw-darwin-arm64"
+WOKWIGW_VERSION="v2.0.1"
+WOKWIGW_ASSET=""
+WOKWIGW_EXTRACTED="wokwigw"
+case "$(uname -s)-$(uname -m)" in
+  Linux-x86_64)  WOKWIGW_ASSET="Linux_64bit"; WOKWIGW_EXTRACTED="wokwigw-linux" ;;
+  Linux-aarch64|Linux-arm64) WOKWIGW_ASSET="Linux_ARM64"; WOKWIGW_EXTRACTED="wokwigw-linux" ;;
+  Darwin-x86_64) WOKWIGW_ASSET="macOS_64bit"; WOKWIGW_EXTRACTED="wokwigw-darwin" ;;
+  Darwin-arm64)  WOKWIGW_ASSET="macOS_ARM64"; WOKWIGW_EXTRACTED="wokwigw-darwin" ;;
+  MINGW*|MSYS*|CYGWIN*) WOKWIGW_ASSET="Windows_64bit"; WOKWIGW_EXTRACTED="wokwigw.exe" ;;
+esac
+WOKWIGW_URL="https://github.com/wokwi/wokwigw/releases/download/${WOKWIGW_VERSION}/wokwigw_${WOKWIGW_VERSION}_${WOKWIGW_ASSET}.zip"
 
 usage() {
   cat <<EOF
@@ -76,14 +86,36 @@ ensure_wokwigw() {
   if [ -x "$WOKWIGW_BIN" ]; then
     return 0
   fi
+  if [ -z "$WOKWIGW_ASSET" ]; then
+    echo "plataforma não suportada: $(uname -s)-$(uname -m)" >&2
+    echo "baixe manualmente em https://github.com/wokwi/wokwigw/releases/latest" >&2
+    echo "e salve o binário em $WOKWIGW_BIN" >&2
+    exit 1
+  fi
   mkdir -p "$ROOT_DIR/.tools"
   echo "== baixando wokwigw para .tools/ =="
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL -o "$WOKWIGW_BIN" "$WOKWIGW_URL" || {
-      echo "falha no download automático. baixe em https://github.com/wokwi/wokwigw/releases/latest" >&2
+    local tmpzip="$ROOT_DIR/.tools/wokwigw.zip"
+    curl -fsSL -o "$tmpzip" "$WOKWIGW_URL" || {
+      echo "falha no download. baixe em https://github.com/wokwi/wokwigw/releases/latest" >&2
       echo "e salve o binário em $WOKWIGW_BIN" >&2
+      rm -f "$tmpzip"
       exit 1
     }
+    if command -v unzip >/dev/null 2>&1; then
+      unzip -qo "$tmpzip" -d "$ROOT_DIR/.tools/"
+    else
+      python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" "$tmpzip" "$ROOT_DIR/.tools/"
+    fi
+    # O zip contém um binário com nome específico por plataforma
+    # (wokwigw-linux, wokwigw-darwin, wokwigw.exe).
+    local extracted="$ROOT_DIR/.tools/$WOKWIGW_EXTRACTED"
+    if [ -f "$extracted" ]; then
+      mv "$extracted" "$WOKWIGW_BIN"
+    fi
+    rm -f "$tmpzip"
+    # Limpa outros arquivos extraídos do zip
+    rm -f "$ROOT_DIR/.tools"/wokwigw_* "$ROOT_DIR/.tools"/README* "$ROOT_DIR/.tools"/LICENSE* 2>/dev/null || true
   else
     echo "curl não encontrado; baixe wokwigw em https://github.com/wokwi/wokwigw/releases/latest" >&2
     exit 1

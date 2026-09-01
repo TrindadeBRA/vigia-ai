@@ -106,8 +106,7 @@ extern int g_gptIdx;
 extern int g_cursorIdx;
 extern int g_openrouterIdx;
 extern int g_deepseekIdx;
-extern int g_opencodeGoIdx;
-extern int g_opencodeZenIdx;
+extern int g_opencodeIdx;
 extern int g_falIdx;
 
 // Geometria do paginador "< i/N >" no topo do card de detalhe — só existe
@@ -127,8 +126,7 @@ int gptWorstIdx();
 int cursorWorstIdx();
 int openrouterWorstIdx();
 int deepseekWorstIdx();
-int opencodeGoWorstIdx();
-int opencodeZenWorstIdx();
+int opencodeWorstIdx();
 int falWorstIdx();
 
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
@@ -146,8 +144,7 @@ void paintGpt();
 void paintCursor();
 void paintOpenRouter();
 void paintDeepSeek();
-void paintOpenCodeGo();
-void paintOpenCodeZen();
+void paintOpenCode();
 void paintFal();
 void paintStatus();
 void paintNow();
@@ -169,9 +166,8 @@ String openrouterRemain(const OpenRouterAccount &o);
 String openrouterBalance(const OpenRouterAccount &o);
 String deepseekRemain(const DeepSeekAccount &d);
 String deepseekBalance(const DeepSeekAccount &d);
-String opencodeGoRemain(const OpenCodeGoAccount &g);
-String opencodeZenRemain(const OpenCodeZenAccount &z);
-String opencodeZenBalance(const OpenCodeZenAccount &z);
+String opencodeRemain(const OpenCodeAccount &o);
+String opencodeBalance(const OpenCodeAccount &o);
 String falRemain(const FalAccount &f);
 String falBalance(const FalAccount &f);
 const char *emptyProvidersMsg();

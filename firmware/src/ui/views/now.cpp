@@ -6,8 +6,7 @@
 #include "assets/icons/icon_deepseek.h"
 #include "assets/icons/icon_fal.h"
 #include "assets/icons/icon_gpt.h"
-#include "assets/icons/icon_opencode_go.h"
-#include "assets/icons/icon_opencode_zen.h"
+#include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
 
 static int g_nowTimeY = 18;
@@ -125,11 +124,10 @@ void paintNow()
   const bool showCursor = g_snap.cursorCount > 0;
   const bool showOpenRouter = g_snap.openrouterCount > 0;
   const bool showDeepSeek = g_snap.deepseekCount > 0;
-  const bool showOpenCodeGo = g_snap.opencode_goCount > 0;
-  const bool showOpenCodeZen = g_snap.opencode_zenCount > 0;
+  const bool showOpenCode = g_snap.opencodeCount > 0;
   const bool showFal = g_snap.falCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen + (int)showFal;
+                (int)showDeepSeek + (int)showOpenCode + (int)showFal;
   if (n == 0)
   {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
@@ -192,8 +190,7 @@ void paintNow()
   const CursorAccount &cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
   const OpenRouterAccount &orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
-  const OpenCodeGoAccount &ocgAcct = g_snap.opencode_go[showOpenCodeGo ? opencodeGoWorstIdx() : 0];
-  const OpenCodeZenAccount &oczAcct = g_snap.opencode_zen[showOpenCodeZen ? opencodeZenWorstIdx() : 0];
+  const OpenCodeAccount &ocAcct = g_snap.opencode[showOpenCode ? opencodeWorstIdx() : 0];
   const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
 
   String cs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.sessionPercent));
@@ -206,7 +203,7 @@ void paintNow()
   // mostrar no lugar), igual ao DeepSeek.
   String os1 = openrouterBalance(orAcct);
   String ds1 = deepseekBalance(dsAcct);
-  String ocz1 = opencodeZenBalance(oczAcct);
+  String oc1 = opencodeRemain(ocAcct);
   String fal1 = falBalance(falAcct);
 
   int slot = 0;
@@ -255,19 +252,13 @@ void paintNow()
     row(slot++, "DeepSeek", suffix, ICON_DEEPSEEK, dsAcct.ok, dsAcct.error, t.credits,
         dsAcct.percent, ds1, false, "", -1, "");
   }
-  if (showOpenCodeGo)
+  if (showOpenCode)
   {
-    String suffix = accountSuffixText(ocgAcct.label, g_snap.opencode_goCount);
-    row(slot++, "OpenCode Go", suffix, ICON_OPENCODE_GO, ocgAcct.ok, ocgAcct.error, t.rolling,
-        ocgAcct.rollingPercent, compact ? String() : withResta(ocgAcct.rollingPercent, ocgAcct.rollingResets),
-        true, t.week, ocgAcct.weeklyPercent,
-        compact ? String() : withResta(ocgAcct.weeklyPercent, ocgAcct.weeklyResets));
-  }
-  if (showOpenCodeZen)
-  {
-    String suffix = accountSuffixText(oczAcct.label, g_snap.opencode_zenCount);
-    row(slot++, "OpenCode Zen", suffix, ICON_OPENCODE_ZEN, oczAcct.ok, oczAcct.error, t.credits,
-        -1, ocz1, false, "", -1, "");
+    String suffix = accountSuffixText(ocAcct.label, g_snap.opencodeCount);
+    row(slot++, "OpenCode", suffix, ICON_OPENCODE, ocAcct.ok, ocAcct.error, t.rolling,
+        ocAcct.rollingPercent, compact ? String() : withResta(ocAcct.rollingPercent, ocAcct.rollingResets),
+        true, t.week, ocAcct.weeklyPercent,
+        compact ? String() : withResta(ocAcct.weeklyPercent, ocAcct.weeklyResets));
   }
   if (showFal)
   {

@@ -31,7 +31,7 @@ int g_eyeGazeX = 0;
 int g_eyeGazeY = 0;
 float g_eyeLid = 0.0f;
 View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER,
-                                       VIEW_DEEPSEEK, VIEW_OPENCODE_GO, VIEW_OPENCODE_ZEN, VIEW_FAL};
+                                       VIEW_DEEPSEEK, VIEW_OPENCODE, VIEW_FAL};
 int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
 int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
 int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -196,41 +196,43 @@ int deepseekWorstIdx()
   return best;
 }
 
-// OpenCode Go e assinatura com janelas (rolling/semanal/mensal) — "pior" e o
-// maior percentual entre as tres janelas, como Claude/GPT.
-int opencodeGoWorstIdx()
+// OpenCode unifica janelas (rolling/semanal/mensal) e saldo (Zen). O "pior"
+// e o maior percentual entre as tres janelas — se nenhuma existir, o saldo
+// mais baixo (estilo saldo pago-conforme-uso).
+int opencodeWorstIdx()
 {
   int best = 0;
   float bestVal = -2;
-  for (int i = 0; i < g_snap.opencode_goCount; i++)
+  bool foundWindow = false;
+  for (int i = 0; i < g_snap.opencodeCount; i++)
   {
-    float v = max(g_snap.opencode_go[i].rollingPercent,
-                  max(g_snap.opencode_go[i].weeklyPercent, g_snap.opencode_go[i].monthlyPercent));
+    float v = max(g_snap.opencode[i].rollingPercent,
+                  max(g_snap.opencode[i].weeklyPercent, g_snap.opencode[i].monthlyPercent));
     if (v > bestVal)
     {
       bestVal = v;
       best = i;
+      foundWindow = true;
     }
   }
-  return best;
-}
-
-// OpenCode Zen e saldo pago-conforme-uso — "pior" e o saldo mais baixo.
-int opencodeZenWorstIdx()
-{
-  int best = 0;
-  int bestVal = 0;
-  bool found = false;
-  for (int i = 0; i < g_snap.opencode_zenCount; i++)
+  if (foundWindow)
   {
-    int rem = g_snap.opencode_zen[i].remainingCents;
+    return best;
+  }
+  // Fallback: menor saldo restante (estilo DeepSeek/OpenRouter).
+  best = 0;
+  int bestRem = 0;
+  bool found = false;
+  for (int i = 0; i < g_snap.opencodeCount; i++)
+  {
+    int rem = g_snap.opencode[i].remainingCents;
     if (rem < 0)
     {
       continue;
     }
-    if (!found || rem < bestVal)
+    if (!found || rem < bestRem)
     {
-      bestVal = rem;
+      bestRem = rem;
       best = i;
       found = true;
     }
@@ -275,10 +277,8 @@ static int currentProviderCount()
     return g_snap.openrouterCount;
   case VIEW_DEEPSEEK:
     return g_snap.deepseekCount;
-  case VIEW_OPENCODE_GO:
-    return g_snap.opencode_goCount;
-  case VIEW_OPENCODE_ZEN:
-    return g_snap.opencode_zenCount;
+  case VIEW_OPENCODE:
+    return g_snap.opencodeCount;
   case VIEW_FAL:
     return g_snap.falCount;
   default:
@@ -300,10 +300,8 @@ static int *currentProviderIdx()
     return &g_openrouterIdx;
   case VIEW_DEEPSEEK:
     return &g_deepseekIdx;
-  case VIEW_OPENCODE_GO:
-    return &g_opencodeGoIdx;
-  case VIEW_OPENCODE_ZEN:
-    return &g_opencodeZenIdx;
+  case VIEW_OPENCODE:
+    return &g_opencodeIdx;
   case VIEW_FAL:
     return &g_falIdx;
   default:

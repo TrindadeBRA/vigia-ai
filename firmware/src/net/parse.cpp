@@ -48,22 +48,14 @@ void usageClientLogSnapshot(const char *why)
                   d.label.length() ? d.label.c_str() : "-", d.ok ? 1 : 0, d.percent,
                   d.error.length() ? d.error.c_str() : "-");
   }
-  Serial.printf("  opencode_go contas=%d\n", g_snap.opencode_goCount);
-  for (int i = 0; i < g_snap.opencode_goCount; i++)
+  Serial.printf("  opencode contas=%d\n", g_snap.opencodeCount);
+  for (int i = 0; i < g_snap.opencodeCount; i++)
   {
-    const OpenCodeGoAccount &g = g_snap.opencode_go[i];
-    Serial.printf("    [%d] id=%s label=%s ok=%d rolling=%.0f semana=%.0f mes=%.0f err=%s\n", i,
-                  g.id.c_str(), g.label.length() ? g.label.c_str() : "-", g.ok ? 1 : 0,
-                  g.rollingPercent, g.weeklyPercent, g.monthlyPercent,
-                  g.error.length() ? g.error.c_str() : "-");
-  }
-  Serial.printf("  opencode_zen contas=%d\n", g_snap.opencode_zenCount);
-  for (int i = 0; i < g_snap.opencode_zenCount; i++)
-  {
-    const OpenCodeZenAccount &z = g_snap.opencode_zen[i];
-    Serial.printf("    [%d] id=%s label=%s ok=%d pct=%.0f err=%s\n", i, z.id.c_str(),
-                  z.label.length() ? z.label.c_str() : "-", z.ok ? 1 : 0, z.percent,
-                  z.error.length() ? z.error.c_str() : "-");
+    const OpenCodeAccount &o = g_snap.opencode[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d rolling=%.0f semana=%.0f mes=%.0f saldo=%d err=%s\n", i,
+                  o.id.c_str(), o.label.length() ? o.label.c_str() : "-", o.ok ? 1 : 0,
+                  o.rollingPercent, o.weeklyPercent, o.monthlyPercent, o.remainingCents,
+                  o.error.length() ? o.error.c_str() : "-");
   }
   Serial.printf("  fal contas=%d\n", g_snap.falCount);
   for (int i = 0; i < g_snap.falCount; i++)
@@ -108,15 +100,10 @@ void markAllAccountsFailed(const char *msg)
     g_snap.deepseek[i].ok = false;
     g_snap.deepseek[i].error = msg;
   }
-  for (int i = 0; i < g_snap.opencode_goCount; i++)
+  for (int i = 0; i < g_snap.opencodeCount; i++)
   {
-    g_snap.opencode_go[i].ok = false;
-    g_snap.opencode_go[i].error = msg;
-  }
-  for (int i = 0; i < g_snap.opencode_zenCount; i++)
-  {
-    g_snap.opencode_zen[i].ok = false;
-    g_snap.opencode_zen[i].error = msg;
+    g_snap.opencode[i].ok = false;
+    g_snap.opencode[i].error = msg;
   }
   for (int i = 0; i < g_snap.falCount; i++)
   {
@@ -275,46 +262,30 @@ bool parseUsageJson(const String &body)
     d.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
   }
 
-  g_snap.opencode_goCount = 0;
-  for (JsonVariantConst v : doc["opencode_go"].as<JsonArrayConst>())
+  g_snap.opencodeCount = 0;
+  for (JsonVariantConst v : doc["opencode"].as<JsonArrayConst>())
   {
-    if (g_snap.opencode_goCount >= MAX_ACCOUNTS)
+    if (g_snap.opencodeCount >= MAX_ACCOUNTS)
     {
-      Serial.println("opencode_go: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      Serial.println("opencode: mais contas do que MAX_ACCOUNTS, ignorando o resto");
       break;
     }
     JsonObjectConst acc = v.as<JsonObjectConst>();
-    OpenCodeGoAccount &g = g_snap.opencode_go[g_snap.opencode_goCount++];
-    g.id = jsonText(acc["id"]);
-    g.label = jsonText(acc["label"]);
-    g.ok = acc["ok"] | false;
-    g.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char *>());
-    g.rollingPercent = jsonFloatOrNeg(acc["rolling_percent"]);
-    g.rollingResets = jsonText(acc["rolling_resets_at"]);
-    g.weeklyPercent = jsonFloatOrNeg(acc["weekly_percent"]);
-    g.weeklyResets = jsonText(acc["weekly_resets_at"]);
-    g.monthlyPercent = jsonFloatOrNeg(acc["monthly_percent"]);
-    g.monthlyResets = jsonText(acc["monthly_resets_at"]);
-  }
-
-  g_snap.opencode_zenCount = 0;
-  for (JsonVariantConst v : doc["opencode_zen"].as<JsonArrayConst>())
-  {
-    if (g_snap.opencode_zenCount >= MAX_ACCOUNTS)
-    {
-      Serial.println("opencode_zen: mais contas do que MAX_ACCOUNTS, ignorando o resto");
-      break;
-    }
-    JsonObjectConst acc = v.as<JsonObjectConst>();
-    OpenCodeZenAccount &z = g_snap.opencode_zen[g_snap.opencode_zenCount++];
-    z.id = jsonText(acc["id"]);
-    z.label = jsonText(acc["label"]);
-    z.ok = acc["ok"] | false;
-    z.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char *>());
-    z.percent = jsonFloatOrNeg(acc["percent"]);
-    z.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
-    z.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
-    z.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
+    OpenCodeAccount &o = g_snap.opencode[g_snap.opencodeCount++];
+    o.id = jsonText(acc["id"]);
+    o.label = jsonText(acc["label"]);
+    o.ok = acc["ok"] | false;
+    o.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char *>());
+    o.rollingPercent = jsonFloatOrNeg(acc["rolling_percent"]);
+    o.rollingResets = jsonText(acc["rolling_resets_at"]);
+    o.weeklyPercent = jsonFloatOrNeg(acc["weekly_percent"]);
+    o.weeklyResets = jsonText(acc["weekly_resets_at"]);
+    o.monthlyPercent = jsonFloatOrNeg(acc["monthly_percent"]);
+    o.monthlyResets = jsonText(acc["monthly_resets_at"]);
+    o.percent = jsonFloatOrNeg(acc["percent"]);
+    o.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
+    o.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
+    o.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
   }
 
   g_snap.falCount = 0;

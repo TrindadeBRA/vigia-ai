@@ -6,8 +6,7 @@
 #include "assets/icons/icon_deepseek.h"
 #include "assets/icons/icon_fal.h"
 #include "assets/icons/icon_gpt.h"
-#include "assets/icons/icon_opencode_go.h"
-#include "assets/icons/icon_opencode_zen.h"
+#include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
 
 static void paintHomeMetric(int x, int y, int w, const char *label, float pct, const String &sub,
@@ -73,11 +72,10 @@ static void paintHomeList()
   const bool showCursor = g_snap.cursorCount > 0;
   const bool showOpenRouter = g_snap.openrouterCount > 0;
   const bool showDeepSeek = g_snap.deepseekCount > 0;
-  const bool showOpenCodeGo = g_snap.opencode_goCount > 0;
-  const bool showOpenCodeZen = g_snap.opencode_zenCount > 0;
+  const bool showOpenCode = g_snap.opencodeCount > 0;
   const bool showFal = g_snap.falCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen + (int)showFal;
+                (int)showDeepSeek + (int)showOpenCode + (int)showFal;
 
   g_homeCardCount = 0;
   g_detailCanScroll = false;
@@ -108,8 +106,7 @@ static void paintHomeList()
   const CursorAccount &cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
   const OpenRouterAccount &orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
-  const OpenCodeGoAccount &ocgAcct = g_snap.opencode_go[showOpenCodeGo ? opencodeGoWorstIdx() : 0];
-  const OpenCodeZenAccount &oczAcct = g_snap.opencode_zen[showOpenCodeZen ? opencodeZenWorstIdx() : 0];
+  const OpenCodeAccount &ocAcct = g_snap.opencode[showOpenCode ? opencodeWorstIdx() : 0];
   const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
   const bool gptTwo = gptAcct.sessionPercent >= 0 && gptAcct.weeklyPercent >= 0;
 
@@ -135,13 +132,9 @@ static void paintHomeList()
   {
     heights[ni++] = hOne;
   }
-  if (showOpenCodeGo)
+  if (showOpenCode)
   {
     heights[ni++] = hTwo;
-  }
-  if (showOpenCodeZen)
-  {
-    heights[ni++] = hOne;
   }
   if (showFal)
   {
@@ -272,8 +265,7 @@ static void paintHomeList()
   String us2 = cursorOndemand(cursorAcct);
   String oSub = openrouterBalance(orAcct);
   String dSub = deepseekBalance(dsAcct);
-  String ocgSub = opencodeGoRemain(ocgAcct);
-  String oczSub = opencodeZenBalance(oczAcct);
+  String ocSub = opencodeRemain(ocAcct);
   String falSub = falBalance(falAcct);
 
   tft.setViewport(pad, bodyTop, cardW, bodyH, false);
@@ -372,28 +364,16 @@ static void paintHomeList()
     }
     slot++;
   }
-  if (showOpenCodeGo)
+  if (showOpenCode)
   {
     int top = nextTop();
     int h = heights[slot];
     if (visible(top, h))
     {
-      String suffix = accountSuffixText(ocgAcct.label, g_snap.opencode_goCount);
-      cardTwo(VIEW_OPENCODE_GO, "OpenCode Go", suffix, ICON_OPENCODE_GO, top, h, ocgAcct.ok,
-              ocgAcct.error, t.rolling, ocgAcct.rollingPercent, ocgSub, t.weekLimit,
-              ocgAcct.weeklyPercent, withResta(ocgAcct.weeklyPercent, ocgAcct.weeklyResets));
-    }
-    slot++;
-  }
-  if (showOpenCodeZen)
-  {
-    int top = nextTop();
-    int h = heights[slot];
-    if (visible(top, h))
-    {
-      String suffix = accountSuffixText(oczAcct.label, g_snap.opencode_zenCount);
-      cardOne(VIEW_OPENCODE_ZEN, "OpenCode Zen", suffix, ICON_OPENCODE_ZEN, top, h, oczAcct.ok,
-              oczAcct.error, t.accountCredits, -1, oczSub);
+      String suffix = accountSuffixText(ocAcct.label, g_snap.opencodeCount);
+      cardTwo(VIEW_OPENCODE, "OpenCode", suffix, ICON_OPENCODE, top, h, ocAcct.ok,
+              ocAcct.error, t.rolling, ocAcct.rollingPercent, ocSub, t.weekLimit,
+              ocAcct.weeklyPercent, withResta(ocAcct.weeklyPercent, ocAcct.weeklyResets));
     }
     slot++;
   }
@@ -457,11 +437,10 @@ static void paintHomeGrid()
   const bool showCursor = g_snap.cursorCount > 0;
   const bool showOpenRouter = g_snap.openrouterCount > 0;
   const bool showDeepSeek = g_snap.deepseekCount > 0;
-  const bool showOpenCodeGo = g_snap.opencode_goCount > 0;
-  const bool showOpenCodeZen = g_snap.opencode_zenCount > 0;
+  const bool showOpenCode = g_snap.opencodeCount > 0;
   const bool showFal = g_snap.falCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCodeGo + (int)showOpenCodeZen + (int)showFal;
+                (int)showDeepSeek + (int)showOpenCode + (int)showFal;
 
   g_homeCardCount = 0;
   g_detailCanScroll = false;
@@ -612,8 +591,7 @@ static void paintHomeGrid()
   const CursorAccount &cursorAcct = g_snap.cursor[showCursor ? cursorWorstIdx() : 0];
   const OpenRouterAccount &orAcct = g_snap.openrouter[showOpenRouter ? openrouterWorstIdx() : 0];
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
-  const OpenCodeGoAccount &ocgAcct = g_snap.opencode_go[showOpenCodeGo ? opencodeGoWorstIdx() : 0];
-  const OpenCodeZenAccount &oczAcct = g_snap.opencode_zen[showOpenCodeZen ? opencodeZenWorstIdx() : 0];
+  const OpenCodeAccount &ocAcct = g_snap.opencode[showOpenCode ? opencodeWorstIdx() : 0];
   const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
 
   String curTitle = cursorPlanTitle(cursorAcct);
@@ -626,7 +604,7 @@ static void paintHomeGrid()
   String us2 = cursorOndemand(cursorAcct);
   String oSub = openrouterBalance(orAcct);
   String dSub = deepseekBalance(dsAcct);
-  String oczSub = opencodeZenBalance(oczAcct);
+  String ocSub = opencodeRemain(ocAcct);
   String falSub = falBalance(falAcct);
 
   tft.setViewport(pad, bodyTop, gridW, bodyH, false);
@@ -692,21 +670,14 @@ static void paintHomeGrid()
             dsAcct.error, compact ? t.credits : t.accountCredits, dsAcct.percent, dSub);
     slot++;
   }
-  if (showOpenCodeGo)
+  if (showOpenCode)
   {
-    String suffix = accountSuffixText(ocgAcct.label, g_snap.opencode_goCount);
-    cardTwo(VIEW_OPENCODE_GO, rects[slot], "OpenCode Go", suffix, ICON_OPENCODE_GO, ocgAcct.ok,
-            ocgAcct.error, compact ? t.rolling : t.rolling, ocgAcct.rollingPercent,
-            showSub ? withResta(ocgAcct.rollingPercent, ocgAcct.rollingResets) : "",
-            compact ? t.week : t.weekLimit, ocgAcct.weeklyPercent,
-            showSub ? withResta(ocgAcct.weeklyPercent, ocgAcct.weeklyResets) : "");
-    slot++;
-  }
-  if (showOpenCodeZen)
-  {
-    String suffix = accountSuffixText(oczAcct.label, g_snap.opencode_zenCount);
-    cardOne(VIEW_OPENCODE_ZEN, rects[slot], "OpenCode Zen", suffix, ICON_OPENCODE_ZEN, oczAcct.ok,
-            oczAcct.error, compact ? t.credits : t.accountCredits, -1, oczSub);
+    String suffix = accountSuffixText(ocAcct.label, g_snap.opencodeCount);
+    cardTwo(VIEW_OPENCODE, rects[slot], "OpenCode", suffix, ICON_OPENCODE, ocAcct.ok,
+            ocAcct.error, compact ? t.rolling : t.rolling, ocAcct.rollingPercent,
+            showSub ? withResta(ocAcct.rollingPercent, ocAcct.rollingResets) : "",
+            compact ? t.week : t.weekLimit, ocAcct.weeklyPercent,
+            showSub ? withResta(ocAcct.weeklyPercent, ocAcct.weeklyResets) : "");
     slot++;
   }
   if (showFal)
@@ -739,8 +710,8 @@ void paintHome()
 {
   const int mask = (g_snap.claudeCount > 0 ? 1 : 0) | (g_snap.gptCount > 0 ? 2 : 0) |
                    (g_snap.cursorCount > 0 ? 4 : 0) | (g_snap.openrouterCount > 0 ? 8 : 0) |
-                   (g_snap.deepseekCount > 0 ? 16 : 0) | (g_snap.opencode_goCount > 0 ? 32 : 0) |
-                   (g_snap.opencode_zenCount > 0 ? 64 : 0) | (g_snap.falCount > 0 ? 128 : 0);
+                   (g_snap.deepseekCount > 0 ? 16 : 0) | (g_snap.opencodeCount > 0 ? 32 : 0) |
+                   (g_snap.falCount > 0 ? 64 : 0);
   if (mask != g_lastHomeConfigMask)
   {
     layoutContent();

@@ -11,8 +11,7 @@ from app.providers.cursor import cursor_fail, fetch_cursor_accounts
 from app.providers.deepseek import deepseek_fail, fetch_deepseek_accounts
 from app.providers.fal import fal_fail, fetch_fal_accounts
 from app.providers.gpt import fetch_gpt_accounts, gpt_fail
-from app.providers.opencode_go import fetch_opencode_go_accounts, opencode_go_fail
-from app.providers.opencode_zen import fetch_opencode_zen_accounts, opencode_zen_fail
+from app.providers.opencode import fetch_opencode_accounts, opencode_fail
 from app.providers.openrouter import fetch_openrouter_accounts, openrouter_fail
 from app.store import load, provider as provider_cfg
 
@@ -92,7 +91,7 @@ def mock_payload() -> dict[str, Any]:
                 "remaining_cents": 750,
             }
         ],
-        "opencode_go": [
+        "opencode": [
             {
                 "id": "legacy",
                 "label": "",
@@ -104,14 +103,6 @@ def mock_payload() -> dict[str, Any]:
                 "weekly_resets_at": now,
                 "monthly_percent": 10.0,
                 "monthly_resets_at": now,
-            }
-        ],
-        "opencode_zen": [
-            {
-                "id": "legacy",
-                "label": "",
-                "ok": True,
-                "error": None,
                 "percent": None,
                 "limit_cents": None,
                 "used_cents": None,
@@ -141,8 +132,7 @@ _PROVIDER_JOBS: list[tuple[str, Callable[[dict], list[dict[str, Any]]], Callable
     ("cursor", fetch_cursor_accounts, cursor_fail, "local"),
     ("openrouter", fetch_openrouter_accounts, openrouter_fail, "legacy"),
     ("deepseek", fetch_deepseek_accounts, deepseek_fail, "legacy"),
-    ("opencode_go", fetch_opencode_go_accounts, opencode_go_fail, "legacy"),
-    ("opencode_zen", fetch_opencode_zen_accounts, opencode_zen_fail, "legacy"),
+    ("opencode", fetch_opencode_accounts, opencode_fail, "legacy"),
     ("fal", fetch_fal_accounts, fal_fail, "legacy"),
 ]
 

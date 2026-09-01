@@ -13,10 +13,9 @@ enum View : uint8_t
   VIEW_GPT = 5,
   VIEW_STATUS = 6,
   VIEW_NOW = 7,
-  VIEW_OPENCODE_GO = 8,
-  VIEW_OPENCODE_ZEN = 9,
-  VIEW_FAL = 10,
-  VIEW_COUNT = 11
+  VIEW_OPENCODE = 8,
+  VIEW_FAL = 9,
+  VIEW_COUNT = 10
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
@@ -97,7 +96,7 @@ struct DeepSeekAccount
   int remainingCents = -1;
 };
 
-struct OpenCodeGoAccount
+struct OpenCodeAccount
 {
   String id;
   String label;
@@ -109,14 +108,6 @@ struct OpenCodeGoAccount
   String weeklyResets;
   float monthlyPercent = -1;
   String monthlyResets;
-};
-
-struct OpenCodeZenAccount
-{
-  String id;
-  String label;
-  bool ok = false;
-  String error;
   float percent = -1;
   int limitCents = -1;
   int usedCents = -1;
@@ -150,10 +141,8 @@ struct UsageSnapshot
   int openrouterCount = 0;
   DeepSeekAccount deepseek[MAX_ACCOUNTS];
   int deepseekCount = 0;
-  OpenCodeGoAccount opencode_go[MAX_ACCOUNTS];
-  int opencode_goCount = 0;
-  OpenCodeZenAccount opencode_zen[MAX_ACCOUNTS];
-  int opencode_zenCount = 0;
+  OpenCodeAccount opencode[MAX_ACCOUNTS];
+  int opencodeCount = 0;
   FalAccount fal[MAX_ACCOUNTS];
   int falCount = 0;
 };
