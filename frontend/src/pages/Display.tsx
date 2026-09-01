@@ -260,22 +260,6 @@ function ProviderCard({ p, pal, onOpen }: { p: ProviderMeta; pal: Pal; onOpen: (
   );
 }
 
-function StatusStrip({ providers, updatedAt, now, t }: { providers: ProviderMeta[]; updatedAt: string; now: number; t: T }) {
-  const failing = providers.filter((p) => !p.ok).length;
-  const age = payloadAgeMs(updatedAt, now);
-  const agoS = age == null ? null : Math.max(0, Math.round(age / 1000));
-  const agoText = agoS == null ? "" : agoS < 3 ? t.agoNow : t.agoSecs(agoS);
-  return (
-    <div className="status-strip">
-      <div className="who">
-        <span className={`who-dot ${failing ? "bad" : "ok"}`} />
-        <span>{failing ? t.errorsCount(failing) : t.allOk}</span>
-      </div>
-      <div className="num">{agoText}</div>
-    </div>
-  );
-}
-
 function Sidebar(props: {
   providers: ProviderMeta[];
   section: string;
@@ -414,7 +398,6 @@ function NowView({ data, prefs, t, pal, nowMs, driftMs, secs, pollS, showCheck, 
       <div className="now-clock">{timeStr}</div>
       <div className="now-date">{dateStr}</div>
       <div className="now-rows">
-        <StatusStrip providers={providers} updatedAt={data.updated_at} now={nowMs} t={t} />
         {providers.length === 0 ? <div className="empty-note">{t.noProviders}</div> : providers.map((p) => <NowRow key={p.id} p={p} pal={pal} />)}
       </div>
     </div>
