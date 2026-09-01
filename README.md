@@ -56,6 +56,7 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 - **Tempo real** — um único ciclo de consulta no coletor, distribuído por SSE; placa e abas de `/display` não multiplicam chamadas
 - **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
 - **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela
+- **Alarmes + notificações push** — avise quando uma cota passar de um limiar ou o saldo de créditos ficar baixo, direto no navegador (Web Push/VAPID); ver [`docs/NOTIFICACOES.md`](docs/NOTIFICACOES.md)
 - **3 temas × 7 cores de destaque**, **PT / EN / ES**
 - **QR code na tela** — abre o painel de configuração de qualquer aparelho na mesma Wi-Fi
 - **Resiliente** — falha numa conta (`ok: false`) nunca derruba as outras

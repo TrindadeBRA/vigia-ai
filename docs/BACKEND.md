@@ -10,6 +10,7 @@ FastAPI em `backend/`. Sobe em `0.0.0.0:8787`.
 - Painel: http://127.0.0.1:5173/display/config (dev) ou http://127.0.0.1:8787/display/config (produção / Compose)
 - Mostrador: `/display`
 - Configs: `/display/config` (`/` redireciona para cá)
+- Alarmes e push: `/display/alarmes` (painel) + `GET/POST /api/alarms`, `PATCH/DELETE /api/alarms/{id}`, `GET/POST /api/push/*` — ver [NOTIFICACOES.md](NOTIFICACOES.md)
 - Swagger: http://127.0.0.1:8787/docs — OpenAPI vivo (`/openapi.json`), incluindo SSE (`GET /events`)
 - Contrato JSON: `GET /usage` — consulta as APIs na hora e avisa o SSE
 - Stream: `GET /events` — `text/event-stream`, um ciclo de APIs para todos os clientes (padrão 60 s, `USAGE_INTERVAL_S`)

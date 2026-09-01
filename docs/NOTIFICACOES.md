@@ -24,6 +24,12 @@ enquanto (`account_id` sempre `"*"`): a maioria tem uma conta por provedor, e
 o campo já existe no modelo pra dar pra adicionar granularidade depois sem
 migração.
 
+O painel sugere um nome pra regra automaticamente (`AlarmsPage.tsx:suggestLabel`)
+no formato `[Provedor] - Uso de X% da cota [Métrica]` (ou "Saldo de $X..." pras
+métricas em `cents`), atualizando ao vivo enquanto o campo "Nome" não é editado
+à mão. Regras já criadas têm um botão **Editar** (limiar e nome — provedor e
+métrica não mudam depois de criada; pra isso, remove e cria de novo).
+
 O engine roda dentro do ciclo do `UsageHub` (`backend/app/hub.py`, hook
 `on_payload`) — mesma cadência do `USAGE_INTERVAL_S`, e também dispara numa
 chamada manual de `GET /usage`. O envio do push em si roda em thread separada
@@ -63,6 +69,34 @@ Isso significa, na prática:
   (`isSecureContext`).
 - Fazer isso funcionar também no celular exigiria HTTPS local na LAN (ex.
   `mkcert`, confiar a CA no aparelho) — decidido, por ora, fora de escopo.
+
+## "Enviei o teste e não chegou nada"
+
+Antes de suspeitar do backend/`pywebpush`, isola o problema direto no
+DevTools (aba `/display/alarmes`, `F12` → Console):
+
+```js
+const reg = await navigator.serviceWorker.getRegistration();
+await reg.showNotification("Teste direto", { body: "sem passar pelo push do servidor" });
+```
+
+- **Não lança erro mas não aparece nada na tela**: não é bug de código — é
+  bloqueio do **macOS**, fora do controle do navegador. Confira **Ajustes do
+  Sistema → Notificações → Google Chrome** (permitir notificações ligado,
+  estilo de alerta diferente de "Nenhum") e se não tem Foco/Não Perturbe
+  ativo. Isso costuma travar porque, na primeira vez que qualquer site tenta
+  notificar, o macOS (não o Chrome) pede permissão num diálogo próprio do
+  sistema — clicar "Não permitir" aí bloqueia **todo** o Chrome, mesmo com
+  `Notification.permission === "granted"` no JS.
+- **Aparece esse teste direto, mas não o do botão "Enviar teste"**: aí sim é
+  específico da entrega via push (`webpush()` aceita a mensagem no FCM, mas o
+  payload pode não estar sendo descriptografado no navegador) — vale
+  investigar `backend/app/push.py`.
+
+O botão "Enviar teste" espera **15 s** antes de disparar (contagem regressiva
+no próprio botão) — dá tempo de minimizar/trocar de janela antes da
+notificação chegar, já que o Chrome pode não mostrar o banner do sistema
+enquanto a aba está em primeiro plano.
 
 ## Arquivos
 

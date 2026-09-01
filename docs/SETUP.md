@@ -23,6 +23,7 @@ Precisa de **Python ≥ 3.11**, **Node 20+** e, para firmware, [PlatformIO Core]
 | O quê | URL |
 | --- | --- |
 | Painel (contas, mock, `secrets.h`) | http://127.0.0.1:5173/display/config |
+| Alarmes e notificações push | http://127.0.0.1:5173/display/alarmes |
 | Mostrador web | http://127.0.0.1:5173/display |
 | Swagger | http://127.0.0.1:8787/docs |
 | Contrato JSON | `GET http://127.0.0.1:8787/usage` |
