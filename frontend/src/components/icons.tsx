@@ -69,6 +69,15 @@ export function GitHubIcon(props: { size?: number }) {
   );
 }
 
+export function ChipIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <rect x={7} y={7} width={10} height={10} rx={1.6} stroke="currentColor" strokeWidth={2} />
+      <path d="M10 4v3M14 4v3M10 17v3M14 17v3M4 10h3M4 14h3M17 10h3M17 14h3" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function SlidersIcon(props: { size?: number }) {
   return (
     <Svg {...props}>

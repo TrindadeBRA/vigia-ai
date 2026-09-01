@@ -39,9 +39,12 @@ export function NetworkCard({ cfg, c, onReload }: { cfg: ConfigPublic; c: Config
           <TextField label={c.netHost} value={host} onChange={(e) => setHost(e.target.value)} hint={c.netHostHint} />
         </div>
         <Checkbox label={c.netMock} checked={mock} onChange={(e) => setMock(e.target.checked)} />
-        <Button type="submit" variant="secondary" loading={save.busy} disabled={!dirty}>
-          {save.busy ? c.saving : c.save}
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {!dirty ? <p className="m-0 max-w-[48ch] text-xs leading-[1.45] text-ink3">{c.netIdleHint}</p> : <span />}
+          <Button type="submit" variant={dirty ? "primary" : "secondary"} loading={save.busy} disabled={!dirty}>
+            {save.busy ? c.saving : c.save}
+          </Button>
+        </div>
         <FieldStatus status={save.status} message={save.message} />
         <p className="mb-0 mt-1 text-[12.5px]">
           <a className="text-accent" href="/docs" target="_blank" rel="noreferrer">

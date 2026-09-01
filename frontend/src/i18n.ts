@@ -63,6 +63,7 @@ type Strings = {
   closeSettings: string;
   config: string;
   setup: string;
+  board: string;
   configCta: string;
 };
 
@@ -124,6 +125,7 @@ export const STR: Record<Lang, Strings> = {
     closeSettings: "Fechar",
     config: "Configurações",
     setup: "Ajustes",
+    board: "Placa e rede",
     configCta: "Configurar contas",
   },
   en: {
@@ -183,6 +185,7 @@ export const STR: Record<Lang, Strings> = {
     closeSettings: "Close",
     config: "Settings",
     setup: "Setup",
+    board: "Board and network",
     configCta: "Set up accounts",
   },
   es: {
@@ -242,6 +245,7 @@ export const STR: Record<Lang, Strings> = {
     closeSettings: "Cerrar",
     config: "Configuración",
     setup: "Ajustes",
+    board: "Placa y red",
     configCta: "Configurar cuentas",
   },
 };

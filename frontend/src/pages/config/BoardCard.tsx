@@ -1,11 +1,10 @@
 import type { ConfigPublic } from "../../api/types";
 import { useRequest } from "../../hooks/useRequest";
 import type { ConfigCopy } from "./copy";
-import { Button, Card, FieldStatus } from "./ui";
+import { Button, Card, CodeRow, FieldStatus } from "./ui";
 
 export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
   const dl = useRequest();
-  const copy = useRequest();
 
   return (
     <Card
@@ -35,28 +34,9 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
       }
     >
       {!cfg.urls.board_ok ? <p className="m-0 text-[12.5px] leading-normal text-warn">{c.boardNoIp}</p> : null}
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="m-0 flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[11.5px] font-[650] uppercase tracking-[.4px] text-ink3">{c.boardUrlLabel}</span>
-          <code className="break-all text-[12.5px] text-accent">{cfg.urls.usage_lan}</code>
-        </div>
-        <Button
-          variant="ghost"
-          loading={copy.busy}
-          onClick={() =>
-            copy.run(
-              async () => {
-                await navigator.clipboard.writeText(cfg.urls.usage_lan);
-                return { ok: true };
-              },
-              { success: c.copied, error: c.fail },
-            )
-          }
-        >
-          {copy.busy ? "…" : c.copyUrl}
-        </Button>
-      </div>
-      <FieldStatus status={dl.message ? dl.status : copy.status} message={dl.message || copy.message} />
+      <CodeRow label={c.boardDestLabel} value={c.boardDest} copyLabel={c.copyUrl} copiedLabel={c.copied} failLabel={c.fail} />
+      <CodeRow label={c.boardUrlLabel} value={cfg.urls.usage_lan} copyLabel={c.copyUrl} copiedLabel={c.copied} failLabel={c.fail} />
+      <FieldStatus status={dl.status} message={dl.message} />
     </Card>
   );
 }

@@ -1,17 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { useOutletContext } from "react-router-dom";
-import { fetchConfig } from "../../api/client";
-import type { ConfigPublic } from "../../api/types";
-import type { Lang } from "../../i18n";
-import { BoardCard } from "./BoardCard";
-import { CONFIG_STR } from "./copy";
-import { NetworkCard } from "./NetworkCard";
+import { Link } from "react-router-dom";
+import { Skeleton } from "../../components/Skeleton";
+import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
 import { ProviderCard } from "./ProviderCard";
-import { cfgGrid, cfgHint, cfgStatus, viewFade } from "../../tw";
-import { Button, Fold, Skeleton } from "./ui";
-import { UsageCheck } from "./UsageCheck";
+import { Button, Fold } from "./ui";
+import { usePublicConfig } from "./usePublicConfig";
 
-export type ConfigOutlet = { lang: Lang };
+export type { ConfigOutlet } from "./usePublicConfig";
 
 const CURSOR_CMD = `(db="$HOME/Library/Application Support/Cursor/User/globalStorage/state.vscdb"
 [ -f "$db" ] || { echo "Erro: Cursor não parece instalado neste Mac."; exit 1; }
@@ -21,39 +15,15 @@ rm -f "$tmp"
 [ -n "$val" ] && echo "$val" || echo "Vazio — a conta não guarda sessão nessa tabela, refaça sign-out/sign-in no Cursor.")`;
 
 export default function ConfigPage() {
-  const ctx = useOutletContext<ConfigOutlet | null>();
-  const c = CONFIG_STR[ctx?.lang || "pt"];
-  const [cfg, setCfg] = useState<ConfigPublic | null>(null);
-  const [phase, setPhase] = useState<"loading" | "ready" | "error">("loading");
-
-  const reload = useCallback(async () => {
-    try {
-      const d = await fetchConfig();
-      setCfg(d);
-      setPhase("ready");
-    } catch {
-      setPhase((p) => (p === "ready" ? "ready" : "error"));
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const { c, cfg, phase, reload, setPhase } = usePublicConfig();
 
   if (phase === "loading" && !cfg) {
-    return (
-      <div className={`flex w-full flex-col gap-[14px] ${viewFade}`}>
-        <header className="w-full">
-          <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
-        </header>
-        <Skeleton />
-      </div>
-    );
+    return <Skeleton page="config" />;
   }
 
   if (phase === "error" && !cfg) {
     return (
-      <div className={`flex w-full flex-col gap-[14px] ${viewFade}`}>
+      <div className={`${pageCol} ${viewFade}`}>
         <header className="w-full">
           <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
@@ -69,10 +39,14 @@ export default function ConfigPage() {
   const common = { inDocker: cfg.in_docker, c, onReload: reload };
 
   return (
-    <div className={`flex w-full flex-col gap-[14px] ${viewFade}`}>
+    <div className={`${pageCol} ${viewFade}`}>
       <header className="w-full">
         <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
         <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
+        <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">
+          {c.configSetupHint}{" "}
+          <Link to="/display/setup" className={accentLink}>{c.toolsTitle}</Link>
+        </p>
       </header>
 
       <div className="mt-2 w-full">
@@ -170,18 +144,6 @@ export default function ConfigPage() {
           usesLocalApp={false}
           {...common}
         />
-      </div>
-
-      <div className="mt-2 w-full">
-        <h2 className="mb-1 mt-0 text-base font-bold">{c.toolsTitle}</h2>
-        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.toolsLead}</p>
-      </div>
-
-      <BoardCard cfg={cfg} c={c} />
-
-      <div className={cfgGrid}>
-        <UsageCheck c={c} />
-        <NetworkCard cfg={cfg} c={c} onReload={reload} />
       </div>
     </div>
   );

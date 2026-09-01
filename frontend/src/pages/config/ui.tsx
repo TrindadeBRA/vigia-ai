@@ -1,8 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "../../cn";
-import type { RequestStatus } from "../../hooks/useRequest";
-import { ConfigSkeleton } from "../../components/Skeleton";
+import { useRequest, type RequestStatus } from "../../hooks/useRequest";
 import { cfgCard, cfgFieldLabel, cfgStatus } from "../../tw";
 
 export function Card({
@@ -85,6 +84,46 @@ export function TextField({
       />
       {hint ? <span className="text-xs leading-[1.45] text-ink3">{hint}</span> : null}
     </label>
+  );
+}
+
+export function CodeRow({
+  label,
+  value,
+  copyLabel,
+  copiedLabel,
+  failLabel,
+}: {
+  label?: string;
+  value: string;
+  copyLabel: string;
+  copiedLabel: string;
+  failLabel: string;
+}) {
+  const copy = useRequest();
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      {label ? <span className={cfgFieldLabel}>{label}</span> : null}
+      <div className="flex min-w-0 items-center gap-1.5 rounded-[10px] border border-edge bg-canvas py-1 pl-3 pr-1">
+        <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-[12.5px] text-accent">{value}</code>
+        <Button
+          variant="ghost"
+          className="shrink-0 px-2.5 py-1.5 text-[12.5px]"
+          loading={copy.busy}
+          onClick={() =>
+            copy.run(
+              async () => {
+                await navigator.clipboard.writeText(value);
+                return { ok: true };
+              },
+              { success: copiedLabel, error: failLabel },
+            )
+          }
+        >
+          {copy.status === "success" ? copiedLabel : copyLabel}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -172,8 +211,4 @@ export function FieldStatus({ status, message }: { status: RequestStatus; messag
 
 export function ActionRow({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-end gap-2">{children}</div>;
-}
-
-export function Skeleton() {
-  return <ConfigSkeleton />;
 }

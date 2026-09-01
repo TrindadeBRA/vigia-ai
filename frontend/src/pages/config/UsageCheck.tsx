@@ -7,12 +7,14 @@ import { cn } from "../../cn";
 import { cfgStatus } from "../../tw";
 import { Button, Card } from "./ui";
 
-const NAMES = ["claude", "gpt", "cursor", "openrouter", "deepseek"] as const;
+const NAMES = ["claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal"] as const;
 
 function titleOf(name: (typeof NAMES)[number]): string {
   if (name === "openrouter") return "OpenRouter";
   if (name === "gpt") return "GPT";
   if (name === "deepseek") return "DeepSeek";
+  if (name === "opencode") return "OpenCode";
+  if (name === "fal") return "fal.ai";
   return name[0].toUpperCase() + name.slice(1);
 }
 
@@ -21,10 +23,8 @@ export function UsageCheck({ c }: { c: ConfigCopy }) {
   const [test, setTest] = useState<UsagePayload | null>(null);
 
   return (
-    <Card
-      title={c.checkTitle}
-      lead={c.checkLead}
-      action={
+    <Card title={c.checkTitle} lead={c.checkLead}>
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           loading={req.busy}
           onClick={() =>
@@ -40,9 +40,8 @@ export function UsageCheck({ c }: { c: ConfigCopy }) {
         >
           {req.busy ? c.checking : c.checkBtn}
         </Button>
-      }
-    >
-      {req.status === "error" && req.message ? <p className={`${cfgStatus} text-bad`}>{req.message}</p> : null}
+        {req.status === "error" && req.message ? <p className={`${cfgStatus} m-0 text-bad`}>{req.message}</p> : null}
+      </div>
       {test ? (
         <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr))]">
           {NAMES.map((name) => {

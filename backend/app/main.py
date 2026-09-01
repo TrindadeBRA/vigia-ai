@@ -111,16 +111,20 @@ def create_app() -> FastAPI:
             app.mount("/icons", StaticFiles(directory=icons), name="icons")
 
         @app.get("/", include_in_schema=False)
+        @app.get("/setup", include_in_schema=False)
+        @app.get("/setup/", include_in_schema=False)
         @app.get("/display", include_in_schema=False)
         @app.get("/display/", include_in_schema=False)
         @app.get("/display/config", include_in_schema=False)
         @app.get("/display/config/", include_in_schema=False)
+        @app.get("/display/setup", include_in_schema=False)
+        @app.get("/display/setup/", include_in_schema=False)
         def spa() -> FileResponse:
             return FileResponse(dist / "index.html")
 
     @app.exception_handler(404)
     async def not_found(_request: Request, _exc: Exception) -> JSONResponse | FileResponse:
-        if dist is not None and (_request.url.path.startswith("/display") or _request.url.path == "/"):
+        if dist is not None and (_request.url.path.startswith("/display") or _request.url.path in ("/", "/setup", "/setup/")):
             return FileResponse(dist / "index.html")
         return JSONResponse({"ok": False, "error": "not found"}, status_code=404)
 

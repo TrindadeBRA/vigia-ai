@@ -1,6 +1,7 @@
 /** Classes Tailwind reutilizadas (mesmo visual do CSS antigo). */
 
 export const num = "font-mono tabular-nums";
+export const pageCol = "flex w-full flex-col gap-[14px]";
 export const viewFade = "animate-fade";
 
 export const iconBtn =
@@ -40,8 +41,11 @@ export const overviewGrid =
 export const metricsGrid =
   "grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))]";
 
+export const skelShine =
+  "bg-[linear-gradient(90deg,var(--chip)_0%,var(--card)_50%,var(--chip)_100%)] bg-[length:200%_100%] animate-shimmer";
+
 export const cfgSkel =
-  "box-border min-w-0 overflow-hidden rounded-2xl border border-edge bg-[linear-gradient(90deg,var(--card)_0%,var(--chip)_50%,var(--card)_100%)] bg-[length:200%_100%] animate-shimmer";
+  `box-border min-w-0 overflow-hidden rounded-2xl border border-edge ${skelShine}`;
 
 export const cfgFieldLabel = "text-[11.5px] font-[650] uppercase tracking-[.4px] text-ink3";
 
@@ -55,4 +59,4 @@ export const sideItem =
 export const sideItemActive =
   "bg-chip text-ink shadow-[inset_0_0_0_1px_var(--card-border),inset_2px_0_0_var(--accent)]";
 
-export const shell = "flex min-h-screen flex-col bg-canvas";
+export const shell = "flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-canvas";

@@ -42,6 +42,30 @@ export type ConfigCopy = {
   secretFold: string;
   toolsTitle: string;
   toolsLead: string;
+  configSetupHint: string;
+  howTitle: string;
+  howLead: string;
+  howIntro: string;
+  how1Title: string;
+  how1Body: string;
+  how2Title: string;
+  how2Body: string;
+  how3Title: string;
+  how3Body: string;
+  how4Title: string;
+  how4Body: string;
+  how5Title: string;
+  how5Body: string;
+  howAccounts: string;
+  accountsCta: string;
+  doNowTitle: string;
+  boardDestLabel: string;
+  boardDest: string;
+  flashCmd: string;
+  wokwiCmd: string;
+  netIdleHint: string;
+  simTitle: string;
+  simLead: string;
   copyUrl: string;
   copied: string;
   addAccount: string;
@@ -137,6 +161,30 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     secretFold: "Colar uma chave",
     toolsTitle: "Placa e rede",
     toolsLead: "Arquivo da ESP32, teste na hora e o endereço neste computador.",
+    configSetupHint: "Para gravar a ESP32 e conferir a rede, abra",
+    howTitle: "Como fazer",
+    howLead: "A placa só mostra porcentagens. Tokens e senhas ficam neste computador. Siga os passos na ordem — a placa e o Mac precisam estar na mesma Wi-Fi.",
+    howIntro: "O coletor neste computador busca as cotas. A ESP32 só pede o JSON na rede local. Nada de login vai para a placa.",
+    how1Title: "Deixe o Vigia ligado",
+    how1Body: "Neste computador, rode ./dev up. O coletor precisa estar no ar para a placa achar os números.",
+    how2Title: "Ligue as contas",
+    how2Body: "Em Configurações, deixe Claude, GPT e Cursor logados neste Mac, ou cole as chaves dos outros provedores.",
+    how3Title: "Baixe o arquivo da placa",
+    how3Body: "O secrets.h diz à ESP32 o endereço deste computador. Mova o arquivo para firmware/src/secrets.h e preencha o nome e a senha da Wi-Fi.",
+    how4Title: "Grave o firmware",
+    how4Body: "Com o cabo USB: ./dev firmware flash. Sem placa física, use o simulador no passo abaixo.",
+    how5Title: "Confira na hora",
+    how5Body: "Use “Buscar cotas agora”. Se a placa não achar o computador, confira IP, porta e se os dois estão na mesma rede.",
+    howAccounts: "Ainda não ligou as contas?",
+    accountsCta: "Abrir configurações",
+    doNowTitle: "Na placa",
+    boardDestLabel: "Coloque o arquivo aqui",
+    boardDest: "firmware/src/secrets.h",
+    flashCmd: "./dev firmware flash",
+    wokwiCmd: "./dev wokwi",
+    netIdleHint: "Pode deixar como está. Só salve se mudar porta, endereço ou o modo de exemplo.",
+    simTitle: "Sem placa física",
+    simLead: "O Wokwi simula a tela neste computador. A Wi-Fi da placa é virtual — o coletor continua neste Mac.",
     copyUrl: "Copiar",
     copied: "Copiado.",
     claudeBlurb: "Usa o login do Claude Code neste computador. Não é a chave de API.",
@@ -224,6 +272,30 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     secretFold: "Paste a key",
     toolsTitle: "Board and network",
     toolsLead: "ESP32 file, a live check, and this computer's address.",
+    configSetupHint: "To flash the ESP32 and check the network, open",
+    howTitle: "How to set it up",
+    howLead: "The board only shows percentages. Tokens and passwords stay on this computer. Follow the steps in order — the board and this Mac must share the same Wi-Fi.",
+    howIntro: "The collector on this computer fetches usage. The ESP32 only requests JSON on the local network. No sign-in ever goes to the board.",
+    how1Title: "Keep Vigia running",
+    how1Body: "On this computer, run ./dev up. The collector must be up for the board to find the numbers.",
+    how2Title: "Connect the accounts",
+    how2Body: "In Settings, leave Claude, GPT, and Cursor signed in on this Mac, or paste keys for the other providers.",
+    how3Title: "Download the board file",
+    how3Body: "secrets.h tells the ESP32 this computer's address. Move the file to firmware/src/secrets.h and fill in the Wi-Fi name and password.",
+    how4Title: "Flash the firmware",
+    how4Body: "With the USB cable: ./dev firmware flash. No physical board? Use the simulator below.",
+    how5Title: "Check right away",
+    how5Body: "Use “Fetch usage now”. If the board can't find this computer, check IP, port, and that both are on the same network.",
+    howAccounts: "Haven't connected accounts yet?",
+    accountsCta: "Open settings",
+    doNowTitle: "On the board",
+    boardDestLabel: "Where to put the file",
+    boardDest: "firmware/src/secrets.h",
+    flashCmd: "./dev firmware flash",
+    wokwiCmd: "./dev wokwi",
+    netIdleHint: "You can leave this as is. Only save if you change the port, address, or sample-data mode.",
+    simTitle: "No physical board",
+    simLead: "Wokwi simulates the screen on this computer. The board's Wi-Fi is virtual — the collector still runs on this Mac.",
     copyUrl: "Copy",
     copied: "Copied.",
     claudeBlurb: "Uses the Claude Code sign-in on this computer. Not the API key.",
@@ -311,6 +383,30 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     secretFold: "Pegar una clave",
     toolsTitle: "Placa y red",
     toolsLead: "Archivo de la ESP32, una comprobación al momento y la dirección de este computador.",
+    configSetupHint: "Para grabar la ESP32 y comprobar la red, abre",
+    howTitle: "Cómo hacerlo",
+    howLead: "La placa solo muestra porcentajes. Tokens y contraseñas quedan en este computador. Sigue los pasos en orden — la placa y este Mac deben estar en el mismo Wi-Fi.",
+    howIntro: "El colector en este computador busca las cuotas. La ESP32 solo pide el JSON en la red local. Ningún inicio de sesión va a la placa.",
+    how1Title: "Deja Vigia en marcha",
+    how1Body: "En este computador, ejecuta ./dev up. El colector tiene que estar activo para que la placa encuentre los números.",
+    how2Title: "Conecta las cuentas",
+    how2Body: "En Configuración, deja Claude, GPT y Cursor iniciados en este Mac, o pega las claves de los otros proveedores.",
+    how3Title: "Descarga el archivo de la placa",
+    how3Body: "secrets.h indica a la ESP32 la dirección de este computador. Muévelo a firmware/src/secrets.h y completa el nombre y la contraseña del Wi-Fi.",
+    how4Title: "Graba el firmware",
+    how4Body: "Con el cable USB: ./dev firmware flash. Sin placa física, usa el simulador más abajo.",
+    how5Title: "Comprueba al momento",
+    how5Body: "Usa “Buscar cuotas ahora”. Si la placa no encuentra el computador, revisa IP, puerto y que ambos estén en la misma red.",
+    howAccounts: "¿Aún no conectaste las cuentas?",
+    accountsCta: "Abrir configuración",
+    doNowTitle: "En la placa",
+    boardDestLabel: "Dónde poner el archivo",
+    boardDest: "firmware/src/secrets.h",
+    flashCmd: "./dev firmware flash",
+    wokwiCmd: "./dev wokwi",
+    netIdleHint: "Puedes dejarlo así. Solo guarda si cambias puerto, dirección o el modo de ejemplo.",
+    simTitle: "Sin placa física",
+    simLead: "Wokwi simula la pantalla en este computador. El Wi-Fi de la placa es virtual — el colector sigue en este Mac.",
     copyUrl: "Copiar",
     copied: "Copiado.",
     claudeBlurb: "Usa el inicio de sesión de Claude Code en este computador. No es la clave de API.",

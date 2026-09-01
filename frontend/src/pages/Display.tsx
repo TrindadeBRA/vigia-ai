@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
-import { OverviewSkeleton } from "../components/Skeleton";
+import { Skeleton } from "../components/Skeleton";
 import { Logo } from "../components/Logo";
-import { CheckIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { cn } from "../cn";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
@@ -296,52 +296,66 @@ function Sidebar(props: {
   onNow: () => void;
   nowActive: boolean;
   configActive: boolean;
+  setupActive: boolean;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, t } = props;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, setupActive, t } = props;
+  const onPage = configActive || setupActive;
+  const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
   return (
     <nav
       className={cn(
-        "flex w-[264px] shrink-0 flex-col gap-px overflow-y-auto border-r border-edge px-2 pb-4 pt-3",
-        "max-[860px]:fixed max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:top-14 max-[860px]:z-30 max-[860px]:w-[82vw] max-[860px]:max-w-[320px] max-[860px]:-translate-x-full max-[860px]:bg-canvas max-[860px]:transition-transform max-[860px]:duration-200",
+        "flex h-full min-h-0 w-[264px] shrink-0 flex-col overflow-hidden border-r border-edge px-2 pb-3 pt-3",
+        "max-[860px]:fixed max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:top-14 max-[860px]:z-30 max-[860px]:h-auto max-[860px]:w-[82vw] max-[860px]:max-w-[320px] max-[860px]:-translate-x-full max-[860px]:bg-canvas max-[860px]:transition-transform max-[860px]:duration-200",
         open && "max-[860px]:translate-x-0",
       )}
     >
-      <button className={cn(sideItem, section === "overview" && !nowActive && !configActive && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
-        <GridIcon size={16} /> {t.overview}
-      </button>
-      <button className={cn(sideItem, nowActive && sideItemActive)} onClick={() => { onNow(); onClose(); }}>
-        <ClockIcon size={16} /> {t.now}
-      </button>
-      <div className="mb-[5px] ml-[9px] mr-[9px] mt-4 text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3">{t.accounts}</div>
-      {providers.length === 0 ? (
-        <div className="px-[9px] py-1.5 text-[12.5px] text-ink3">
-          {t.noProviders}{" "}
-          <NavLink to="/display/config" className={accentLink} onClick={onClose}>
-            {t.configCta}
-          </NavLink>
+      <div className="flex shrink-0 flex-col gap-px">
+        <button className={cn(sideItem, section === "overview" && !nowActive && !onPage && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
+          <GridIcon size={16} /> {t.overview}
+        </button>
+        <button className={cn(sideItem, nowActive && sideItemActive)} onClick={() => { onNow(); onClose(); }}>
+          <ClockIcon size={16} /> {t.now}
+        </button>
+      </div>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
+        <div className={heading}>{t.accounts}</div>
+        <div className="flex min-h-0 flex-1 flex-col gap-px overflow-hidden">
+          {providers.length === 0 ? (
+            <div className="px-[9px] py-1.5 text-[12.5px] text-ink3">
+              {t.noProviders}{" "}
+              <NavLink to="/display/config" className={accentLink} onClick={onClose}>
+                {t.configCta}
+              </NavLink>
+            </div>
+          ) : (
+            providers.map((p) => (
+              <button key={p.id} className={cn(sideItem, "shrink-0", section === "account" && selectedId === p.id && !onPage && sideItemActive)} onClick={() => { onSelect(p.id); onClose(); }}>
+                <div className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
+                  <img className="size-[13px] object-contain" src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="overflow-hidden text-ellipsis whitespace-nowrap font-semibold">{p.title}</div>
+                  {p.label ? <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{p.label}</div> : null}
+                </div>
+                <span className={cn("size-1.5 shrink-0 rounded-full", p.ok ? "bg-good" : "bg-bad")} />
+              </button>
+            ))
+          )}
         </div>
-      ) : (
-        providers.map((p) => (
-          <button key={p.id} className={cn(sideItem, section === "account" && selectedId === p.id && !configActive && sideItemActive)} onClick={() => { onSelect(p.id); onClose(); }}>
-            <div className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
-              <img className="size-[13px] object-contain" src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="overflow-hidden text-ellipsis whitespace-nowrap font-semibold">{p.title}</div>
-              {p.label ? <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{p.label}</div> : null}
-            </div>
-            <span className={cn("size-1.5 shrink-0 rounded-full", p.ok ? "bg-good" : "bg-bad")} />
-          </button>
-        ))
-      )}
-      <div className="mb-[5px] ml-[9px] mr-[9px] mt-4 text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3">{t.setup}</div>
-      <NavLink to="/display/config" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
-        <SlidersIcon size={16} /> {t.config}
-      </NavLink>
-      <a className={sideItem} href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
-        <GitHubIcon size={16} /> GitHub
-      </a>
+      </div>
+      <div className="mt-3 flex shrink-0 flex-col gap-px border-t border-edge pt-3">
+        <div className={heading}>{t.setup}</div>
+        <NavLink to="/display/config" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+          <SlidersIcon size={16} /> {t.config}
+        </NavLink>
+        <NavLink to="/display/setup" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+          <ChipIcon size={16} /> {t.board}
+        </NavLink>
+        <a className={sideItem} href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
+          <GitHubIcon size={16} /> GitHub
+        </a>
+      </div>
     </nav>
   );
 }
@@ -422,7 +436,7 @@ function NowView({ data, prefs, t, pal, nowMs, driftMs, secs, pollS, showCheck, 
   const dateStr = `${weekday}  ${pad2(clockNow.getDate())}/${pad2(clockNow.getMonth() + 1)}/${clockNow.getFullYear()}`;
   const providers = buildProviders(data, t, nowMs);
   return (
-    <div className="relative flex min-h-screen w-full cursor-pointer flex-col items-center justify-center bg-[radial-gradient(900px_420px_at_50%_30%,var(--glow),transparent_65%),var(--bg)] px-3.5 py-7" onClick={onClose}>
+    <div className="relative flex h-full min-h-0 w-full cursor-pointer flex-col items-center justify-center overflow-y-auto bg-[radial-gradient(900px_420px_at_50%_30%,var(--glow),transparent_65%),var(--bg)] px-3.5 py-7" onClick={onClose}>
       <div className="absolute right-3.5 top-3.5">
         <Badge secs={secs} total={pollS} showCheck={showCheck} pal={pal} />
       </div>
@@ -732,6 +746,8 @@ function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetch
 export default function Display() {
   const navigate = useNavigate();
   const isConfig = Boolean(useMatch("/display/config"));
+  const isSetup = Boolean(useMatch("/display/setup"));
+  const isNested = isConfig || isSetup;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -885,19 +901,20 @@ export default function Display() {
           t={t}
           nowActive={nowOpen}
           configActive={isConfig}
+          setupActive={isSetup}
           onOverview={goOverview}
           onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); setNowOpen(false); }}
           onNow={() => { if (data) setNowOpen(true); }}
           onClose={() => setSidebarOpen(false)}
         />
         <main className="min-w-0 flex-1 overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]">
-          {isConfig ? (
+          {isNested ? (
             <Outlet context={outlet} />
           ) : !data ? (
             fetchFailed ? (
               <div className={emptyNote}>{t.fetchFail}</div>
             ) : (
-              <OverviewSkeleton />
+              <Skeleton page={section === "account" ? "account" : "overview"} />
             )
           ) : (
             <>
