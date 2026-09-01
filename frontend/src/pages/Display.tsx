@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { DndContext, DragOverlay, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
 import { Skeleton } from "../components/Skeleton";
 import { Logo } from "../components/Logo";
-import { CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { cn } from "../cn";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewGrid, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { ConfigOutlet } from "./config/ConfigPage";
+import { syncBoard, type BoardLayout, type CardSize } from "../board";
 
-type Prefs = { theme: ThemeName; accent: number; lang: Lang };
+type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout };
 type Pal = (typeof PALETTES)[ThemeName];
 type Metric = { label: string; pct: number | null; sub: string | null };
 type ProviderMeta = {
@@ -74,32 +78,39 @@ function barFillStyle(pct: number, pal: Pal) {
   return { width: `${v}%`, minWidth: v > 0 ? 7 : 0, background: barColor(pct, pal), boxShadow: barGlow(pct, pal) };
 }
 
-function MetricRow({ label, pct, sub, pal }: Metric & { pal: Pal }) {
+function MetricRow({ label, pct, sub, pal, compact }: Metric & { pal: Pal; compact?: boolean }) {
   if (pct == null) {
     return (
-      <div className="mt-3 first:mt-0">
-        <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
-          <span className="text-ink2">{label}</span>
+      <div className={compact ? "mt-1.5 first:mt-0" : "mt-3 first:mt-0"}>
+        <div className={cn("mb-1 flex items-baseline justify-between", compact ? "text-[11px]" : "mb-1.5 text-[12.5px]")}>
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
         </div>
-        <div className={`${num} text-[15px] font-bold`}>{sub || "--"}</div>
+        <div className={cn(num, "font-bold", compact ? "text-[13px]" : "text-[15px]")}>{sub || "--"}</div>
       </div>
     );
   }
   return (
-    <div className="mt-3 first:mt-0">
-      <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
-        <span className="text-ink2">{label}</span>
-        <span className={`${num} text-sm font-bold`}>{fmtPct(pct)}</span>
+    <div className={compact ? "mt-1.5 first:mt-0" : "mt-3 first:mt-0"}>
+      <div className={cn("mb-1 flex items-baseline justify-between", compact ? "text-[11px]" : "mb-1.5 text-[12.5px]")}>
+        <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{label}</span>
+        <span className={`${num} shrink-0 font-bold ${compact ? "text-[12px]" : "text-sm"}`}>{fmtPct(pct)}</span>
       </div>
-      <div className={barTrack}>
+      <div className={cn(barTrack, compact && "h-[5px]")}>
         <div className={barFill} style={barFillStyle(pct, pal)} />
       </div>
-      {sub ? <div className="mt-[5px] text-[11.5px] text-ink3">{sub}</div> : null}
+      {sub && !compact ? <div className="mt-[5px] text-[11.5px] text-ink3">{sub}</div> : null}
     </div>
   );
 }
 
-function Icon({ id, large }: { id: string; large?: boolean }) {
+function Icon({ id, large, compact }: { id: string; large?: boolean; compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
+        <img className="size-3.5 object-contain" src={PROVIDER_ICON[id]} alt={id} draggable={false} />
+      </div>
+    );
+  }
   return (
     <div className={large ? "flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]" : iconChip}>
       <img className={large ? "size-[23px] object-contain" : iconImg} src={PROVIDER_ICON[id]} alt={id} draggable={false} />
@@ -257,30 +268,132 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
   return list;
 }
 
-function ProviderCard({ p, pal, onOpen }: { p: ProviderMeta; pal: Pal; onOpen: () => void }) {
+function SizeToggle({ size, t, onChange }: { size: CardSize; t: T; onChange: (next: CardSize) => void }) {
+  return (
+    <div className="flex shrink-0 rounded-lg border border-edge bg-canvas p-0.5" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className={cn("flex size-6 items-center justify-center rounded-md transition-colors duration-150", size === "sm" ? "bg-chip text-ink" : "text-ink3 hover:text-ink")}
+        title={t.cardSmall}
+        aria-label={t.cardSmall}
+        aria-pressed={size === "sm"}
+        onClick={() => onChange("sm")}
+      >
+        <span className="block size-[7px] rounded-[2px] border-[1.6px] border-current" />
+      </button>
+      <button
+        type="button"
+        className={cn("flex size-6 items-center justify-center rounded-md transition-colors duration-150", size === "lg" ? "bg-chip text-ink" : "text-ink3 hover:text-ink")}
+        title={t.cardLarge}
+        aria-label={t.cardLarge}
+        aria-pressed={size === "lg"}
+        onClick={() => onChange("lg")}
+      >
+        <span className="block h-[7px] w-[13px] rounded-[2px] border-[1.6px] border-current" />
+      </button>
+    </div>
+  );
+}
+
+function ProviderCard({
+  p,
+  pal,
+  size,
+  dragging,
+  lifted,
+  t,
+  grip,
+  onOpen,
+  onSetSize,
+}: {
+  p: ProviderMeta;
+  pal: Pal;
+  size: CardSize;
+  dragging?: boolean;
+  lifted?: boolean;
+  t: T;
+  grip?: object;
+  onOpen: () => void;
+  onSetSize: (next: CardSize) => void;
+}) {
+  const sm = size === "sm";
   return (
     <div
       className={cn(
-        "flex h-full min-w-0 w-full cursor-pointer flex-col rounded-2xl border border-edge bg-panel p-4 shadow-card transition-[transform,box-shadow,border-color] duration-150",
-        "hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover active:translate-y-0",
-        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0",
-        viewFade,
+        "flex min-w-0 w-full flex-col rounded-2xl border bg-panel shadow-card",
+        sm ? "p-3" : "min-h-[196px] p-4",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
       )}
-      onClick={onOpen}
     >
-      <div className="mb-3.5 flex items-center gap-[11px]">
-        <Icon id={p.provider} />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-[7px] text-[14.5px] font-[650]">
-            <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{p.title}</span>
-            <span className={cn("size-1.5 shrink-0 rounded-full", p.ok ? "bg-good" : "bg-bad")} />
+      <div className={cn("flex items-center", sm ? "mb-2 gap-2" : "mb-3.5 gap-[11px]")}>
+        <button
+          type="button"
+          className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing"
+          aria-label={t.dragCard}
+          title={t.dragCard}
+          {...grip}
+        >
+          <GripIcon size={15} />
+        </button>
+        <button type="button" className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-left text-ink" onClick={onOpen}>
+          <Icon id={p.provider} compact={sm} />
+          <div className="min-w-0 flex-1">
+            <div className={cn("flex min-w-0 items-center gap-[7px] font-[650]", sm ? "text-[13px]" : "text-[14.5px]")}>
+              <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{p.title}</span>
+              <span className={cn("size-1.5 shrink-0 rounded-full", p.ok ? "bg-good" : "bg-bad")} />
+            </div>
+            {p.label ? <div className={cardLabel}>{p.label}</div> : null}
           </div>
-          {p.label ? <div className={cardLabel}>{p.label}</div> : null}
-        </div>
+        </button>
+        <SizeToggle size={size} t={t} onChange={onSetSize} />
       </div>
-      <div className="flex flex-1 flex-col justify-center">
-        {!p.ok ? <div className={errorText}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} />)}
-      </div>
+      <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center border-0 bg-transparent p-0 text-left text-ink" onClick={onOpen}>
+        {!p.ok ? <div className={errorText}>{p.error || ""}</div> : p.metrics.map((m, i) => <MetricRow key={i} {...m} pal={pal} compact={sm} />)}
+      </button>
+    </div>
+  );
+}
+
+function SortableTile({
+  p,
+  pal,
+  size,
+  t,
+  onOpen,
+  onSetSize,
+}: {
+  p: ProviderMeta;
+  pal: Pal;
+  size: CardSize;
+  t: T;
+  onOpen: () => void;
+  onSetSize: (next: CardSize) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: p.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 2 : undefined,
+      }}
+      className={cn("min-w-0", size === "lg" ? "col-span-2" : "col-span-1")}
+    >
+      <ProviderCard
+        p={p}
+        pal={pal}
+        size={size}
+        t={t}
+        dragging={isDragging}
+        grip={{ ...attributes, ...listeners }}
+        onOpen={onOpen}
+        onSetSize={onSetSize}
+      />
     </div>
   );
 }
@@ -360,10 +473,62 @@ function Sidebar(props: {
   );
 }
 
-function Overview({ providers, updatedAt, now, t, pal, onOpen }: { providers: ProviderMeta[]; updatedAt: string; now: number; t: T; pal: Pal; onOpen: (id: string) => void }) {
+function Overview({
+  providers,
+  updatedAt,
+  now,
+  t,
+  pal,
+  board,
+  onBoard,
+  onOpen,
+}: {
+  providers: ProviderMeta[];
+  updatedAt: string;
+  now: number;
+  t: T;
+  pal: Pal;
+  board: BoardLayout;
+  onBoard: (fn: (b: BoardLayout) => BoardLayout) => void;
+  onOpen: (id: string) => void;
+}) {
   const failing = providers.filter((p) => !p.ok).length;
   const age = payloadAgeMs(updatedAt, now);
   const agoS = age == null ? null : Math.max(0, Math.round(age / 1000));
+  const byId = new Map(providers.map((p) => [p.id, p]));
+  const tiles = board.order.map((id) => byId.get(id)).filter((p): p is ProviderMeta => Boolean(p));
+  const idsKey = providers.map((p) => p.id).join("|");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const active = activeId ? byId.get(activeId) : null;
+  const activeSize: CardSize = activeId && board.size[activeId] === "sm" ? "sm" : "lg";
+
+  useEffect(() => {
+    onBoard((b) => b);
+  }, [idsKey]);
+
+  function onDragStart(e: DragStartEvent) {
+    setActiveId(String(e.active.id));
+    const box = e.active.rect.current.initial;
+    setLiftSize(box ? { w: box.width, h: box.height } : null);
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    setActiveId(null);
+    setLiftSize(null);
+    const over = e.over;
+    if (!over || e.active.id === over.id) return;
+    const from = String(e.active.id);
+    const to = String(over.id);
+    onBoard((b) => {
+      const oldIndex = b.order.indexOf(from);
+      const newIndex = b.order.indexOf(to);
+      if (oldIndex < 0 || newIndex < 0) return b;
+      return { ...b, order: arrayMove(b.order, oldIndex, newIndex) };
+    });
+  }
+
   return (
     <>
       <div className="mb-[18px] flex w-full flex-wrap items-end justify-between gap-3">
@@ -382,11 +547,36 @@ function Overview({ providers, updatedAt, now, t, pal, onOpen }: { providers: Pr
           </Link>
         </div>
       ) : (
-        <div className={overviewGrid}>
-          {providers.map((p) => (
-            <ProviderCard key={p.id} p={p} pal={pal} onOpen={() => onOpen(p.id)} />
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => { setActiveId(null); setLiftSize(null); }}>
+          <SortableContext items={tiles.map((p) => p.id)} strategy={rectSortingStrategy}>
+            <div className={overviewGrid}>
+              {tiles.map((p) => {
+                const size = board.size[p.id] === "sm" ? "sm" : "lg";
+                return (
+                  <SortableTile
+                    key={p.id}
+                    p={p}
+                    pal={pal}
+                    size={size}
+                    t={t}
+                    onOpen={() => onOpen(p.id)}
+                    onSetSize={(next) => onBoard((b) => ({ ...b, size: { ...b.size, [p.id]: next } }))}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+          <DragOverlay zIndex={80} dropAnimation={null}>
+            {active ? (
+              <div
+                className="pointer-events-none cursor-grabbing"
+                style={{ width: liftSize?.w || (activeSize === "sm" ? 160 : 320) }}
+              >
+                <ProviderCard p={active} pal={pal} size={activeSize} t={t} lifted onOpen={() => {}} onSetSize={() => {}} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
     </>
   );
@@ -918,7 +1108,31 @@ export default function Display() {
             )
           ) : (
             <>
-              {section === "overview" ? <Overview providers={providers} updatedAt={data.updated_at} now={now} t={t} pal={pal} onOpen={(id) => { setSection("account"); setSelectedId(id); }} /> : null}
+              {section === "overview" ? (
+                <Overview
+                  providers={providers}
+                  updatedAt={data.updated_at}
+                  now={now}
+                  t={t}
+                  pal={pal}
+                  board={syncBoard(providers.map((p) => p.id), prefs.board)}
+                  onBoard={(fn) =>
+                    setPrefs((p) => {
+                      const base = syncBoard(providers.map((x) => x.id), p.board);
+                      const next = fn(base);
+                      if (
+                        p.board
+                        && p.board.order.join("|") === next.order.join("|")
+                        && providers.every((x) => (p.board?.size[x.id] || "lg") === (next.size[x.id] || "lg"))
+                      ) {
+                        return p;
+                      }
+                      return { ...p, board: next };
+                    })
+                  }
+                  onOpen={(id) => { setSection("account"); setSelectedId(id); }}
+                />
+              ) : null}
               {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
             </>
           )}

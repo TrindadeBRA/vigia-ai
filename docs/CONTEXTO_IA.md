@@ -21,6 +21,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [FRONTEND.md](FRONTEND.md)                   | Painel e mostrador React                                          |
 | [FIRMWARE.md](FIRMWARE.md)                   | PlatformIO, Wokwi, `secrets.h`                                    |
 | [DECISOES.md](DECISOES.md)                   | Por que as escolhas atuais                                        |
+| [MCPS.md](MCPS.md)                           | MCPs recomendados (Playwright, dnd-kit)                           |
 | [PLANO.md](PLANO.md)                         | Escopo do protótipo (histórico)                                   |
 
 ## O que é este projeto

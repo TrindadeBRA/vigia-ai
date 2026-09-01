@@ -78,6 +78,19 @@ export function ChipIcon(props: { size?: number }) {
   );
 }
 
+export function GripIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <circle cx={9} cy={7} r={1.35} fill="currentColor" />
+      <circle cx={15} cy={7} r={1.35} fill="currentColor" />
+      <circle cx={9} cy={12} r={1.35} fill="currentColor" />
+      <circle cx={15} cy={12} r={1.35} fill="currentColor" />
+      <circle cx={9} cy={17} r={1.35} fill="currentColor" />
+      <circle cx={15} cy={17} r={1.35} fill="currentColor" />
+    </Svg>
+  );
+}
+
 export function SlidersIcon(props: { size?: number }) {
   return (
     <Svg {...props}>

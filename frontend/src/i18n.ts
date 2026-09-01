@@ -65,6 +65,9 @@ type Strings = {
   setup: string;
   board: string;
   configCta: string;
+  cardLarge: string;
+  cardSmall: string;
+  dragCard: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -127,6 +130,9 @@ export const STR: Record<Lang, Strings> = {
     setup: "Ajustes",
     board: "Placa e rede",
     configCta: "Configurar contas",
+    cardLarge: "Card grande",
+    cardSmall: "Card pequeno",
+    dragCard: "Arrastar",
   },
   en: {
     overview: "Overview",
@@ -187,6 +193,9 @@ export const STR: Record<Lang, Strings> = {
     setup: "Setup",
     board: "Board and network",
     configCta: "Set up accounts",
+    cardLarge: "Large card",
+    cardSmall: "Small card",
+    dragCard: "Drag",
   },
   es: {
     overview: "Resumen",
@@ -247,6 +256,9 @@ export const STR: Record<Lang, Strings> = {
     setup: "Ajustes",
     board: "Placa y red",
     configCta: "Configurar cuentas",
+    cardLarge: "Card grande",
+    cardSmall: "Card pequeño",
+    dragCard: "Arrastrar",
   },
 };
 

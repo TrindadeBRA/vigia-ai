@@ -24,11 +24,11 @@ export function SkelCard({ className }: { className?: string }) {
   );
 }
 
-function Cards({ n, className }: { n: number; className?: string }) {
+function Cards({ n, className, itemClass }: { n: number; className?: string; itemClass?: string }) {
   return (
     <div className={className}>
       {Array.from({ length: n }, (_, i) => (
-        <SkelCard key={i} />
+        <SkelCard key={i} className={itemClass} />
       ))}
     </div>
   );
@@ -50,7 +50,7 @@ function OverviewBody() {
         <Bone className="h-8 w-40" />
         <Bone className="h-4 w-52" />
       </div>
-      <Cards n={6} className={overviewGrid} />
+      <Cards n={6} className={overviewGrid} itemClass="col-span-2 min-h-[196px]" />
     </>
   );
 }

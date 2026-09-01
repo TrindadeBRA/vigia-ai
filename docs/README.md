@@ -9,4 +9,5 @@ Ponto de entrada para agentes: **[CONTEXTO_IA.md](CONTEXTO_IA.md)**. Como contri
 5. [APIS_CLAUDE.md](APIS_CLAUDE.md) · [APIS_GPT.md](APIS_GPT.md) · [APIS_CURSOR.md](APIS_CURSOR.md) · [APIS_OPENROUTER.md](APIS_OPENROUTER.md) · [APIS_DEEPSEEK.md](APIS_DEEPSEEK.md) · [APIS_OPENCODE_GO.md](APIS_OPENCODE_GO.md) · [APIS_OPENCODE_ZEN.md](APIS_OPENCODE_ZEN.md)
 6. [HARDWARE.md](HARDWARE.md) · [TOUCH.md](TOUCH.md)
 7. [DECISOES.md](DECISOES.md)
-8. Histórico: [PLANO.md](PLANO.md) (protótipo v1) · [COLETOR.md](COLETOR.md) (coletor antigo)
+8. [MCPS.md](MCPS.md) — MCPs recomendados (Playwright, dnd-kit)
+9. Histórico: [PLANO.md](PLANO.md) (protótipo v1) · [COLETOR.md](COLETOR.md) (coletor antigo)
