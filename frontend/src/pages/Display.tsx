@@ -15,7 +15,7 @@ import { CurrenciesBoardCard, CurrenciesDetail, currenciesAllowedSizes, currenci
 import { WeatherBoardCard, WeatherDetail, weatherAllowedSizes, weatherSizeLabel } from "../components/cards/WeatherCard";
 import { CursorBoardCard, CursorDetail, cursorAllowedSizes, cursorSizeLabel } from "../components/cards/CursorCard";
 import { GptBoardCard, GptDetail, gptAllowedSizes, gptSizeLabel } from "../components/cards/GptCard";
-import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, CopyIcon, DownloadIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
+import { BellIcon, CheckIcon, ChipIcon, CloseIcon, CopyIcon, DownloadIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
@@ -1069,16 +1069,10 @@ function Sidebar(props: {
         <button className={cn(sideItem, section === "overview" && !nowActive && !onPage && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
           <GridIcon size={16} /> {t.overview}
         </button>
-        <NavLink to="/display/now" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
-          <ClockIcon size={16} /> {t.now}
-        </NavLink>
-        <NavLink to="/display/canvas" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
-          <CanvasIcon size={16} /> {t.canvas}
-        </NavLink>
       </div>
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
         <div className={heading}>{t.accounts}</div>
-        <div className="flex min-h-0 flex-1 flex-col gap-px overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto">
           {providers.length === 0 ? (
             <div className="px-[9px] py-1.5 text-[12.5px] text-ink3">
               {t.noProviders}{" "}
@@ -1114,8 +1108,15 @@ function Sidebar(props: {
         <NavLink to="/display/alarms" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <BellIcon size={16} /> {t.alarms}
         </NavLink>
-        <a className={sideItem} href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
-          <GitHubIcon size={16} /> GitHub
+      </div>
+      <div className="mt-1 shrink-0 border-t border-edge pt-1">
+        <a
+          className="flex w-full cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-[9px] py-2 text-left text-[12.5px] text-ink3 no-underline transition-colors duration-150 hover:bg-chip hover:text-ink2"
+          href="https://github.com/TrindadeBRA/vigia-ai"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <GitHubIcon size={15} /> GitHub
         </a>
       </div>
     </nav>
@@ -1629,6 +1630,7 @@ export default function Display() {
   const flat = prefs.theme === "contrast";
   const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
   const t = STR[prefs.lang];
+  const pageTitle = isConfig ? t.config : isSetup ? t.board : isTheme ? t.theme : isAlarms ? t.alarms : isNow ? t.now : null;
   const outlet: DisplayOutlet = { lang: prefs.lang, data, nowMs: now, driftMs };
   const shellClass = cn(shell, flat && "flat");
   const pollS = pollMs / 1000;
@@ -1734,19 +1736,37 @@ export default function Display() {
   return (
     <div className={cn(shellClass, isCanvas && "fixed inset-0 z-50 overflow-hidden bg-black")}>
       {!isCanvas ? (
-      <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none">
-        <button className={`${iconBtn} hidden max-[860px]:flex`} onClick={() => setSidebarOpen(true)}><MenuIcon size={19} /></button>
-        <button className="group/brand flex cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
-          <Logo size={28} />
-        </button>
-        <div className="flex-1" />
-        <NavLink to="/display/now" className={`${num} flex cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2.5 py-[7px] text-[14.5px] font-semibold text-ink transition-colors duration-150 hover:bg-chip`} title={t.now}>
+      <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none">
+        <div className="flex min-w-0 flex-1 items-center gap-0.5">
+          <button className={`${iconBtn} hidden shrink-0 max-[860px]:flex`} onClick={() => setSidebarOpen(true)} title={t.overview} aria-label={t.overview}><MenuIcon size={19} /></button>
+          <button className="group/brand flex shrink-0 cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
+            <Logo size={28} />
+          </button>
+          {pageTitle ? (
+            <div className="ml-0.5 flex min-w-0 items-center gap-1.5 text-ink3 max-[520px]:hidden">
+              <span aria-hidden className="text-[15px] leading-none">/</span>
+              <span className="min-w-0 truncate text-[14px] font-semibold text-ink">{pageTitle}</span>
+            </div>
+          ) : null}
+        </div>
+        <NavLink
+          to="/display/now"
+          className={({ isActive }) =>
+            cn(
+              num,
+              "flex shrink-0 cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2.5 py-[7px] text-[14.5px] font-semibold text-ink transition-colors duration-150 hover:bg-chip",
+              isActive && "bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]",
+            )
+          }
+          title={t.now}
+        >
           <span className="size-1.5 shrink-0 rounded-full bg-good shadow-[0_0_5px_var(--good)] [.flat_&]:shadow-none" />
           {fmtClock(now + driftMs)}
         </NavLink>
-        <button className={cn(iconBtn, settingsOpen && "text-accent")} onClick={() => setSettingsOpen((v) => !v)} title={t.settings}>
+        <button className={cn(iconBtn, settingsOpen && "bg-chip text-accent")} onClick={() => setSettingsOpen((v) => !v)} title={t.settings}>
           <SettingsIcon size={19} />
         </button>
+        <div className="mx-0.5 h-6 w-px shrink-0 bg-edge" aria-hidden />
         <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} onClick={() => void loadUsage()} />
       </div>
       ) : null}
