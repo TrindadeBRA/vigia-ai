@@ -208,7 +208,6 @@ void paintNow()
   String ds1 = deepseekBalance(dsAcct);
   String oc1 = opencodeRemain(ocAcct);
   String fal1 = falBalance(falAcct);
-  String bc1 = bitcoinBalance(bcAcct);
   String bc2 = bitcoinValueText(bcAcct);
 
   int slot = 0;
@@ -273,8 +272,12 @@ void paintNow()
   }
   if (showBitcoin)
   {
+    // Uma coluna só: "0.00036288 BTC" + "$28.09 / R$144,80" juntos nao cabem
+    // nas duas colunas estreitas dessa tela (paintNowMetric nao trunca por
+    // largura como paintHomeMetric) -- igual OpenRouter/DeepSeek/fal.ai, so
+    // o valor em dinheiro aqui; o saldo em BTC fica no detalhe (toque no card).
     String suffix = accountSuffixText(bcAcct.label, g_snap.bitcoinCount);
-    row(slot++, "Bitcoin", suffix, ICON_BITCOIN, bcAcct.ok, bcAcct.error, t.bitcoinBalance,
-        -1, bc1, true, t.bitcoinValue, -1, bc2);
+    row(slot++, "Bitcoin", suffix, ICON_BITCOIN, bcAcct.ok, bcAcct.error, t.bitcoinValue,
+        -1, bc2, false, "", -1, "");
   }
 }

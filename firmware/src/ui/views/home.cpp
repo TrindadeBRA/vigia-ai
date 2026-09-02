@@ -665,8 +665,16 @@ static void paintHomeGrid()
     } else {
       // 1x1: sm/md - empilhado
       if (metricCount == 2) {
-        // Se sm, mostra só 1 métrica para não espremer
-        if (s == CARD_SM) {
+        // Sem barra dos dois lados (ex.: Bitcoin: saldo BTC + valor em
+        // dinheiro, nenhum e percentual) -- cada linha e soh label+valor,
+        // bem mais baixa que o metricH assumido abaixo (que reserva espaco
+        // pra barra+legenda), entao cabem as duas mesmo num card pequeno.
+        const bool bothPlain = p1 < 0 && p2 < 0;
+        if (bothPlain) {
+          paintHomeMetric(barX, y0, barW, l1, p1, s1, font, labelH, barH);
+          paintHomeMetric(barX, y0 + labelH + gapM, barW, l2, p2, s2, font, labelH, barH);
+        } else if (s == CARD_SM) {
+          // Se sm, mostra só 1 métrica para não espremer
           paintHomeMetric(barX, y0, barW, l1, p1, s1, font, labelH, barH);
         } else {
           paintHomeMetric(barX, y0, barW, l1, p1, s1, font, labelH, barH);

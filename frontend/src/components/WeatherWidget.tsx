@@ -74,7 +74,7 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
                 <div className="mt-auto flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-ink2">
                     {showFeels && cur?.apparent_temperature != null ? <span>{t.weatherFeelsLike} {fmtTemp(cur.apparent_temperature, tempUnit)}</span> : null}
                     {showHumidity && cur?.relative_humidity_2m != null ? <span>{fmtHumidity(cur.relative_humidity_2m)}</span> : null}
-                    {showWind && cur?.wind_speed_10m != null ? <span>{fmtWind(cur.wind_speed_10m, windUnit)} {windDir(cur.wind_direction_10m)}</span> : null}
+                    {showWind && cur?.wind_speed_10m != null ? <span>{fmtWind(cur.wind_speed_10m, windUnit)}{cur.wind_direction_10m != null ? ` ${windDir(cur.wind_direction_10m)}` : ""}</span> : null}
                     {showPrecip && cur?.precipitation != null && cur.precipitation > 0 ? <span>{fmtPrecip(cur.precipitation, "mm")}</span> : null}
                 </div>
             </button>
@@ -94,14 +94,14 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink2">
                 {showFeels && cur?.apparent_temperature != null ? <span>{t.weatherFeelsLike} {fmtTemp(cur.apparent_temperature, tempUnit)}</span> : null}
                 {showHumidity && cur?.relative_humidity_2m != null ? <span>{t.weatherHumidity} {fmtHumidity(cur.relative_humidity_2m)}</span> : null}
-                {showWind && cur?.wind_speed_10m != null ? <span>{t.weatherWind} {fmtWind(cur.wind_speed_10m, windUnit)} {windDir(cur.wind_direction_10m)}</span> : null}
-                {showPrecip && cur?.precipitation != null ? <span>{t.weatherPrecip} {fmtPrecip(cur.precipitation, "mm")}</span> : null}
+                {showWind && cur?.wind_speed_10m != null ? <span>{t.weatherWind} {fmtWind(cur.wind_speed_10m, windUnit)}{cur.wind_direction_10m != null ? ` ${windDir(cur.wind_direction_10m)}` : ""}</span> : null}
+                {showPrecip && cur?.precipitation != null && cur.precipitation > 0 ? <span>{t.weatherPrecip} {fmtPrecip(cur.precipitation, "mm")}</span> : null}
                 {fields?.pressure && cur?.pressure_msl != null ? <span>{t.weatherPressure} {fmtPressure(cur.pressure_msl)}</span> : null}
                 {fields?.cloud_cover && cur?.cloud_cover != null ? <span>{t.weatherCloudCover} {fmtHumidity(cur.cloud_cover)}</span> : null}
             </div>
             {weather.daily?.time?.length ? (
-                <div className="mt-2.5 flex gap-1.5 overflow-x-auto pb-1">
-                    {weather.daily.time.slice(0, 5).map((d, i) => (
+                <div className="mt-2.5 flex min-h-0 flex-1 flex-wrap content-start items-start gap-1.5 overflow-hidden">
+                    {weather.daily.time.slice(0, 4).map((d, i) => (
                         <span key={d} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-chip px-2 py-1 text-[11px] font-semibold">
                             <span>{fmtDayLabel(d)}</span>
                             <span>{wmoEmoji(weather.daily?.weather_code?.[i])}</span>
