@@ -11,6 +11,19 @@ FRONTEND_PORT=5173
 # (forward embutido dele, sem precisar de --forward) — dá pra testar o
 # upload de tema (protótipo, ver .agents/CONTRATO_TEMA.md) sem hardware real.
 THEME_SIM_PORT=9080
+# Amarelo pros logs do gateway wokwigw (mesmo espírito do magenta em
+# backend/app/http_util.py pras chamadas de saída — cada fonte com sua cor).
+_GW_YELLOW='\033[33m'
+_GW_RESET='\033[0m'
+colorize_gateway() {
+  if [ -t 1 ]; then
+    while IFS= read -r line; do
+      printf '%b%s%b\n' "$_GW_YELLOW" "$line" "$_GW_RESET"
+    done
+  else
+    cat
+  fi
+}
 WOKWIGW_BIN="$ROOT_DIR/.tools/wokwigw"
 WOKWIGW_VERSION="v2.0.1"
 WOKWIGW_ASSET=""
@@ -271,7 +284,7 @@ cmd_sim() {
   if nc -z 127.0.0.1 9011 2>/dev/null; then
     echo "gateway ja esta em :9011"
   else
-    "$WOKWIGW_BIN" --listenPort 9011 &
+    "$WOKWIGW_BIN" --listenPort 9011 2>&1 | colorize_gateway &
     PIDS+=("$!")
     local i
     for i in $(seq 1 20); do
