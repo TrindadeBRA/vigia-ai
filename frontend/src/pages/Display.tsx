@@ -878,7 +878,7 @@ function Sidebar(props: {
         <button className={cn(sideItem, section === "overview" && !nowActive && !onPage && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
           <GridIcon size={16} /> {t.overview}
         </button>
-        <NavLink to="/display/agora" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+        <NavLink to="/display/now" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <ClockIcon size={16} /> {t.now}
         </NavLink>
       </div>
@@ -1496,7 +1496,7 @@ export default function Display() {
   const isSetup = Boolean(useMatch("/display/setup"));
   const isTema = Boolean(useMatch("/display/tema"));
   const isAlarms = Boolean(useMatch("/display/alarmes"));
-  const isNow = Boolean(useMatch("/display/agora"));
+  const isNow = Boolean(useMatch("/display/now"));
   const isNested = isConfig || isSetup || isTema || isAlarms || isNow;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
@@ -1622,7 +1622,7 @@ export default function Display() {
           <Logo size={28} />
         </button>
         <div className="flex-1" />
-        <NavLink to="/display/agora" className={`${num} flex cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2.5 py-[7px] text-[14.5px] font-semibold text-ink transition-colors duration-150 hover:bg-chip`} title={t.now}>
+        <NavLink to="/display/now" className={`${num} flex cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2.5 py-[7px] text-[14.5px] font-semibold text-ink transition-colors duration-150 hover:bg-chip`} title={t.now}>
           <span className="size-1.5 shrink-0 rounded-full bg-good shadow-[0_0_5px_var(--good)] [.flat_&]:shadow-none" />
           {fmtClock(now + driftMs)}
         </NavLink>
