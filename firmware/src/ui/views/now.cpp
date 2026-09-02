@@ -4,6 +4,7 @@
 #include "assets/icons/icon_adsense.h"
 #include "assets/icons/icon_bitcoin.h"
 #include "assets/icons/icon_claude.h"
+#include "assets/icons/icon_currencies.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
 #include "assets/icons/icon_fal.h"
@@ -130,9 +131,10 @@ void paintNow()
   const bool showFal = g_snap.falCount > 0;
   const bool showBitcoin = g_snap.bitcoinCount > 0;
   const bool showAdsense = g_snap.adsenseCount > 0;
+  const bool showCurrencies = currenciesVisible();
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
                 (int)showDeepSeek + (int)showOpenCode + (int)showFal + (int)showBitcoin +
-                (int)showAdsense;
+                (int)showAdsense + (int)showCurrencies;
   if (n == 0)
   {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
@@ -290,5 +292,20 @@ void paintNow()
     String suffix = accountSuffixText(asAcct.label, g_snap.adsenseCount);
     row(slot++, "AdSense", suffix, ICON_ADSENSE, asAcct.ok, asAcct.error, t.adsenseWallet,
         -1, as2, false, "", -1, "");
+  }
+  if (showCurrencies)
+  {
+    const CurrenciesData &cu = g_snap.currencies;
+    String l0 = cu.itemCount > 0 ? currencyQuoteLabel(cu.items[0]) : String(t.currencies);
+    String v0 = cu.itemCount > 0 ? currencyQuoteValue(cu.items[0], cu.base) : String(t.currenciesEmpty);
+    String l1s, v1s;
+    const bool has2 = cu.itemCount >= 2;
+    if (has2)
+    {
+      l1s = currencyQuoteLabel(cu.items[1]);
+      v1s = currencyQuoteValue(cu.items[1], cu.base);
+    }
+    row(slot++, t.currencies, cu.base, ICON_CURRENCIES, cu.ok, cu.error, l0.c_str(), -1, v0, has2,
+        has2 ? l1s.c_str() : "", -1, v1s);
   }
 }

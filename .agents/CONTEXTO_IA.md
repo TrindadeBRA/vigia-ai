@@ -30,7 +30,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 ## O que é este projeto
 
-**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **GPT** (ChatGPT / Codex), **Cursor**, **OpenRouter**, **DeepSeek**, **OpenCode Go**, **OpenCode Zen**, **fal.ai**, carteira **Bitcoin** e ganhos **AdSense**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. Firmware e `/display` escutam `GET /events` (SSE). `GET /usage` é o mesmo JSON, na hora. O frontend React é o mostrador (`/display`) e as configurações (`/display/config`). `/` redireciona para as configs.
+**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **GPT** (ChatGPT / Codex), **Cursor**, **OpenRouter**, **DeepSeek**, **OpenCode Go**, **OpenCode Zen**, **fal.ai**, carteira **Bitcoin**, ganhos **AdSense** e cotação de **moedas**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. Firmware e `/display` escutam `GET /events` (SSE). `GET /usage` é o mesmo JSON, na hora. O frontend React é o mostrador (`/display`) e as configurações (`/display/config`). `/` redireciona para as configs.
 
 Idioma da UI e da documentação: **português (Brasil)**. Código (identificadores) em inglês.
 
@@ -51,7 +51,7 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 ```
 backend/app/main.py           FastAPI, Swagger /docs
 backend/app/schemas.py        contrato OpenAPI
-backend/app/providers/        claude, gpt, cursor, openrouter, deepseek, opencode_go, opencode_zen, fal, bitcoin, adsense
+backend/app/providers/        claude, gpt, cursor, openrouter, deepseek, opencode_go, opencode_zen, fal, bitcoin, adsense, currencies, weather
 backend/app/local/            Keychain, credentials, state.vscdb, auth.json (Codex)
 frontend/src/pages/Display.tsx         mostrador (SSE GET /events)
 frontend/src/pages/config/ConfigPage.tsx  contas, placa, rede

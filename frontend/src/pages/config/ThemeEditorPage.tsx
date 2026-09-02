@@ -24,7 +24,6 @@ type ThemeBg = { color: string };
 type ThemeState = { background: ThemeBg; clock: ThemeClock; icons: ThemeIcon[]; texts: ThemeText[] };
 
 type WallpaperItem = { id: string; source: string; provider?: string | null; external_id?: string | null; preview_url?: string | null; created_at?: string | null; has_preview: boolean };
-type SlideshowConfig = { enabled: boolean; interval: number; order: string[] };
 
 const ICON_PROVIDERS: { id: Provider; label: string }[] = [
   { id: "claude", label: "Claude" },
@@ -284,7 +283,6 @@ export default function ThemeEditorPage() {
   const [now, setNow] = useState(() => new Date());
   const [weatherPreview, setWeatherPreview] = useState<{ temp: number | null; code: number | null; unit: string } | null>(null);
   const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
-  const [slideshow, setSlideshow] = useState<SlideshowConfig>({ enabled: false, interval: 5, order: [] });
   const [currentWallpaperId, setCurrentWallpaperId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const send = useRequest();
@@ -326,15 +324,15 @@ export default function ThemeEditorPage() {
     };
   }, []);
 
-  // Carrega wallpapers e slideshow — mesma lógica da placa (ver backend/app/routers/theme.py:_slideshow_state)
-  // O canvas deve mostrar exatamente o que a placa mostra: se slideshow ativo, o wallpaper do índice atual; senão o primeiro.
+  // Carrega wallpapers — o canvas mostra o papel selecionado (o mesmo que a placa baixa em GET /api/theme/background).
   const fetchWallpapers = useCallback(async () => {
     try {
       const r = await fetch("/api/wallpapers", { cache: "no-store" });
       if (!r.ok) return;
-      const j = (await r.json()) as { wallpapers: WallpaperItem[]; slideshow: SlideshowConfig };
-      setWallpapers(j.wallpapers || []);
-      setSlideshow(j.slideshow || { enabled: false, interval: 5, order: [] });
+      const j = (await r.json()) as { wallpapers: WallpaperItem[]; selected_id?: string | null };
+      const list = j.wallpapers || [];
+      setWallpapers(list);
+      setCurrentWallpaperId(j.selected_id || list[0]?.id || null);
     } catch {
       /* ignore */
     }
@@ -342,40 +340,10 @@ export default function ThemeEditorPage() {
 
   useEffect(() => {
     void fetchWallpapers();
-    // Atualiza quando WallpaperManager dispara evento (upload/delete/slideshow)
     const onUpdate = () => void fetchWallpapers();
     window.addEventListener("vigia:wallpapers-updated", onUpdate);
     return () => window.removeEventListener("vigia:wallpapers-updated", onUpdate);
   }, [fetchWallpapers]);
-
-  // Calcula qual wallpaper a placa está mostrando agora (mesma fórmula do backend: floor(now / (interval*60)) % count)
-  useEffect(() => {
-    if (wallpapers.length === 0) {
-      setCurrentWallpaperId(null);
-      return;
-    }
-    const compute = () => {
-      if (slideshow.enabled && slideshow.order.length > 0) {
-        const existing = new Set(wallpapers.map((w) => w.id));
-        const filtered = slideshow.order.filter((id) => existing.has(id));
-        const order = filtered.length > 0 ? filtered : wallpapers.map((w) => w.id);
-        const idx = Math.floor(Date.now() / 1000 / (slideshow.interval * 60)) % order.length;
-        setCurrentWallpaperId(order[idx] || null);
-      } else if (slideshow.order.length > 0) {
-        const existing = new Set(wallpapers.map((w) => w.id));
-        const first = slideshow.order.find((id) => existing.has(id));
-        setCurrentWallpaperId(first || wallpapers[0]?.id || null);
-      } else {
-        setCurrentWallpaperId(wallpapers[0]?.id || null);
-      }
-    };
-    compute();
-    // Se slideshow ativo, atualiza a cada 30s igual à placa (themeClientPollSlideshow)
-    if (slideshow.enabled && wallpapers.length > 1) {
-      const id = window.setInterval(compute, 30000);
-      return () => window.clearInterval(id);
-    }
-  }, [wallpapers, slideshow]);
 
   // Resolução real da placa reportada ao coletor (header X-Vigia-Screen em
   // GET /usage e /events, ver firmware/src/net/client.cpp) — acerta o
@@ -456,7 +424,7 @@ export default function ThemeEditorPage() {
   // A placa é quem busca (botão de recarregar no header, ver
   // firmware/src/net/client.cpp:themeClientReload e docs/CONTRATO_TEMA.md).
   async function saveTheme() {
-    const hasWallpaper = wallpapers.length > 0;
+    const hasWallpaper = Boolean(currentWallpaperId);
     const r2 = await fetch("/api/theme/meta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -500,9 +468,7 @@ export default function ThemeEditorPage() {
         {!canvasKnown ? <p className={cfgStatus}>{c.canvasNoDevice}</p> : null}
         {currentWallpaperId ? (
           <p className={cfgStatus}>
-            Papel de parede: <span className="font-mono text-ink">{currentWallpaperId.slice(0, 8)}</span>
-            {slideshow.enabled && wallpapers.length > 1 ? ` · slideshow a cada ${slideshow.interval} min` : ""}
-            {wallpapers.length > 1 && !slideshow.enabled ? " · slideshow desativado (mostrando o 1º)" : ""}
+            Papel de parede em uso
           </p>
         ) : wallpapers.length > 0 ? (
           <p className={`${cfgStatus} text-warn`}>Papéis de parede cadastrados mas nenhum selecionado</p>
@@ -519,6 +485,7 @@ export default function ThemeEditorPage() {
           {/* Fundo: exatamente como a placa — se há wallpaper, mostra a imagem com cover (mesmo crop do backend _image_to_raw); senão cor sólida */}
           {currentWallpaperId ? (
             <img
+              key={currentWallpaperId}
               src={`/api/wallpapers/${currentWallpaperId}/preview`}
               alt=""
               draggable={false}

@@ -169,7 +169,19 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "unpaid_cents": 56789,
       "account_name": "pub-1234"
     }
-  ]
+  ],
+  "currencies": {
+    "ok": true,
+    "error": null,
+    "updated_at": "2026-08-31T00:10:00-03:00",
+    "base": "BRL",
+    "items": [
+      {"id": "usd", "kind": "fiat", "code": "USD", "label": "Dólar americano", "price": 5.18, "ok": true, "error": null},
+      {"id": "eur", "kind": "fiat", "code": "EUR", "label": "Euro", "price": 6.00, "ok": true, "error": null},
+      {"id": "btc", "kind": "crypto", "code": "bitcoin", "label": "Bitcoin", "price": 398064.00, "ok": true, "error": null},
+      {"id": "eth", "kind": "crypto", "code": "ethereum", "label": "Ethereum", "price": 12408.59, "ok": true, "error": null}
+    ]
+  }
 }
 ```
 
@@ -190,6 +202,7 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
 | `fal`          | array de contas | sim (pode ser `[]`) |
 | `bitcoin`      | array de contas | sim (pode ser `[]`) |
 | `adsense`      | array de contas | sim (pode ser `[]`) |
+| `currencies`   | objeto ou `null` | não — ausente/`null` = desligado ou oculto; ver `currencies` abaixo |
 
 ### Campos comuns a toda conta, nos 10 provedores
 
@@ -325,6 +338,30 @@ Login Google OAuth no coletor (não vai token no JSON) — ganhos estimados de h
 | `unpaid_cents`  | number ou `null` | Saldo não pago (`payments/unpaid`), na moeda da conta          |
 | `account_name`  | string ou `null` | Nome de exibição da conta AdSense                              |
 
+### `currencies`
+
+Cotação de moedas (fiat + cripto) convertidas para uma moeda base. **Não** é lista de contas: é um objeto único, igual ao clima. `null` ou ausente = item desligado/oculto no painel — o firmware **não desenha o card**. Lista vazia (`items: []` e `ok: true`) também some da placa. O firmware guarda no máximo 8 itens (`MAX_CURRENCY_ITEMS`); o resto é ignorado (log serial).
+
+| Campo         | Tipo             | Notas                                                                 |
+| ------------- | ---------------- | --------------------------------------------------------------------- |
+| `ok`          | bool             | `false` se a busca das cotações falhou por completo                   |
+| `error`       | string ou `null` | Mensagem curta quando `ok` é `false`                                  |
+| `updated_at`  | string ou `null` | ISO-8601 do ciclo                                                     |
+| `base`        | string           | ISO-4217 da moeda em que os preços são mostrados (ex.: `BRL`)         |
+| `items`       | array            | Moedas acompanhadas, na ordem do painel                               |
+
+#### `currencies.items[i]`
+
+| Campo   | Tipo             | Notas                                                                                          |
+| ------- | ---------------- | ---------------------------------------------------------------------------------------------- |
+| `id`    | string           | Estável entre polls (gerado pelo coletor)                                                      |
+| `kind`  | string           | `"fiat"` (câmbio) ou `"crypto"` (CoinGecko)                                                    |
+| `code`  | string           | ISO-4217 (`USD`) ou id CoinGecko (`ethereum`)                                                  |
+| `label` | string           | Nome de exibição (`""` = usa `code`)                                                           |
+| `price` | number ou `null` | Valor de 1 unidade de `code` em `base`                                                         |
+| `ok`    | bool             | `false` se esta cotação falhou (as outras continuam)                                           |
+| `error` | string ou `null` | Mensagem curta quando `ok` é `false`                                                           |
+
 ## Outros endpoints
 
 | Método | Caminho   | Corpo                                                                                                         |
@@ -347,7 +384,7 @@ Uma conta só entra no array se estiver visível — o firmware **não desenha o
 
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
    painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai, Bitcoin e AdSense somem ao
-   apagar a última key/endereço/login.
+   apagar a última key/endereço/login. Moedas some ao desligar o interruptor ou esvaziar a lista.
 2. **Oculta no painel** — a conta **local** de Claude/GPT/Cursor (Keychain/`auth.json`/`state.vscdb`) e
    a **primeira key/endereço** de OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai/Bitcoin (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`/`OPENCODE_GO_API_KEY`/`OPENCODE_ZEN_API_KEY`/`FAL_API_KEY`/`BITCOIN_ADDRESS`)
    e o login AdSense

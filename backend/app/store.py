@@ -103,13 +103,6 @@ _WALLPAPER_PROVIDERS_DEFAULT: dict[str, Any] = {
     "wallhaven_key": "",
 }
 
-_SLIDESHOW_DEFAULT: dict[str, Any] = {
-    "enabled": False,
-    "interval": 5,
-    "order": [],
-}
-
-
 def default_config() -> dict[str, Any]:
     cfg = {
         "version": 1,
@@ -123,7 +116,7 @@ def default_config() -> dict[str, Any]:
         "currencies": deepcopy(_CURRENCIES_DEFAULT),
         "wallpapers": {
             "providers": deepcopy(_WALLPAPER_PROVIDERS_DEFAULT),
-            "slideshow": deepcopy(_SLIDESHOW_DEFAULT),
+            "selected_id": "",
         },
     }
     cfg["providers"]["adsense"].update(
@@ -414,25 +407,22 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
                 }
             )
         cur["items"] = cleaned_items
-    # Wallpapers / slideshow
+    # Wallpapers
     raw_wp = raw.get("wallpapers") if isinstance(raw.get("wallpapers"), dict) else {}
     wp = cfg["wallpapers"]
     raw_prov = raw_wp.get("providers") if isinstance(raw_wp.get("providers"), dict) else {}
     for k in ("pexels_key", "unsplash_key", "wallhaven_key"):
         if k in raw_prov and isinstance(raw_prov[k], str):
             wp["providers"][k] = raw_prov[k].strip()
-    raw_sl = raw_wp.get("slideshow") if isinstance(raw_wp.get("slideshow"), dict) else {}
-    if "enabled" in raw_sl:
-        wp["slideshow"]["enabled"] = bool(raw_sl["enabled"])
-    if "interval" in raw_sl:
-        try:
-            iv = int(raw_sl["interval"])
-            wp["slideshow"]["interval"] = max(1, min(120, iv))
-        except (TypeError, ValueError):
-            pass
-    if isinstance(raw_sl.get("order"), list):
-        cleaned = [str(x).strip() for x in raw_sl["order"] if isinstance(x, str) and str(x).strip()]
-        wp["slideshow"]["order"] = cleaned
+    if isinstance(raw_wp.get("selected_id"), str):
+        wp["selected_id"] = raw_wp["selected_id"].strip()
+    elif not wp["selected_id"]:
+        # Migração: configs antigas guardavam a ordem do slideshow — usa o 1º.
+        raw_sl = raw_wp.get("slideshow") if isinstance(raw_wp.get("slideshow"), dict) else {}
+        order = raw_sl.get("order") if isinstance(raw_sl.get("order"), list) else []
+        first = next((str(x).strip() for x in order if isinstance(x, str) and str(x).strip()), "")
+        if first:
+            wp["selected_id"] = first
     return cfg
 
 

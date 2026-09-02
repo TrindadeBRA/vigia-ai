@@ -125,15 +125,14 @@ esse formato).
 
 | Rota                                                       | O que faz                                                                                                                         |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/theme`                                           | `{ "active": bool, "theme": "<json ou null>", "has_background": bool, "slideshow": { "enabled", "interval", "order", "count" } }` |
+| `GET /api/theme`                                           | `{ "active": bool, "theme": "<json ou null>", "has_background": bool, "background_id": string \| null }`                          |
 | `POST /api/theme/meta`                                     | corpo = `theme.json` cru (`Content-Type` qualquer, máx. 8 KB)                                                                     |
 | `POST /api/theme/background`                               | `multipart/form-data`, campo `bg` (máx. ~400 KB) — legado, ainda funciona                                                         |
-| `GET /api/theme/background`                                | bytes RAW, `application/octet-stream`, `404` se não houver. Se slideshow ativo, retorna o wallpaper atual (round-robin por tempo) |
-| `GET /api/theme/background/index`                          | `{ "enabled", "index", "count", "interval", "current_id", "order" }` — índice atual do slideshow                                  |
+| `GET /api/theme/background`                                | bytes RAW do **papel selecionado**, `application/octet-stream`, `404` se não houver                                               |
 | `DELETE /api/theme`                                        | apaga os dois arquivos                                                                                                            |
-| `GET /api/wallpapers`                                      | `{ "wallpapers": [...], "slideshow": {...}, "providers": {...}, "count" }`                                                        |
-| `GET /api/wallpapers/slideshow`                            | config do slideshow                                                                                                               |
-| `PUT /api/wallpapers/slideshow`                            | `{ "enabled": bool, "interval": 1-120, "order": string[] }`                                                                       |
+| `GET /api/wallpapers`                                      | `{ "wallpapers": [...], "selected_id": string \| null, "providers": {...}, "count" }`                                             |
+| `GET /api/wallpapers/selected`                             | `{ "selected_id": string \| null }`                                                                                               |
+| `PUT /api/wallpapers/selected`                             | `{ "id": string \| null }` — define o papel ativo (e marca `theme.json` `background.type` = `image`)                              |
 | `GET /api/wallpapers/providers`                            | status dos provedores                                                                                                             |
 | `PUT /api/wallpapers/providers`                            | `{ "pexels_key"?, "unsplash_key"?, "wallhaven_key"? }`                                                                            |
 | `POST /api/wallpapers/upload`                              | `multipart/form-data` campo `file` (JPEG/PNG ou RAW)                                                                              |
@@ -146,12 +145,12 @@ esse formato).
 Não valida o schema do `theme.json` — é opaco pro coletor (quem valida é a
 placa ao aplicar, e o painel ao montar).
 
-### Slideshow
+### Papel de parede
 
-- O usuário configura 1+ wallpapers e um intervalo de 1–120 minutos.
-- O coletor calcula o índice atual como `floor(now / (interval*60)) % count` — determinístico, sem estado.
-- `GET /api/theme/background` já retorna o wallpaper correto automaticamente quando slideshow ativo.
-- A placa faz polling em `GET /api/theme/background/index` a cada 30s (`themeClientPollSlideshow()` em `net/client.cpp`) e só baixa o novo fundo quando o índice muda.
+- O usuário cadastra 1+ imagens e **clica numa** para usá-la como fundo.
+- O id ativo fica em `config.json` → `wallpapers.selected_id`.
+- `GET /api/theme/background` devolve o RAW dessa imagem (resolução via `X-Vigia-Screen` ou `?w=&h=`).
+- A placa baixa o fundo **só** no recarregar do tema (`themeClientReload()`), sem polling.
 - Wallpapers são armazenados em `data/wallpapers/` como RAW RGB565 em duas resoluções (240×160 hardware + 160×120 wokwi) + JPEG preview + original.
 
 ### Provedores externos

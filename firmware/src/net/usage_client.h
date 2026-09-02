@@ -20,7 +20,3 @@ void markAllAccountsFailed(const char *msg);
 // ui/customtheme.h — chamado pelo botão de recarregar no header
 // (ui/layout.cpp + ui/nav.cpp), nunca automático.
 void themeClientReload();
-// Slideshow: verifica se o índice do fundo mudou e recarrega só o background.
-// Chamado periodicamente pelo loop quando o tema custom está ativo.
-void themeClientPollSlideshow();
-bool themeClientSlideshowActive();

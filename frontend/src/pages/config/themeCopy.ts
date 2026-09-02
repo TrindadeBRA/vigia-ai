@@ -67,17 +67,6 @@ export type ThemeCopy = {
   ntcDocs: string;
   ntcPick: string;
   ntcClear: string;
-  slideshow: string;
-  slideshowLead: string;
-  slideshowEnabled: string;
-  slideshowInterval: string;
-  slideshowIntervalHint: string;
-  slideshowOrder: string;
-  slideshowEmpty: string;
-  slideshowCount: string;
-  slideshowSaving: string;
-  slideshowSaved: string;
-  slideshowError: string;
   wallpapers: string;
   wallpapersLead: string;
   wallpapersUpload: string;
@@ -86,6 +75,9 @@ export type ThemeCopy = {
   wallpapersRemove: string;
   wallpapersRemoving: string;
   wallpapersPreview: string;
+  wallpaperSelected: string;
+  wallpaperSelectHint: string;
+  wallpaperSelectError: string;
   providers: string;
   providersLead: string;
   providerPexels: string;
@@ -111,7 +103,6 @@ export type ThemeCopy = {
   importing: string;
   imported: string;
   importError: string;
-  dragHint: string;
 };
 
 export const THEME_STR: Record<Lang, ThemeCopy> = {
@@ -184,25 +175,17 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     ntcDocs: "Ver documentação",
     ntcPick: "Usar esta cor",
     ntcClear: "Limpar",
-    slideshow: "Slideshow",
-    slideshowLead: "Troca automática entre vários papéis de parede. Configure o intervalo e a ordem.",
-    slideshowEnabled: "Ativar slideshow",
-    slideshowInterval: "Intervalo (minutos)",
-    slideshowIntervalHint: "1 a 120 minutos entre cada troca",
-    slideshowOrder: "Ordem dos papéis de parede",
-    slideshowEmpty: "Adicione pelo menos 2 papéis de parede para usar o slideshow.",
-    slideshowCount: "papéis de parede no slideshow",
-    slideshowSaving: "Salvando…",
-    slideshowSaved: "Slideshow salvo",
-    slideshowError: "Falha ao salvar slideshow",
     wallpapers: "Papéis de parede",
-    wallpapersLead: "Gerencie seus papéis de parede. Arraste para reordenar quando o slideshow estiver ativo.",
+    wallpapersLead: "Envie ou importe imagens e clique numa para usá-la como fundo do tema.",
     wallpapersUpload: "Enviar imagem",
     wallpapersUploading: "Enviando…",
     wallpapersEmpty: "Nenhum papel de parede ainda. Envie uma imagem ou importe de um provedor.",
     wallpapersRemove: "Remover",
     wallpapersRemoving: "Removendo…",
     wallpapersPreview: "Prévia",
+    wallpaperSelected: "Em uso",
+    wallpaperSelectHint: "Clique num papel de parede para usá-lo no tema e na placa.",
+    wallpaperSelectError: "Falha ao selecionar papel de parede",
     providers: "Provedores externos",
     providersLead: "Busque e importe papéis de parede de serviços externos. Wallhaven funciona sem chave; Pexels e Unsplash precisam da sua própria API key.",
     providerPexels: "Pexels",
@@ -228,7 +211,6 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importing: "Importando…",
     imported: "Importado com sucesso",
     importError: "Falha ao importar",
-    dragHint: "Arraste para reordenar",
   },
   en: {
     title: "Custom theme",
@@ -299,25 +281,17 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     ntcDocs: "View docs",
     ntcPick: "Use this color",
     ntcClear: "Clear",
-    slideshow: "Slideshow",
-    slideshowLead: "Auto-rotate between multiple wallpapers. Set the interval and order.",
-    slideshowEnabled: "Enable slideshow",
-    slideshowInterval: "Interval (minutes)",
-    slideshowIntervalHint: "1 to 120 minutes between each change",
-    slideshowOrder: "Wallpaper order",
-    slideshowEmpty: "Add at least 2 wallpapers to use slideshow.",
-    slideshowCount: "wallpapers in slideshow",
-    slideshowSaving: "Saving…",
-    slideshowSaved: "Slideshow saved",
-    slideshowError: "Failed to save slideshow",
     wallpapers: "Wallpapers",
-    wallpapersLead: "Manage your wallpapers. Drag to reorder when slideshow is active.",
+    wallpapersLead: "Upload or import images and click one to use it as the theme background.",
     wallpapersUpload: "Upload image",
     wallpapersUploading: "Uploading…",
     wallpapersEmpty: "No wallpapers yet. Upload an image or import from a provider.",
     wallpapersRemove: "Remove",
     wallpapersRemoving: "Removing…",
     wallpapersPreview: "Preview",
+    wallpaperSelected: "In use",
+    wallpaperSelectHint: "Click a wallpaper to use it on the theme and on the board.",
+    wallpaperSelectError: "Failed to select wallpaper",
     providers: "External providers",
     providersLead: "Search and import wallpapers from external services. Wallhaven works without a key; Pexels and Unsplash need your own API key.",
     providerPexels: "Pexels",
@@ -343,7 +317,6 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importing: "Importing…",
     imported: "Imported successfully",
     importError: "Failed to import",
-    dragHint: "Drag to reorder",
   },
   es: {
     title: "Tema personalizado",
@@ -414,25 +387,17 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     ntcDocs: "Ver documentación",
     ntcPick: "Usar este color",
     ntcClear: "Limpiar",
-    slideshow: "Slideshow",
-    slideshowLead: "Rotación automática entre varios fondos. Configurá el intervalo y el orden.",
-    slideshowEnabled: "Activar slideshow",
-    slideshowInterval: "Intervalo (minutos)",
-    slideshowIntervalHint: "1 a 120 minutos entre cada cambio",
-    slideshowOrder: "Orden de los fondos",
-    slideshowEmpty: "Agregá al menos 2 fondos para usar el slideshow.",
-    slideshowCount: "fondos en el slideshow",
-    slideshowSaving: "Guardando…",
-    slideshowSaved: "Slideshow guardado",
-    slideshowError: "Error al guardar slideshow",
     wallpapers: "Fondos",
-    wallpapersLead: "Gestioná tus fondos. Arrastrá para reordenar cuando el slideshow esté activo.",
+    wallpapersLead: "Subí o importá imágenes y hacé clic en una para usarla como fondo del tema.",
     wallpapersUpload: "Subir imagen",
     wallpapersUploading: "Subiendo…",
     wallpapersEmpty: "Todavía sin fondos. Subí una imagen o importá de un proveedor.",
     wallpapersRemove: "Quitar",
     wallpapersRemoving: "Quitando…",
     wallpapersPreview: "Vista previa",
+    wallpaperSelected: "En uso",
+    wallpaperSelectHint: "Hacé clic en un fondo para usarlo en el tema y en la placa.",
+    wallpaperSelectError: "Error al seleccionar el fondo",
     providers: "Proveedores externos",
     providersLead: "Buscá e importá fondos de servicios externos. Wallhaven funciona sin clave; Pexels y Unsplash necesitan tu propia API key.",
     providerPexels: "Pexels",
@@ -458,6 +423,5 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importing: "Importando…",
     imported: "Importado con éxito",
     importError: "Error al importar",
-    dragHint: "Arrastrá para reordenar",
   },
 };

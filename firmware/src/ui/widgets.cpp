@@ -206,6 +206,107 @@ String fmtMoney(int cents, const String &currency) {
   return fmtUsdSite(cents);
 }
 
+static String llToDec(long long n, int minDigits = 1)
+{
+  if (n < 0)
+  {
+    n = -n;
+  }
+  char buf[28];
+  int i = 27;
+  buf[i] = '\0';
+  int written = 0;
+  do
+  {
+    buf[--i] = (char)('0' + (n % 10));
+    n /= 10;
+    written++;
+  } while (n > 0 && i > 0);
+  while (written < minDigits && i > 0)
+  {
+    buf[--i] = '0';
+    written++;
+  }
+  return String(buf + i);
+}
+
+static String groupInt(long long n, char sep)
+{
+  if (n < 0)
+  {
+    n = -n;
+  }
+  String s = llToDec(n, 1);
+  String out;
+  int len = (int)s.length();
+  for (int i = 0; i < len; i++)
+  {
+    if (i > 0 && (len - i) % 3 == 0)
+    {
+      out += sep;
+    }
+    out += s[i];
+  }
+  return out;
+}
+
+// Cotação livre (não centavos): BRL no padrão brasileiro (R$ 5,18 /
+// R$ 398.064,00). USD com $ e ponto. Demais: "CODE 1.234,56" em pt, senão
+// "1,234.56 CODE". Casas: 2 se >= 1, até 6 se for fração (cripto barata).
+String fmtCurrencyAmount(float price, const String &base)
+{
+  if (price < 0)
+  {
+    return "--";
+  }
+  String cur = base;
+  cur.toUpperCase();
+  const bool brStyle = (uiLang() != LANG_EN) || cur == "BRL";
+  const char thou = brStyle ? '.' : ',';
+  const char dec = brStyle ? ',' : '.';
+  const int decimals = (price >= 1.0f) ? 2 : (price >= 0.01f ? 4 : 6);
+
+  long long scale = 1;
+  for (int i = 0; i < decimals; i++)
+  {
+    scale *= 10;
+  }
+  long long scaled = (long long)(price * (double)scale + 0.5);
+  long long ip = scaled / scale;
+  long long frac = scaled % scale;
+  if (frac < 0)
+  {
+    frac = -frac;
+  }
+  String num = groupInt(ip, thou);
+  if (decimals > 0)
+  {
+    String fs = llToDec(frac, decimals);
+    if (decimals > 2)
+    {
+      while (fs.length() > 2 && fs[fs.length() - 1] == '0')
+      {
+        fs.remove(fs.length() - 1);
+      }
+    }
+    num += dec;
+    num += fs;
+  }
+  if (cur == "BRL")
+  {
+    return String("R$ ") + num;
+  }
+  if (cur == "USD")
+  {
+    return String("$") + num;
+  }
+  if (cur == "EUR")
+  {
+    return String("EUR ") + num;
+  }
+  return num + " " + cur;
+}
+
 // 8 casas decimais (precisao de satoshi) — igual ao frontend (fmtBtc em format.ts).
 String fmtBtc(float btc) {
   if (btc < 0) {

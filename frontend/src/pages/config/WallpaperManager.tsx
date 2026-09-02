@@ -4,7 +4,7 @@ import { useRequest } from "../../hooks/useRequest";
 import type { Lang } from "../../i18n";
 import { cfgStatus } from "../../tw";
 import { THEME_STR } from "./themeCopy";
-import { Button, Card, Checkbox, FieldStatus, TextField } from "./ui";
+import { Button, Card, FieldStatus, TextField } from "./ui";
 
 type WallpaperItem = {
     id: string;
@@ -14,13 +14,6 @@ type WallpaperItem = {
     preview_url?: string | null;
     created_at?: string | null;
     has_preview: boolean;
-};
-
-type SlideshowConfig = {
-    enabled: boolean;
-    interval: number;
-    order: string[];
-    count: number;
 };
 
 type ProviderStatus = {
@@ -45,9 +38,8 @@ type SearchResult = {
 export function WallpaperManager({ lang }: { lang: Lang }) {
     const c = THEME_STR[lang];
     const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
-    const [slideshow, setSlideshow] = useState<SlideshowConfig>({ enabled: false, interval: 5, order: [], count: 0 });
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [providers, setProviders] = useState<ProviderStatus | null>(null);
-    const [dragId, setDragId] = useState<string | null>(null);
 
     const [pexelsKey, setPexelsKey] = useState("");
     const [unsplashKey, setUnsplashKey] = useState("");
@@ -62,7 +54,7 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
     const fileRef = useRef<HTMLInputElement>(null);
     const listReq = useRequest();
     const uploadReq = useRequest();
-    const slideshowReq = useRequest();
+    const selectReq = useRequest();
     const providerReq = useRequest();
     const searchReq = useRequest();
     const importReq = useRequest();
@@ -70,11 +62,11 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
     const fetchAll = useCallback(async () => {
         try {
             const r = await fetch("/api/wallpapers");
-            const j = (await r.json()) as { wallpapers: WallpaperItem[]; slideshow: SlideshowConfig; providers: ProviderStatus };
+            const j = (await r.json()) as { wallpapers: WallpaperItem[]; selected_id?: string | null; providers: ProviderStatus };
             setWallpapers(j.wallpapers || []);
-            setSlideshow(j.slideshow || { enabled: false, interval: 5, order: [], count: 0 });
+            setSelectedId(j.selected_id || j.wallpapers?.[0]?.id || null);
             setProviders(j.providers || null);
-            // Notifica o canvas do ThemeEditorPage pra atualizar o fundo igual à placa
+            // Notifica o canvas do ThemeEditorPage pra atualizar o fundo
             window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
         } catch {
             /* ignore */
@@ -84,22 +76,6 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
     useEffect(() => {
         void fetchAll();
     }, [fetchAll]);
-
-    // Ordena wallpapers conforme slideshow.order quando slideshow ativo
-    const orderedWallpapers = (() => {
-        if (!slideshow.enabled || slideshow.order.length === 0) return wallpapers;
-        const map = new Map(wallpapers.map((w) => [w.id, w]));
-        const ordered: WallpaperItem[] = [];
-        for (const id of slideshow.order) {
-            const w = map.get(id);
-            if (w) ordered.push(w);
-        }
-        // Adiciona os que não estão na ordem (novos)
-        for (const w of wallpapers) {
-            if (!slideshow.order.includes(w.id)) ordered.push(w);
-        }
-        return ordered;
-    })();
 
     async function handleUpload(file: File) {
         const fd = new FormData();
@@ -119,20 +95,17 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
         return { ok: true };
     }
 
-    async function handleSlideshowSave() {
-        const body = {
-            enabled: slideshow.enabled,
-            interval: slideshow.interval,
-            order: slideshow.order,
-        };
-        const r = await fetch("/api/wallpapers/slideshow", {
+    async function handleSelect(id: string) {
+        if (id === selectedId) return { ok: true };
+        const r = await fetch("/api/wallpapers/selected", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ id }),
         });
-        const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
-        if (!j.ok) throw new Error(j.error || c.slideshowError);
-        await fetchAll();
+        const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string; selected_id?: string | null };
+        if (!j.ok) throw new Error(j.error || c.wallpaperSelectError);
+        setSelectedId(j.selected_id || id);
+        window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
         return { ok: true };
     }
 
@@ -191,34 +164,6 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
         return { ok: true };
     }
 
-    function handleDragStart(id: string) {
-        setDragId(id);
-    }
-    function handleDragOver(e: React.DragEvent, overId: string) {
-        e.preventDefault();
-        if (!dragId || dragId === overId) return;
-    }
-    function handleDrop(e: React.DragEvent, targetId: string) {
-        e.preventDefault();
-        if (!dragId || dragId === targetId) {
-            setDragId(null);
-            return;
-        }
-        const order = [...slideshow.order];
-        // Se order vazio, inicializa com wallpapers ids
-        const currentOrder = order.length > 0 ? order : wallpapers.map((w) => w.id);
-        const fromIdx = currentOrder.indexOf(dragId);
-        const toIdx = currentOrder.indexOf(targetId);
-        if (fromIdx === -1 || toIdx === -1) {
-            setDragId(null);
-            return;
-        }
-        const [moved] = currentOrder.splice(fromIdx, 1);
-        currentOrder.splice(toIdx, 0, moved);
-        setSlideshow((s) => ({ ...s, order: currentOrder }));
-        setDragId(null);
-    }
-
     const canSearch = (() => {
         if (searchProvider === "wallhaven") return true;
         if (searchProvider === "pexels") return providers?.pexels.configured;
@@ -228,45 +173,6 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
 
     return (
         <div className="flex flex-col gap-6">
-            {/* Slideshow */}
-            <Card title={c.slideshow} lead={c.slideshowLead}>
-                <Checkbox
-                    label={c.slideshowEnabled}
-                    checked={slideshow.enabled}
-                    onChange={(e) => setSlideshow((s) => ({ ...s, enabled: e.target.checked }))}
-                />
-                <label className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-[.06em] text-ink3">{c.slideshowInterval}</span>
-                    <div className="flex items-center gap-3">
-                        <input
-                            type="range"
-                            min={1}
-                            max={120}
-                            value={slideshow.interval}
-                            onChange={(e) => setSlideshow((s) => ({ ...s, interval: Number(e.target.value) }))}
-                            className="flex-1 accent-accent"
-                        />
-                        <span className="min-w-[56px] rounded-[8px] border border-edge bg-canvas px-2 py-1 text-center text-sm font-semibold text-ink">
-                            {slideshow.interval} min
-                        </span>
-                    </div>
-                    <span className={cfgStatus}>{c.slideshowIntervalHint}</span>
-                </label>
-                {wallpapers.length > 0 ? (
-                    <p className={cfgStatus}>
-                        {wallpapers.length} {c.slideshowCount} · {slideshow.enabled ? `troca a cada ${slideshow.interval} min` : "slideshow desativado"}
-                    </p>
-                ) : (
-                    <p className={cfgStatus}>{c.slideshowEmpty}</p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                    <Button onClick={() => void slideshowReq.run(handleSlideshowSave, { success: c.slideshowSaved, error: c.slideshowError })} loading={slideshowReq.busy}>
-                        {slideshowReq.busy ? c.slideshowSaving : c.providerSave}
-                    </Button>
-                </div>
-                <FieldStatus status={slideshowReq.status} message={slideshowReq.message} />
-            </Card>
-
             {/* Wallpapers */}
             <Card title={c.wallpapers} lead={c.wallpapersLead}>
                 <input
@@ -288,66 +194,70 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
                         Atualizar
                     </Button>
                 </div>
+                <p className={cfgStatus}>{c.wallpaperSelectHint}</p>
                 <FieldStatus status={uploadReq.status} message={uploadReq.message} />
+                <FieldStatus status={selectReq.status} message={selectReq.message} />
                 <FieldStatus status={listReq.status} message={listReq.message} />
 
-                {orderedWallpapers.length === 0 ? (
+                {wallpapers.length === 0 ? (
                     <p className={cfgStatus}>{c.wallpapersEmpty}</p>
                 ) : (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        {orderedWallpapers.map((w, idx) => (
-                            <div
-                                key={w.id}
-                                draggable={slideshow.enabled}
-                                onDragStart={() => handleDragStart(w.id)}
-                                onDragOver={(e) => handleDragOver(e, w.id)}
-                                onDrop={(e) => handleDrop(e, w.id)}
-                                onDragEnd={() => setDragId(null)}
-                                className={cn(
-                                    "group relative overflow-hidden rounded-[12px] border bg-canvas",
-                                    slideshow.enabled ? "cursor-grab active:cursor-grabbing" : "",
-                                    dragId === w.id ? "opacity-50" : "",
-                                    "border-edge",
-                                )}
-                            >
-                                <div className="aspect-[16/10] overflow-hidden bg-black/10">
-                                    <img
-                                        src={`/api/wallpapers/${w.id}/preview`}
-                                        alt={w.id}
-                                        className="size-full object-cover"
-                                        loading="lazy"
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = "none";
-                                        }}
-                                    />
+                        {wallpapers.map((w) => {
+                            const active = w.id === selectedId;
+                            return (
+                                <div
+                                    key={w.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => void selectReq.run(() => handleSelect(w.id), { error: c.wallpaperSelectError })}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            void selectReq.run(() => handleSelect(w.id), { error: c.wallpaperSelectError });
+                                        }
+                                    }}
+                                    className={cn(
+                                        "group relative cursor-pointer overflow-hidden rounded-[12px] border bg-canvas text-left",
+                                        active ? "border-accent ring-2 ring-accent/40" : "border-edge hover:border-accent/50",
+                                    )}
+                                >
+                                    <div className="aspect-[16/10] overflow-hidden bg-black/10">
+                                        <img
+                                            src={`/api/wallpapers/${w.id}/preview`}
+                                            alt={w.id}
+                                            className="size-full object-cover"
+                                            loading="lazy"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = "none";
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                                        <span className="truncate text-[11px] font-medium text-ink2">
+                                            {w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="shrink-0 rounded-full bg-bad px-2 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm(`Remover ${w.id}?`)) void uploadReq.run(() => handleDelete(w.id), { success: c.imported, error: c.importError });
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                    {active ? (
+                                        <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">
+                                            {c.wallpaperSelected}
+                                        </span>
+                                    ) : null}
                                 </div>
-                                <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                                    <span className="truncate text-[11px] font-medium text-ink2">
-                                        {slideshow.enabled ? `${idx + 1}. ` : ""}
-                                        {w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        className="shrink-0 rounded-full bg-bad px-2 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90"
-                                        onClick={() => {
-                                            if (confirm(`Remover ${w.id}?`)) void uploadReq.run(() => handleDelete(w.id), { success: c.imported, error: c.importError });
-                                        }}
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                                {slideshow.enabled ? (
-                                    <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                                        #{idx + 1}
-                                    </span>
-                                ) : null}
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
-                {slideshow.enabled && orderedWallpapers.length > 1 ? (
-                    <p className={cfgStatus}>{c.dragHint}</p>
-                ) : null}
             </Card>
 
             {/* Provedores */}

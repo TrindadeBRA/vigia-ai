@@ -21,7 +21,8 @@ enum View : uint8_t
   // nunca pelo swipe/paginação normal de views.
   VIEW_THEME = 11,
   VIEW_ADSENSE = 12,
-  VIEW_COUNT = 13
+  VIEW_CURRENCIES = 13,
+  VIEW_COUNT = 14
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
@@ -168,6 +169,32 @@ struct WeatherData
   String locationName = "";
 };
 
+// Cotação de moedas: um único card com N itens (fiat + cripto), não uma
+// lista de contas. MAX_CURRENCY_ITEMS limita o que a placa guarda; o
+// coletor pode ter mais, o resto só não aparece (log serial, nunca trava).
+constexpr int MAX_CURRENCY_ITEMS = 8;
+
+struct CurrencyQuote
+{
+  String id;
+  String kind;
+  String code;
+  String label;
+  float price = -1;
+  bool ok = false;
+  String error;
+};
+
+struct CurrenciesData
+{
+  bool hasData = false;
+  bool ok = false;
+  String error;
+  String base = "BRL";
+  CurrencyQuote items[MAX_CURRENCY_ITEMS];
+  int itemCount = 0;
+};
+
 struct UsageSnapshot
 {
   bool httpOk = false;
@@ -192,6 +219,7 @@ struct UsageSnapshot
   AdsenseAccount adsense[MAX_ACCOUNTS];
   int adsenseCount = 0;
   WeatherData weather;
+  CurrenciesData currencies;
 };
 
 extern TFT_eSPI tft;

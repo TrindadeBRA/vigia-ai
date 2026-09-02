@@ -173,8 +173,8 @@ export default function ConfigPage() {
           {...common}
         />
         <AdSenseConfigCard p={cfg.providers.adsense} listenPort={cfg.listen.port} {...common} />
+        <CurrenciesConfigCard currencies={cfg.currencies} c={c} onReload={reload} />
       </div>
-      <CurrenciesConfigCard currencies={cfg.currencies} c={c} onReload={reload} />
     </div>
   );
 }

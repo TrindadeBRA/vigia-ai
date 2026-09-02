@@ -1,4 +1,4 @@
-"""Wallpapers: slideshow + provedores externos (Pexels, Wallhaven, Unsplash)."""
+"""Wallpapers: papéis de parede + provedores externos (Pexels, Wallhaven, Unsplash)."""
 
 from __future__ import annotations
 
@@ -85,15 +85,47 @@ def _list_wallpapers() -> list[dict[str, Any]]:
         })
     return out
 
-def _get_slideshow_config() -> dict[str, Any]:
+def _get_selected_id() -> str | None:
+    ids = [w["id"] for w in _list_wallpapers()]
+    if not ids:
+        return None
     cfg = load()
     wp = cfg.get("wallpapers") or {}
-    sl = wp.get("slideshow") or {}
-    return {
-        "enabled": bool(sl.get("enabled", False)),
-        "interval": int(sl.get("interval", 5)),
-        "order": list(sl.get("order") or []),
-    }
+    selected = str(wp.get("selected_id") or "").strip()
+    if selected in ids:
+        return selected
+    return ids[0]
+
+
+def _patch_theme_background_type(kind: str) -> None:
+    p = data_dir() / "theme.json"
+    if not p.is_file():
+        return
+    try:
+        raw = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(raw, dict):
+        return
+    bg = raw.get("background")
+    if not isinstance(bg, dict):
+        raw["background"] = {"type": kind, "color": "#10151A"}
+    else:
+        bg["type"] = kind
+        raw["background"] = bg
+    tmp = p.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(raw, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(p)
+
+
+def _set_selected_id(wid: str | None) -> None:
+    def mut(cfg: dict[str, Any]) -> None:
+        wp = cfg.setdefault("wallpapers", {})
+        wp["selected_id"] = str(wid or "")
+
+    update(mut)
+    _patch_theme_background_type("image" if wid else "color")
+
 
 def _get_provider_keys() -> dict[str, str]:
     cfg = load()
@@ -213,57 +245,35 @@ def _http_json(url: str, headers: dict[str, str] | None = None, timeout: float =
 @router.get("", summary="Lista wallpapers")
 def list_wallpapers() -> dict[str, Any]:
     wallpapers = _list_wallpapers()
-    slideshow = _get_slideshow_config()
     providers = _provider_status()
     return {
         "wallpapers": wallpapers,
-        "slideshow": slideshow,
+        "selected_id": _get_selected_id(),
         "providers": providers,
         "count": len(wallpapers),
     }
 
-@router.get("/slideshow", summary="Config do slideshow")
-def get_slideshow() -> dict[str, Any]:
-    return _get_slideshow_config()
+@router.get("/selected", summary="Papel de parede ativo")
+def get_selected() -> dict[str, Any]:
+    return {"selected_id": _get_selected_id()}
 
-@router.put("/slideshow", summary="Atualiza slideshow")
-async def put_slideshow(request: Request) -> dict[str, Any]:
+@router.put("/selected", summary="Define o papel de parede ativo")
+async def put_selected(request: Request) -> dict[str, Any]:
     try:
         body = await request.json()
     except Exception:
         raise HTTPException(400, "JSON inválido")
-    enabled = body.get("enabled")
-    interval = body.get("interval")
-    order = body.get("order")
-    # Validação
-    if enabled is not None and not isinstance(enabled, bool):
-        raise HTTPException(400, "enabled deve ser boolean")
-    if interval is not None:
-        try:
-            interval = int(interval)
-        except (TypeError, ValueError):
-            raise HTTPException(400, "interval deve ser número")
-        if not (1 <= interval <= 120):
-            raise HTTPException(400, "interval deve ser 1-120 minutos")
-    if order is not None:
-        if not isinstance(order, list):
-            raise HTTPException(400, "order deve ser lista")
-        # Valida que ids existem
-        existing = {w["id"] for w in _list_wallpapers()}
-        for oid in order:
-            if not isinstance(oid, str) or oid not in existing:
-                raise HTTPException(400, f"wallpaper id inválido: {oid}")
-    def mut(cfg: dict[str, Any]) -> None:
-        wp = cfg.setdefault("wallpapers", {})
-        sl = wp.setdefault("slideshow", {"enabled": False, "interval": 5, "order": []})
-        if enabled is not None:
-            sl["enabled"] = bool(enabled)
-        if interval is not None:
-            sl["interval"] = int(interval)
-        if order is not None:
-            sl["order"] = [str(x) for x in order]
-    update(mut)
-    return {"ok": True, **_get_slideshow_config()}
+    wid = body.get("id")
+    if wid is not None and not isinstance(wid, str):
+        raise HTTPException(400, "id deve ser string")
+    existing = {w["id"] for w in _list_wallpapers()}
+    if wid:
+        if wid not in existing:
+            raise HTTPException(400, "wallpaper id inválido")
+        _set_selected_id(wid)
+    else:
+        _set_selected_id(None)
+    return {"ok": True, "selected_id": _get_selected_id()}
 
 @router.get("/providers", summary="Status dos provedores")
 def get_providers() -> dict[str, Any]:
@@ -509,15 +519,8 @@ async def upload_wallpaper(request: Request) -> dict[str, Any]:
     })
     _save_meta(meta)
 
-    # Atualiza slideshow order: adiciona no final
-    def mut(cfg: dict[str, Any]) -> None:
-        wp = cfg.setdefault("wallpapers", {})
-        sl = wp.setdefault("slideshow", {"enabled": False, "interval": 5, "order": []})
-        order = sl.get("order") or []
-        if wid not in order:
-            order.append(wid)
-            sl["order"] = order
-    update(mut)
+    # Novo upload passa a ser o papel ativo do tema.
+    _set_selected_id(wid)
 
     return {"ok": True, "id": wid}
 
@@ -545,15 +548,11 @@ def delete_wallpaper(wid: str) -> dict[str, Any]:
             p.unlink(missing_ok=True)
         except OSError:
             pass
-    # Remove do slideshow order
-    def mut(cfg: dict[str, Any]) -> None:
-        wp = cfg.get("wallpapers") or {}
-        sl = wp.get("slideshow") or {}
-        order = sl.get("order") or []
-        if wid in order:
-            sl["order"] = [x for x in order if x != wid]
-            # Se slideshow ficava enabled e agora tem <2, desabilita? Não, mantém mas não rotaciona
-    update(mut)
+    # Se o removido era o ativo, escolhe outro (ou nenhum).
+    remaining = [w["id"] for w in _list_wallpapers()]
+    selected = load().get("wallpapers", {}).get("selected_id") or ""
+    if selected == wid or selected not in remaining:
+        _set_selected_id(remaining[0] if remaining else None)
     return {"ok": True}
 
 @router.get("/{wid}/preview", summary="Preview JPEG do wallpaper")
@@ -885,15 +884,8 @@ async def import_wallpaper(request: Request) -> dict[str, Any]:
     })
     _save_meta(meta)
 
-    # Adiciona ao slideshow order
-    def mut(cfg: dict[str, Any]) -> None:
-        wp = cfg.setdefault("wallpapers", {})
-        sl = wp.setdefault("slideshow", {"enabled": False, "interval": 5, "order": []})
-        order = sl.get("order") or []
-        if wid not in order:
-            order.append(wid)
-            sl["order"] = order
-    update(mut)
+    # Importado passa a ser o papel ativo do tema.
+    _set_selected_id(wid)
 
     return {"ok": True, "id": wid, "provider": provider}
 

@@ -15,6 +15,7 @@ String fmtUsdSite(int cents);
 String fmtBrlSite(int cents);
 String fmtMoney(int cents, const String &currency);
 String fmtBtc(float btc);
+String fmtCurrencyAmount(float price, const String &base);
 
 void drawBar(int x, int y, int w, int h, float pct);
 void drawError(int x, int y, const String& err, uint16_t bg);

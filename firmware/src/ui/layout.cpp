@@ -35,10 +35,10 @@ int g_eyeGazeY = 0;
 float g_eyeLid = 0.0f;
 View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER,
                                        VIEW_DEEPSEEK, VIEW_OPENCODE, VIEW_FAL};
-int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int g_homeCardCount = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;

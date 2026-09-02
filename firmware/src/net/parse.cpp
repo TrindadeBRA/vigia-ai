@@ -88,6 +88,20 @@ void usageClientLogSnapshot(const char *why)
                   g_snap.weather.locationName.length() ? g_snap.weather.locationName.c_str() : "-",
                   g_snap.weather.weatherCode);
   }
+  if (g_snap.currencies.hasData)
+  {
+    Serial.printf("  currencies ok=%d base=%s itens=%d err=%s\n", g_snap.currencies.ok ? 1 : 0,
+                  g_snap.currencies.base.length() ? g_snap.currencies.base.c_str() : "-",
+                  g_snap.currencies.itemCount,
+                  g_snap.currencies.error.length() ? g_snap.currencies.error.c_str() : "-");
+    for (int i = 0; i < g_snap.currencies.itemCount; i++)
+    {
+      const CurrencyQuote &q = g_snap.currencies.items[i];
+      Serial.printf("    [%d] %s %s ok=%d price=%.4f err=%s\n", i, q.code.c_str(),
+                    q.label.length() ? q.label.c_str() : "-", q.ok ? 1 : 0, q.price,
+                    q.error.length() ? q.error.c_str() : "-");
+    }
+  }
 }
 
 // Falha total (Wi-Fi fora do ar, HTTP != 200, JSON ilegivel): marca todas as
@@ -145,6 +159,16 @@ void markAllAccountsFailed(const char *msg)
   }
   g_snap.weather.hasData = false;
   g_snap.weather.ok = false;
+  if (g_snap.currencies.hasData)
+  {
+    g_snap.currencies.ok = false;
+    g_snap.currencies.error = msg;
+    for (int i = 0; i < g_snap.currencies.itemCount; i++)
+    {
+      g_snap.currencies.items[i].ok = false;
+      g_snap.currencies.items[i].error = msg;
+    }
+  }
 }
 
 static float jsonFloatOrNeg(JsonVariantConst v)
@@ -439,6 +463,48 @@ bool parseUsageJson(const String &body)
     {
       g_snap.weather.hasData = false;
       g_snap.weather.ok = false;
+    }
+  }
+
+  // Moedas — objeto único (não lista de contas). Ausente/null = card some.
+  {
+    JsonVariantConst cu = doc["currencies"];
+    if (!cu.isNull() && cu.is<JsonObjectConst>())
+    {
+      JsonObjectConst o = cu.as<JsonObjectConst>();
+      g_snap.currencies.hasData = true;
+      g_snap.currencies.ok = o["ok"] | false;
+      g_snap.currencies.error = o["error"].isNull() ? "" : String(o["error"].as<const char *>());
+      g_snap.currencies.base = jsonText(o["base"]);
+      if (!g_snap.currencies.base.length())
+      {
+        g_snap.currencies.base = "BRL";
+      }
+      g_snap.currencies.itemCount = 0;
+      for (JsonVariantConst v : o["items"].as<JsonArrayConst>())
+      {
+        if (g_snap.currencies.itemCount >= MAX_CURRENCY_ITEMS)
+        {
+          Serial.println("currencies: mais itens do que MAX_CURRENCY_ITEMS, ignorando o resto");
+          break;
+        }
+        JsonObjectConst acc = v.as<JsonObjectConst>();
+        CurrencyQuote &q = g_snap.currencies.items[g_snap.currencies.itemCount++];
+        q.id = jsonText(acc["id"]);
+        q.kind = jsonText(acc["kind"]);
+        q.code = jsonText(acc["code"]);
+        q.label = jsonText(acc["label"]);
+        q.ok = acc["ok"] | false;
+        q.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char *>());
+        q.price = jsonFloatOrNeg(acc["price"]);
+      }
+    }
+    else
+    {
+      g_snap.currencies.hasData = false;
+      g_snap.currencies.ok = false;
+      g_snap.currencies.error = "";
+      g_snap.currencies.itemCount = 0;
     }
   }
 

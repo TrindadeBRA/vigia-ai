@@ -57,7 +57,7 @@ extern float g_eyeLid;
 // paintHomeGrid() a cada pintura — só os provedores com pelo menos uma conta
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta
 // lista em vez de assumir posições fixas.
-constexpr int MAX_HOME_CARDS = 9;
+constexpr int MAX_HOME_CARDS = 10;
 extern View g_homeCardView[MAX_HOME_CARDS];
 extern int g_homeCardX[MAX_HOME_CARDS];
 extern int g_homeCardY[MAX_HOME_CARDS];
@@ -166,6 +166,7 @@ void paintOpenCode();
 void paintFal();
 void paintBitcoin();
 void paintAdsense();
+void paintCurrencies();
 void paintStatus();
 void paintNow();
 void paintNowClock();
@@ -194,6 +195,9 @@ String bitcoinBalance(const BitcoinAccount &b);
 String bitcoinValueText(const BitcoinAccount &b);
 String adsenseTodayText(const AdsenseAccount &a);
 String adsenseWalletText(const AdsenseAccount &a);
+bool currenciesVisible();
+String currencyQuoteLabel(const CurrencyQuote &q);
+String currencyQuoteValue(const CurrencyQuote &q, const String &base);
 const char *emptyProvidersMsg();
 
 // Chrome das telas de detalhe / Sistema (card com scroll).

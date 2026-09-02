@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { addCurrencyItem, deleteCurrencyItem, patchCurrenciesConfig, searchCurrencyCoins } from "../../api/client";
 import type { CurrenciesConfig, CurrencySearchResult } from "../../api/types";
 import { useRequest } from "../../hooks/useRequest";
-import { cfgCard, cfgFieldLabel } from "../../tw";
+import { PROVIDER_ICON } from "../../theme";
+import { cfgCard, cfgFieldLabel, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
-import { ActionRow, Button, FieldStatus, Switch, TextField } from "./ui";
+import { ActionRow, Button, FieldStatus, Fold, Switch, TextField } from "./ui";
 
 // Códigos ISO 4217 mais comuns — cobre a maioria dos casos sem precisar de
 // busca (ao contrário de cripto, que tem milhares de ativos no CoinGecko).
@@ -43,7 +44,7 @@ const FIAT_CODES: { code: string; label: string }[] = [
 function ItemRow({ item, c, onReload }: { item: CurrenciesConfig["items"][number]; c: ConfigCopy; onReload: () => Promise<void> }) {
     const remove = useRequest();
     return (
-        <li className="flex items-center justify-between gap-2.5 rounded-[10px] border border-edge bg-canvas px-2.5 py-2">
+        <li className="flex items-center justify-between gap-2 rounded-[10px] border border-edge bg-canvas px-2.5 py-2">
             <div className="min-w-0">
                 <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">
                     {item.label || item.code} <span className="ml-1 text-[11px] font-normal text-ink3">{item.code}{item.kind === "crypto" ? ` · ${c.currenciesKindCrypto}` : ""}</span>
@@ -51,6 +52,7 @@ function ItemRow({ item, c, onReload }: { item: CurrenciesConfig["items"][number
             </div>
             <Button
                 variant="ghost"
+                className="shrink-0 px-2.5 py-1.5 text-[12.5px]"
                 loading={remove.busy}
                 onClick={() =>
                     remove.run(
@@ -76,6 +78,10 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
     const [cryptoResults, setCryptoResults] = useState<CurrencySearchResult[]>([]);
     const [searching, setSearching] = useState(false);
     const [base, setBase] = useState(currencies.base);
+
+    useEffect(() => {
+        setBase(currencies.base);
+    }, [currencies.base]);
 
     const toggleEnabled = useRequest();
     const toggleHidden = useRequest();
@@ -120,12 +126,24 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
         setCryptoQuery("");
     }
 
+    const hint = currencies.items.length
+        ? `${currencies.base} · ${currencies.items.map((i) => i.code.toUpperCase()).join(", ")}`
+        : c.currenciesEmpty;
+    const listSummary = currencies.items.length
+        ? `${c.currenciesListLabel} (${currencies.items.length})`
+        : c.currenciesListLabel;
+
     return (
-        <section className={cfgCard}>
+        <article className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                    <h2 className="m-0 text-[15.5px] font-bold">{c.currenciesTitle}</h2>
-                    <p className="mb-0 mt-1 text-[13.5px] leading-[1.55] text-ink2">{c.currenciesLead}</p>
+                <div className="flex min-w-0 items-start gap-3">
+                    <div className={iconChip}>
+                        <img className={iconImg} src={PROVIDER_ICON.currencies} alt="" draggable={false} />
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="m-0 text-[15.5px] font-bold">{c.currenciesTitle}</h3>
+                        <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
+                    </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                     <Switch
@@ -165,42 +183,37 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
                 </div>
             </div>
 
-            {/* Moeda base */}
-            <div className="flex flex-col gap-2">
-                <span className={cfgFieldLabel}>{c.currenciesBaseLabel}</span>
-                <ActionRow>
-                    <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
-                        <select value={base} onChange={(e) => setBase(e.target.value)} className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
-                            {FIAT_CODES.map((f) => (
-                                <option key={f.code} value={f.code}>{f.code} — {f.label}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <Button
-                        loading={saveBase.busy}
-                        disabled={base === currencies.base}
-                        onClick={() =>
-                            saveBase.run(
-                                async () => {
-                                    const res = await patchCurrenciesConfig({ base });
-                                    if (res.ok) await onReload();
-                                    return res;
-                                },
-                                { success: c.saved, error: c.offline },
-                            )
-                        }
-                    >
-                        {saveBase.busy ? c.saving : c.save}
-                    </Button>
-                </ActionRow>
-                {saveBase.message ? <FieldStatus status={saveBase.status} message={saveBase.message} /> : null}
-                {toggleEnabled.message ? <FieldStatus status={toggleEnabled.status} message={toggleEnabled.message} /> : null}
-                {toggleHidden.message ? <FieldStatus status={toggleHidden.status} message={toggleHidden.message} /> : null}
-            </div>
+            <ActionRow>
+                <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
+                    <span className={cfgFieldLabel}>{c.currenciesBaseLabel}</span>
+                    <select value={base} onChange={(e) => setBase(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
+                        {FIAT_CODES.map((f) => (
+                            <option key={f.code} value={f.code}>{f.code} — {f.label}</option>
+                        ))}
+                    </select>
+                </label>
+                <Button
+                    loading={saveBase.busy}
+                    disabled={base === currencies.base}
+                    onClick={() =>
+                        saveBase.run(
+                            async () => {
+                                const res = await patchCurrenciesConfig({ base });
+                                if (res.ok) await onReload();
+                                return res;
+                            },
+                            { success: c.saved, error: c.offline },
+                        )
+                    }
+                >
+                    {saveBase.busy ? c.saving : c.save}
+                </Button>
+            </ActionRow>
+            {saveBase.message ? <FieldStatus status={saveBase.status} message={saveBase.message} /> : null}
+            {toggleEnabled.message ? <FieldStatus status={toggleEnabled.status} message={toggleEnabled.message} /> : null}
+            {toggleHidden.message ? <FieldStatus status={toggleHidden.status} message={toggleHidden.message} /> : null}
 
-            {/* Lista atual */}
-            <div className="flex flex-col gap-2 border-t border-edge pt-3">
-                <span className={cfgFieldLabel}>{c.currenciesListLabel}</span>
+            <Fold summary={listSummary}>
                 {currencies.items.length ? (
                     <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {currencies.items.map((item) => (
@@ -210,12 +223,10 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
                 ) : (
                     <p className="m-0 text-xs text-ink3">{c.currenciesEmpty}</p>
                 )}
-            </div>
+            </Fold>
 
-            {/* Adicionar */}
-            <div className="flex flex-col gap-2 border-t border-edge pt-3">
-                <span className={cfgFieldLabel}>{c.currenciesAddTitle}</span>
-                <div className="flex gap-2">
+            <Fold summary={c.currenciesAddTitle}>
+                <div className="flex flex-wrap gap-2">
                     <button
                         type="button"
                         onClick={() => setKind("fiat")}
@@ -234,8 +245,8 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
 
                 {kind === "fiat" ? (
                     <ActionRow>
-                        <label className="flex min-w-[180px] flex-1 flex-col gap-1.5">
-                            <select value={fiatCode} onChange={(e) => setFiatCode(e.target.value)} className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
+                        <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
+                            <select value={fiatCode} onChange={(e) => setFiatCode(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
                                 {FIAT_CODES.map((f) => (
                                     <option key={f.code} value={f.code}>{f.code} — {f.label}</option>
                                 ))}
@@ -281,7 +292,7 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
                     </div>
                 )}
                 {add.message ? <FieldStatus status={add.status} message={add.message} /> : null}
-            </div>
-        </section>
+            </Fold>
+        </article>
     );
 }

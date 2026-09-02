@@ -4,6 +4,7 @@
 #include "assets/icons/icon_adsense.h"
 #include "assets/icons/icon_bitcoin.h"
 #include "assets/icons/icon_claude.h"
+#include "assets/icons/icon_currencies.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
 #include "assets/icons/icon_fal.h"
@@ -45,6 +46,39 @@ static void paintHomeMetric(int x, int y, int w, const char *label, float pct, c
   tft.setTextDatum(TL_DATUM);
   tft.setTextColor(COL_TEXT_MUTED, COL_CARD);
   tft.drawString(s, x, barY + barH + 2, font);
+}
+
+// Linha de cotação: rótulo à esquerda (apagado) e valor à direita, sem barra
+// — espelha o card de Moedas do mostrador web.
+static void paintQuoteRow(int x, int y, int w, const String &label, const String &value, uint8_t font)
+{
+  tft.setTextDatum(TR_DATUM);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  String v = value;
+  int maxValW = w * 3 / 5;
+  if (maxValW < 24)
+  {
+    maxValW = w / 2;
+  }
+  while (v.length() && tft.textWidth(v, font) > maxValW)
+  {
+    v.remove(v.length() - 1);
+  }
+  tft.drawString(v, x + w, y, font);
+  const int valW = tft.textWidth(v, font);
+  int avail = w - valW - 6;
+  if (avail < 8)
+  {
+    avail = 8;
+  }
+  String lab = label;
+  while (lab.length() && tft.textWidth(lab, font) > avail)
+  {
+    lab.remove(lab.length() - 1);
+  }
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(COL_TEXT_DIM, COL_CARD);
+  tft.drawString(lab, x, y, font);
 }
 
 // ── Packing helpers (espelha frontend/src/board.ts) ────────────────────────
@@ -142,6 +176,10 @@ static int buildHomeProviders(HomeProvider out[MAX_HOME_CARDS]) {
     const AdsenseAccount &a = g_snap.adsense[adsenseWorstIdx()];
     add(VIEW_ADSENSE, "AdSense", ICON_ADSENSE, g_snap.adsenseCount, accountSuffixText(a.label, g_snap.adsenseCount));
   }
+  if (currenciesVisible()) {
+    int nItems = g_snap.currencies.itemCount;
+    add(VIEW_CURRENCIES, uiTr().currencies, ICON_CURRENCIES, nItems > 0 ? nItems : 1, g_snap.currencies.base);
+  }
   return n;
 }
 
@@ -190,17 +228,26 @@ static void paintHomeList()
     CardSize s = uiCardSize(v);
     CardRect cr = cardRectFor(s, 1);
     int baseH = hOne;
-    bool two = false;
-    if (v == VIEW_CLAUDE) two = true;
-    else if (v == VIEW_GPT) {
-      const GptAccount &a = g_snap.gpt[gptWorstIdx()];
-      two = (a.sessionPercent >= 0 && a.weeklyPercent >= 0);
-    } else if (v == VIEW_CURSOR) two = true;
-    else if (v == VIEW_OPENCODE) two = true;
-    else if (v == VIEW_BITCOIN) two = true;
-    else if (v == VIEW_ADSENSE) two = true;
-    else two = false;
-    baseH = two ? hTwo : hOne;
+    if (v == VIEW_CURRENCIES) {
+      int nRows = g_snap.currencies.itemCount;
+      if (nRows < 1) nRows = 1;
+      if (nRows > 6) nRows = 6;
+      if (s == CARD_SM && nRows > 2) nRows = 2;
+      const int quoteH = labelH + 2;
+      baseH = innerPadY * 2 + titleH + titleToMetric + nRows * quoteH + (nRows > 1 ? (nRows - 1) * gapM : 0);
+    } else {
+      bool two = false;
+      if (v == VIEW_CLAUDE) two = true;
+      else if (v == VIEW_GPT) {
+        const GptAccount &a = g_snap.gpt[gptWorstIdx()];
+        two = (a.sessionPercent >= 0 && a.weeklyPercent >= 0);
+      } else if (v == VIEW_CURSOR) two = true;
+      else if (v == VIEW_OPENCODE) two = true;
+      else if (v == VIEW_BITCOIN) two = true;
+      else if (v == VIEW_ADSENSE) two = true;
+      else two = false;
+      baseH = two ? hTwo : hOne;
+    }
     if (cr.h == 4) {
       heights[i] = baseH * 4 + gap * 3;
     } else if (cr.h == 2) {
@@ -394,6 +441,35 @@ static void paintHomeList()
     else if (v == VIEW_FAL) { ok=falAcct.ok; err=falAcct.error; l1=t.accountCredits; p1=-1; s1=falSub; isTwo=false; }
     else if (v == VIEW_BITCOIN) { ok=bcAcct.ok; err=bcAcct.error; l1=t.bitcoinBalance; p1=-1; s1=bc1; l2=t.bitcoinValue; p2=-1; s2=bc2; isTwo=true; }
     else if (v == VIEW_ADSENSE) { ok=asAcct.ok; err=asAcct.error; l1=t.adsenseToday; p1=-1; s1=as1; l2=t.adsenseWallet; p2=-1; s2=as2; isTwo=true; }
+    else if (v == VIEW_CURRENCIES) {
+      const CurrenciesData &cu = g_snap.currencies;
+      registerCard(v, top, h);
+      const int quoteH = labelH + 2;
+      int nRows = cu.itemCount;
+      if (nRows < 1) nRows = 1;
+      const int contentH = titleH + titleToMetric + nRows * quoteH + (nRows > 1 ? (nRows - 1) * gapM : 0);
+      const int titleY = cardChrome(title, suffix, icon, top, h, contentH);
+      if (!cu.ok) {
+        const int errY = titleY + titleH + 4;
+        const int errMaxH = (top + h - 8) - errY;
+        drawErrorWrapped(pad + 12, errY, cardW - 24, cu.error, COL_CARD, 1, errMaxH);
+      } else {
+        const int barX = pad + 12;
+        const int barW = cardW - 24;
+        int y0 = titleY + titleH + titleToMetric;
+        int avail = (top + h - 8) - y0;
+        int pitch = quoteH + gapM;
+        int fit = pitch > 0 ? avail / pitch : 1;
+        if (fit < 1) fit = 1;
+        int shown = cu.itemCount < fit ? cu.itemCount : fit;
+        for (int qi = 0; qi < shown; qi++) {
+          paintQuoteRow(barX, y0 + qi * pitch, barW, currencyQuoteLabel(cu.items[qi]),
+                        currencyQuoteValue(cu.items[qi], cu.base), metricFont);
+        }
+      }
+      slot++;
+      continue;
+    }
     if (isTwo) cardTwo(v, title, suffix, icon, top, h, ok, err, l1, p1, s1, l2, p2, s2);
     else cardOne(v, title, suffix, icon, top, h, ok, err, l1, p1, s1);
     slot++;
@@ -624,13 +700,26 @@ static void paintHomeGrid()
       ok=bcAcct.ok; err=bcAcct.error; l1=t.bitcoinBalance; p1=-1; s1=bc1; l2=t.bitcoinValue; p2=-1; s2=bc2; metricCount=2;
     } else if (v == VIEW_ADSENSE) {
       ok=asAcct.ok; err=asAcct.error; l1=t.adsenseToday; p1=-1; s1=as1; l2=t.adsenseWallet; p2=-1; s2=as2; metricCount=2;
+    } else if (v == VIEW_CURRENCIES) {
+      ok = g_snap.currencies.ok;
+      err = g_snap.currencies.error;
+      metricCount = 0;
     }
 
     registerCard(v, r);
 
     // Calcula contentH para centralizar título
     int contentH = titleH + titleToMetric + metricH;
-    if (metricCount == 2) contentH += gapM + metricH;
+    if (v == VIEW_CURRENCIES) {
+      int nRows = g_snap.currencies.itemCount;
+      if (nRows < 1) nRows = 1;
+      if (compact || s == CARD_SM) {
+        if (nRows > 3) nRows = 3;
+      } else if (nRows > 6) {
+        nRows = 6;
+      }
+      contentH = titleH + titleToMetric + nRows * (labelH + gapM);
+    } else if (metricCount == 2) contentH += gapM + metricH;
     else if (metricCount == 4) contentH += gapM + metricH + gapM + metricH;
     // Para xl alto, contentH pode ser maior, mas já está dentro de h
     int titleY = drawCardChrome(r.x, r.y, r.w, r.h, title, suffix, icon, contentH);
@@ -645,6 +734,21 @@ static void paintHomeGrid()
     int barX = r.x + (r.w < 150 ? 6 : 10);
     int barW = r.w - (r.w < 150 ? 12 : 20);
     int y0 = titleY + titleH + titleToMetric;
+
+    if (v == VIEW_CURRENCIES) {
+      const CurrenciesData &cu = g_snap.currencies;
+      int pitch = labelH + gapM;
+      int avail = r.h - (y0 - r.y) - 4;
+      int fit = pitch > 0 ? avail / pitch : 1;
+      if (fit < 1) fit = 1;
+      if (s == CARD_SM && fit > 2) fit = 2;
+      int shown = cu.itemCount < fit ? cu.itemCount : fit;
+      for (int qi = 0; qi < shown; qi++) {
+        paintQuoteRow(barX, y0 + qi * pitch, barW, currencyQuoteLabel(cu.items[qi]),
+                      currencyQuoteValue(cu.items[qi], cu.base), font);
+      }
+      continue;
+    }
 
     if ((s == CARD_XL || s == CARD_WXL) && isTall && isWide) {
       if (isSuperTall) {
@@ -748,7 +852,7 @@ void paintHome()
                    (g_snap.cursorCount > 0 ? 4 : 0) | (g_snap.openrouterCount > 0 ? 8 : 0) |
                    (g_snap.deepseekCount > 0 ? 16 : 0) | (g_snap.opencodeCount > 0 ? 32 : 0) |
                    (g_snap.falCount > 0 ? 64 : 0) | (g_snap.bitcoinCount > 0 ? 128 : 0) |
-                   (g_snap.adsenseCount > 0 ? 256 : 0);
+                   (g_snap.adsenseCount > 0 ? 256 : 0) | (currenciesVisible() ? 512 : 0);
   int sizeMask = 0;
   if (g_snap.claudeCount > 0) sizeMask |= (int)uiCardSize(VIEW_CLAUDE) << 0;
   if (g_snap.gptCount > 0) sizeMask |= (int)uiCardSize(VIEW_GPT) << 2;
@@ -759,6 +863,7 @@ void paintHome()
   if (g_snap.falCount > 0) sizeMask |= (int)uiCardSize(VIEW_FAL) << 12;
   if (g_snap.bitcoinCount > 0) sizeMask |= (int)uiCardSize(VIEW_BITCOIN) << 14;
   if (g_snap.adsenseCount > 0) sizeMask |= (int)uiCardSize(VIEW_ADSENSE) << 16;
+  if (currenciesVisible()) sizeMask |= (int)uiCardSize(VIEW_CURRENCIES) << 19;
   sizeMask = (sizeMask << 8) | (int)g_homeLayout;
   if (mask != g_lastHomeConfigMask || sizeMask != g_lastHomeSizeMask)
   {

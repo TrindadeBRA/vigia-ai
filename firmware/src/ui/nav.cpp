@@ -37,6 +37,8 @@ static bool viewProviderVisible(View v)
     return g_snap.bitcoinCount > 0;
   case VIEW_ADSENSE:
     return g_snap.adsenseCount > 0;
+  case VIEW_CURRENCIES:
+    return currenciesVisible();
   default:
     return true;
   }
@@ -107,7 +109,7 @@ static bool viewHasScroll()
   return g_view == VIEW_HOME || g_view == VIEW_CLAUDE || g_view == VIEW_GPT ||
          g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK ||
          g_view == VIEW_OPENCODE || g_view == VIEW_FAL || g_view == VIEW_BITCOIN ||
-         g_view == VIEW_ADSENSE || g_view == VIEW_STATUS;
+         g_view == VIEW_ADSENSE || g_view == VIEW_CURRENCIES || g_view == VIEW_STATUS;
 }
 
 bool uiCanScroll() { return viewHasScroll() && g_detailCanScroll; }
@@ -198,6 +200,9 @@ void uiRefreshData()
     break;
   case VIEW_ADSENSE:
     paintAdsense();
+    break;
+  case VIEW_CURRENCIES:
+    paintCurrencies();
     break;
   case VIEW_STATUS:
     paintStatus();

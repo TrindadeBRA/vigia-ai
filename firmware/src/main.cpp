@@ -73,7 +73,6 @@ void loop()
       usageClientFetch();
     }
     usageClientPoll();
-    themeClientPollSlideshow();
   }
   else if (now - g_lastFetchMs > 5000)
   {

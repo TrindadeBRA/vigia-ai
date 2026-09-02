@@ -251,6 +251,42 @@ String adsenseWalletText(const AdsenseAccount &a)
   return a.unpaidCents >= 0 ? fmtMoney(a.unpaidCents, a.currency) : String(uiTr().noData);
 }
 
+bool currenciesVisible()
+{
+  if (!g_snap.currencies.hasData)
+  {
+    return false;
+  }
+  if (g_snap.currencies.itemCount > 0)
+  {
+    return true;
+  }
+  return !g_snap.currencies.ok && g_snap.currencies.error.length() > 0;
+}
+
+String currencyQuoteLabel(const CurrencyQuote &q)
+{
+  if (q.label.length())
+  {
+    return q.label;
+  }
+  String c = q.code;
+  if (q.kind == "crypto" && c.length() <= 6)
+  {
+    c.toUpperCase();
+  }
+  return c.length() ? c : String("--");
+}
+
+String currencyQuoteValue(const CurrencyQuote &q, const String &base)
+{
+  if (!q.ok)
+  {
+    return q.error.length() ? q.error : String(uiTr().noData);
+  }
+  return fmtCurrencyAmount(q.price, base);
+}
+
 const char *emptyProvidersMsg()
 {
   if (!g_hasFetchedOk)

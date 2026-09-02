@@ -78,6 +78,8 @@ static const UiStrings kPt = {
     "endereco",
     "Hoje (est.)",
     "Carteira",
+    "Moedas",
+    "Nenhuma moeda configurada.",
 };
 
 static const UiStrings kEn = {
@@ -156,6 +158,8 @@ static const UiStrings kEn = {
     "address",
     "Today (est.)",
     "Wallet",
+    "Currencies",
+    "No currency configured.",
 };
 
 static const UiStrings kEs = {
@@ -234,6 +238,8 @@ static const UiStrings kEs = {
     "direccion",
     "Hoy (est.)",
     "Billetera",
+    "Monedas",
+    "Ninguna moneda configurada.",
 };
 
 const UiStrings &uiTr()
