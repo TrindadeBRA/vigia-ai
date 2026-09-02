@@ -133,3 +133,11 @@ export function SlidersIcon(props: { size?: number }) {
     </Svg>
   );
 }
+
+export function ArrowLeftIcon(props: { size?: number; className?: string }) {
+  return <Svg {...props} d="M19 12H5M12 19l-7-7 7-7" />;
+}
+
+export function ChevronRightIcon(props: { size?: number; className?: string }) {
+  return <Svg {...props} d="M9 18l6-6-6-6" />;
+}
