@@ -42,7 +42,7 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
 
     if (!weather || !weather.ok) {
         return (
-            <div className={cn("flex h-full min-h-0 w-full flex-col rounded-2xl border border-edge bg-panel p-3.5 shadow-card", compact && "p-3")}>
+            <div className="flex h-full min-h-0 w-full flex-col">
                 <div className="mb-2 flex items-center gap-2">
                     <span className="text-[18px]">🌤️</span>
                     <span className="text-[13px] font-bold">{t.weather}</span>
@@ -62,7 +62,7 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
 
     if (compact) {
         return (
-            <button type="button" onClick={onOpen} className="flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-edge bg-panel p-3 text-left shadow-card transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover">
+            <button type="button" onClick={onOpen} className="flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left">
                 <div className="mb-1.5 flex items-center gap-2">
                     <WeatherIcon code={cur?.weather_code} size={22} />
                     <div className="min-w-0 flex-1">
@@ -82,7 +82,7 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
     }
 
     return (
-        <button type="button" onClick={onOpen} className="flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-edge bg-panel p-3.5 text-left shadow-card transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover">
+        <button type="button" onClick={onOpen} className="flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left">
             <div className="mb-2.5 flex items-center gap-2.5">
                 <WeatherIcon code={cur?.weather_code} size={32} />
                 <div className="min-w-0 flex-1">
