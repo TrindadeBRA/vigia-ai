@@ -34,7 +34,7 @@ Accept: application/json
 | **weekly**  | $30    | ~7 d (semana civil) |
 | **monthly** | $60    | 1º do mês           |
 
-`percent` já vem em 0–100 da API. `status` pode ser `"ok"`, `"warning"` ou `"error"` — o coletor ignora e usa só `percent`/`resetsAt`.
+`percent` já vem em 0–100 da API — **não** é fração 0–1. O parser (`_parse_go` em `backend/app/providers/opencode.py`) usa `as_percent_points()`, não `as_percent()`: essa última trata 0–1.5 como fração e multiplica por 100 (certo pro `utilization` do Claude, errado aqui — `percent: 1.0` virava 100%). `status` pode ser `"ok"`, `"warning"` ou `"error"` — o coletor ignora e usa só `percent`/`resetsAt`.
 
 ## O que a tela mostra
 

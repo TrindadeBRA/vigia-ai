@@ -17,6 +17,10 @@ All notable changes to this project are documented here.
 - **Alarmes + notificações push** (`/display/alarmes`): regras de provedor + métrica + limiar, edge-triggered, disparando Web Push (VAPID + service worker) quando cruzadas. Nome sugerido automaticamente e edição inline das regras. Só funciona em contexto seguro (`http://127.0.0.1` ou HTTPS) — ver `.agents/NOTIFICACOES.md`.
 - Provedor **Bitcoin** (endereço público de carteira → saldo on-chain via Blockstream Esplora + cotação USD/BRL via CoinGecko, sem chave privada). Card no firmware, no mostrador e no painel — ver `.agents/APIS_BITCOIN.md`.
 
+### Fixed
+
+- OpenCode Go: `percent` das janelas rolling/weekly/monthly usava `as_percent()` (fração 0–1, certo pro Claude), mas a API do OpenCode já devolve 0–100 — `percent: 1.0` (1% usado) virava 100% na tela. Trocado para `as_percent_points()`, igual ao Cursor.
+
 ### Changed
 
 - Rota do editor de tema: `/display/theme` (inglês, como as demais slugs). `/display/tema` redireciona. Alarmes: `/display/alarms` (`/display/alarmes` redireciona).
