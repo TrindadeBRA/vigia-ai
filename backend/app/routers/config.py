@@ -280,6 +280,49 @@ def _cursor_card(cfg: dict[str, Any]) -> ProviderCardPublic:
     )
 
 
+def _adsense_card(cfg: dict[str, Any]) -> ProviderCardPublic:
+    p = provider_cfg(cfg, "adsense")
+    client_id = str(p.get("client_id") or "").strip()
+    client_secret = str(p.get("client_secret") or "").strip()
+    refresh = str(p.get("refresh_token") or "").strip()
+    extras = _accounts_public(p)
+    if refresh:
+        return ProviderCardPublic(
+            source="google",
+            label="Login Google gravado neste coletor",
+            configured=True,
+            suffix=_suffix(client_id) if client_id else None,
+            mode="oauth",
+            hidden=bool(p.get("hidden")),
+            local_label=str(p.get("local_label") or ""),
+            primary_label=str(p.get("local_label") or ""),
+            accounts=extras,
+        )
+    if client_id and client_secret:
+        return ProviderCardPublic(
+            source="google_client",
+            label="Credenciais Google Cloud salvas — entre com o Google",
+            configured=False,
+            suffix=_suffix(client_id),
+            mode="need_oauth",
+            hidden=bool(p.get("hidden")),
+            local_label=str(p.get("local_label") or ""),
+            primary_label=str(p.get("local_label") or ""),
+            accounts=extras,
+        )
+    return ProviderCardPublic(
+        source="missing",
+        label="Cole o Client ID e o Client Secret (tipo Web) do Google Cloud",
+        configured=False,
+        suffix=None,
+        mode="need_paste",
+        hidden=bool(p.get("hidden")),
+        local_label=str(p.get("local_label") or ""),
+        primary_label=str(p.get("local_label") or ""),
+        accounts=extras,
+    )
+
+
 def _key_card(cfg: dict[str, Any], name: str) -> ProviderCardPublic:
     p = provider_cfg(cfg, name)
     paste = str(p.get("paste_secret") or "").strip()
@@ -292,6 +335,7 @@ def _key_card(cfg: dict[str, Any], name: str) -> ProviderCardPublic:
             suffix=_suffix(paste),
             mode="paste",
             hidden=bool(p.get("hidden")),
+            local_label=str(p.get("local_label") or ""),
             primary_label=str(p.get("local_label") or ""),
             accounts=extras,
         )
@@ -302,6 +346,7 @@ def _key_card(cfg: dict[str, Any], name: str) -> ProviderCardPublic:
         suffix=None,
         mode="need_paste",
         hidden=bool(p.get("hidden")),
+        local_label=str(p.get("local_label") or ""),
         primary_label=str(p.get("local_label") or ""),
         accounts=extras,
     )
@@ -374,6 +419,7 @@ def config_public(listen_host: str, listen_port: int, hub: Any = None) -> Config
             "opencode": _key_card(cfg, "opencode"),
             "fal": _key_card(cfg, "fal"),
             "bitcoin": _key_card(cfg, "bitcoin"),
+            "adsense": _adsense_card(cfg),
         },
         weather=weather_cfg,
         currencies=currencies_cfg,
@@ -427,6 +473,7 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
             "opencode": (body.opencode_hidden, body.opencode_primary_label, body.opencode_paste, "opencode"),
             "fal": (body.fal_hidden, body.fal_primary_label, body.fal_paste, "fal"),
             "bitcoin": (body.bitcoin_hidden, body.bitcoin_primary_label, body.bitcoin_paste, "bitcoin"),
+            "adsense": (body.adsense_hidden, body.adsense_primary_label, None, None),
         }
         for name, (hidden, label, paste, kind) in mapping.items():
             p = cfg["providers"][name]
@@ -462,6 +509,11 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
                         raise HTTPException(400, "Endereço Bitcoin inválido; cole o endereço público da carteira")
                     secret = cleaned
                 p["paste_secret"] = secret
+        adsense = cfg["providers"]["adsense"]
+        if body.adsense_client_id is not None and body.adsense_client_id not in ("", "********"):
+            adsense["client_id"] = body.adsense_client_id.strip()
+        if body.adsense_client_secret is not None and body.adsense_client_secret not in ("", "********"):
+            adsense["client_secret"] = body.adsense_client_secret.strip()
 
     try:
         update(mut)
@@ -523,7 +575,7 @@ def add_account(body: AddAccountBody) -> AddAccountResult:
     description="Não apaga a conta local (Keychain / state.vscdb / primeira key).",
 )
 def delete_account(provider: str, account_id: str) -> OkResult:
-    if provider not in ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin"):
+    if provider not in ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin", "adsense"):
         return OkResult(ok=False, error="provider inválido")
     if not account_id:
         return OkResult(ok=False, error="id vazio")
@@ -569,12 +621,20 @@ def clear_secret(name: str) -> OkResult:
         "bitcoin": "bitcoin",
         "bitcoin_paste": "bitcoin",
         "BITCOIN_ADDRESS": "bitcoin",
+        "adsense_client_secret": "adsense",
+        "adsense_client_id": "adsense",
     }
     provider = mapping.get(name)
     if not provider:
         return OkResult(ok=False, error="chave não é segredo gerenciável")
 
     def mut(cfg: dict[str, Any]) -> None:
+        if provider == "adsense":
+            cfg["providers"]["adsense"]["client_id"] = ""
+            cfg["providers"]["adsense"]["client_secret"] = ""
+            cfg["providers"]["adsense"]["refresh_token"] = ""
+            cfg["providers"]["adsense"]["account_name"] = ""
+            return
         cfg["providers"][provider]["paste_secret"] = ""
 
     update(mut)

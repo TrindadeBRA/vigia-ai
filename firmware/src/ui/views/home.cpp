@@ -1,6 +1,7 @@
 #include "ui/internal.h"
 
 #include "ui/i18n.h"
+#include "assets/icons/icon_adsense.h"
 #include "assets/icons/icon_bitcoin.h"
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
@@ -137,6 +138,10 @@ static int buildHomeProviders(HomeProvider out[MAX_HOME_CARDS]) {
     const BitcoinAccount &a = g_snap.bitcoin[bitcoinWorstIdx()];
     add(VIEW_BITCOIN, "Bitcoin", ICON_BITCOIN, g_snap.bitcoinCount, accountSuffixText(a.label, g_snap.bitcoinCount));
   }
+  if (g_snap.adsenseCount > 0) {
+    const AdsenseAccount &a = g_snap.adsense[adsenseWorstIdx()];
+    add(VIEW_ADSENSE, "AdSense", ICON_ADSENSE, g_snap.adsenseCount, accountSuffixText(a.label, g_snap.adsenseCount));
+  }
   return n;
 }
 
@@ -193,6 +198,7 @@ static void paintHomeList()
     } else if (v == VIEW_CURSOR) two = true;
     else if (v == VIEW_OPENCODE) two = true;
     else if (v == VIEW_BITCOIN) two = true;
+    else if (v == VIEW_ADSENSE) two = true;
     else two = false;
     baseH = two ? hTwo : hOne;
     if (cr.h == 4) {
@@ -332,6 +338,7 @@ static void paintHomeList()
   const OpenCodeAccount &ocAcct = g_snap.opencode[g_snap.opencodeCount > 0 ? opencodeWorstIdx() : 0];
   const FalAccount &falAcct = g_snap.fal[g_snap.falCount > 0 ? falWorstIdx() : 0];
   const BitcoinAccount &bcAcct = g_snap.bitcoin[g_snap.bitcoinCount > 0 ? bitcoinWorstIdx() : 0];
+  const AdsenseAccount &asAcct = g_snap.adsense[g_snap.adsenseCount > 0 ? adsenseWorstIdx() : 0];
 
   String cs1 = withResta(claudeAcct.sessionPercent, claudeAcct.sessionResets);
   String cs2 = withResta(claudeAcct.weeklyPercent, claudeAcct.weeklyResets);
@@ -343,6 +350,8 @@ static void paintHomeList()
   String falSub = falBalance(falAcct);
   String bc1 = bitcoinBalance(bcAcct);
   String bc2 = bitcoinValueText(bcAcct);
+  String as1 = adsenseTodayText(asAcct);
+  String as2 = adsenseWalletText(asAcct);
 
   tft.setViewport(pad, bodyTop, cardW, bodyH, false);
 
@@ -384,6 +393,7 @@ static void paintHomeList()
     else if (v == VIEW_OPENCODE) { ok=ocAcct.ok; err=ocAcct.error; l1=t.rolling; p1=ocAcct.rollingPercent; s1=ocSub; l2=t.weekLimit; p2=ocAcct.weeklyPercent; s2=withResta(ocAcct.weeklyPercent,ocAcct.weeklyResets); isTwo=true; }
     else if (v == VIEW_FAL) { ok=falAcct.ok; err=falAcct.error; l1=t.accountCredits; p1=-1; s1=falSub; isTwo=false; }
     else if (v == VIEW_BITCOIN) { ok=bcAcct.ok; err=bcAcct.error; l1=t.bitcoinBalance; p1=-1; s1=bc1; l2=t.bitcoinValue; p2=-1; s2=bc2; isTwo=true; }
+    else if (v == VIEW_ADSENSE) { ok=asAcct.ok; err=asAcct.error; l1=t.adsenseToday; p1=-1; s1=as1; l2=t.adsenseWallet; p2=-1; s2=as2; isTwo=true; }
     if (isTwo) cardTwo(v, title, suffix, icon, top, h, ok, err, l1, p1, s1, l2, p2, s2);
     else cardOne(v, title, suffix, icon, top, h, ok, err, l1, p1, s1);
     slot++;
@@ -498,6 +508,7 @@ static void paintHomeGrid()
   const OpenCodeAccount &ocAcct = g_snap.opencode[g_snap.opencodeCount > 0 ? opencodeWorstIdx() : 0];
   const FalAccount &falAcct = g_snap.fal[g_snap.falCount > 0 ? falWorstIdx() : 0];
   const BitcoinAccount &bcAcct = g_snap.bitcoin[g_snap.bitcoinCount > 0 ? bitcoinWorstIdx() : 0];
+  const AdsenseAccount &asAcct = g_snap.adsense[g_snap.adsenseCount > 0 ? adsenseWorstIdx() : 0];
 
   String cs1 = withResta(claudeAcct.sessionPercent, claudeAcct.sessionResets);
   String cs2 = withResta(claudeAcct.weeklyPercent, claudeAcct.weeklyResets);
@@ -509,6 +520,8 @@ static void paintHomeGrid()
   String falSub = falBalance(falAcct);
   String bc1 = bitcoinBalance(bcAcct);
   String bc2 = bitcoinValueText(bcAcct);
+  String as1 = adsenseTodayText(asAcct);
+  String as2 = adsenseWalletText(asAcct);
 
   auto registerCard = [&](View view, const HomeGridRect &r)
   {
@@ -609,6 +622,8 @@ static void paintHomeGrid()
       ok=falAcct.ok; err=falAcct.error; l1= compact? t.credits : t.accountCredits; p1=-1; s1=falSub; metricCount=1;
     } else if (v == VIEW_BITCOIN) {
       ok=bcAcct.ok; err=bcAcct.error; l1=t.bitcoinBalance; p1=-1; s1=bc1; l2=t.bitcoinValue; p2=-1; s2=bc2; metricCount=2;
+    } else if (v == VIEW_ADSENSE) {
+      ok=asAcct.ok; err=asAcct.error; l1=t.adsenseToday; p1=-1; s1=as1; l2=t.adsenseWallet; p2=-1; s2=as2; metricCount=2;
     }
 
     registerCard(v, r);
@@ -732,7 +747,8 @@ void paintHome()
   const int mask = (g_snap.claudeCount > 0 ? 1 : 0) | (g_snap.gptCount > 0 ? 2 : 0) |
                    (g_snap.cursorCount > 0 ? 4 : 0) | (g_snap.openrouterCount > 0 ? 8 : 0) |
                    (g_snap.deepseekCount > 0 ? 16 : 0) | (g_snap.opencodeCount > 0 ? 32 : 0) |
-                   (g_snap.falCount > 0 ? 64 : 0) | (g_snap.bitcoinCount > 0 ? 128 : 0);
+                   (g_snap.falCount > 0 ? 64 : 0) | (g_snap.bitcoinCount > 0 ? 128 : 0) |
+                   (g_snap.adsenseCount > 0 ? 256 : 0);
   int sizeMask = 0;
   if (g_snap.claudeCount > 0) sizeMask |= (int)uiCardSize(VIEW_CLAUDE) << 0;
   if (g_snap.gptCount > 0) sizeMask |= (int)uiCardSize(VIEW_GPT) << 2;
@@ -742,6 +758,7 @@ void paintHome()
   if (g_snap.opencodeCount > 0) sizeMask |= (int)uiCardSize(VIEW_OPENCODE) << 10;
   if (g_snap.falCount > 0) sizeMask |= (int)uiCardSize(VIEW_FAL) << 12;
   if (g_snap.bitcoinCount > 0) sizeMask |= (int)uiCardSize(VIEW_BITCOIN) << 14;
+  if (g_snap.adsenseCount > 0) sizeMask |= (int)uiCardSize(VIEW_ADSENSE) << 16;
   sizeMask = (sizeMask << 8) | (int)g_homeLayout;
   if (mask != g_lastHomeConfigMask || sizeMask != g_lastHomeSizeMask)
   {

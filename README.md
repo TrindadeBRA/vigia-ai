@@ -5,7 +5,7 @@
 
 ### Painel de mesa para cotas de IA — sem nunca expor um token
 
-**Claude** · **GPT** (ChatGPT / Codex) · **Cursor** · **OpenRouter** · **DeepSeek** · **OpenCode Go** · **OpenCode Zen** · **fal.ai**
+**Claude** · **GPT** (ChatGPT / Codex) · **Cursor** · **OpenRouter** · **DeepSeek** · **OpenCode Go** · **OpenCode Zen** · **fal.ai** · **Bitcoin** · **AdSense**
 rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-e63931?style=flat-square)](LICENSE)
@@ -52,7 +52,7 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 
 ## Recursos
 
-- **8 provedores, múltiplas contas cada** — Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai
+- **10 provedores, múltiplas contas cada** — Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai, Bitcoin, AdSense
 - **Tempo real** — um único ciclo de consulta no coletor, distribuído por SSE; placa e abas de `/display` não multiplicam chamadas
 - **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
 - **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela
@@ -142,7 +142,7 @@ Mesmo contrato JSON, layout responsivo: sidebar no desktop, menu hambúrguer no 
 ## Como funciona
 
 ```
-Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go / OpenCode Zen / fal.ai)
+Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go / OpenCode Zen / fal.ai / Bitcoin / AdSense)
         │  tokens só no host
         ▼
   backend FastAPI  :8787     GET /events  (SSE, JSON sem Bearer)

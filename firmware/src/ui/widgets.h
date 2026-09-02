@@ -13,6 +13,7 @@ String fmtPct(float pct);
 String fmtRemain(float used);
 String fmtUsdSite(int cents);
 String fmtBrlSite(int cents);
+String fmtMoney(int cents, const String &currency);
 String fmtBtc(float btc);
 
 void drawBar(int x, int y, int w, int h, float pct);

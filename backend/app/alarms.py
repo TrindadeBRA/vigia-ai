@@ -47,6 +47,9 @@ METRICS: dict[str, list[tuple[str, str, str]]] = {
     "bitcoin": [
         ("value_usd_cents", "Valor em USD", "cents"),
     ],
+    "adsense": [
+        ("unpaid_cents", "Carteira", "cents"),
+    ],
 }
 
 
@@ -66,6 +69,7 @@ PROVIDER_NAMES: dict[str, str] = {
     "opencode": "OpenCode",
     "fal": "fal.ai",
     "bitcoin": "Bitcoin",
+    "adsense": "AdSense",
 }
 
 

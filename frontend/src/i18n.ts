@@ -97,6 +97,8 @@ type Strings = {
   // Bitcoin
   bitcoinBalance: string;
   bitcoinValue: string;
+  adsenseToday: string;
+  adsenseWallet: string;
   // Currencies
   currencies: string;
   currenciesEmpty: string;
@@ -192,6 +194,8 @@ export const STR: Record<Lang, Strings> = {
     weatherRainProb: "Chuva",
     bitcoinBalance: "Saldo",
     bitcoinValue: "Valor",
+    adsenseToday: "Hoje (est.)",
+    adsenseWallet: "Carteira",
     currencies: "Moedas",
     currenciesEmpty: "Nenhuma moeda configurada.",
   },
@@ -284,6 +288,8 @@ export const STR: Record<Lang, Strings> = {
     weatherRainProb: "Rain",
     bitcoinBalance: "Balance",
     bitcoinValue: "Value",
+    adsenseToday: "Today (est.)",
+    adsenseWallet: "Wallet",
     currencies: "Currencies",
     currenciesEmpty: "No currency configured.",
   },
@@ -376,6 +382,8 @@ export const STR: Record<Lang, Strings> = {
     weatherRainProb: "Lluvia",
     bitcoinBalance: "Saldo",
     bitcoinValue: "Valor",
+    adsenseToday: "Hoy (est.)",
+    adsenseWallet: "Billetera",
     currencies: "Monedas",
     currenciesEmpty: "Ninguna moneda configurada.",
   },

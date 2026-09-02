@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
-import type { BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
+import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
 import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
@@ -11,7 +11,7 @@ import { Skeleton } from "../components/Skeleton";
 import { CurrenciesBoardCard, CurrenciesDetail } from "../components/CurrenciesWidget";
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
 import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
-import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
@@ -220,6 +220,13 @@ function bitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
   return [
     { label: t.bitcoinBalance, pct: null, value: b.balance_btc != null ? fmtBtc(b.balance_btc) : null, sub: null },
     { label: t.bitcoinValue, pct: null, value, sub: null },
+  ];
+}
+
+function adsenseMetrics(a: AdsenseAccount, t: T): Metric[] {
+  return [
+    { label: t.adsenseToday, pct: null, value: a.today_cents != null ? fmtMoney(a.today_cents, a.currency) : null, sub: null },
+    { label: t.adsenseWallet, pct: null, value: a.unpaid_cents != null ? fmtMoney(a.unpaid_cents, a.currency) : null, sub: null },
   ];
 }
 
@@ -436,6 +443,17 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       title: "Bitcoin",
       label: b.label || "",
       metrics: bitcoinMetrics(b, t),
+    });
+  }
+  for (const a of data.adsense || []) {
+    list.push({
+      id: `adsense:${a.id}`,
+      provider: "adsense",
+      ok: a.ok,
+      error: a.error,
+      title: "AdSense",
+      label: a.label || a.account_name || "",
+      metrics: adsenseMetrics(a, t),
     });
   }
   // Weather widget — só aparece se habilitado e não oculto
@@ -1379,6 +1397,20 @@ function BitcoinBody({ data, account, t, pal }: { data: UsagePayload; account: B
   );
 }
 
+function AdsenseBody({ data, account, t, pal }: { data: UsagePayload; account: AdsenseAccount; t: T; pal: Pal }) {
+  const a = account;
+  return (
+    <>
+      {a.account_name ? <div className="px-0.5 text-[12.5px] tracking-[.1px] text-ink3">{a.account_name}</div> : null}
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.adsenseToday} pct={null} pal={pal} value={a.today_cents != null ? fmtMoney(a.today_cents, a.currency) : t.noData} />
+        <MetricCard label={t.adsenseWallet} pct={null} pal={pal} value={a.unpaid_cents != null ? fmtMoney(a.unpaid_cents, a.currency) : t.noData} />
+      </MetricsGrid>
+    </>
+  );
+}
+
 function WeatherAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   const w = data.weather;
   // Busca config do weather via payload (location/units) — se não tiver, usa defaults
@@ -1411,7 +1443,7 @@ function CurrenciesAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   );
 }
 
-function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
+function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   // Weather e Moedas têm página própria (sem "conta" única)
   if (meta.provider === "weather" || meta.kind === "weather") {
     return <WeatherAccountPage data={data} t={t} />;
@@ -1429,6 +1461,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "opencode") body = <OpenCodeBody data={data} account={account as OpenCodeAccount} t={t} pal={pal} />;
     else if (meta.provider === "fal") body = <FalBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "bitcoin") body = <BitcoinBody data={data} account={account as BitcoinAccount} t={t} pal={pal} />;
+    else if (meta.provider === "adsense") body = <AdsenseBody data={data} account={account as AdsenseAccount} t={t} pal={pal} />;
   }
   return (
     <div className={`w-full ${viewFade}`}>
@@ -1635,13 +1668,13 @@ export default function Display() {
 
   const providers = data ? buildProviders(data, t, now) : [];
   let meta: ProviderMeta | null = null;
-  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | null = null;
+  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null = null;
   if (data && section === "account") {
     meta = providers.find((p) => p.id === selectedId) || null;
     if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies") {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
-      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "bitcoin";
+      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "bitcoin" | "adsense";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
   }

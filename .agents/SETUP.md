@@ -91,7 +91,9 @@ GET /usage  (na hora)   ·   GET /events  (SSE a cada USAGE_INTERVAL_S)
 firmware ESP32  ·  /display  ·  /display/config
 ```
 
-O coletor **não** é um OAuth client. Não tem `client_id`, não faz authorization code, **não faz refresh**. Quem emite e renova o access token é o app oficial. O Vigia só **reusa** o token já gravado e dispara HTTP (`http_json`) com `Authorization: Bearer …`. Token expirado → `ok: false` naquela conta; as outras seguem.
+O coletor **não** é um OAuth client para Claude/GPT/Cursor. Não tem `client_id` desses, não faz authorization code, **não faz refresh**. Quem emite e renova o access token é o app oficial. O Vigia só **reusa** o token já gravado e dispara HTTP (`http_json`) com `Authorization: Bearer …`. Token expirado → `ok: false` naquela conta; as outras seguem.
+
+**AdSense** é a exceção: o coletor guarda Client ID/Secret (tipo Web) e faz o authorization code + refresh. Callback em `http://127.0.0.1:{porta}/api/oauth/adsense/callback` — ver [`APIS_ADSENSE.md`](APIS_ADSENSE.md).
 
 `UsageHub` (`backend/app/hub.py`) faz **um** ciclo de APIs e espalha o snapshot. Placa e abas de `/display` só escutam SSE. `GET /usage` força um ciclo extra (botão «Atualizar consumo», Swagger). Falha de um provedor **não** derruba o HTTP 200 nem os outros cards.
 
@@ -150,8 +152,10 @@ Várias contas por serviço. O coletor consulta as APIs a cada 60 s (`USAGE_INTE
 | OpenRouter | — | API key |
 | DeepSeek | — | API key |
 | fal.ai | — | API key (escopo Admin) |
+| Bitcoin | — | endereço público da carteira |
+| AdSense | — | OAuth Google (Client ID tipo Web + login) |
 
-Detalhes: [`APIS_CLAUDE.md`](APIS_CLAUDE.md), [`APIS_GPT.md`](APIS_GPT.md), [`APIS_CURSOR.md`](APIS_CURSOR.md), [`APIS_OPENROUTER.md`](APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](APIS_DEEPSEEK.md), [`APIS_FAL.md`](APIS_FAL.md).
+Detalhes: [`APIS_CLAUDE.md`](APIS_CLAUDE.md), [`APIS_GPT.md`](APIS_GPT.md), [`APIS_CURSOR.md`](APIS_CURSOR.md), [`APIS_OPENROUTER.md`](APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](APIS_DEEPSEEK.md), [`APIS_FAL.md`](APIS_FAL.md), [`APIS_BITCOIN.md`](APIS_BITCOIN.md), [`APIS_ADSENSE.md`](APIS_ADSENSE.md).
 
 ## Placa (hardware)
 

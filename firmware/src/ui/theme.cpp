@@ -131,10 +131,12 @@ static void loadCardSizes(Preferences &prefs)
     g_cardSizeByView[i] = CARD_MD;
   // chave "cs" = blob de VIEW_COUNT bytes (um por View). Legado: sem blob -> MD.
   size_t len = prefs.getBytesLength("cs");
-  if (len == (size_t)VIEW_COUNT)
+  if (len > 0 && len <= (size_t)VIEW_COUNT)
   {
     uint8_t buf[VIEW_COUNT];
-    prefs.getBytes("cs", buf, VIEW_COUNT);
+    for (int i = 0; i < VIEW_COUNT; i++)
+      buf[i] = (uint8_t)CARD_MD;
+    prefs.getBytes("cs", buf, len);
     for (int i = 0; i < VIEW_COUNT; i++)
       g_cardSizeByView[i] = normalizeCardSize(buf[i]);
     return;

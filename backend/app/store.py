@@ -14,7 +14,7 @@ from app.config import config_path, data_dir
 
 _LOCK = threading.Lock()
 
-PROVIDERS = ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin")
+PROVIDERS = ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin", "adsense")
 
 _EMPTY_PROVIDER: dict[str, Any] = {
     "hidden": False,
@@ -111,7 +111,7 @@ _SLIDESHOW_DEFAULT: dict[str, Any] = {
 
 
 def default_config() -> dict[str, Any]:
-    return {
+    cfg = {
         "version": 1,
         "listen": {"host": "0.0.0.0", "port": 8787},
         "mock": False,
@@ -126,6 +126,10 @@ def default_config() -> dict[str, Any]:
             "slideshow": deepcopy(_SLIDESHOW_DEFAULT),
         },
     }
+    cfg["providers"]["adsense"].update(
+        {"client_id": "", "client_secret": "", "refresh_token": "", "account_name": ""}
+    )
+    return cfg
 
 
 def _empty_provider() -> dict[str, Any]:
@@ -286,6 +290,11 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
         dest["local_label"] = str(src.get("local_label") or "")
         dest["paste_secret"] = str(src.get("paste_secret") or "")
         dest["accounts"] = _parse_accounts_blob(src.get("accounts") or [], "secret")
+        if name == "adsense":
+            dest["client_id"] = str(src.get("client_id") or "")
+            dest["client_secret"] = str(src.get("client_secret") or "")
+            dest["refresh_token"] = str(src.get("refresh_token") or "")
+            dest["account_name"] = str(src.get("account_name") or "")
     # Migração: opencode_go/opencode_zen (antigos) → opencode (unificado).
     # Ambos usavam a mesma chave; consolida a primeira chave encontrada.
     if not cfg["providers"]["opencode"]["paste_secret"] and not cfg["providers"]["opencode"]["accounts"]:

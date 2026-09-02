@@ -62,7 +62,7 @@ void paintStatus()
   g_cardSizeSplit5 = dX + 5 * (btn6W + gap6) - gap6 / 2;
   {
     View cv = g_view;
-    if (cv != VIEW_CLAUDE && cv != VIEW_GPT && cv != VIEW_CURSOR && cv != VIEW_OPENROUTER && cv != VIEW_DEEPSEEK && cv != VIEW_OPENCODE && cv != VIEW_FAL && cv != VIEW_BITCOIN)
+    if (cv != VIEW_CLAUDE && cv != VIEW_GPT && cv != VIEW_CURSOR && cv != VIEW_OPENROUTER && cv != VIEW_DEEPSEEK && cv != VIEW_OPENCODE && cv != VIEW_FAL && cv != VIEW_BITCOIN && cv != VIEW_ADSENSE)
     {
       if (g_snap.claudeCount > 0) cv = VIEW_CLAUDE;
       else if (g_snap.gptCount > 0) cv = VIEW_GPT;

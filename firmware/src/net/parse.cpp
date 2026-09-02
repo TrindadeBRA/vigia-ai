@@ -73,6 +73,14 @@ void usageClientLogSnapshot(const char *why)
                   b.label.length() ? b.label.c_str() : "-", b.ok ? 1 : 0, b.balanceBtc,
                   b.valueUsdCents, b.error.length() ? b.error.c_str() : "-");
   }
+  Serial.printf("  adsense contas=%d\n", g_snap.adsenseCount);
+  for (int i = 0; i < g_snap.adsenseCount; i++)
+  {
+    const AdsenseAccount &a = g_snap.adsense[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d hoje=%d carteira=%d err=%s\n", i, a.id.c_str(),
+                  a.label.length() ? a.label.c_str() : "-", a.ok ? 1 : 0, a.todayCents,
+                  a.unpaidCents, a.error.length() ? a.error.c_str() : "-");
+  }
   if (g_snap.weather.hasData)
   {
     Serial.printf("  weather ok=%d temp=%.1f%s loc=%s code=%d\n", g_snap.weather.ok ? 1 : 0,
@@ -129,6 +137,11 @@ void markAllAccountsFailed(const char *msg)
   {
     g_snap.bitcoin[i].ok = false;
     g_snap.bitcoin[i].error = msg;
+  }
+  for (int i = 0; i < g_snap.adsenseCount; i++)
+  {
+    g_snap.adsense[i].ok = false;
+    g_snap.adsense[i].error = msg;
   }
   g_snap.weather.hasData = false;
   g_snap.weather.ok = false;
@@ -350,6 +363,26 @@ bool parseUsageJson(const String &body)
     b.priceBrlCents = acc["price_brl_cents"].isNull() ? -1 : acc["price_brl_cents"].as<int>();
     b.valueUsdCents = acc["value_usd_cents"].isNull() ? -1 : acc["value_usd_cents"].as<int>();
     b.valueBrlCents = acc["value_brl_cents"].isNull() ? -1 : acc["value_brl_cents"].as<int>();
+  }
+
+  g_snap.adsenseCount = 0;
+  for (JsonVariantConst v : doc["adsense"].as<JsonArrayConst>())
+  {
+    if (g_snap.adsenseCount >= MAX_ACCOUNTS)
+    {
+      Serial.println("adsense: mais contas do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    AdsenseAccount &a = g_snap.adsense[g_snap.adsenseCount++];
+    a.id = jsonText(acc["id"]);
+    a.label = jsonText(acc["label"]);
+    a.ok = acc["ok"] | false;
+    a.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char *>());
+    a.currency = jsonText(acc["currency"]);
+    a.todayCents = acc["today_cents"].isNull() ? -1 : acc["today_cents"].as<int>();
+    a.unpaidCents = acc["unpaid_cents"].isNull() ? -1 : acc["unpaid_cents"].as<int>();
+    a.accountName = jsonText(acc["account_name"]);
   }
 
   // Weather (Open-Meteo) — opcional, não quebra se ausente

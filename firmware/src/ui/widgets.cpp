@@ -187,6 +187,25 @@ String fmtBrlSite(int cents) {
   return String(buf);
 }
 
+String fmtMoney(int cents, const String &currency) {
+  String cur = currency;
+  cur.toUpperCase();
+  if (cur == "BRL") {
+    return fmtBrlSite(cents);
+  }
+  if (cur == "EUR") {
+    if (cents < 0) {
+      return "--";
+    }
+    long reais = cents / 100;
+    int cc = (int)(cents % 100);
+    char buf[24];
+    snprintf(buf, sizeof(buf), "EUR %ld.%02d", reais, cc);
+    return String(buf);
+  }
+  return fmtUsdSite(cents);
+}
+
 // 8 casas decimais (precisao de satoshi) — igual ao frontend (fmtBtc em format.ts).
 String fmtBtc(float btc) {
   if (btc < 0) {

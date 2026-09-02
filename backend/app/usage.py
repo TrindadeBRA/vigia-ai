@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable
 
 from app.formatting import utc_now
+from app.providers.adsense import adsense_fail, fetch_adsense_accounts
 from app.providers.bitcoin import bitcoin_fail, fetch_bitcoin_accounts
 from app.providers.claude import claude_fail, fetch_claude_accounts
 from app.providers.currencies import fetch_currency_quotes, mock_currencies_payload
@@ -138,6 +139,18 @@ def mock_payload() -> dict[str, Any]:
                 "value_brl_cents": 40740,
             }
         ],
+        "adsense": [
+            {
+                "id": "legacy",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "currency": "BRL",
+                "today_cents": 1234,
+                "unpaid_cents": 56789,
+                "account_name": "pub-1234",
+            }
+        ],
         "weather": mock_weather_payload(),
         "currencies": mock_currencies_payload(),
     }
@@ -154,6 +167,7 @@ _PROVIDER_JOBS: list[tuple[str, Callable[[dict], list[dict[str, Any]]], Callable
     ("opencode", fetch_opencode_accounts, opencode_fail, "legacy"),
     ("fal", fetch_fal_accounts, fal_fail, "legacy"),
     ("bitcoin", fetch_bitcoin_accounts, bitcoin_fail, "legacy"),
+    ("adsense", fetch_adsense_accounts, adsense_fail, "legacy"),
 ]
 
 

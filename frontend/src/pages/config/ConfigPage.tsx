@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Skeleton } from "../../components/Skeleton";
 import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
+import { AdSenseConfigCard } from "./AdSenseConfigCard";
 import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { Button, Fold } from "./ui";
@@ -171,6 +172,7 @@ export default function ConfigPage() {
           usesLocalApp={false}
           {...common}
         />
+        <AdSenseConfigCard p={cfg.providers.adsense} listenPort={cfg.listen.port} {...common} />
       </div>
       <CurrenciesConfigCard currencies={cfg.currencies} c={c} onReload={reload} />
     </div>

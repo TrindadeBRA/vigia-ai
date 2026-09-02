@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -55,3 +56,14 @@ def http_json(
         return json.loads(raw)
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"JSON inválido de {url}: {exc}") from exc
+
+
+def http_form(url: str, fields: dict[str, str], *, timeout: float = 20.0) -> Any:
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    return http_json(
+        url,
+        method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
+        body=body,
+        timeout=timeout,
+    )

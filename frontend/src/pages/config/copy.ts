@@ -82,6 +82,19 @@ export type ConfigCopy = {
   opencodeBlurb: string;
   falBlurb: string;
   bitcoinBlurb: string;
+  adsenseBlurb: string;
+  adsenseCredsFold: string;
+  adsenseClientId: string;
+  adsenseClientSecret: string;
+  adsenseClientIdPh: string;
+  adsenseClientSecretPh: string;
+  adsenseRedirectHint: (url: string) => string;
+  adsenseLogin: string;
+  adsenseLogout: string;
+  adsenseLogoutOk: string;
+  adsenseOauthOk: string;
+  adsenseOauthDenied: string;
+  adsenseOauthError: string;
   cursorHint: string;
   cursorAdvanced: string;
   modeLocal: string;
@@ -89,6 +102,8 @@ export type ConfigCopy = {
   modeExpired: string;
   modeNeedLocal: string;
   modeNeedPaste: string;
+  modeOauth: string;
+  modeNeedOauth: string;
   modeDocker: string;
   checkTitle: string;
   checkLead: string;
@@ -252,6 +267,19 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     opencodeBlurb: "Cota da assinatura (janelas rolling, semanal e mensal) e saldo pago-conforme-uso. Crie a key em opencode.ai/auth.",
     falBlurb: "Saldo de créditos. Crie uma key com escopo Admin em fal.ai/dashboard/keys (uma key comum não lê o saldo).",
     bitcoinBlurb: "Cole o endereço público da carteira (nunca a chave privada ou a seed). Mostra o saldo on-chain e o valor em dólar e em real.",
+    adsenseBlurb: "Ganhos de hoje (estimativa) e saldo não pago da conta AdSense. Exige um Client ID OAuth no Google Cloud (tipo Web) e o login Google neste computador.",
+    adsenseCredsFold: "Credenciais do Google Cloud",
+    adsenseClientId: "CLIENT ID",
+    adsenseClientSecret: "CLIENT SECRET",
+    adsenseClientIdPh: "xxxx.apps.googleusercontent.com",
+    adsenseClientSecretPh: "GOCSPX-…",
+    adsenseRedirectHint: (url) => `URI de redirecionamento (cadastrar no cliente OAuth Web): ${url}`,
+    adsenseLogin: "Entrar com Google",
+    adsenseLogout: "Sair do Google",
+    adsenseLogoutOk: "Login Google apagado.",
+    adsenseOauthOk: "AdSense conectado.",
+    adsenseOauthDenied: "Login Google cancelado.",
+    adsenseOauthError: "Não deu para conectar o AdSense.",
     cursorHint: "Se não aparecer sozinho: no Cursor, abra a conta, saia e entre de novo.",
     cursorAdvanced: "Opção avançada (Terminal)",
     modeLocal: "Encontramos o login neste computador.",
@@ -259,6 +287,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     modeExpired: "A sessão expirou. Abra o app neste computador e entre de novo.",
     modeNeedLocal: "Abra o app neste computador e entre na sua conta.",
     modeNeedPaste: "Cole a chave abaixo para conectar.",
+    modeOauth: "Login Google gravado neste coletor.",
+    modeNeedOauth: "Credenciais salvas — entre com o Google.",
     modeDocker: "Neste modo o login do Mac não é lido. Cole o token abaixo, ou rode o Vigia fora do Docker.",
     checkTitle: "Conferir agora",
     checkLead: "Busca os números na hora, sem esperar a próxima atualização automática.",
@@ -321,7 +351,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherNotConfigured: "Configure a cidade para ver o clima.",
     weatherPoweredBy: "Dados por Open-Meteo.com",
     financeiroTitle: "Financeiro",
-    financeiroLead: "Carteira Bitcoin e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
+    financeiroLead: "Carteira Bitcoin, AdSense e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
     currenciesTitle: "Cotação de moedas",
     currenciesLead: "Adicione quantas moedas quiser — fiat (dólar, euro...) ou cripto — e veja a cotação convertida para a moeda base.",
     currenciesEnabled: "Mostrar no painel",
@@ -418,6 +448,19 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     opencodeBlurb: "Subscription quota (rolling, weekly and monthly windows) and pay-as-you-go balance. Create a key at opencode.ai/auth.",
     falBlurb: "Credit balance. Create an Admin-scope key at fal.ai/dashboard/keys (a regular API key can't read the balance).",
     bitcoinBlurb: "Paste the wallet's public address (never the private key or seed phrase). Shows the on-chain balance and its value in USD and BRL.",
+    adsenseBlurb: "Today's estimated earnings and unpaid AdSense balance. Needs a Google Cloud OAuth Web client and a Google login on this computer.",
+    adsenseCredsFold: "Google Cloud credentials",
+    adsenseClientId: "CLIENT ID",
+    adsenseClientSecret: "CLIENT SECRET",
+    adsenseClientIdPh: "xxxx.apps.googleusercontent.com",
+    adsenseClientSecretPh: "GOCSPX-…",
+    adsenseRedirectHint: (url) => `Redirect URI (register it on the Web OAuth client): ${url}`,
+    adsenseLogin: "Sign in with Google",
+    adsenseLogout: "Sign out of Google",
+    adsenseLogoutOk: "Google login cleared.",
+    adsenseOauthOk: "AdSense connected.",
+    adsenseOauthDenied: "Google sign-in cancelled.",
+    adsenseOauthError: "Could not connect AdSense.",
     cursorHint: "If it doesn't show up: in Cursor, open the account, sign out, and sign back in.",
     cursorAdvanced: "Advanced (Terminal)",
     modeLocal: "We found the sign-in on this computer.",
@@ -425,6 +468,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     modeExpired: "The session expired. Open the app on this computer and sign in again.",
     modeNeedLocal: "Open the app on this computer and sign in.",
     modeNeedPaste: "Paste the key below to connect.",
+    modeOauth: "Google login stored in this collector.",
+    modeNeedOauth: "Credentials saved — sign in with Google.",
     modeDocker: "In this mode the Mac sign-in isn't read. Paste the token below, or run Vigia outside Docker.",
     checkTitle: "Check now",
     checkLead: "Fetches the numbers right away, without waiting for the next automatic update.",
@@ -487,7 +532,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherNotConfigured: "Set the city to see the weather.",
     weatherPoweredBy: "Data by Open-Meteo.com",
     financeiroTitle: "Finance",
-    financeiroLead: "Bitcoin wallet and currency quotes — dollar, euro, crypto, whatever you want to track.",
+    financeiroLead: "Bitcoin wallet, AdSense and currency quotes — dollar, euro, crypto, whatever you want to track.",
     currenciesTitle: "Currency quotes",
     currenciesLead: "Add as many currencies as you want — fiat (dollar, euro...) or crypto — and see the rate converted to your base currency.",
     currenciesEnabled: "Show on display",
@@ -584,6 +629,19 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     opencodeBlurb: "Cuota de la suscripción (ventanas rolling, semanal y mensual) y saldo de pago por uso. Crea una clave en opencode.ai/auth.",
     falBlurb: "Saldo de créditos. Crea una clave con alcance Admin en fal.ai/dashboard/keys (una clave normal no puede leer el saldo).",
     bitcoinBlurb: "Pega la dirección pública de la billetera (nunca la clave privada ni la semilla). Muestra el saldo on-chain y el valor en dólares y en reales.",
+    adsenseBlurb: "Ganancias de hoy (estimadas) y saldo impago de AdSense. Requiere un Client ID OAuth de Google Cloud (tipo Web) y el login de Google en este equipo.",
+    adsenseCredsFold: "Credenciales de Google Cloud",
+    adsenseClientId: "CLIENT ID",
+    adsenseClientSecret: "CLIENT SECRET",
+    adsenseClientIdPh: "xxxx.apps.googleusercontent.com",
+    adsenseClientSecretPh: "GOCSPX-…",
+    adsenseRedirectHint: (url) => `URI de redirección (registrar en el cliente OAuth Web): ${url}`,
+    adsenseLogin: "Entrar con Google",
+    adsenseLogout: "Salir de Google",
+    adsenseLogoutOk: "Login de Google borrado.",
+    adsenseOauthOk: "AdSense conectado.",
+    adsenseOauthDenied: "Inicio de sesión de Google cancelado.",
+    adsenseOauthError: "No se pudo conectar AdSense.",
     cursorHint: "Si no aparece solo: en Cursor, abre la cuenta, cierra sesión y vuelve a entrar.",
     cursorAdvanced: "Opción avanzada (Terminal)",
     modeLocal: "Encontramos el inicio de sesión en este computador.",
@@ -591,6 +649,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     modeExpired: "La sesión caducó. Abre la app en este computador y entra de nuevo.",
     modeNeedLocal: "Abre la app en este computador e inicia sesión.",
     modeNeedPaste: "Pega la clave abajo para conectar.",
+    modeOauth: "Login de Google guardado en este colector.",
+    modeNeedOauth: "Credenciales guardadas — entra con Google.",
     modeDocker: "En este modo no se lee el inicio de sesión del Mac. Pega el token abajo, o ejecuta Vigia fuera de Docker.",
     checkTitle: "Comprobar ahora",
     checkLead: "Busca los números al momento, sin esperar la próxima actualización automática.",
@@ -653,7 +713,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherNotConfigured: "Configura la ciudad para ver el clima.",
     weatherPoweredBy: "Datos por Open-Meteo.com",
     financeiroTitle: "Finanzas",
-    financeiroLead: "Billetera Bitcoin y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
+    financeiroLead: "Billetera Bitcoin, AdSense y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
     currenciesTitle: "Cotización de monedas",
     currenciesLead: "Agrega las monedas que quieras — fiat (dólar, euro...) o cripto — y mira la cotización convertida a tu moneda base.",
     currenciesEnabled: "Mostrar en el panel",
@@ -681,6 +741,8 @@ export function connectionHint(p: ProviderCardPublic, c: ConfigCopy, inDocker: b
   if (p.source === "expired") return c.modeExpired;
   if (p.mode === "local") return c.modeLocal;
   if (p.mode === "paste") return c.modePaste;
+  if (p.mode === "oauth") return c.modeOauth;
+  if (p.mode === "need_oauth") return c.modeNeedOauth;
   if (p.mode === "need_paste" && inDocker && usesLocalApp) return c.modeDocker;
   if (p.mode === "need_paste") return c.modeNeedPaste;
   if (p.mode === "need_local") return c.modeNeedLocal;

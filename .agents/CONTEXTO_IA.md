@@ -17,6 +17,8 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [APIS_OPENCODE_GO.md](APIS_OPENCODE_GO.md)   | Assinatura mensal OpenCode Go                                     |
 | [APIS_OPENCODE_ZEN.md](APIS_OPENCODE_ZEN.md) | Saldo pré-pago OpenCode Zen                                       |
 | [APIS_FAL.md](APIS_FAL.md)                   | Saldo de créditos fal.ai                                          |
+| [APIS_BITCOIN.md](APIS_BITCOIN.md)           | Saldo de carteira Bitcoin + cotação                               |
+| [APIS_ADSENSE.md](APIS_ADSENSE.md)           | Ganhos AdSense (OAuth Google)                                     |
 | [HARDWARE.md](HARDWARE.md)                   | Placa, pinos, drivers TFT                                         |
 | [TOUCH.md](TOUCH.md)                         | Views, XPT2046, calibração, Wokwi                                 |
 | [BACKEND.md](BACKEND.md)                     | Como rodar o FastAPI                                              |
@@ -28,7 +30,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 
 ## O que é este projeto
 
-**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **GPT** (ChatGPT / Codex), **Cursor**, **OpenRouter**, **DeepSeek**, **OpenCode Go**, **OpenCode Zen** e **fal.ai**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. Firmware e `/display` escutam `GET /events` (SSE). `GET /usage` é o mesmo JSON, na hora. O frontend React é o mostrador (`/display`) e as configurações (`/display/config`). `/` redireciona para as configs.
+**Vigia AI**: painel de mesa — **ESP32 + TFT 3,5" touch** mostra cotas das assinaturas **Claude**, **GPT** (ChatGPT / Codex), **Cursor**, **OpenRouter**, **DeepSeek**, **OpenCode Go**, **OpenCode Zen**, **fal.ai**, carteira **Bitcoin** e ganhos **AdSense**. A placa **não** guarda tokens. Um **coletor FastAPI** no host lê credenciais locais (ou `backend/data/config.json`), chama as APIs e serve JSON na LAN. Firmware e `/display` escutam `GET /events` (SSE). `GET /usage` é o mesmo JSON, na hora. O frontend React é o mostrador (`/display`) e as configurações (`/display/config`). `/` redireciona para as configs.
 
 Idioma da UI e da documentação: **português (Brasil)**. Código (identificadores) em inglês.
 
@@ -49,7 +51,7 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 ```
 backend/app/main.py           FastAPI, Swagger /docs
 backend/app/schemas.py        contrato OpenAPI
-backend/app/providers/        claude, gpt, cursor, openrouter, deepseek, opencode_go, opencode_zen, fal
+backend/app/providers/        claude, gpt, cursor, openrouter, deepseek, opencode_go, opencode_zen, fal, bitcoin, adsense
 backend/app/local/            Keychain, credentials, state.vscdb, auth.json (Codex)
 frontend/src/pages/Display.tsx         mostrador (SSE GET /events)
 frontend/src/pages/config/ConfigPage.tsx  contas, placa, rede

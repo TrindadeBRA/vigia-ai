@@ -241,6 +241,16 @@ String bitcoinValueText(const BitcoinAccount &b)
   return s;
 }
 
+String adsenseTodayText(const AdsenseAccount &a)
+{
+  return a.todayCents >= 0 ? fmtMoney(a.todayCents, a.currency) : String(uiTr().noData);
+}
+
+String adsenseWalletText(const AdsenseAccount &a)
+{
+  return a.unpaidCents >= 0 ? fmtMoney(a.unpaidCents, a.currency) : String(uiTr().noData);
+}
+
 const char *emptyProvidersMsg()
 {
   if (!g_hasFetchedOk)

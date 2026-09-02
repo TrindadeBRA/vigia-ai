@@ -83,6 +83,17 @@ export type BitcoinAccount = {
   value_brl_cents: number | null;
 };
 
+export type AdsenseAccount = {
+  id: string;
+  label: string;
+  ok: boolean;
+  error: string | null;
+  currency: string | null;
+  today_cents: number | null;
+  unpaid_cents: number | null;
+  account_name: string | null;
+};
+
 export type WeatherLocation = {
   name: string;
   latitude: number | null;
@@ -294,6 +305,7 @@ export type UsagePayload = {
   opencode: OpenCodeAccount[];
   fal: CreditsAccount[];
   bitcoin: BitcoinAccount[];
+  adsense: AdsenseAccount[];
   weather?: WeatherPayload | null;
   currencies?: CurrenciesPayload | null;
 };

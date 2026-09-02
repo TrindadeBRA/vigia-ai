@@ -35,10 +35,10 @@ int g_eyeGazeY = 0;
 float g_eyeLid = 0.0f;
 View g_homeCardView[MAX_HOME_CARDS] = {VIEW_CLAUDE, VIEW_GPT, VIEW_CURSOR, VIEW_OPENROUTER,
                                        VIEW_DEEPSEEK, VIEW_OPENCODE, VIEW_FAL};
-int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
-int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
-int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
-int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardX[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardY[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardW[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+int g_homeCardH[MAX_HOME_CARDS] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 int g_homeCardCount = 0;
 int g_layoutBtnY = 0;
 int g_layoutBtnH = 28;
@@ -298,6 +298,29 @@ int bitcoinWorstIdx()
   return best;
 }
 
+// AdSense: "pior" e o saldo nao pago mais baixo (carteira).
+int adsenseWorstIdx()
+{
+  int best = 0;
+  int bestVal = 0;
+  bool found = false;
+  for (int i = 0; i < g_snap.adsenseCount; i++)
+  {
+    int val = g_snap.adsense[i].unpaidCents;
+    if (val < 0)
+    {
+      continue;
+    }
+    if (!found || val < bestVal)
+    {
+      bestVal = val;
+      best = i;
+      found = true;
+    }
+  }
+  return best;
+}
+
 static int currentProviderCount()
 {
   switch (g_view)
@@ -318,6 +341,8 @@ static int currentProviderCount()
     return g_snap.falCount;
   case VIEW_BITCOIN:
     return g_snap.bitcoinCount;
+  case VIEW_ADSENSE:
+    return g_snap.adsenseCount;
   default:
     return 0;
   }
@@ -343,6 +368,8 @@ static int *currentProviderIdx()
     return &g_falIdx;
   case VIEW_BITCOIN:
     return &g_bitcoinIdx;
+  case VIEW_ADSENSE:
+    return &g_adsenseIdx;
   default:
     return nullptr;
   }

@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ProviderId = Literal[
-    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin"
+    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin", "adsense"
 ]
 
 USAGE_EXAMPLE = {
@@ -127,12 +127,24 @@ USAGE_EXAMPLE = {
             "value_brl_cents": 40740,
         }
     ],
+    "adsense": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "currency": "BRL",
+            "today_cents": 1234,
+            "unpaid_cents": 56789,
+            "account_name": "pub-1234",
+        }
+    ],
 }
 
 SSE_WIRE_EXAMPLE = (
     ": connected\n\n"
     "event: usage\n"
-    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode":[],"fal":[],"bitcoin":[]}\n\n'
+    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode":[],"fal":[],"bitcoin":[],"adsense":[]}\n\n'
     ": ping\n\n"
 )
 
@@ -190,6 +202,13 @@ class BitcoinAccount(AccountBase):
     price_brl_cents: int | None = Field(default=None, description="Cotação do BTC em centavos de BRL.")
     value_usd_cents: int | None = Field(default=None, description="balance_btc × price_usd_cents.")
     value_brl_cents: int | None = Field(default=None, description="balance_btc × price_brl_cents.")
+
+
+class AdsenseAccount(AccountBase):
+    currency: str | None = Field(default=None, description="ISO-4217 da conta AdSense (ex.: BRL, USD).")
+    today_cents: int | None = Field(default=None, description="Ganhos estimados de hoje, na moeda da conta.")
+    unpaid_cents: int | None = Field(default=None, description="Saldo não pago (carteira), na moeda da conta.")
+    account_name: str | None = Field(default=None, description="Nome de exibição da conta AdSense.")
 
 
 class OpenCodeAccount(AccountBase):
@@ -476,6 +495,7 @@ class UsagePayload(BaseModel):
     opencode: list[OpenCodeAccount]
     fal: list[CreditsAccount]
     bitcoin: list[BitcoinAccount]
+    adsense: list[AdsenseAccount]
     weather: WeatherPayload | None = Field(default=None, description="Dados meteorológicos Open-Meteo, se configurado.")
     currencies: CurrenciesPayload | None = Field(default=None, description="Cotações de moedas configuradas, se habilitado.")
 
@@ -562,6 +582,7 @@ class ConfigPatch(BaseModel):
     opencode_hidden: bool | None = None
     fal_hidden: bool | None = None
     bitcoin_hidden: bool | None = None
+    adsense_hidden: bool | None = None
     claude_local_label: str | None = None
     gpt_local_label: str | None = None
     cursor_local_label: str | None = None
@@ -570,6 +591,7 @@ class ConfigPatch(BaseModel):
     opencode_primary_label: str | None = None
     fal_primary_label: str | None = None
     bitcoin_primary_label: str | None = None
+    adsense_primary_label: str | None = None
     claude_paste: str | None = None
     gpt_paste: str | None = None
     cursor_paste: str | None = None
@@ -578,6 +600,8 @@ class ConfigPatch(BaseModel):
     opencode_paste: str | None = None
     fal_paste: str | None = None
     bitcoin_paste: str | None = None
+    adsense_client_id: str | None = None
+    adsense_client_secret: str | None = None
 
 
 class ConfigSaveResult(BaseModel):

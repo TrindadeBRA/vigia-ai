@@ -29,6 +29,8 @@ def test_usage_mock_schema(client: TestClient) -> None:
     assert isinstance(body["deepseek"], list)
     assert isinstance(body["opencode"], list)
     assert isinstance(body["fal"], list)
+    assert isinstance(body["bitcoin"], list)
+    assert isinstance(body["adsense"], list)
     assert body["claude"][0]["ok"] is True
     assert "session_percent" in body["claude"][0]
     assert body["gpt"][0]["ok"] is True
@@ -40,6 +42,9 @@ def test_usage_mock_schema(client: TestClient) -> None:
     assert "remaining_cents" in body["opencode"][0]
     assert body["fal"][0]["ok"] is True
     assert "remaining_cents" in body["fal"][0]
+    assert body["adsense"][0]["ok"] is True
+    assert "today_cents" in body["adsense"][0]
+    assert "unpaid_cents" in body["adsense"][0]
 
 
 def test_config_does_not_leak_token(client: TestClient) -> None:
@@ -57,6 +62,8 @@ def test_config_does_not_leak_token(client: TestClient) -> None:
     if suffix:
         assert suffix == "alue"
     assert "gpt" in body["providers"]
+    assert "adsense" in body["providers"]
+    assert body["providers"]["adsense"]["mode"] in ("need_paste", "need_oauth", "oauth")
 
 
 def test_openapi_available(client: TestClient) -> None:

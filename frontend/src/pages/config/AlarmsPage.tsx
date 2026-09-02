@@ -19,6 +19,7 @@ const PROVIDER_LABEL: Record<string, string> = {
   opencode: "OpenCode",
   fal: "fal.ai",
   bitcoin: "Bitcoin",
+  adsense: "AdSense",
 };
 
 function pushBadge(state: PushSupport, c: typeof ALARMS_STR.pt): { state: "ok" | "warn" | "missing"; label: string } {

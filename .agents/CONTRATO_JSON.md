@@ -6,9 +6,11 @@ O JSON viaja em `GET /usage` (uma vez) e em `GET /events` (SSE, `event: usage`).
 
 `Content-Type` em `/usage`: `application/json; charset=utf-8`. Em `/events`: `text/event-stream` (`event: usage` + `data:` o JSON).
 
-**v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`, `opencode_go`, `opencode_zen`, `fal`, `bitcoin`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
+**v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`, `opencode_go`, `opencode_zen`, `fal`, `bitcoin`, `adsense`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
 
 `bitcoin` não é bem uma "conta" (não há login) — cada item da lista é uma **carteira** identificada pelo endereço público colado no painel; ver `bitcoin[i]` abaixo.
+
+`adsense` é uma conta Google (OAuth no coletor) — hoje (estimativa) + saldo não pago; ver `adsense[i]` abaixo.
 
 Percentuais: **0–100** (float). Se a API nativa mandar 0–1, o coletor converte.
 
@@ -155,6 +157,18 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "value_usd_cents": 8025,
       "value_brl_cents": 40740
     }
+  ],
+  "adsense": [
+    {
+      "id": "legacy",
+      "label": "",
+      "ok": true,
+      "error": null,
+      "currency": "BRL",
+      "today_cents": 1234,
+      "unpaid_cents": 56789,
+      "account_name": "pub-1234"
+    }
   ]
 }
 ```
@@ -175,8 +189,9 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
 | `opencode_zen` | array de contas | sim (pode ser `[]`) |
 | `fal`          | array de contas | sim (pode ser `[]`) |
 | `bitcoin`      | array de contas | sim (pode ser `[]`) |
+| `adsense`      | array de contas | sim (pode ser `[]`) |
 
-### Campos comuns a toda conta, nos 9 provedores
+### Campos comuns a toda conta, nos 10 provedores
 
 | Campo   | Tipo             | Notas                                                                                                                                                      |
 | ------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -299,6 +314,17 @@ Endereço público de carteira colado no painel (não é chave privada) — sald
 | `value_usd_cents`  | number ou `null` | `balance_btc × price_usd_cents`, em centavos de USD                |
 | `value_brl_cents`  | number ou `null` | `balance_btc × price_brl_cents`, em centavos de BRL                |
 
+### `adsense[i]`
+
+Login Google OAuth no coletor (não vai token no JSON) — ganhos estimados de hoje + saldo não pago; ver `APIS_ADSENSE.md`.
+
+| Campo           | Tipo             | Notas                                                          |
+| --------------- | ---------------- | -------------------------------------------------------------- |
+| `currency`      | string ou `null` | ISO-4217 da conta (ex.: `BRL`, `USD`)                          |
+| `today_cents`   | number ou `null` | Ganhos estimados de hoje, na moeda da conta                    |
+| `unpaid_cents`  | number ou `null` | Saldo não pago (`payments/unpaid`), na moeda da conta          |
+| `account_name`  | string ou `null` | Nome de exibição da conta AdSense                              |
+
 ## Outros endpoints
 
 | Método | Caminho   | Corpo                                                                                                         |
@@ -320,12 +346,13 @@ HTTP 5xx só se o processo do coletor quebrar de fato.
 Uma conta só entra no array se estiver visível — o firmware **não desenha o card** de nenhuma conta que não veio no JSON, em nenhuma tela (Início lista/grade, Agora). Um provedor com array vazio (`[]`) não desenha nenhum card daquele tipo. Origens de "de fora":
 
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
-   painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai e Bitcoin somem ao
-   apagar a última key/endereço.
+   painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai, Bitcoin e AdSense somem ao
+   apagar a última key/endereço/login.
 2. **Oculta no painel** — a conta **local** de Claude/GPT/Cursor (Keychain/`auth.json`/`state.vscdb`) e
    a **primeira key/endereço** de OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai/Bitcoin (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`/`OPENCODE_GO_API_KEY`/`OPENCODE_ZEN_API_KEY`/`FAL_API_KEY`/`BITCOIN_ADDRESS`)
+   e o login AdSense
    têm um interruptor **Mostrar na placa** que grava `CLAUDE_HIDDEN` / `GPT_HIDDEN` / `CURSOR_HIDDEN` /
-   `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` / `OPENCODE_GO_HIDDEN` / `OPENCODE_ZEN_HIDDEN` / `FAL_HIDDEN` / `BITCOIN_HIDDEN` em `config.json` — a conta some do array
+   `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` / `OPENCODE_GO_HIDDEN` / `OPENCODE_ZEN_HIDDEN` / `FAL_HIDDEN` / `BITCOIN_HIDDEN` / `ADSENSE_HIDDEN` em `config.json` — a conta some do array
    (sem chamar a API), mas continua salva/logada; só o card some na ESP32. Contas
    extras coladas (`*_ACCOUNTS`) não têm esse interruptor — remover a conta no
    painel é o equivalente a "ocultar".

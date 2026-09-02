@@ -52,7 +52,7 @@ A placa real é XPT2046 (SPI, `T_CS` 21). O Wokwi não tem XPT2046; usa `board-i
 
 ## Login local, sem copiar token
 
-Claude, GPT e Cursor: Keychain / `~/.codex/auth.json` / `state.vscdb` primeiro; paste no painel só se o app não estiver neste PC. Não usar `gerar_env_*.py` para gravar Bearer em `config.json`. O coletor não faz refresh OAuth/JWT próprio — abra o app oficial para renovar.
+Claude, GPT e Cursor: Keychain / `~/.codex/auth.json` / `state.vscdb` primeiro; paste no painel só se o app não estiver neste PC. Não usar `gerar_env_*.py` para gravar Bearer em `config.json`. O coletor **não** faz refresh OAuth/JWT desses três — abra o app oficial para renovar. **AdSense é a exceção**: o coletor é o cliente OAuth (Client ID tipo Web + `refresh_token` em `config.json`); ver [`APIS_ADSENSE.md`](APIS_ADSENSE.md).
 
 ## Sem autenticação no coletor (v1)
 

@@ -63,6 +63,18 @@ export function fmtBrl(cents: number | null | undefined): string {
   return `R$${reais.toLocaleString("pt-BR")},${String(cc).padStart(2, "0")}`;
 }
 
+export function fmtMoney(cents: number | null | undefined, currency?: string | null): string {
+  const cur = (currency || "USD").toUpperCase();
+  if (cur === "BRL") return fmtBrl(cents);
+  if (cur === "USD") return fmtUsd(cents);
+  if (cents == null || cents < 0) return "--";
+  try {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: cur }).format(cents / 100);
+  } catch {
+    return `${cur} ${(cents / 100).toFixed(2)}`;
+  }
+}
+
 export function fmtBtc(btc: number | null | undefined): string {
   if (btc == null || btc < 0) return "--";
   return `${btc.toFixed(8)} BTC`;

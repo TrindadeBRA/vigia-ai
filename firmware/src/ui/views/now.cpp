@@ -1,6 +1,7 @@
 #include "ui/internal.h"
 
 #include "ui/i18n.h"
+#include "assets/icons/icon_adsense.h"
 #include "assets/icons/icon_bitcoin.h"
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
@@ -128,8 +129,10 @@ void paintNow()
   const bool showOpenCode = g_snap.opencodeCount > 0;
   const bool showFal = g_snap.falCount > 0;
   const bool showBitcoin = g_snap.bitcoinCount > 0;
+  const bool showAdsense = g_snap.adsenseCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCode + (int)showFal + (int)showBitcoin;
+                (int)showDeepSeek + (int)showOpenCode + (int)showFal + (int)showBitcoin +
+                (int)showAdsense;
   if (n == 0)
   {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
@@ -195,6 +198,7 @@ void paintNow()
   const OpenCodeAccount &ocAcct = g_snap.opencode[showOpenCode ? opencodeWorstIdx() : 0];
   const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
   const BitcoinAccount &bcAcct = g_snap.bitcoin[showBitcoin ? bitcoinWorstIdx() : 0];
+  const AdsenseAccount &asAcct = g_snap.adsense[showAdsense ? adsenseWorstIdx() : 0];
 
   String cs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.sessionPercent));
   String cs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.weeklyPercent));
@@ -209,6 +213,7 @@ void paintNow()
   String oc1 = opencodeRemain(ocAcct);
   String fal1 = falBalance(falAcct);
   String bc2 = bitcoinValueText(bcAcct);
+  String as2 = adsenseWalletText(asAcct);
 
   int slot = 0;
   if (showClaude)
@@ -279,5 +284,11 @@ void paintNow()
     String suffix = accountSuffixText(bcAcct.label, g_snap.bitcoinCount);
     row(slot++, "Bitcoin", suffix, ICON_BITCOIN, bcAcct.ok, bcAcct.error, t.bitcoinValue,
         -1, bc2, false, "", -1, "");
+  }
+  if (showAdsense)
+  {
+    String suffix = accountSuffixText(asAcct.label, g_snap.adsenseCount);
+    row(slot++, "AdSense", suffix, ICON_ADSENSE, asAcct.ok, asAcct.error, t.adsenseWallet,
+        -1, as2, false, "", -1, "");
   }
 }

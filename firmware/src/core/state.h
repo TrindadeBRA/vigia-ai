@@ -20,7 +20,8 @@ enum View : uint8_t
   // Só entra por gatilho explícito (botão de recarregar ou tema recebido),
   // nunca pelo swipe/paginação normal de views.
   VIEW_THEME = 11,
-  VIEW_COUNT = 12
+  VIEW_ADSENSE = 12,
+  VIEW_COUNT = 13
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
@@ -145,6 +146,18 @@ struct BitcoinAccount
   int valueBrlCents = -1;
 };
 
+struct AdsenseAccount
+{
+  String id;
+  String label;
+  bool ok = false;
+  String error;
+  String currency;
+  int todayCents = -1;
+  int unpaidCents = -1;
+  String accountName;
+};
+
 struct WeatherData
 {
   bool hasData = false;
@@ -176,6 +189,8 @@ struct UsageSnapshot
   int falCount = 0;
   BitcoinAccount bitcoin[MAX_ACCOUNTS];
   int bitcoinCount = 0;
+  AdsenseAccount adsense[MAX_ACCOUNTS];
+  int adsenseCount = 0;
   WeatherData weather;
 };
 

@@ -76,6 +76,8 @@ static const UiStrings kPt = {
     "Saldo",
     "Valor",
     "endereco",
+    "Hoje (est.)",
+    "Carteira",
 };
 
 static const UiStrings kEn = {
@@ -152,6 +154,8 @@ static const UiStrings kEn = {
     "Balance",
     "Value",
     "address",
+    "Today (est.)",
+    "Wallet",
 };
 
 static const UiStrings kEs = {
@@ -228,6 +232,8 @@ static const UiStrings kEs = {
     "Saldo",
     "Valor",
     "direccion",
+    "Hoy (est.)",
+    "Billetera",
 };
 
 const UiStrings &uiTr()

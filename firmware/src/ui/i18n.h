@@ -76,6 +76,8 @@ struct UiStrings
   const char *bitcoinBalance;
   const char *bitcoinValue;
   const char *bitcoinAddress;
+  const char *adsenseToday;
+  const char *adsenseWallet;
 };
 
 const UiStrings &uiTr();
