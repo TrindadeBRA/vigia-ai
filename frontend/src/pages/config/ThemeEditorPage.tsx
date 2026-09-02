@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "../../cn";
 import { Logo } from "../../components/Logo";
 import { Skeleton } from "../../components/Skeleton";
+import { fmtTemp, wmoEmoji } from "../../format";
 import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
@@ -14,13 +15,16 @@ import type { ConfigOutlet } from "./usePublicConfig";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperManager } from "./WallpaperManager";
 
-type Provider = "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "brand";
+type Provider = "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "brand" | "weather";
 
 type ThemeIcon = { id: string; provider: Provider; x: number; y: number; scale: number; color: string | null };
 type ThemeText = { id: string; x: number; y: number; scale: number; color: string | null; text: string };
 type ThemeClock = { enabled: boolean; x: number; y: number; scale: number; color: string | null; format24h: boolean; showBackground: boolean; autoColor: boolean };
 type ThemeBg = { color: string };
 type ThemeState = { background: ThemeBg; clock: ThemeClock; icons: ThemeIcon[]; texts: ThemeText[] };
+
+type WallpaperItem = { id: string; source: string; provider?: string | null; external_id?: string | null; preview_url?: string | null; created_at?: string | null; has_preview: boolean };
+type SlideshowConfig = { enabled: boolean; interval: number; order: string[] };
 
 const ICON_PROVIDERS: { id: Provider; label: string }[] = [
   { id: "claude", label: "Claude" },
@@ -30,6 +34,7 @@ const ICON_PROVIDERS: { id: Provider; label: string }[] = [
   { id: "deepseek", label: "DeepSeek" },
   { id: "opencode", label: "OpenCode" },
   { id: "fal", label: "fal.ai" },
+  { id: "weather", label: "Clima" },
   { id: "brand", label: "VIGIA AI" },
 ];
 
@@ -100,10 +105,10 @@ function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState) => vo
   return [theme, (fn) => setTheme(fn)];
 }
 
-function themeToJson(t: ThemeState) {
+function themeToJson(t: ThemeState, hasWallpaper: boolean) {
   return {
     version: 1,
-    background: { type: "color", color: t.background.color },
+    background: { type: hasWallpaper ? "image" : "color", color: t.background.color },
     clock: {
       enabled: t.clock.enabled,
       x: t.clock.x,
@@ -277,6 +282,10 @@ export default function ThemeEditorPage() {
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [screenshotFullscreen, setScreenshotFullscreen] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [weatherPreview, setWeatherPreview] = useState<{ temp: number | null; code: number | null; unit: string } | null>(null);
+  const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
+  const [slideshow, setSlideshow] = useState<SlideshowConfig>({ enabled: false, interval: 5, order: [] });
+  const [currentWallpaperId, setCurrentWallpaperId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const send = useRequest();
   const remove = useRequest();
@@ -290,6 +299,83 @@ export default function ThemeEditorPage() {
   useEffect(() => {
     if (!ipTouched && cfg?.device.ip) setDeviceIp(cfg.device.ip);
   }, [cfg?.device.ip, ipTouched]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const applyUsage = (d: unknown) => {
+      if (cancelled) return;
+      const w = (d as { weather?: { current?: { temperature_2m?: number | null; weather_code?: number | null }; current_units?: Record<string, string> } })?.weather;
+      if (w?.current) {
+        setWeatherPreview({ temp: w.current.temperature_2m ?? null, code: w.current.weather_code ?? null, unit: w.current_units?.["temperature_2m"] || "°C" });
+      }
+    };
+    fetch("/usage", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(applyUsage)
+      .catch(() => { });
+    fetch("/api/weather", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: unknown) => {
+        if (cancelled) return;
+        const cur = (d as { current?: { temperature_2m?: number | null; weather_code?: number | null }; current_units?: Record<string, string> })?.current;
+        if (cur) setWeatherPreview({ temp: cur.temperature_2m ?? null, code: cur.weather_code ?? null, unit: (d as { current_units?: Record<string, string> })?.current_units?.["temperature_2m"] || "°C" });
+      })
+      .catch(() => { });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Carrega wallpapers e slideshow — mesma lógica da placa (ver backend/app/routers/theme.py:_slideshow_state)
+  // O canvas deve mostrar exatamente o que a placa mostra: se slideshow ativo, o wallpaper do índice atual; senão o primeiro.
+  const fetchWallpapers = useCallback(async () => {
+    try {
+      const r = await fetch("/api/wallpapers", { cache: "no-store" });
+      if (!r.ok) return;
+      const j = (await r.json()) as { wallpapers: WallpaperItem[]; slideshow: SlideshowConfig };
+      setWallpapers(j.wallpapers || []);
+      setSlideshow(j.slideshow || { enabled: false, interval: 5, order: [] });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchWallpapers();
+    // Atualiza quando WallpaperManager dispara evento (upload/delete/slideshow)
+    const onUpdate = () => void fetchWallpapers();
+    window.addEventListener("vigia:wallpapers-updated", onUpdate);
+    return () => window.removeEventListener("vigia:wallpapers-updated", onUpdate);
+  }, [fetchWallpapers]);
+
+  // Calcula qual wallpaper a placa está mostrando agora (mesma fórmula do backend: floor(now / (interval*60)) % count)
+  useEffect(() => {
+    if (wallpapers.length === 0) {
+      setCurrentWallpaperId(null);
+      return;
+    }
+    const compute = () => {
+      if (slideshow.enabled && slideshow.order.length > 0) {
+        const existing = new Set(wallpapers.map((w) => w.id));
+        const filtered = slideshow.order.filter((id) => existing.has(id));
+        const order = filtered.length > 0 ? filtered : wallpapers.map((w) => w.id);
+        const idx = Math.floor(Date.now() / 1000 / (slideshow.interval * 60)) % order.length;
+        setCurrentWallpaperId(order[idx] || null);
+      } else if (slideshow.order.length > 0) {
+        const existing = new Set(wallpapers.map((w) => w.id));
+        const first = slideshow.order.find((id) => existing.has(id));
+        setCurrentWallpaperId(first || wallpapers[0]?.id || null);
+      } else {
+        setCurrentWallpaperId(wallpapers[0]?.id || null);
+      }
+    };
+    compute();
+    // Se slideshow ativo, atualiza a cada 30s igual à placa (themeClientPollSlideshow)
+    if (slideshow.enabled && wallpapers.length > 1) {
+      const id = window.setInterval(compute, 30000);
+      return () => window.clearInterval(id);
+    }
+  }, [wallpapers, slideshow]);
 
   // Resolução real da placa reportada ao coletor (header X-Vigia-Screen em
   // GET /usage e /events, ver firmware/src/net/client.cpp) — acerta o
@@ -370,10 +456,11 @@ export default function ThemeEditorPage() {
   // A placa é quem busca (botão de recarregar no header, ver
   // firmware/src/net/client.cpp:themeClientReload e docs/CONTRATO_TEMA.md).
   async function saveTheme() {
+    const hasWallpaper = wallpapers.length > 0;
     const r2 = await fetch("/api/theme/meta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(themeToJson(theme)),
+      body: JSON.stringify(themeToJson(theme, hasWallpaper)),
     });
     const j2 = (await r2.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
     if (!j2.ok) return { ok: false, error: j2.error || c.saveError };
@@ -411,6 +498,15 @@ export default function ThemeEditorPage() {
 
       <Card title={c.canvasTitle} lead={c.canvasHint}>
         {!canvasKnown ? <p className={cfgStatus}>{c.canvasNoDevice}</p> : null}
+        {currentWallpaperId ? (
+          <p className={cfgStatus}>
+            Papel de parede: <span className="font-mono text-ink">{currentWallpaperId.slice(0, 8)}</span>
+            {slideshow.enabled && wallpapers.length > 1 ? ` · slideshow a cada ${slideshow.interval} min` : ""}
+            {wallpapers.length > 1 && !slideshow.enabled ? " · slideshow desativado (mostrando o 1º)" : ""}
+          </p>
+        ) : wallpapers.length > 0 ? (
+          <p className={`${cfgStatus} text-warn`}>Papéis de parede cadastrados mas nenhum selecionado</p>
+        ) : null}
         <div
           ref={canvasRef}
           className="relative mx-auto w-full max-w-[560px] touch-none select-none overflow-hidden rounded-[14px] border border-edge"
@@ -420,6 +516,20 @@ export default function ThemeEditorPage() {
           }}
           onPointerDown={() => setSelected(null)}
         >
+          {/* Fundo: exatamente como a placa — se há wallpaper, mostra a imagem com cover (mesmo crop do backend _image_to_raw); senão cor sólida */}
+          {currentWallpaperId ? (
+            <img
+              src={`/api/wallpapers/${currentWallpaperId}/preview`}
+              alt=""
+              draggable={false}
+              className="absolute inset-0 size-full object-cover"
+              style={{ imageRendering: "auto" }}
+              onError={(e) => {
+                // Se preview falhar, esconde e deixa a cor de fundo aparecer (fallback igual à placa: drawThemeBackground cai pra fillRect)
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : null}
           {theme.clock.enabled ? (
             <CanvasDot
               x={theme.clock.x}
@@ -459,21 +569,36 @@ export default function ThemeEditorPage() {
               onRemove={() => removeIcon(icon.id)}
               removeLabel={c.removeIcon}
             >
-              <div
-                className="rounded-full bg-black/25"
-                style={{ padding: Math.max(2, 4 * zoom), boxShadow: icon.color ? `0 0 0 2px ${icon.color}` : undefined }}
-              >
-                {icon.provider === "brand" ? (
-                  <Logo size={20 * icon.scale * zoom} />
-                ) : (
-                  <img
-                    src={PROVIDER_ICON[icon.provider]}
-                    alt={icon.provider}
-                    draggable={false}
-                    style={{ width: 20 * icon.scale * zoom, height: 20 * icon.scale * zoom, objectFit: "contain" }}
-                  />
-                )}
-              </div>
+              {icon.provider === "weather" ? (
+                <div
+                  className="flex items-center gap-1 rounded-md bg-black/35 px-2 py-1"
+                  style={{ border: icon.color ? `1.5px solid ${icon.color}` : undefined }}
+                >
+                  <span style={{ fontSize: `${14 * icon.scale * zoom}px`, lineHeight: 1 }}>{wmoEmoji(weatherPreview?.code)}</span>
+                  <span
+                    className="whitespace-nowrap font-mono font-bold text-white"
+                    style={{ color: icon.color || undefined, fontSize: `${11 * icon.scale * zoom}px` }}
+                  >
+                    {weatherPreview?.temp != null ? fmtTemp(weatherPreview.temp, weatherPreview.unit) : "26°C"}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="rounded-full bg-black/25"
+                  style={{ padding: Math.max(2, 4 * zoom), boxShadow: icon.color ? `0 0 0 2px ${icon.color}` : undefined }}
+                >
+                  {icon.provider === "brand" ? (
+                    <Logo size={20 * icon.scale * zoom} />
+                  ) : (
+                    <img
+                      src={PROVIDER_ICON[icon.provider]}
+                      alt={icon.provider}
+                      draggable={false}
+                      style={{ width: 20 * icon.scale * zoom, height: 20 * icon.scale * zoom, objectFit: "contain" }}
+                    />
+                  )}
+                </div>
+              )}
             </CanvasDot>
           ))}
           {theme.texts.map((txt) => (

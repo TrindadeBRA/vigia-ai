@@ -73,6 +73,13 @@ void usageClientLogSnapshot(const char *why)
                   b.label.length() ? b.label.c_str() : "-", b.ok ? 1 : 0, b.balanceBtc,
                   b.valueUsdCents, b.error.length() ? b.error.c_str() : "-");
   }
+  if (g_snap.weather.hasData)
+  {
+    Serial.printf("  weather ok=%d temp=%.1f%s loc=%s code=%d\n", g_snap.weather.ok ? 1 : 0,
+                  g_snap.weather.temperature, g_snap.weather.tempUnit.c_str(),
+                  g_snap.weather.locationName.length() ? g_snap.weather.locationName.c_str() : "-",
+                  g_snap.weather.weatherCode);
+  }
 }
 
 // Falha total (Wi-Fi fora do ar, HTTP != 200, JSON ilegivel): marca todas as
@@ -123,6 +130,8 @@ void markAllAccountsFailed(const char *msg)
     g_snap.bitcoin[i].ok = false;
     g_snap.bitcoin[i].error = msg;
   }
+  g_snap.weather.hasData = false;
+  g_snap.weather.ok = false;
 }
 
 static float jsonFloatOrNeg(JsonVariantConst v)
@@ -341,6 +350,63 @@ bool parseUsageJson(const String &body)
     b.priceBrlCents = acc["price_brl_cents"].isNull() ? -1 : acc["price_brl_cents"].as<int>();
     b.valueUsdCents = acc["value_usd_cents"].isNull() ? -1 : acc["value_usd_cents"].as<int>();
     b.valueBrlCents = acc["value_brl_cents"].isNull() ? -1 : acc["value_brl_cents"].as<int>();
+  }
+
+  // Weather (Open-Meteo) — opcional, não quebra se ausente
+  {
+    JsonVariantConst w = doc["weather"];
+    if (!w.isNull() && w.is<JsonObjectConst>())
+    {
+      JsonObjectConst wo = w.as<JsonObjectConst>();
+      g_snap.weather.hasData = true;
+      g_snap.weather.ok = wo["ok"] | false;
+      JsonVariantConst cur = wo["current"];
+      if (!cur.isNull() && cur.is<JsonObjectConst>())
+      {
+        JsonObjectConst co = cur.as<JsonObjectConst>();
+        if (!co["temperature_2m"].isNull())
+          g_snap.weather.temperature = co["temperature_2m"].as<float>();
+        if (!co["weather_code"].isNull())
+          g_snap.weather.weatherCode = co["weather_code"].as<int>();
+      }
+      JsonVariantConst cu = wo["current_units"];
+      if (!cu.isNull() && cu.is<JsonObjectConst>())
+      {
+        JsonObjectConst cuo = cu.as<JsonObjectConst>();
+        String u = jsonText(cuo["temperature_2m"]);
+        if (u.length())
+          g_snap.weather.tempUnit = u;
+      }
+      JsonVariantConst loc = wo["location"];
+      if (!loc.isNull() && loc.is<JsonObjectConst>())
+      {
+        String n = jsonText(loc.as<JsonObjectConst>()["name"]);
+        if (n.length())
+          g_snap.weather.locationName = n;
+      }
+      // Fallback: units.temperature_unit (ex: "celsius")
+      if (g_snap.weather.tempUnit.length() == 0 || g_snap.weather.tempUnit == "celsius" || g_snap.weather.tempUnit == "fahrenheit")
+      {
+        JsonVariantConst units = wo["units"];
+        if (!units.isNull() && units.is<JsonObjectConst>())
+        {
+          String tu = jsonText(units.as<JsonObjectConst>()["temperature_unit"]);
+          if (tu == "fahrenheit")
+            g_snap.weather.tempUnit = "°F";
+          else if (tu == "celsius")
+            g_snap.weather.tempUnit = "°C";
+        }
+      }
+      if (g_snap.weather.tempUnit == "celsius")
+        g_snap.weather.tempUnit = "°C";
+      if (g_snap.weather.tempUnit == "fahrenheit")
+        g_snap.weather.tempUnit = "°F";
+    }
+    else
+    {
+      g_snap.weather.hasData = false;
+      g_snap.weather.ok = false;
+    }
   }
 
   if (g_snap.updatedAt.length() >= 16)

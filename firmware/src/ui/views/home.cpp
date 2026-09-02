@@ -56,11 +56,11 @@ static GridRect rectForView(View v, int cols) {
   return { (int)cr.w, (int)cr.h };
 }
 
-static bool isFreeCell(bool occ[12][4], GridCell cell, GridRect rect, int cols) {
+static bool isFreeCell(bool occ[20][4], GridCell cell, GridRect rect, int cols) {
   if (cell.c < 0 || cell.r < 0 || cell.c + rect.w > cols) return false;
-  if (cell.r >= 12) return false;
+  if (cell.r >= 20) return false;
   for (int r = cell.r; r < cell.r + rect.h; r++) {
-    if (r >= 12) return false;
+    if (r >= 20) return false;
     for (int c = cell.c; c < cell.c + rect.w; c++) {
       if (occ[r][c]) return false;
     }
@@ -68,19 +68,19 @@ static bool isFreeCell(bool occ[12][4], GridCell cell, GridRect rect, int cols) 
   return true;
 }
 
-static GridCell firstFreeCell(bool occ[12][4], GridRect rect, int cols) {
-  for (int r = 0; r < 12; r++) {
+static GridCell firstFreeCell(bool occ[20][4], GridRect rect, int cols) {
+  for (int r = 0; r < 20; r++) {
     for (int c = 0; c <= cols - rect.w; c++) {
       if (isFreeCell(occ, {r,c}, rect, cols)) return {r,c};
     }
   }
-  return {12, 0};
+  return {20, 0};
 }
 
-static void occupyCell(bool occ[12][4], GridCell cell, GridRect rect) {
+static void occupyCell(bool occ[20][4], GridCell cell, GridRect rect) {
   for (int r = cell.r; r < cell.r + rect.h; r++) {
     for (int c = cell.c; c < cell.c + rect.w; c++) {
-      if (r < 12 && c < 4) occ[r][c] = true;
+      if (r < 20 && c < 4) occ[r][c] = true;
     }
   }
 }
@@ -178,14 +178,13 @@ static void paintHomeList()
   const int hTwo = innerPadY * 2 + titleH + titleToMetric + metricH + gapM + metricH;
   const int hOne = innerPadY * 2 + titleH + titleToMetric + metricH;
 
-  // Calcula altura por card considerando CardSize (xl = 2x altura)
+  // Calcula altura por card considerando CardSize (xl=2x, wl/wxl=4x)
   int heights[MAX_HOME_CARDS];
   for (int i = 0; i < n; i++) {
     View v = providers[i].view;
     CardSize s = uiCardSize(v);
-    CardRect cr = cardRectFor(s, 1); // lista = 1 coluna, lg clamp 2->1, xl 1x2
+    CardRect cr = cardRectFor(s, 1);
     int baseH = hOne;
-    // Determina base por provedor (1 ou 2 métricas)
     bool two = false;
     if (v == VIEW_CLAUDE) two = true;
     else if (v == VIEW_GPT) {
@@ -196,13 +195,13 @@ static void paintHomeList()
     else if (v == VIEW_BITCOIN) two = true;
     else two = false;
     baseH = two ? hTwo : hOne;
-    // xl em lista ocupa 2 linhas (dobro da altura + gap)
-    if (cr.h == 2) {
+    if (cr.h == 4) {
+      heights[i] = baseH * 4 + gap * 3;
+    } else if (cr.h == 2) {
       heights[i] = baseH * 2 + gap;
     } else {
       heights[i] = baseH;
     }
-    // sm fica um pouco mais compacto
     if (s == CARD_SM) {
       heights[i] = max(48, heights[i] - 12);
     }
@@ -281,13 +280,19 @@ static void paintHomeList()
     }
     const int barX = pad + 12;
     const int barW = cardW - 24;
-    // Se xl (alto), distribui métricas com mais espaço
     CardSize s = uiCardSize(view);
-    if (s == CARD_XL && h > hTwo) {
+    CardRect cr = cardRectFor(s, 1);
+    if (cr.h == 4 && h > hTwo) {
+      int y = titleY + titleH + titleToMetric;
+      int avail = h - (y - top) - 8;
+      int rows = 2;
+      int each = (avail - gapM) / rows;
+      paintHomeMetric(barX, y, barW, label1, pct1, sub1, metricFont, labelH, barH);
+      paintHomeMetric(barX, y + each + gapM, barW, label2, pct2, sub2, metricFont, labelH, barH);
+    } else if (cr.h == 2 && h > hTwo) {
       int y = titleY + titleH + titleToMetric;
       int avail = h - (y - top) - 8;
       int each = (avail - gapM) / 2;
-      // Recalcula metricH para xl alto: usa cada metade
       paintHomeMetric(barX, y, barW, label1, pct1, sub1, metricFont, labelH, barH);
       paintHomeMetric(barX, y + each + gapM, barW, label2, pct2, sub2, metricFont, labelH, barH);
     } else {
@@ -438,7 +443,7 @@ static void paintHomeGrid()
   // Packing: encontra posição (r,c) para cada card
   GridCell positions[MAX_HOME_CARDS];
   GridRect rects[MAX_HOME_CARDS];
-  bool occ[12][4] = {};
+  bool occ[20][4] = {};
   int maxRow = 0;
   for (int i = 0; i < n; i++) {
     View v = providers[i].view;
@@ -545,8 +550,8 @@ static void paintHomeGrid()
     CardSize s = uiCardSize(v);
     GridRect gr = rects[i];
     bool isWide = (gr.w == 2);
-    bool isTall = (gr.h == 2);
-    // Determina se é compacto por card
+    bool isTall = (gr.h >= 2);
+    bool isSuperTall = (gr.h == 4);
     bool compact = compactGlobal || r.w < 140 || (s == CARD_SM);
     int barH = compact ? 4 : 6;
     uint8_t font = compact ? 1 : 2;
@@ -574,12 +579,11 @@ static void paintHomeGrid()
       ok=claudeAcct.ok; err=claudeAcct.error;
       l1 = compact ? t.session5hShort : t.session5h; p1=claudeAcct.sessionPercent; s1=cs1;
       l2 = compact ? t.week : t.weekLimit; p2=claudeAcct.weeklyPercent; s2=cs2;
-      // Para xl, mostra também sonnet/opus se existirem
-      if (s == CARD_XL) {
+      if (s == CARD_XL || s == CARD_WL || s == CARD_WXL) {
         if (claudeAcct.sonnetPercent >=0) { l3 = "Sonnet"; p3=claudeAcct.sonnetPercent; s3=withResta(claudeAcct.sonnetPercent, claudeAcct.sonnetResets); }
         if (claudeAcct.opusPercent >=0) { l4 = "Opus"; p4=claudeAcct.opusPercent; s4=withResta(claudeAcct.opusPercent, claudeAcct.opusResets); }
       }
-      metricCount = (s == CARD_XL && (p3>=0 || p4>=0)) ? 4 : 2;
+      metricCount = ((s == CARD_XL || s == CARD_WL || s == CARD_WXL) && (p3>=0 || p4>=0)) ? 4 : 2;
     } else if (v == VIEW_GPT) {
       ok=gptAcct.ok; err=gptAcct.error;
       bool gptTwo = gptAcct.sessionPercent >=0 && gptAcct.weeklyPercent >=0;
@@ -599,7 +603,7 @@ static void paintHomeGrid()
       ok=ocAcct.ok; err=ocAcct.error;
       l1= t.rolling; p1=ocAcct.rollingPercent; s1=ocSub;
       l2= compact? t.week : t.weekLimit; p2=ocAcct.weeklyPercent; s2=withResta(ocAcct.weeklyPercent,ocAcct.weeklyResets);
-      if (s == CARD_XL && ocAcct.monthlyPercent >=0) { l3= compact? "Mes" : t.monthLimit; p3=ocAcct.monthlyPercent; s3=withResta(ocAcct.monthlyPercent,ocAcct.monthlyResets); l4= compact? t.credits : t.accountCredits; p4=ocAcct.percent; s4=ocAcct.remainingCents>=0? ("$"+String(ocAcct.remainingCents/100)) : ""; metricCount=4; }
+      if ((s == CARD_XL || s == CARD_WL || s == CARD_WXL) && ocAcct.monthlyPercent >=0) { l3= compact? "Mes" : t.monthLimit; p3=ocAcct.monthlyPercent; s3=withResta(ocAcct.monthlyPercent,ocAcct.monthlyResets); l4= compact? t.credits : t.accountCredits; p4=ocAcct.percent; s4=ocAcct.remainingCents>=0? ("$"+String(ocAcct.remainingCents/100)) : ""; metricCount=4; }
       else metricCount=2;
     } else if (v == VIEW_FAL) {
       ok=falAcct.ok; err=falAcct.error; l1= compact? t.credits : t.accountCredits; p1=-1; s1=falSub; metricCount=1;
@@ -627,28 +631,43 @@ static void paintHomeGrid()
     int barW = r.w - (r.w < 150 ? 12 : 20);
     int y0 = titleY + titleH + titleToMetric;
 
-    if (s == CARD_XL && isTall && isWide) {
-      // 2x2: 4 métricas em grade 2x2 ou 2 métricas empilhadas com mais espaço
-      if (metricCount == 4) {
+    if ((s == CARD_XL || s == CARD_WXL) && isTall && isWide) {
+      if (isSuperTall) {
+        // 2x4 / 1x4 super alto: empilha até 4 métricas verticalmente com espaçamento
+        int avail = r.h - (y0 - r.y) - 4;
+        int rows = min(metricCount, 4);
+        int eachH = rows > 0 ? (avail - gapM * (rows - 1)) / rows : avail;
+        int y = y0;
+        if (metricCount >= 1) { paintHomeMetric(barX, y, barW, l1, p1, s1, font, labelH, barH); y += eachH + gapM; }
+        if (metricCount >= 2) { paintHomeMetric(barX, y, barW, l2, p2, s2, font, labelH, barH); y += eachH + gapM; }
+        if (metricCount >= 3 && l3) { paintHomeMetric(barX, y, barW, l3, p3, s3, font, labelH, barH); y += eachH + gapM; }
+        if (metricCount >= 4 && l4) { paintHomeMetric(barX, y, barW, l4, p4, s4, font, labelH, barH); }
+      } else if (metricCount == 4) {
         int colGap = 6;
         int halfW = (barW - colGap) / 2;
-        // Linha 1
         paintHomeMetric(barX, y0, halfW, l1, p1, s1, font, labelH, barH);
         paintHomeMetric(barX + halfW + colGap, y0, halfW, l2, p2, s2, font, labelH, barH);
-        // Linha 2
         int y1 = y0 + metricH + gapM;
         if (l3) paintHomeMetric(barX, y1, halfW, l3, p3, s3, font, labelH, barH);
         if (l4) paintHomeMetric(barX + halfW + colGap, y1, halfW, l4, p4, s4, font, labelH, barH);
       } else if (metricCount == 2) {
-        // 2 métricas empilhadas com espaçamento maior
         int avail = r.h - (y0 - r.y) - 4;
         int eachH = (avail - gapM) / 2;
-        // Ajusta para centralizar
         paintHomeMetric(barX, y0, barW, l1, p1, s1, font, labelH, barH);
         paintHomeMetric(barX, y0 + eachH + gapM, barW, l2, p2, s2, font, labelH, barH);
       } else {
         paintHomeMetric(barX, y0, barW, l1, p1, s1, font, labelH, barH);
       }
+    } else if (s == CARD_WL && gr.w == 1 && gr.h == 4) {
+      // 1x4: estreito e alto - empilha verticalmente
+      int avail = r.h - (y0 - r.y) - 4;
+      int rows = min(metricCount, 4);
+      int eachH = rows > 0 ? (avail - gapM * (rows - 1)) / rows : avail;
+      int y = y0;
+      if (metricCount >= 1) { paintHomeMetric(barX, y, barW, l1, p1, s1, font, labelH, barH); y += eachH + gapM; }
+      if (metricCount >= 2) { paintHomeMetric(barX, y, barW, l2, p2, s2, font, labelH, barH); y += eachH + gapM; }
+      if (metricCount >= 3 && l3) { paintHomeMetric(barX, y, barW, l3, p3, s3, font, labelH, barH); y += eachH + gapM; }
+      if (metricCount >= 4 && l4) { paintHomeMetric(barX, y, barW, l4, p4, s4, font, labelH, barH); }
     } else if (s == CARD_LG && isWide) {
       // 2x1: largo, baixo - 2 métricas lado a lado se couber
       if (metricCount == 2 && r.w > 200) {

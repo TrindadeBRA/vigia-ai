@@ -83,7 +83,7 @@ sempre converte fração → pixel na hora de desenhar, contra
 - `clock.autoColor`: `boolean` (default `false`) — quando `true`, a cor do texto do relógio é calculada automaticamente via `generateReadableColor` sobre `background.color` (WCAG AA 4.5:1), ignorando `clock.color`.
 - `scale`: multiplicador de tamanho, clamp **0.5–4.0**.
 - `icons[].provider`: `claude` | `gpt` | `cursor` | `openrouter` | `deepseek`
-  | `opencode` | `fal` | `brand` (o olho da marca). Item com provider
+  | `opencode` | `fal` | `weather` | `brand` (o olho da marca). Item com provider
   desconhecido é ignorado, o resto do tema continua válido.
 - Limites: até **8** ícones, até **4** textos (`texts[].text` até 23 chars) —
   o excesso é descartado silenciosamente.

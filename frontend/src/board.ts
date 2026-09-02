@@ -1,4 +1,4 @@
-export type CardSize = "sm" | "md" | "lg" | "xl";
+export type CardSize = "sm" | "md" | "lg" | "xl" | "wl" | "wxl";
 
 export type Cell = { r: number; c: number };
 
@@ -34,7 +34,7 @@ export function colsForWidth(width: number): number {
 }
 
 export function normalizeSize(s: string | undefined): CardSize {
-  if (s === "sm" || s === "md" || s === "lg" || s === "xl") return s;
+  if (s === "sm" || s === "md" || s === "lg" || s === "xl" || s === "wl" || s === "wxl") return s;
   // migração: "lg" antigo (2×2) vira "xl" (extra grande), resto vira "md" (normal)
   if (s === "lg") return "xl";
   return "md";
@@ -44,6 +44,8 @@ export function rectFor(size: CardSize | undefined, cols: number): Rect {
   const s = normalizeSize(size);
   if (s === "sm" || s === "md") return { w: 1, h: 1 };
   if (s === "lg") return { w: Math.min(2, Math.max(1, cols)), h: 1 };
+  if (s === "wl") return { w: 1, h: 4 };
+  if (s === "wxl") return { w: Math.min(2, Math.max(1, cols)), h: 4 };
   return { w: Math.min(2, Math.max(1, cols)), h: 2 };
 }
 

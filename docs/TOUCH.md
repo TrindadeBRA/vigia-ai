@@ -26,7 +26,7 @@ Nas telas internas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go 
 
 Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`7`.
 
-Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1` Claude, `2` Cursor, `3` OpenRouter, `4` DeepSeek, `5` GPT, `6` OpenCode Go, `7` OpenCode Zen, `8` info, `9` relogio, `l` lista, `g` grade, `t` ciclo de tema, `a` ciclo da cor, `i` ciclo de idioma, `h` ciclo da barra (esq/topo/dir/base), `u`/`d` scroll no detalhe/info/início, `r` refresh, `c` calibrar (só hardware), `s` ciclo de tamanho do card da view atual, `1`/`2`/`3`/`4` tamanho P/M/G/XG.
+Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1` Claude, `2` Cursor, `3` OpenRouter, `4` DeepSeek, `5` GPT, `6` OpenCode Go, `7` OpenCode Zen, `8` info, `9` relogio, `l` lista, `g` grade, `t` ciclo de tema, `a` ciclo da cor, `i` ciclo de idioma, `h` ciclo da barra (esq/topo/dir/base), `u`/`d` scroll no detalhe/info/início, `r` refresh, `c` calibrar (só hardware), `s` ciclo de tamanho do card da view atual, `1`/`2`/`3`/`4`/`5`/`6` tamanho P/M/G/XG/WL/WXL.
 
 A escolha Lista/Grade, o tema, a cor, o idioma, o lado da barra e o tamanho de cada card ficam na NVS (namespace `ui`, chaves `home`, `theme`, `accent`, `lang`, `edge` e `cs` — blob de `VIEW_COUNT` bytes, um `CardSize` por `View`). Início padrão: **grade**, cards **M** (normal). Idioma padrão: **pt-BR**. Barra padrão: **esquerda**. Cor padrão: **vermelho**.
 

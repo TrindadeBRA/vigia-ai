@@ -53,35 +53,33 @@ void paintStatus()
   dSection(t.cardSizeSection);
   g_cardSizeBtnH = g_btnH;
   g_cardSizeBtnY = dCursor;
-  const int gap4 = 4;
-  const int btn4W = (dW - gap4 * 3) / 4;
-  g_cardSizeSplit1 = dX + btn4W + gap4 / 2;
-  g_cardSizeSplit2 = dX + 2 * (btn4W + gap4) - gap4 / 2;
-  g_cardSizeSplit3 = dX + 3 * (btn4W + gap4) - gap4 / 2;
-  // Mostra o tamanho do card atualmente selecionado (se estiver numa view de provider, senão HOME)
+  const int gap6 = 3;
+  const int btn6W = (dW - gap6 * 5) / 6;
+  g_cardSizeSplit1 = dX + btn6W + gap6 / 2;
+  g_cardSizeSplit2 = dX + 2 * (btn6W + gap6) - gap6 / 2;
+  g_cardSizeSplit3 = dX + 3 * (btn6W + gap6) - gap6 / 2;
+  g_cardSizeSplit4 = dX + 4 * (btn6W + gap6) - gap6 / 2;
+  g_cardSizeSplit5 = dX + 5 * (btn6W + gap6) - gap6 / 2;
   {
     View cv = g_view;
     if (cv != VIEW_CLAUDE && cv != VIEW_GPT && cv != VIEW_CURSOR && cv != VIEW_OPENROUTER && cv != VIEW_DEEPSEEK && cv != VIEW_OPENCODE && cv != VIEW_FAL && cv != VIEW_BITCOIN)
     {
-      // Se está em HOME/STATUS/NOW, usa o provider com mais uso como referência, ou CLAUDE
-      if (g_snap.claudeCount > 0)
-        cv = VIEW_CLAUDE;
-      else if (g_snap.gptCount > 0)
-        cv = VIEW_GPT;
-      else if (g_snap.cursorCount > 0)
-        cv = VIEW_CURSOR;
-      else
-        cv = VIEW_CLAUDE;
+      if (g_snap.claudeCount > 0) cv = VIEW_CLAUDE;
+      else if (g_snap.gptCount > 0) cv = VIEW_GPT;
+      else if (g_snap.cursorCount > 0) cv = VIEW_CURSOR;
+      else cv = VIEW_CLAUDE;
     }
     g_cardSizeView = cv;
     if (dVisible(g_btnH))
     {
       int y = dScreenY();
       CardSize cur = uiCardSize(cv);
-      drawChoiceButton(dX, y, btn4W, g_btnH, t.cardSm, cur == CARD_SM);
-      drawChoiceButton(dX + btn4W + gap4, y, btn4W, g_btnH, t.cardMd, cur == CARD_MD);
-      drawChoiceButton(dX + 2 * (btn4W + gap4), y, btn4W, g_btnH, t.cardLg, cur == CARD_LG);
-      drawChoiceButton(dX + 3 * (btn4W + gap4), y, btn4W, g_btnH, t.cardXl, cur == CARD_XL);
+      drawChoiceButton(dX, y, btn6W, g_btnH, t.cardSm, cur == CARD_SM);
+      drawChoiceButton(dX + btn6W + gap6, y, btn6W, g_btnH, t.cardMd, cur == CARD_MD);
+      drawChoiceButton(dX + 2*(btn6W + gap6), y, btn6W, g_btnH, t.cardLg, cur == CARD_LG);
+      drawChoiceButton(dX + 3*(btn6W + gap6), y, btn6W, g_btnH, t.cardXl, cur == CARD_XL);
+      drawChoiceButton(dX + 4*(btn6W + gap6), y, btn6W, g_btnH, t.cardWl, cur == CARD_WL);
+      drawChoiceButton(dX + 5*(btn6W + gap6), y, btn6W, g_btnH, t.cardWxl, cur == CARD_WXL);
     }
   }
   dAdvance(g_btnH + 8);
