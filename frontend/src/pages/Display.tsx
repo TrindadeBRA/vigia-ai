@@ -8,10 +8,13 @@ import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropTarget, dupl
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
-import { CurrenciesBoardCard, CurrenciesDetail } from "../components/CurrenciesWidget";
+import { CurrenciesBoardCard as CurrenciesWidgetBoardCard, CurrenciesDetail as CurrenciesWidgetDetail } from "../components/CurrenciesWidget";
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
-import { ClaudeBoardCard, ClaudeDetail, claudeAllowedSizes } from "../components/cards/ClaudeCard";
-import { CursorBoardCard, CursorDetail, cursorAllowedSizes } from "../components/cards/CursorCard";
+import { BitcoinBoardCard, BitcoinDetail, bitcoinAllowedSizes, bitcoinSizeLabel } from "../components/cards/BitcoinCard";
+import { ClaudeBoardCard, ClaudeDetail, claudeAllowedSizes, claudeSizeLabel } from "../components/cards/ClaudeCard";
+import { CurrenciesBoardCard as CurrenciesItemBoardCard, CurrenciesDetail as CurrenciesItemDetail, currenciesAllowedSizes, currenciesSizeLabel } from "../components/cards/CurrenciesCard";
+import { CursorBoardCard, CursorDetail, cursorAllowedSizes, cursorSizeLabel } from "../components/cards/CursorCard";
+import { GptBoardCard, GptDetail, gptAllowedSizes, gptSizeLabel } from "../components/cards/GptCard";
 import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, CopyIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
@@ -40,6 +43,8 @@ export type ProviderMeta = {
   weather?: WeatherPayload | null;
   weatherConfig?: WeatherConfig | null;
   currencies?: CurrenciesPayload | null;
+  currencyQuote?: import("../api/types").CurrencyQuote | null;
+  currencyBase?: string | null;
 };
 
 function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
@@ -214,15 +219,10 @@ function creditsMetric(
 }
 
 function bitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
-  const value =
-    b.value_usd_cents != null && b.value_brl_cents != null
-      ? `${fmtUsd(b.value_usd_cents)} · ${fmtBrl(b.value_brl_cents)}`
-      : b.value_usd_cents != null
-        ? fmtUsd(b.value_usd_cents)
-        : null;
   return [
     { label: t.bitcoinBalance, pct: null, value: b.balance_btc != null ? fmtBtc(b.balance_btc) : null, sub: null },
-    { label: t.bitcoinValue, pct: null, value, sub: null },
+    { label: "USD", pct: null, value: b.value_usd_cents != null ? fmtUsd(b.value_usd_cents) : null, sub: null },
+    { label: "BRL", pct: null, value: b.value_brl_cents != null ? fmtBrl(b.value_brl_cents) : null, sub: b.address || null },
   ];
 }
 
@@ -494,26 +494,38 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       });
     }
   }
-  // Moedas — card único com N cotações, igual ao clima (o backend já filtra
-  // hidden/enabled; se chegou aqui é pra mostrar).
+  // Moedas — um card por item (normal e grande) seguindo padrão Claude/Cursor
   const cu = data.currencies;
-  if (cu && (((cu.items?.length) ?? 0) > 0 || (!cu.ok && cu.error))) {
-    list.push({
-      id: "currencies:main",
-      provider: "currencies",
-      ok: cu.ok,
-      error: cu.error,
-      title: t.currencies,
-      label: cu.base,
-      metrics: (cu.items ?? []).slice(0, 6).map((it) => ({
-        label: it.label || it.code,
-        pct: null,
-        value: it.ok ? fmtCurrencyAmount(it.price, cu.base) : null,
-        sub: it.ok ? null : it.error,
-      })),
-      kind: "currencies",
-      currencies: cu,
-    });
+  if (cu) {
+    if ((cu.items?.length ?? 0) > 0) {
+      for (const it of cu.items!) {
+        list.push({
+          id: `currencies:${it.id}`,
+          provider: "currencies",
+          ok: it.ok,
+          error: it.error,
+          title: it.label || it.code,
+          label: cu.base,
+          metrics: [{ label: it.label || it.code, pct: null, value: it.ok && it.price != null ? fmtCurrencyAmount(it.price, cu.base) : null, sub: it.ok ? null : it.error }],
+          kind: "currencies",
+          currencies: cu,
+          currencyQuote: it,
+          currencyBase: cu.base,
+        });
+      }
+    } else if (!cu.ok && cu.error) {
+      list.push({
+        id: "currencies:main",
+        provider: "currencies",
+        ok: cu.ok,
+        error: cu.error,
+        title: t.currencies,
+        label: cu.base,
+        metrics: [],
+        kind: "currencies",
+        currencies: cu,
+      });
+    }
   }
   return list;
 }
@@ -554,12 +566,13 @@ function baseIdForProvider(id: string): string {
   return isCloneId(id) ? baseIdFromClone(id) : id;
 }
 
-const CARD_ORDER: CardSize[] = ["sm", "sw", "md", "lg", "xl", "wl", "wxl"];
+const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "md", "lg", "xl", "wl", "wxl"];
 
 function sizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
   if (s === "sm") return t.cardSmall;
   if (s === "sw") return t.cardSmallWeek;
+  if (s === "sx") return t.cardSmallOnDemand;
   if (s === "md") return t.cardNormal;
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
@@ -571,6 +584,7 @@ function SizeIcon({ size, className }: { size: CardSize; className?: string }) {
   const s = normalizeSize(size);
   if (s === "sm") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-current", className)} />;
   if (s === "sw") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-dashed border-current", className)} />;
+  if (s === "sx") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-dotted border-current", className)} />;
   if (s === "md") return <span className={cn("block size-[11px] rounded-[2px] border-[1.5px] border-current", className)} />;
   if (s === "lg") return <span className={cn("flex size-[11px] gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
   if (s === "wl") return <span className={cn("flex size-[11px] flex-col gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
@@ -578,9 +592,10 @@ function SizeIcon({ size, className }: { size: CardSize; className?: string }) {
   return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
 }
 
-function SizeMenu({ size, t, onChange, allowed }: { size: CardSize; t: T; onChange: (next: CardSize) => void; allowed?: CardSize[] }) {
+function SizeMenu({ size, t, onChange, allowed, getLabel }: { size: CardSize; t: T; onChange: (next: CardSize) => void; allowed?: CardSize[]; getLabel?: (s: CardSize) => string }) {
   const cur = normalizeSize(size);
   const order = allowed && allowed.length ? allowed : CARD_ORDER;
+  const labelFor = getLabel || ((s: CardSize) => sizeLabel(s, t));
   // Se o tamanho atual não está entre os permitidos (ex: veio de localStorage antigo com wxl), mostra mesmo assim
   const displayOrder = order.includes(cur) ? order : [...order, cur];
   const [open, setOpen] = useState(false);
@@ -628,8 +643,8 @@ function SizeMenu({ size, t, onChange, allowed }: { size: CardSize; t: T; onChan
         ref={btnRef}
         type="button"
         className="flex size-[18px] shrink-0 items-center justify-center rounded-md text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
-        title={sizeLabel(cur, t)}
-        aria-label={sizeLabel(cur, t)}
+        title={labelFor(cur)}
+        aria-label={labelFor(cur)}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
@@ -655,7 +670,7 @@ function SizeMenu({ size, t, onChange, allowed }: { size: CardSize; t: T; onChan
                 onClick={(e) => { e.stopPropagation(); onChange(s); setOpen(false); }}
               >
                 <span className={cn("flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border", active ? "border-accent-ink/30 bg-accent-ink/15" : "border-edge bg-chip")}><SizeIcon size={s} className={active ? "text-accent-ink" : "text-ink3"} /></span>
-                <span className="flex-1 font-medium leading-none">{sizeLabel(s, t)}</span>
+                <span className="flex-1 font-medium leading-none">{labelFor(s)}</span>
                 {active ? <CheckIcon size={10} /> : null}
               </button>
             );
@@ -743,7 +758,7 @@ function ClaudeTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen
         <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
           <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
           {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} />
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => claudeSizeLabel(s, t)} />
           {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
         </div>
       ) : null}
@@ -753,7 +768,7 @@ function ClaudeTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen
 }
 
 function CursorTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
-  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
+  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw" || normalizeSize(size) === "sx";
   const allowed = cursorAllowedSizes(null, p.metrics);
   const isClone = isCloneId(p.id);
   return (
@@ -772,11 +787,105 @@ function CursorTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen
         <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
           <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
           {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} />
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => cursorSizeLabel(s, t)} />
           {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
         </div>
       ) : null}
       <CursorBoardCard metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function GptTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
+  const allowed = gptAllowedSizes(null, p.metrics);
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => gptSizeLabel(s, t)} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
+        </div>
+      ) : null}
+      <GptBoardCard metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function BitcoinTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
+  const allowed = bitcoinAllowedSizes(null, p.metrics);
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => bitcoinSizeLabel(s, t)} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
+        </div>
+      ) : null}
+      <BitcoinBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function CurrenciesItemTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const sm = normalizeSize(size) === "sm";
+  const allowed = currenciesAllowedSizes();
+  const isClone = isCloneId(p.id);
+  const quote = p.currencyQuote;
+  const base = p.currencyBase || p.label;
+  if (!quote) {
+    return (
+      <div className={cn("group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card", sm ? "px-3 pb-2.5 pt-2.5" : "px-3.5 pb-3 pt-3", lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing", dragging && !lifted && "border-dashed border-edge opacity-35", !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover", "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0", !lifted && viewFade)}>
+        {!lifted ? (
+          <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+            <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+            {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
+            <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => currenciesSizeLabel(s, t)} />
+            {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
+          </div>
+        ) : null}
+        <div className={errorText}>{p.error || t.currenciesEmpty}</div>
+      </div>
+    );
+  }
+  return (
+    <div className={cn("group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card", sm ? "px-3 pb-2.5 pt-2.5" : "px-3.5 pb-3 pt-3", lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing", dragging && !lifted && "border-dashed border-edge opacity-35", !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover", "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0", !lifted && viewFade)}>
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => currenciesSizeLabel(s, t)} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
+        </div>
+      ) : null}
+      <CurrenciesItemBoardCard quote={quote} base={base} t={t} size={size} onOpen={onOpen} />
     </div>
   );
 }
@@ -814,6 +923,12 @@ function ProviderCard({
   }
   if (p.provider === "cursor") {
     return <CursorTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "gpt") {
+    return <GptTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "bitcoin") {
+    return <BitcoinTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
   if (p.provider === "weather" || p.kind === "weather") {
     return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
@@ -1327,21 +1442,7 @@ function ClaudeBody({ data, account, t, pal, nowMs }: { data: UsagePayload; acco
 }
 
 function GptBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: GptAccount; t: T; pal: Pal; nowMs: number }) {
-  const g = account;
-  const resetAt = g.session_resets_at || g.weekly_resets_at;
-  return (
-    <>
-      <MetaChips items={[{ k: t.plan, v: g.plan }, { k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        {g.session_percent != null ? (
-          <MetricCard label={t.window5h} pct={g.session_percent} pal={pal} sub={remainLine(t, g.session_percent, g.session_resets_at)} />
-        ) : (
-          <MetricCard label={t.resetIn} pct={null} pal={pal} sub={fmtCountdown(resetAt, nowMs)} />
-        )}
-        <MetricCard label={t.weekLimit} pct={g.weekly_percent} pal={pal} sub={remainLine(t, g.weekly_percent, g.weekly_resets_at)} />
-      </MetricsGrid>
-    </>
-  );
+  return <GptDetail account={account} updatedAt={data.updated_at} t={t} pal={pal} nowMs={nowMs} />;
 }
 
 function CursorBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: CursorAccount; t: T; pal: Pal; nowMs: number }) {
@@ -1408,24 +1509,8 @@ function FalBody({ data, account, t, pal }: { data: UsagePayload; account: Credi
   );
 }
 
-function BitcoinBody({ data, account, t, pal }: { data: UsagePayload; account: BitcoinAccount; t: T; pal: Pal }) {
-  const b = account;
-  const value =
-    b.value_usd_cents != null && b.value_brl_cents != null
-      ? `${fmtUsd(b.value_usd_cents)} · ${fmtBrl(b.value_brl_cents)}`
-      : b.value_usd_cents != null
-        ? fmtUsd(b.value_usd_cents)
-        : t.noData;
-  return (
-    <>
-      {b.address ? <div className="px-0.5 text-[12.5px] tracking-[.1px] text-ink3">{b.address}</div> : null}
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard label={t.bitcoinBalance} pct={null} pal={pal} value={b.balance_btc != null ? fmtBtc(b.balance_btc) : null} />
-        <MetricCard label={t.bitcoinValue} pct={null} pal={pal} value={value} />
-      </MetricsGrid>
-    </>
-  );
+function BitcoinBody({ data, account, t }: { data: UsagePayload; account: BitcoinAccount; t: T }) {
+  return <BitcoinDetail account={account} updatedAt={data.updated_at} t={t} />;
 }
 
 function AdsenseBody({ data, account, t, pal }: { data: UsagePayload; account: AdsenseAccount; t: T; pal: Pal }) {
@@ -1491,7 +1576,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "opencode") body = <OpenCodeBody data={data} account={account as OpenCodeAccount} t={t} pal={pal} />;
     else if (meta.provider === "fal") body = <FalBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
-    else if (meta.provider === "bitcoin") body = <BitcoinBody data={data} account={account as BitcoinAccount} t={t} pal={pal} />;
+    else if (meta.provider === "bitcoin") body = <BitcoinBody data={data} account={account as BitcoinAccount} t={t} />;
     else if (meta.provider === "adsense") body = <AdsenseBody data={data} account={account as AdsenseAccount} t={t} pal={pal} />;
   }
   return (

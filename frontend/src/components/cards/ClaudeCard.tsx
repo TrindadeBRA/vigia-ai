@@ -66,6 +66,17 @@ export function claudeAllowedSizes(c: ClaudeAccount | null, metrics?: Metric[]):
 
 export const CLAUDE_ALLOWED_ALL: CardSize[] = ["sm", "sw", "md", "lg", "wl"];
 
+export function claudeSizeLabel(size: CardSize, t: T): string {
+  const s = normalizeSize(size);
+  if (s === "sm") return t.cardSmall; // "Pequeno · 5h"
+  if (s === "sw") return t.cardSmallWeek; // "Pequeno · semana"
+  if (s === "md") return t.cardNormal;
+  if (s === "lg") return t.cardLarge;
+  if (s === "wl") return t.cardWl;
+  if (s === "wxl") return t.cardWxl;
+  return t.cardXl;
+}
+
 /* ── Primitivos visuais (reúso máximo) ─────────────────────────────── */
 
 function barStyle(pct: number, pal: (typeof PALETTES)[ThemeName]) {

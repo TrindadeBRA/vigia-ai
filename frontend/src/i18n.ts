@@ -74,6 +74,7 @@ type Strings = {
   configCta: string;
   cardSmall: string;
   cardSmallWeek: string;
+  cardSmallOnDemand: string;
   cardNormal: string;
   cardLarge: string;
   cardXl: string;
@@ -179,6 +180,7 @@ export const STR: Record<Lang, Strings> = {
     configCta: "Configurar contas",
     cardSmall: "Pequeno · 5h",
     cardSmallWeek: "Pequeno · semana",
+    cardSmallOnDemand: "Pequeno · on-demand",
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",
@@ -279,6 +281,7 @@ export const STR: Record<Lang, Strings> = {
     configCta: "Set up accounts",
     cardSmall: "Small · 5h",
     cardSmallWeek: "Small · week",
+    cardSmallOnDemand: "Small · on-demand",
     cardNormal: "Normal card",
     cardLarge: "Large card",
     cardXl: "Extra large card",
@@ -379,6 +382,7 @@ export const STR: Record<Lang, Strings> = {
     configCta: "Configurar cuentas",
     cardSmall: "Pequeño · 5h",
     cardSmallWeek: "Pequeño · semana",
+    cardSmallOnDemand: "Pequeño · on-demand",
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",
