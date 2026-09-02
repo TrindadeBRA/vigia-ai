@@ -110,6 +110,40 @@ static float clampf(float v, float lo, float hi)
   return v < lo ? lo : (v > hi ? hi : v);
 }
 
+// Ajusta o centro (cx,cy) pra que a caixa boxW x boxH fique inteira dentro
+// da tela — sem isso, um widget arrastado perto de uma borda no editor web
+// (que recorta visualmente via overflow:hidden) fica de fato CORTADO na
+// placa, já que aqui nada limitava o desenho aos limites físicos do TFT.
+static void clampBoxCenter(int &cx, int &cy, int boxW, int boxH, int screenW, int screenH)
+{
+  if (boxW >= screenW)
+  {
+    cx = screenW / 2;
+  }
+  else
+  {
+    int halfL = boxW / 2;
+    int halfR = boxW - halfL;
+    if (cx - halfL < 0)
+      cx = halfL;
+    if (cx + halfR > screenW)
+      cx = screenW - halfR;
+  }
+  if (boxH >= screenH)
+  {
+    cy = screenH / 2;
+  }
+  else
+  {
+    int halfT = boxH / 2;
+    int halfB = boxH - halfT;
+    if (cy - halfT < 0)
+      cy = halfT;
+    if (cy + halfB > screenH)
+      cy = screenH - halfB;
+  }
+}
+
 static bool hexColorToRgb565(const String &hex, uint16_t &out)
 {
   if (hex.length() != 7 || hex[0] != '#')
@@ -753,8 +787,8 @@ static bool scaleThemeIcon(const ThemeIcon &icon, int &targetW, int &targetH)
 
 static void drawThemeWeather(const ThemeIcon &icon)
 {
-  const int cx = (int)(icon.x * tft.width());
-  const int cy = (int)(icon.y * tft.height());
+  int cx = (int)(icon.x * tft.width());
+  int cy = (int)(icon.y * tft.height());
   const WeatherData &w = g_snap.weather;
   char tempBuf[16];
   const char *iconLabel = "clima";
@@ -784,6 +818,7 @@ static void drawThemeWeather(const ThemeIcon &icon)
     boxW = 40;
   if (boxH < 18)
     boxH = 18;
+  clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
   int y0 = cy - boxH / 2;
   uint16_t bgCol = 0x1082;
@@ -815,11 +850,12 @@ static void drawThemeIcon(const ThemeIcon &icon)
     drawThemeWeather(icon);
     return;
   }
-  const int cx = (int)(icon.x * tft.width());
-  const int cy = (int)(icon.y * tft.height());
+  int cx = (int)(icon.x * tft.width());
+  int cy = (int)(icon.y * tft.height());
   if (icon.kind == TICON_BRAND)
   {
     const int r = (int)(10 * icon.scale);
+    clampBoxCenter(cx, cy, r * 2, r * 2, tft.width(), tft.height());
     drawEyeIcon(cx, cy, r, 0, 0, 0.0f);
     return;
   }
@@ -832,6 +868,7 @@ static void drawThemeIcon(const ThemeIcon &icon)
   String val = themeIconValue(icon);
   if (!val.length())
   {
+    clampBoxCenter(cx, cy, targetW, targetH, tft.width(), tft.height());
     tft.setSwapBytes(true);
     tft.pushImage(cx - targetW / 2, cy - targetH / 2, targetW, targetH, g_iconScaleBuf, kBakedCard);
     tft.setSwapBytes(false);
@@ -846,6 +883,7 @@ static void drawThemeIcon(const ThemeIcon &icon)
   int innerH = targetH > textH ? targetH : textH;
   int boxW = padX + targetW + gap + textW + padX;
   int boxH = innerH + padY * 2;
+  clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
   int y0 = cy - boxH / 2;
   uint16_t bgCol = 0x1082;
@@ -871,10 +909,13 @@ static void drawThemeIcon(const ThemeIcon &icon)
 
 static void drawThemeText(const ThemeText &t)
 {
-  const int cx = (int)(t.x * tft.width());
-  const int cy = (int)(t.y * tft.height());
+  int cx = (int)(t.x * tft.width());
+  int cy = (int)(t.y * tft.height());
   const uint8_t font = t.scale >= 2.5f ? 4 : 2;
   tft.setTextDatum(MC_DATUM);
+  int tw = tft.textWidth(t.text, font);
+  int th = tft.fontHeight(font);
+  clampBoxCenter(cx, cy, tw, th, tft.width(), tft.height());
   tft.setTextColor(t.hasColor ? t.color : COL_TEXT); // 1 arg = desenho transparente
   tft.drawString(t.text, cx, cy, font);
 }
@@ -961,8 +1002,8 @@ static void drawThemeClock(const ThemeClock &c)
   }
   snprintf(buf, sizeof(buf), "%02d:%02d", c.format24h ? hh : hh12, mi);
   const uint8_t font = c.scale >= 3.0f ? 8 : (c.scale >= 1.5f ? 6 : 4);
-  const int cx = (int)(c.x * tft.width());
-  const int cy = (int)(c.y * tft.height());
+  int cx = (int)(c.x * tft.width());
+  int cy = (int)(c.y * tft.height());
   // Cor: autoColor usa generateReadableColor sobre a cor de fundo; senão cor manual ou padrão
   uint16_t fg;
   if (c.autoColor)
@@ -980,15 +1021,16 @@ static void drawThemeClock(const ThemeClock &c)
   // Fundo do relógio: quando showBackground=false, desenha transparente (1 arg);
   // quando true, desenha com fundo semi-transparente escuro para legibilidade
   tft.setTextDatum(MC_DATUM);
+  int16_t tw = tft.textWidth(buf, font);
+  int16_t th = tft.fontHeight(font);
   if (c.showBackground)
   {
     // Fundo arredondado atrás do texto — mede o texto e desenha um retângulo
-    int16_t tw = tft.textWidth(buf, font);
-    int16_t th = tft.fontHeight(font);
     int padX = 6;
     int padY = 3;
     int bgW = tw + padX * 2;
     int bgH = th + padY * 2;
+    clampBoxCenter(cx, cy, bgW, bgH, tft.width(), tft.height());
     // Cor de fundo do card: preto com alpha simulado (mistura com bgColor)
     // Usa um cinza escuro semi-transparente aproximado
     uint16_t bgCol = 0x1082; // ~#101010 escuro
@@ -997,6 +1039,7 @@ static void drawThemeClock(const ThemeClock &c)
   }
   else
   {
+    clampBoxCenter(cx, cy, tw, th, tft.width(), tft.height());
     tft.setTextColor(fg);
   }
   tft.drawString(buf, cx, cy, font);

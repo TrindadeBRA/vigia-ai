@@ -56,6 +56,17 @@ function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
+// Espelha o clampBoxCenter do firmware (ui/customtheme.cpp): mantém a caixa
+// do widget inteira dentro do canvas, mesmo perto das bordas — sem isso, a
+// prévia web (que só recorta via overflow:hidden) parecia caber onde a
+// placa de fato cortava o widget, já que os tamanhos de caixa nunca eram
+// levados em conta na posição exibida.
+function clampBoxCenter(rawCenter: number, boxSize: number, containerSize: number): number {
+  if (!containerSize || !boxSize) return rawCenter;
+  if (boxSize >= containerSize) return containerSize / 2;
+  return clamp(rawCenter, boxSize / 2, containerSize - boxSize / 2);
+}
+
 function isBareLoopback(ip: string): boolean {
   const v = ip.trim().toLowerCase();
   return v === "127.0.0.1" || v === "localhost" || v === "::1";
@@ -151,6 +162,7 @@ function CanvasDot({
   x,
   y,
   canvasRef,
+  containerSize,
   selected,
   title,
   onSelect,
@@ -162,6 +174,7 @@ function CanvasDot({
   x: number;
   y: number;
   canvasRef: React.RefObject<HTMLDivElement | null>;
+  containerSize: { width: number; height: number };
   selected: boolean;
   title: string;
   onSelect: () => void;
@@ -170,6 +183,20 @@ function CanvasDot({
   removeLabel?: string;
   children: React.ReactNode;
 }) {
+  const dotRef = useRef<HTMLDivElement>(null);
+  const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = dotRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect;
+      if (r) setBoxSize({ width: r.width, height: r.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     onSelect();
@@ -180,14 +207,18 @@ function CanvasDot({
     const rect = canvasRef.current.getBoundingClientRect();
     onDrag(clamp((e.clientX - rect.left) / rect.width, 0, 1), clamp((e.clientY - rect.top) / rect.height, 0, 1));
   };
+  const { width: cw, height: ch } = containerSize;
+  const left = cw > 0 ? clampBoxCenter(x * cw, boxSize.width, cw) : x * 100;
+  const top = ch > 0 ? clampBoxCenter(y * ch, boxSize.height, ch) : y * 100;
   return (
     <div
+      ref={dotRef}
       role="button"
       tabIndex={0}
       title={title}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
+      style={cw > 0 && ch > 0 ? { left: `${left}px`, top: `${top}px` } : { left: `${left}%`, top: `${top}%` }}
       className={cn(
         "absolute flex -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none select-none items-center justify-center rounded-[10px] outline-none active:cursor-grabbing",
         selected ? "ring-2 ring-accent ring-offset-2 ring-offset-transparent" : "ring-1 ring-white/40",
@@ -434,6 +465,8 @@ export default function ThemeEditorPage() {
   }, [phase, cfg]);
 
   const zoom = canvasSize.width > 0 && canvasRenderedW > 0 ? canvasRenderedW / canvasSize.width : 1;
+  const canvasRenderedH = canvasSize.width > 0 ? canvasRenderedW * (canvasSize.height / canvasSize.width) : 0;
+  const containerSize = { width: canvasRenderedW, height: canvasRenderedH };
 
   useEffect(() => {
     if (!deviceIp) return;
@@ -583,6 +616,7 @@ export default function ThemeEditorPage() {
                 x={theme.clock.x}
                 y={theme.clock.y}
                 canvasRef={canvasRef}
+                containerSize={containerSize}
                 selected={selected === "clock"}
                 title={c.clock}
                 onSelect={() => setSelected("clock")}
@@ -610,6 +644,7 @@ export default function ThemeEditorPage() {
                 x={icon.x}
                 y={icon.y}
                 canvasRef={canvasRef}
+                containerSize={containerSize}
                 selected={selected === `icon:${icon.id}`}
                 title={`${providerLabel(icon.provider)} ${formatThemeMetric(usage, icon.provider, icon.metric)}`}
                 onSelect={() => setSelected(`icon:${icon.id}`)}
@@ -626,6 +661,7 @@ export default function ThemeEditorPage() {
                 x={txt.x}
                 y={txt.y}
                 canvasRef={canvasRef}
+                containerSize={containerSize}
                 selected={selected === `text:${txt.id}`}
                 title={txt.text}
                 onSelect={() => setSelected(`text:${txt.id}`)}
