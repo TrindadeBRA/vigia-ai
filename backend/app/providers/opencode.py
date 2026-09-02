@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.formatting import as_percent, iso_or_none
+from app.formatting import as_percent_points, iso_or_none
 from app.http_util import http_json
 from app.store import provider as provider_cfg
 
@@ -86,7 +86,7 @@ def _parse_go(data: dict[str, Any]) -> dict[str, Any]:
         obj = usage.get(name)
         if not isinstance(obj, dict):
             return None, None
-        return as_percent(obj.get("percent")), iso_or_none(obj.get("resetsAt"))
+        return as_percent_points(obj.get("percent")), iso_or_none(obj.get("resetsAt"))
 
     rolling_pct, rolling_reset = _win("rolling")
     weekly_pct, weekly_reset = _win("weekly")
