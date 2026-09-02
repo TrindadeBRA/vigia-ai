@@ -1,7 +1,7 @@
 import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
 import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
@@ -15,7 +15,7 @@ import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp,
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
-import type { ConfigOutlet } from "./config/ConfigPage";
+import type { DisplayOutlet } from "./config/usePublicConfig";
 import NowPage from "./NowPage";
 
 const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
@@ -1495,12 +1495,14 @@ function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetch
 
 export default function Display() {
   const navigate = useNavigate();
-  const isConfig = Boolean(useMatch("/display/config"));
-  const isSetup = Boolean(useMatch("/display/setup"));
-  const isTheme = Boolean(useMatch("/display/theme") || useMatch("/display/tema"));
-  const isAlarms = Boolean(useMatch("/display/alarms") || useMatch("/display/alarmes"));
-  const isNow = Boolean(useMatch("/display/now"));
-  const isNested = isConfig || isSetup || isTheme || isAlarms || isNow;
+  const { pathname } = useLocation();
+  const isConfig = pathname === "/display/config";
+  const isSetup = pathname === "/display/setup";
+  const isTheme = pathname === "/display/theme" || pathname === "/display/tema";
+  const isCanvas = pathname === "/display/canvas";
+  const isAlarms = pathname === "/display/alarms" || pathname === "/display/alarmes";
+  const isNow = pathname === "/display/now";
+  const isNested = isConfig || isSetup || isTheme || isCanvas || isAlarms || isNow;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -1522,7 +1524,7 @@ export default function Display() {
   const flat = prefs.theme === "contrast";
   const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
   const t = STR[prefs.lang];
-  const outlet: ConfigOutlet = { lang: prefs.lang };
+  const outlet: DisplayOutlet = { lang: prefs.lang, data, nowMs: now, driftMs };
   const shellClass = cn(shell, flat && "flat");
   const pollS = pollMs / 1000;
   const showCheck = Boolean(okFlashAt && now - okFlashAt < FETCH_OK_FLASH_MS);
@@ -1617,8 +1619,11 @@ export default function Display() {
     }
   }
 
+  const showOutlet = isCanvas || (isNested && !isNow);
+
   return (
-    <div className={shellClass}>
+    <div className={cn(shellClass, isCanvas && "fixed inset-0 z-50 overflow-hidden bg-black")}>
+      {!isCanvas ? (
       <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none">
         <button className={`${iconBtn} hidden max-[860px]:flex`} onClick={() => setSidebarOpen(true)}><MenuIcon size={19} /></button>
         <button className="group/brand flex cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
@@ -1634,8 +1639,10 @@ export default function Display() {
         </button>
         <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} onClick={() => void loadUsage()} />
       </div>
-      <div className="flex min-h-0 flex-1">
-        {sidebarOpen ? <div className="fixed inset-x-0 bottom-0 top-14 z-[25] bg-black/45 min-[861px]:hidden" onClick={() => setSidebarOpen(false)} /> : null}
+      ) : null}
+      <div className={cn("flex min-h-0 flex-1", isCanvas && "h-full w-full")}>
+        {!isCanvas && sidebarOpen ? <div className="fixed inset-x-0 bottom-0 top-14 z-[25] bg-black/45 min-[861px]:hidden" onClick={() => setSidebarOpen(false)} /> : null}
+        {!isCanvas ? (
         <Sidebar
           providers={providers}
           section={section}
@@ -1651,8 +1658,14 @@ export default function Display() {
           onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
           onClose={() => setSidebarOpen(false)}
         />
-        <main className="min-w-0 flex-1 overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]">
-          {isNested && !isNow ? (
+        ) : null}
+        <main
+          className={cn(
+            "min-w-0 flex-1",
+            isCanvas ? "h-full overflow-hidden p-0" : "overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]",
+          )}
+        >
+          {showOutlet ? (
             <Outlet context={outlet} />
           ) : isNow && data ? (
             <NowPage data={data} prefs={prefs} providers={providers} t={t} nowMs={now} driftMs={driftMs} />
@@ -1688,7 +1701,7 @@ export default function Display() {
           )}
         </main>
       </div>
-      {settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
+      {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useOutletContext } from "react-router-dom";
 import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
@@ -22,7 +21,6 @@ import {
   type ThemeProvider,
 } from "./themeMetrics";
 import { Button, Card, Checkbox, FieldStatus, Fold, TextField } from "./ui";
-import type { ConfigOutlet } from "./usePublicConfig";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./WallpaperManager";
 
@@ -83,10 +81,22 @@ function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<ThemeIc
     if (typeof merged.clock.showBackground !== "boolean") merged.clock.showBackground = DEFAULT_THEME.clock.showBackground;
     if (typeof merged.clock.autoColor !== "boolean") merged.clock.autoColor = DEFAULT_THEME.clock.autoColor;
   }
-  merged.icons = (merged.icons || []).map((icon) => ({
-    ...icon,
+  merged.icons = (merged.icons || []).map((icon, idx) => ({
+    id: icon.id || `i${idx}`,
     provider: (icon.provider as ThemeProvider) || "claude",
+    x: icon.x ?? 0.5,
+    y: icon.y ?? 0.5,
+    scale: icon.scale ?? 1,
+    color: icon.color ?? null,
     metric: icon.metric || defaultMetric((icon.provider as ThemeProvider) || "claude"),
+  }));
+  merged.texts = (merged.texts || []).map((txt, idx) => ({
+    id: txt.id || `t${idx}`,
+    text: txt.text || "",
+    x: txt.x ?? 0.5,
+    y: txt.y ?? 0.5,
+    scale: txt.scale ?? 1,
+    color: txt.color ?? null,
   }));
   return merged;
 }
@@ -330,10 +340,8 @@ function IconChip({
 }
 
 export default function ThemeEditorPage() {
-  const ctx = useOutletContext<ConfigOutlet | null>();
-  const lang = ctx?.lang || "pt";
+  const { cfg, phase, reload, setPhase, lang } = usePublicConfig();
   const c = THEME_STR[lang];
-  const { cfg, phase, reload, setPhase } = usePublicConfig();
 
   const [theme, setTheme] = useThemeDraft();
   const [selected, setSelected] = useState<string | null>(null);
@@ -423,7 +431,7 @@ export default function ThemeEditorPage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [phase, cfg]);
 
   const zoom = canvasSize.width > 0 && canvasRenderedW > 0 ? canvasRenderedW / canvasSize.width : 1;
 
