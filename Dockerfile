@@ -10,6 +10,7 @@ RUN npm run build
 FROM python:3.12-slim
 WORKDIR /app
 COPY backend /app
+RUN pip install --no-cache-dir -e .
 COPY --from=frontend /frontend/dist /frontend/dist
 ENV HOST=0.0.0.0
 ENV PORT=8787
