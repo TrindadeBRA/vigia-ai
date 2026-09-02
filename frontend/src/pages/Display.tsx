@@ -116,26 +116,33 @@ function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t, value
   if (pct == null) {
     const money = compact ? (value || compactMoney(sub, t)) : (value || sub);
     const display = clock || money || sub || "--";
-    const showClockBelow = Boolean(clock && money && clock !== money);
+    const clockLine = clock ? `${t.resetIn} ${clock}` : null;
+    // GPT free (e similares): o rótulo já é "Reset em" e o valor grande já é o
+    // cronômetro — não repetir "Reset em 28d …" na mesma linha, senão os dois
+    // textos se sobrepõem no card em tamanho real.
+    const labelIsReset = name === t.resetIn || name === t.reset;
+    const showHeaderClock = Boolean(clock && display !== clock && !labelIsReset);
+    const showClockBelow = Boolean(clock && display !== clock && !showHeaderClock);
+    const showSub = Boolean(sub && sub !== display && sub !== clock && sub !== clockLine && !showClockBelow);
     if (compact) {
       return (
         <div className="mt-1.5 flex min-w-0 flex-col gap-1 first:mt-0">
           <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-none text-ink3">{name}</span>
           <span className={cn(num, "min-w-0 text-[15px] font-bold leading-tight tracking-tight [overflow-wrap:anywhere]")}>{display}</span>
-          {showClockBelow ? <span className={cn(num, "overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-[550] text-ink2")}>{t.resetIn} {clock}</span> : null}
-          {sub && display !== sub && !showClockBelow ? <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{sub}</span> : null}
+          {showClockBelow ? <span className={cn(num, "overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-[550] text-ink2")}>{clockLine}</span> : null}
+          {showSub ? <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{sub}</span> : null}
         </div>
       );
     }
     return (
       <div className="mt-3 first:mt-0">
-        <div className="mb-1.5 flex items-baseline justify-between text-[12.5px]">
+        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-[12.5px]">
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{name}</span>
-          {clock ? <span className={cn(num, "shrink-0 text-[12px] font-[550] text-ink2")}>{t.resetIn} {clock}</span> : null}
+          {showHeaderClock ? <span className={cn(num, "shrink-0 text-[12px] font-[550] text-ink2")}>{clockLine}</span> : null}
         </div>
         <div className={cn(num, "text-[15px] font-bold")}>{display}</div>
-        {sub && display !== sub ? <div className="mt-1 text-[11.5px] leading-snug text-ink3">{sub}</div> : null}
-        {clock && display !== clock && sub !== `${t.resetIn} ${clock}` ? <div className={cn(num, "mt-1 text-[11.5px] font-[550] text-ink2")}>{t.resetIn} {clock}</div> : null}
+        {showSub ? <div className="mt-1 text-[11.5px] leading-snug text-ink3">{sub}</div> : null}
+        {showClockBelow ? <div className={cn(num, "mt-1 text-[11.5px] font-[550] text-ink2")}>{clockLine}</div> : null}
       </div>
     );
   }
