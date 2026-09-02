@@ -43,7 +43,7 @@ A placa só conhece Wi-Fi e a URL do coletor (`USAGE_URL`).
 - [x] Segredos fora do git (`data/config.json`, `secrets.h`)
 - [x] Tela com duas barras (Claude sessão+semana; Cursor plano)
 - [x] Wokwi fala com o coletor de verdade via `wokwigw` (`./dev wokwi`)
-- [x] README + `docs/` para humanos e agentes
+- [x] README + `` para humanos e agentes
 - [ ] Hardware físico conferido pelo usuário (precisa da placa ligada e do coletor no Mac)
 
 ## Riscos

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "landing/**"
+      - "docs/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -28,6 +28,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: landing
+          path: docs
       - id: deployment
         uses: actions/deploy-pages@v4

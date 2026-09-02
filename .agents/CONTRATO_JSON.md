@@ -202,7 +202,7 @@ Não existe mais um `configured` por conta: uma conta só aparece no array se es
 
 ### `gpt[i]`
 
-Cota da assinatura ChatGPT / Codex CLI — ver `docs/APIS_GPT.md`.
+Cota da assinatura ChatGPT / Codex CLI — ver `APIS_GPT.md`.
 
 | Campo               | Tipo             | Notas                                         |
 | ------------------- | ---------------- | --------------------------------------------- |
@@ -231,7 +231,7 @@ Cota da assinatura ChatGPT / Codex CLI — ver `docs/APIS_GPT.md`.
 
 Vem de `/api/v1/credits` — saldo da **conta** dessa key, não da key individual (uma key
 recém-criada pode nunca ter sido usada diretamente e ainda assim a conta ter
-gasto real feito por outra key/app; ver `docs/APIS_OPENROUTER.md`).
+gasto real feito por outra key/app; ver `APIS_OPENROUTER.md`).
 
 | Campo             | Tipo             | Notas                                                                                                  |
 | ----------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
@@ -242,7 +242,7 @@ gasto real feito por outra key/app; ver `docs/APIS_OPENROUTER.md`).
 
 ### `deepseek[i]`
 
-Vem de `GET /user/balance` — saldo da conta dessa key; ver `docs/APIS_DEEPSEEK.md`.
+Vem de `GET /user/balance` — saldo da conta dessa key; ver `APIS_DEEPSEEK.md`.
 
 | Campo             | Tipo             | Notas                                                                                             |
 | ----------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
@@ -253,7 +253,7 @@ Vem de `GET /user/balance` — saldo da conta dessa key; ver `docs/APIS_DEEPSEEK
 
 ### `opencode_go[i]`
 
-Vem de `GET /zen/go/v1/usage` — assinatura mensal da OpenCode; ver `docs/APIS_OPENCODE_GO.md`.
+Vem de `GET /zen/go/v1/usage` — assinatura mensal da OpenCode; ver `APIS_OPENCODE_GO.md`.
 
 | Campo               | Tipo             | Notas                                 |
 | ------------------- | ---------------- | ------------------------------------- |
@@ -266,7 +266,7 @@ Vem de `GET /zen/go/v1/usage` — assinatura mensal da OpenCode; ver `docs/APIS_
 
 ### `opencode_zen[i]`
 
-Vem de um endpoint de saldo da OpenCode — créditos pré-pagos; ver `docs/APIS_OPENCODE_ZEN.md`.
+Vem de um endpoint de saldo da OpenCode — créditos pré-pagos; ver `APIS_OPENCODE_ZEN.md`.
 
 | Campo             | Tipo             | Notas                                                        |
 | ----------------- | ---------------- | ------------------------------------------------------------ |
@@ -277,7 +277,7 @@ Vem de um endpoint de saldo da OpenCode — créditos pré-pagos; ver `docs/APIS
 
 ### `fal[i]`
 
-Vem de `GET /v1/account/billing` (fal.ai) — créditos pré-pagos; ver `docs/APIS_FAL.md`.
+Vem de `GET /v1/account/billing` (fal.ai) — créditos pré-pagos; ver `APIS_FAL.md`.
 
 | Campo             | Tipo             | Notas                                                        |
 | ----------------- | ---------------- | ------------------------------------------------------------ |
@@ -288,7 +288,7 @@ Vem de `GET /v1/account/billing` (fal.ai) — créditos pré-pagos; ver `docs/AP
 
 ### `bitcoin[i]`
 
-Endereço público de carteira colado no painel (não é chave privada) — saldo on-chain via Blockstream Esplora + cotação via CoinGecko; ver `docs/APIS_BITCOIN.md`.
+Endereço público de carteira colado no painel (não é chave privada) — saldo on-chain via Blockstream Esplora + cotação via CoinGecko; ver `APIS_BITCOIN.md`.
 
 | Campo             | Tipo             | Notas                                                              |
 | ------------------ | ---------------- | ------------------------------------------------------------------ |
