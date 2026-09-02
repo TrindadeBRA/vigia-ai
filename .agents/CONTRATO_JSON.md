@@ -170,6 +170,29 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "account_name": "pub-1234"
     }
   ],
+  "weather": {
+    "ok": true,
+    "error": null,
+    "updated_at": "2026-08-31T00:10:00-03:00",
+    "current": {
+      "temperature_2m": 26.5,
+      "apparent_temperature": 28.1,
+      "relative_humidity_2m": 65,
+      "precipitation": 0.0,
+      "weather_code": 2,
+      "wind_speed_10m": 12.3
+    },
+    "current_units": {
+      "temperature_2m": "°C",
+      "wind_speed_10m": "km/h",
+      "precipitation": "mm"
+    },
+    "daily": {
+      "temperature_2m_max": [28.5],
+      "temperature_2m_min": [18.0]
+    },
+    "location": {"name": "São Paulo"}
+  },
   "currencies": {
     "ok": true,
     "error": null,
@@ -202,6 +225,7 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
 | `fal`          | array de contas | sim (pode ser `[]`) |
 | `bitcoin`      | array de contas | sim (pode ser `[]`) |
 | `adsense`      | array de contas | sim (pode ser `[]`) |
+| `weather`      | objeto ou `null` | não — ausente/`null` = desligado ou oculto; ver `weather` abaixo |
 | `currencies`   | objeto ou `null` | não — ausente/`null` = desligado ou oculto; ver `currencies` abaixo |
 
 ### Campos comuns a toda conta, nos 10 provedores
@@ -338,6 +362,20 @@ Login Google OAuth no coletor (não vai token no JSON) — ganhos estimados de h
 | `unpaid_cents`  | number ou `null` | Saldo não pago (`payments/unpaid`), na moeda da conta          |
 | `account_name`  | string ou `null` | Nome de exibição da conta AdSense                              |
 
+### `weather`
+
+Previsão Open-Meteo. **Não** é lista de contas: é um objeto único, igual a moedas. `null` ou ausente = item desligado/oculto no painel — o firmware **não desenha o card**. O payload completo (hourly/daily extra) alimenta o mostrador web; a placa lê só o recorte abaixo.
+
+| Campo           | Tipo             | Notas                                                                 |
+| --------------- | ---------------- | --------------------------------------------------------------------- |
+| `ok`            | bool             | `false` se a busca do Open-Meteo falhou                               |
+| `error`         | string ou `null` | Mensagem curta quando `ok` é `false`                                  |
+| `updated_at`    | string ou `null` | ISO-8601 do ciclo                                                     |
+| `current`       | objeto ou `null` | Condições atuais (`temperature_2m`, `weather_code`, `apparent_temperature`, `relative_humidity_2m`, `wind_speed_10m`, `precipitation`) |
+| `current_units` | objeto ou `null` | Unidades dos campos em `current` (ex.: `°C`, `km/h`, `mm`)            |
+| `daily`         | objeto ou `null` | A placa usa só o 1º dia de `temperature_2m_max` / `temperature_2m_min` |
+| `location`      | objeto ou `null` | `name` vira o sufixo do card (cidade)                                 |
+
 ### `currencies`
 
 Cotação de moedas (fiat + cripto) convertidas para uma moeda base. **Não** é lista de contas: é um objeto único, igual ao clima. `null` ou ausente = item desligado/oculto no painel — o firmware **não desenha o card**. Lista vazia (`items: []` e `ok: true`) também some da placa. O firmware guarda no máximo 8 itens (`MAX_CURRENCY_ITEMS`); o resto é ignorado (log serial).
@@ -384,7 +422,7 @@ Uma conta só entra no array se estiver visível — o firmware **não desenha o
 
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
    painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai, Bitcoin e AdSense somem ao
-   apagar a última key/endereço/login. Moedas some ao desligar o interruptor ou esvaziar a lista.
+   apagar a última key/endereço/login. Clima e Moedas somem ao desligar o interruptor ou esvaziar a lista.
 2. **Oculta no painel** — a conta **local** de Claude/GPT/Cursor (Keychain/`auth.json`/`state.vscdb`) e
    a **primeira key/endereço** de OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai/Bitcoin (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`/`OPENCODE_GO_API_KEY`/`OPENCODE_ZEN_API_KEY`/`FAL_API_KEY`/`BITCOIN_ADDRESS`)
    e o login AdSense
@@ -392,7 +430,7 @@ Uma conta só entra no array se estiver visível — o firmware **não desenha o
    `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` / `OPENCODE_GO_HIDDEN` / `OPENCODE_ZEN_HIDDEN` / `FAL_HIDDEN` / `BITCOIN_HIDDEN` / `ADSENSE_HIDDEN` em `config.json` — a conta some do array
    (sem chamar a API), mas continua salva/logada; só o card some na ESP32. Contas
    extras coladas (`*_ACCOUNTS`) não têm esse interruptor — remover a conta no
-   painel é o equivalente a "ocultar".
+   painel é o equivalente a "ocultar". Clima e Moedas usam `weather.hidden` / `currencies.hidden`.
 
 Isso é diferente de `ok=false`: uma conta presente no array que falha
 (rede fora do ar, token expirado, rate limit) continua com o card visível,

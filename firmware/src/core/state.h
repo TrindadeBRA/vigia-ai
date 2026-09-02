@@ -22,7 +22,8 @@ enum View : uint8_t
   VIEW_THEME = 11,
   VIEW_ADSENSE = 12,
   VIEW_CURRENCIES = 13,
-  VIEW_COUNT = 14
+  VIEW_WEATHER = 14,
+  VIEW_COUNT = 15
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
@@ -163,9 +164,18 @@ struct WeatherData
 {
   bool hasData = false;
   bool ok = false;
+  String error;
   float temperature = -999;
+  float feelsLike = -999;
+  float humidity = -1;
+  float windSpeed = -1;
+  float precipitation = -1;
+  float tempMax = -999;
+  float tempMin = -999;
   int weatherCode = -1;
-  String tempUnit = "°C";
+  String tempUnit = "C";
+  String windUnit = "km/h";
+  String precipUnit = "mm";
   String locationName = "";
 };
 

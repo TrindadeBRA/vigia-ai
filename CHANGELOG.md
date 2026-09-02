@@ -13,6 +13,7 @@ All notable changes to this project are documented here.
 - Seção **Financeiro** no painel de configuração (Bitcoin + AdSense + cotação de moedas).
 - Provedor **AdSense** (OAuth Google → ganhos estimados de hoje + saldo não pago). Card no firmware, no mostrador e no painel, ao lado do Bitcoin — ver `.agents/APIS_ADSENSE.md`.
 - **Cotação de moedas** (`/api/currencies`): lista livre do usuário, moedas fiat (câmbio via open.er-api.com) ou cripto (CoinGecko, com busca embutida), todas convertidas pra uma moeda base configurável. Card no mostrador web **e no firmware** (Início, Agora e detalhe).
+- Card **Clima** no firmware (Início, Agora e detalhe), no mesmo padrão de Moedas: objeto único no `/usage`, some da placa se desligado/oculto.
 - **Alarmes + notificações push** (`/display/alarmes`): regras de provedor + métrica + limiar, edge-triggered, disparando Web Push (VAPID + service worker) quando cruzadas. Nome sugerido automaticamente e edição inline das regras. Só funciona em contexto seguro (`http://127.0.0.1` ou HTTPS) — ver `.agents/NOTIFICACOES.md`.
 - Provedor **Bitcoin** (endereço público de carteira → saldo on-chain via Blockstream Esplora + cotação USD/BRL via CoinGecko, sem chave privada). Card no firmware, no mostrador e no painel — ver `.agents/APIS_BITCOIN.md`.
 

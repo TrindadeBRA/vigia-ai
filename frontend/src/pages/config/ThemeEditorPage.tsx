@@ -13,7 +13,7 @@ import { THEME_STR } from "./themeCopy";
 import { Button, Card, Checkbox, FieldStatus, TextField } from "./ui";
 import type { ConfigOutlet } from "./usePublicConfig";
 import { usePublicConfig } from "./usePublicConfig";
-import { WallpaperManager } from "./WallpaperManager";
+import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./WallpaperManager";
 
 type Provider = "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "brand" | "weather";
 
@@ -695,65 +695,71 @@ export default function ThemeEditorPage() {
           <FieldStatus status={remove.status} message={remove.message} />
         </Card>
 
-        <div className="col-span-full">
-          <WallpaperManager
-            lang={ctx?.lang || "pt"}
-            onSelectedChange={handleWallpaperSelected}
-            onLocalPreview={setLocalPreviewUrl}
-          />
-        </div>
-
-        <Card title={c.debugTitle} lead={c.debugLead}>
-          <TextField
-            label={c.deviceIpLabel}
-            value={deviceIp}
-            placeholder="192.168.0.42"
-            hint={c.deviceIpHint}
-            onChange={(e) => { setIpTouched(true); setDeviceIp(e.target.value); }}
-          />
-          {!deviceIp ? (
-            <p className={cfgStatus}>{c.deviceUnknown}</p>
-          ) : (
-            <>
-              {cfg?.device.last_seen_s != null ? <p className={cfgStatus}>{c.deviceSeen(cfg.device.last_seen_s)}</p> : null}
-              {isBareLoopback(deviceIp) ? <p className={`${cfgStatus} text-warn`}>{c.deviceLoopback}</p> : null}
-            </>
-          )}
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="secondary"
-              disabled={!deviceIp.trim()}
-              loading={screenshotLoading}
-              onClick={() => {
-                setScreenshotLoading(true);
-                setScreenshotUrl(`http://${deviceIp.trim()}/theme/screenshot?t=${Date.now()}`);
-              }}
-            >
-              {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
-            </Button>
-            <p className={cfgStatus}>{c.screenshotHint}</p>
-            {screenshotUrl ? (
-              <button
-                type="button"
-                className="w-fit cursor-zoom-in border-0 bg-transparent p-0"
-                onClick={() => setScreenshotFullscreen(true)}
-              >
-                <img
-                  src={screenshotUrl}
-                  alt={c.screenshotButton}
-                  className="w-full max-w-[320px] rounded-[10px] border border-edge"
-                  onLoad={() => setScreenshotLoading(false)}
-                  onError={() => {
-                    setScreenshotLoading(false);
-                    setScreenshotUrl(null);
-                    screenshot.fail(c.screenshotError);
-                  }}
-                />
-              </button>
-            ) : null}
-            <FieldStatus status={screenshot.status} message={screenshot.message} />
+        <WallpaperManager
+          lang={ctx?.lang || "pt"}
+          onSelectedChange={handleWallpaperSelected}
+          onLocalPreview={setLocalPreviewUrl}
+        >
+          <div className="col-span-full">
+            <WallpaperLibrary />
           </div>
-        </Card>
+
+          <Card title={c.debugTitle} lead={c.debugLead}>
+            <TextField
+              label={c.deviceIpLabel}
+              value={deviceIp}
+              placeholder="192.168.0.42"
+              hint={c.deviceIpHint}
+              onChange={(e) => { setIpTouched(true); setDeviceIp(e.target.value); }}
+            />
+            {!deviceIp ? (
+              <p className={cfgStatus}>{c.deviceUnknown}</p>
+            ) : (
+              <>
+                {cfg?.device.last_seen_s != null ? <p className={cfgStatus}>{c.deviceSeen(cfg.device.last_seen_s)}</p> : null}
+                {isBareLoopback(deviceIp) ? <p className={`${cfgStatus} text-warn`}>{c.deviceLoopback}</p> : null}
+              </>
+            )}
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="secondary"
+                disabled={!deviceIp.trim()}
+                loading={screenshotLoading}
+                onClick={() => {
+                  setScreenshotLoading(true);
+                  setScreenshotUrl(`http://${deviceIp.trim()}/theme/screenshot?t=${Date.now()}`);
+                }}
+              >
+                {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
+              </Button>
+              <p className={cfgStatus}>{c.screenshotHint}</p>
+              {screenshotUrl ? (
+                <button
+                  type="button"
+                  className="w-fit cursor-zoom-in border-0 bg-transparent p-0"
+                  onClick={() => setScreenshotFullscreen(true)}
+                >
+                  <img
+                    src={screenshotUrl}
+                    alt={c.screenshotButton}
+                    className="w-full max-w-[320px] rounded-[10px] border border-edge"
+                    onLoad={() => setScreenshotLoading(false)}
+                    onError={() => {
+                      setScreenshotLoading(false);
+                      setScreenshotUrl(null);
+                      screenshot.fail(c.screenshotError);
+                    }}
+                  />
+                </button>
+              ) : null}
+              <FieldStatus status={screenshot.status} message={screenshot.message} />
+            </div>
+          </Card>
+
+          <div className="col-span-full">
+            <WallpaperProviders />
+          </div>
+        </WallpaperManager>
       </div>
 
       {screenshotFullscreen && screenshotUrl ? (

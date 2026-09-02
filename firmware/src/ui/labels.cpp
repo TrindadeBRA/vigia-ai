@@ -1,5 +1,7 @@
 #include "ui/internal.h"
 
+#include <math.h>
+
 #include "ui/i18n.h"
 
 String withResta(float pct, const String &whenRaw)
@@ -285,6 +287,157 @@ String currencyQuoteValue(const CurrencyQuote &q, const String &base)
     return q.error.length() ? q.error : String(uiTr().noData);
   }
   return fmtCurrencyAmount(q.price, base);
+}
+
+bool weatherVisible()
+{
+  if (!g_snap.weather.hasData)
+  {
+    return false;
+  }
+  if (g_snap.weather.locationName.length())
+  {
+    return true;
+  }
+  if (g_snap.weather.temperature > -900)
+  {
+    return true;
+  }
+  return !g_snap.weather.ok && g_snap.weather.error.length() > 0;
+}
+
+const char *weatherWmoText(int code)
+{
+  switch (code)
+  {
+  case 0:
+    return "sol";
+  case 1:
+    return "sol/nuv";
+  case 2:
+    return "nuv/sol";
+  case 3:
+    return "nublado";
+  case 45:
+  case 48:
+    return "nevoa";
+  case 51:
+  case 53:
+  case 55:
+  case 56:
+  case 57:
+    return "garoa";
+  case 61:
+  case 63:
+  case 65:
+  case 66:
+  case 67:
+    return "chuva";
+  case 71:
+  case 73:
+  case 75:
+  case 77:
+    return "neve";
+  case 80:
+  case 81:
+  case 82:
+    return "pancada";
+  case 85:
+  case 86:
+    return "neve";
+  case 95:
+  case 96:
+  case 99:
+    return "trovoada";
+  default:
+    return "clima";
+  }
+}
+
+static String weatherFmtTemp(float v, const String &unit)
+{
+  if (v <= -900)
+  {
+    return String(uiTr().noData);
+  }
+  char buf[16];
+  const char *u = "C";
+  if (unit.indexOf('F') >= 0 || unit.indexOf('f') >= 0)
+  {
+    u = "F";
+  }
+  snprintf(buf, sizeof(buf), "%d %s", (int)roundf(v), u);
+  return String(buf);
+}
+
+String weatherTempText(const WeatherData &w)
+{
+  return weatherFmtTemp(w.temperature, w.tempUnit);
+}
+
+String weatherConditionText(const WeatherData &w)
+{
+  if (w.weatherCode < 0)
+  {
+    return String(uiTr().noData);
+  }
+  return String(weatherWmoText(w.weatherCode));
+}
+
+String weatherFeelsText(const WeatherData &w)
+{
+  if (w.feelsLike <= -900)
+  {
+    return "";
+  }
+  return weatherFmtTemp(w.feelsLike, w.tempUnit);
+}
+
+String weatherHumidityText(const WeatherData &w)
+{
+  if (w.humidity < 0)
+  {
+    return "";
+  }
+  return String((int)roundf(w.humidity)) + "%";
+}
+
+String weatherWindText(const WeatherData &w)
+{
+  if (w.windSpeed < 0)
+  {
+    return "";
+  }
+  return String((int)roundf(w.windSpeed)) + " " + w.windUnit;
+}
+
+String weatherPrecipText(const WeatherData &w)
+{
+  if (w.precipitation < 0)
+  {
+    return "";
+  }
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%.1f", w.precipitation);
+  return String(buf) + " " + w.precipUnit;
+}
+
+String weatherHighText(const WeatherData &w)
+{
+  if (w.tempMax <= -900)
+  {
+    return "";
+  }
+  return weatherFmtTemp(w.tempMax, w.tempUnit);
+}
+
+String weatherLowText(const WeatherData &w)
+{
+  if (w.tempMin <= -900)
+  {
+    return "";
+  }
+  return weatherFmtTemp(w.tempMin, w.tempUnit);
 }
 
 const char *emptyProvidersMsg()

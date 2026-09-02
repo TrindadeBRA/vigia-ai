@@ -80,6 +80,15 @@ static const UiStrings kPt = {
     "Carteira",
     "Moedas",
     "Nenhuma moeda configurada.",
+    "Clima",
+    "Temp",
+    "Ceu",
+    "Sensacao",
+    "Umidade",
+    "Vento",
+    "Chuva",
+    "Max",
+    "Min",
 };
 
 static const UiStrings kEn = {
@@ -160,6 +169,15 @@ static const UiStrings kEn = {
     "Wallet",
     "Currencies",
     "No currency configured.",
+    "Weather",
+    "Temp",
+    "Sky",
+    "Feels",
+    "Humidity",
+    "Wind",
+    "Rain",
+    "High",
+    "Low",
 };
 
 static const UiStrings kEs = {
@@ -240,6 +258,15 @@ static const UiStrings kEs = {
     "Billetera",
     "Monedas",
     "Ninguna moneda configurada.",
+    "Clima",
+    "Temp",
+    "Cielo",
+    "Sensacion",
+    "Humedad",
+    "Viento",
+    "Lluvia",
+    "Max",
+    "Min",
 };
 
 const UiStrings &uiTr()

@@ -11,6 +11,7 @@
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
+#include "assets/icons/icon_weather.h"
 
 static int g_nowTimeY = 18;
 static uint8_t g_nowTimeFont = 4;
@@ -131,10 +132,11 @@ void paintNow()
   const bool showFal = g_snap.falCount > 0;
   const bool showBitcoin = g_snap.bitcoinCount > 0;
   const bool showAdsense = g_snap.adsenseCount > 0;
+  const bool showWeather = weatherVisible();
   const bool showCurrencies = currenciesVisible();
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
                 (int)showDeepSeek + (int)showOpenCode + (int)showFal + (int)showBitcoin +
-                (int)showAdsense + (int)showCurrencies;
+                (int)showAdsense + (int)showWeather + (int)showCurrencies;
   if (n == 0)
   {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
@@ -292,6 +294,12 @@ void paintNow()
     String suffix = accountSuffixText(asAcct.label, g_snap.adsenseCount);
     row(slot++, "AdSense", suffix, ICON_ADSENSE, asAcct.ok, asAcct.error, t.adsenseWallet,
         -1, as2, false, "", -1, "");
+  }
+  if (showWeather)
+  {
+    const WeatherData &w = g_snap.weather;
+    row(slot++, t.weather, w.locationName, ICON_WEATHER, w.ok, w.error, t.weatherTemp,
+        -1, weatherTempText(w), true, t.weatherSky, -1, weatherConditionText(w));
   }
   if (showCurrencies)
   {

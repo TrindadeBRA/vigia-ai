@@ -80,6 +80,15 @@ struct UiStrings
   const char *adsenseWallet;
   const char *currencies;
   const char *currenciesEmpty;
+  const char *weather;
+  const char *weatherTemp;
+  const char *weatherSky;
+  const char *weatherFeels;
+  const char *weatherHumidity;
+  const char *weatherWind;
+  const char *weatherPrecip;
+  const char *weatherHigh;
+  const char *weatherLow;
 };
 
 const UiStrings &uiTr();

@@ -545,54 +545,6 @@ static void drawThemeBackground(const CustomTheme &t)
 constexpr int kIconScaledMax = 80;
 static uint16_t g_iconScaleBuf[kIconScaledMax * kIconScaledMax];
 
-static const char *wmoIconText(int code)
-{
-  switch (code)
-  {
-  case 0:
-    return "sol";
-  case 1:
-    return "sol/nuv";
-  case 2:
-    return "nuv/sol";
-  case 3:
-    return "nublado";
-  case 45:
-  case 48:
-    return "nevoa";
-  case 51:
-  case 53:
-  case 55:
-  case 56:
-  case 57:
-    return "garoa";
-  case 61:
-  case 63:
-  case 65:
-  case 66:
-  case 67:
-    return "chuva";
-  case 71:
-  case 73:
-  case 75:
-  case 77:
-    return "neve";
-  case 80:
-  case 81:
-  case 82:
-    return "pancada";
-  case 85:
-  case 86:
-    return "neve";
-  case 95:
-  case 96:
-  case 99:
-    return "trovoada";
-  default:
-    return "clima";
-  }
-}
-
 static void drawThemeWeather(const ThemeIcon &icon)
 {
   const int cx = (int)(icon.x * tft.width());
@@ -603,10 +555,11 @@ static void drawThemeWeather(const ThemeIcon &icon)
   if (w.hasData && w.ok && w.temperature > -900)
   {
     int t = (int)roundf(w.temperature);
-    // TFT_eSPI usa font sem glifo de grau; usa 'o' como fallback visual
-    snprintf(tempBuf, sizeof(tempBuf), "%d%s", t, w.tempUnit.c_str());
+    // TFT_eSPI usa font sem glifo de grau; C/F ASCII
+    snprintf(tempBuf, sizeof(tempBuf), "%d %s", t,
+             (w.tempUnit.indexOf('F') >= 0 || w.tempUnit.indexOf('f') >= 0) ? "F" : "C");
     if (w.weatherCode >= 0)
-      iconLabel = wmoIconText(w.weatherCode);
+      iconLabel = weatherWmoText(w.weatherCode);
   }
   else
   {

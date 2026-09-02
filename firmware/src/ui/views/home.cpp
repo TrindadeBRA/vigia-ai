@@ -11,6 +11,7 @@
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
+#include "assets/icons/icon_weather.h"
 
 static void paintHomeMetric(int x, int y, int w, const char *label, float pct, const String &sub,
                             uint8_t font, int labelH, int barH)
@@ -133,7 +134,7 @@ struct HomeProvider {
 static int buildHomeProviders(HomeProvider out[MAX_HOME_CARDS]) {
   int n = 0;
   auto add = [&](View v, const char* title, const uint16_t* icon, int count, const String& suffix) {
-    if (count <= 0) return;
+    if (count <= 0 || n >= MAX_HOME_CARDS) return;
     out[n++] = {v, title, icon, true, count, suffix};
   };
   // Ordem fixa (igual ao frontend antes do drag): Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, Fal
@@ -175,6 +176,9 @@ static int buildHomeProviders(HomeProvider out[MAX_HOME_CARDS]) {
   if (g_snap.adsenseCount > 0) {
     const AdsenseAccount &a = g_snap.adsense[adsenseWorstIdx()];
     add(VIEW_ADSENSE, "AdSense", ICON_ADSENSE, g_snap.adsenseCount, accountSuffixText(a.label, g_snap.adsenseCount));
+  }
+  if (weatherVisible()) {
+    add(VIEW_WEATHER, uiTr().weather, ICON_WEATHER, 1, g_snap.weather.locationName);
   }
   if (currenciesVisible()) {
     int nItems = g_snap.currencies.itemCount;
@@ -245,6 +249,7 @@ static void paintHomeList()
       else if (v == VIEW_OPENCODE) two = true;
       else if (v == VIEW_BITCOIN) two = true;
       else if (v == VIEW_ADSENSE) two = true;
+      else if (v == VIEW_WEATHER) two = true;
       else two = false;
       baseH = two ? hTwo : hOne;
     }
@@ -441,6 +446,10 @@ static void paintHomeList()
     else if (v == VIEW_FAL) { ok=falAcct.ok; err=falAcct.error; l1=t.accountCredits; p1=-1; s1=falSub; isTwo=false; }
     else if (v == VIEW_BITCOIN) { ok=bcAcct.ok; err=bcAcct.error; l1=t.bitcoinBalance; p1=-1; s1=bc1; l2=t.bitcoinValue; p2=-1; s2=bc2; isTwo=true; }
     else if (v == VIEW_ADSENSE) { ok=asAcct.ok; err=asAcct.error; l1=t.adsenseToday; p1=-1; s1=as1; l2=t.adsenseWallet; p2=-1; s2=as2; isTwo=true; }
+    else if (v == VIEW_WEATHER) {
+      const WeatherData &w = g_snap.weather;
+      ok=w.ok; err=w.error; l1=t.weatherTemp; p1=-1; s1=weatherTempText(w); l2=t.weatherSky; p2=-1; s2=weatherConditionText(w); isTwo=true;
+    }
     else if (v == VIEW_CURRENCIES) {
       const CurrenciesData &cu = g_snap.currencies;
       registerCard(v, top, h);
@@ -700,6 +709,9 @@ static void paintHomeGrid()
       ok=bcAcct.ok; err=bcAcct.error; l1=t.bitcoinBalance; p1=-1; s1=bc1; l2=t.bitcoinValue; p2=-1; s2=bc2; metricCount=2;
     } else if (v == VIEW_ADSENSE) {
       ok=asAcct.ok; err=asAcct.error; l1=t.adsenseToday; p1=-1; s1=as1; l2=t.adsenseWallet; p2=-1; s2=as2; metricCount=2;
+    } else if (v == VIEW_WEATHER) {
+      const WeatherData &w = g_snap.weather;
+      ok=w.ok; err=w.error; l1=t.weatherTemp; p1=-1; s1=weatherTempText(w); l2=t.weatherSky; p2=-1; s2=weatherConditionText(w); metricCount=2;
     } else if (v == VIEW_CURRENCIES) {
       ok = g_snap.currencies.ok;
       err = g_snap.currencies.error;
@@ -852,7 +864,8 @@ void paintHome()
                    (g_snap.cursorCount > 0 ? 4 : 0) | (g_snap.openrouterCount > 0 ? 8 : 0) |
                    (g_snap.deepseekCount > 0 ? 16 : 0) | (g_snap.opencodeCount > 0 ? 32 : 0) |
                    (g_snap.falCount > 0 ? 64 : 0) | (g_snap.bitcoinCount > 0 ? 128 : 0) |
-                   (g_snap.adsenseCount > 0 ? 256 : 0) | (currenciesVisible() ? 512 : 0);
+                   (g_snap.adsenseCount > 0 ? 256 : 0) | (weatherVisible() ? 512 : 0) |
+                   (currenciesVisible() ? 1024 : 0);
   int sizeMask = 0;
   if (g_snap.claudeCount > 0) sizeMask |= (int)uiCardSize(VIEW_CLAUDE) << 0;
   if (g_snap.gptCount > 0) sizeMask |= (int)uiCardSize(VIEW_GPT) << 2;
@@ -863,7 +876,8 @@ void paintHome()
   if (g_snap.falCount > 0) sizeMask |= (int)uiCardSize(VIEW_FAL) << 12;
   if (g_snap.bitcoinCount > 0) sizeMask |= (int)uiCardSize(VIEW_BITCOIN) << 14;
   if (g_snap.adsenseCount > 0) sizeMask |= (int)uiCardSize(VIEW_ADSENSE) << 16;
-  if (currenciesVisible()) sizeMask |= (int)uiCardSize(VIEW_CURRENCIES) << 19;
+  if (weatherVisible()) sizeMask |= (int)uiCardSize(VIEW_WEATHER) << 19;
+  if (currenciesVisible()) sizeMask |= (int)uiCardSize(VIEW_CURRENCIES) << 22;
   sizeMask = (sizeMask << 8) | (int)g_homeLayout;
   if (mask != g_lastHomeConfigMask || sizeMask != g_lastHomeSizeMask)
   {

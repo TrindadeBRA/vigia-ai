@@ -83,10 +83,11 @@ void usageClientLogSnapshot(const char *why)
   }
   if (g_snap.weather.hasData)
   {
-    Serial.printf("  weather ok=%d temp=%.1f%s loc=%s code=%d\n", g_snap.weather.ok ? 1 : 0,
+    Serial.printf("  weather ok=%d temp=%.1f%s loc=%s code=%d err=%s\n", g_snap.weather.ok ? 1 : 0,
                   g_snap.weather.temperature, g_snap.weather.tempUnit.c_str(),
                   g_snap.weather.locationName.length() ? g_snap.weather.locationName.c_str() : "-",
-                  g_snap.weather.weatherCode);
+                  g_snap.weather.weatherCode,
+                  g_snap.weather.error.length() ? g_snap.weather.error.c_str() : "-");
   }
   if (g_snap.currencies.hasData)
   {
@@ -157,8 +158,11 @@ void markAllAccountsFailed(const char *msg)
     g_snap.adsense[i].ok = false;
     g_snap.adsense[i].error = msg;
   }
-  g_snap.weather.hasData = false;
-  g_snap.weather.ok = false;
+  if (g_snap.weather.hasData)
+  {
+    g_snap.weather.ok = false;
+    g_snap.weather.error = msg;
+  }
   if (g_snap.currencies.hasData)
   {
     g_snap.currencies.ok = false;
@@ -409,22 +413,45 @@ bool parseUsageJson(const String &body)
     a.accountName = jsonText(acc["account_name"]);
   }
 
-  // Weather (Open-Meteo) — opcional, não quebra se ausente
+  // Clima (Open-Meteo) — objeto único, igual a moedas. Ausente/null = card some.
   {
     JsonVariantConst w = doc["weather"];
     if (!w.isNull() && w.is<JsonObjectConst>())
     {
       JsonObjectConst wo = w.as<JsonObjectConst>();
-      g_snap.weather.hasData = true;
-      g_snap.weather.ok = wo["ok"] | false;
+      WeatherData &wd = g_snap.weather;
+      wd.hasData = true;
+      wd.ok = wo["ok"] | false;
+      wd.error = wo["error"].isNull() ? "" : String(wo["error"].as<const char *>());
+      wd.temperature = -999;
+      wd.feelsLike = -999;
+      wd.humidity = -1;
+      wd.windSpeed = -1;
+      wd.precipitation = -1;
+      wd.tempMax = -999;
+      wd.tempMin = -999;
+      wd.weatherCode = -1;
+      wd.tempUnit = "C";
+      wd.windUnit = "km/h";
+      wd.precipUnit = "mm";
+      wd.locationName = "";
+
       JsonVariantConst cur = wo["current"];
       if (!cur.isNull() && cur.is<JsonObjectConst>())
       {
         JsonObjectConst co = cur.as<JsonObjectConst>();
         if (!co["temperature_2m"].isNull())
-          g_snap.weather.temperature = co["temperature_2m"].as<float>();
+          wd.temperature = co["temperature_2m"].as<float>();
+        if (!co["apparent_temperature"].isNull())
+          wd.feelsLike = co["apparent_temperature"].as<float>();
+        if (!co["relative_humidity_2m"].isNull())
+          wd.humidity = co["relative_humidity_2m"].as<float>();
+        if (!co["wind_speed_10m"].isNull())
+          wd.windSpeed = co["wind_speed_10m"].as<float>();
+        if (!co["precipitation"].isNull())
+          wd.precipitation = co["precipitation"].as<float>();
         if (!co["weather_code"].isNull())
-          g_snap.weather.weatherCode = co["weather_code"].as<int>();
+          wd.weatherCode = co["weather_code"].as<int>();
       }
       JsonVariantConst cu = wo["current_units"];
       if (!cu.isNull() && cu.is<JsonObjectConst>())
@@ -432,37 +459,62 @@ bool parseUsageJson(const String &body)
         JsonObjectConst cuo = cu.as<JsonObjectConst>();
         String u = jsonText(cuo["temperature_2m"]);
         if (u.length())
-          g_snap.weather.tempUnit = u;
+          wd.tempUnit = u;
+        String wu = jsonText(cuo["wind_speed_10m"]);
+        if (wu.length())
+          wd.windUnit = wu;
+        String pu = jsonText(cuo["precipitation"]);
+        if (pu.length())
+          wd.precipUnit = pu;
       }
       JsonVariantConst loc = wo["location"];
       if (!loc.isNull() && loc.is<JsonObjectConst>())
       {
         String n = jsonText(loc.as<JsonObjectConst>()["name"]);
         if (n.length())
-          g_snap.weather.locationName = n;
+          wd.locationName = n;
       }
-      // Fallback: units.temperature_unit (ex: "celsius")
-      if (g_snap.weather.tempUnit.length() == 0 || g_snap.weather.tempUnit == "celsius" || g_snap.weather.tempUnit == "fahrenheit")
+      JsonVariantConst daily = wo["daily"];
+      if (!daily.isNull() && daily.is<JsonObjectConst>())
+      {
+        JsonObjectConst d = daily.as<JsonObjectConst>();
+        JsonVariantConst tmax = d["temperature_2m_max"];
+        if (!tmax.isNull() && tmax.is<JsonArrayConst>())
+        {
+          JsonArrayConst arr = tmax.as<JsonArrayConst>();
+          if (arr.size() > 0 && !arr[0].isNull())
+            wd.tempMax = arr[0].as<float>();
+        }
+        JsonVariantConst tmin = d["temperature_2m_min"];
+        if (!tmin.isNull() && tmin.is<JsonArrayConst>())
+        {
+          JsonArrayConst arr = tmin.as<JsonArrayConst>();
+          if (arr.size() > 0 && !arr[0].isNull())
+            wd.tempMin = arr[0].as<float>();
+        }
+      }
+      if (wd.tempUnit.length() == 0 || wd.tempUnit == "celsius" || wd.tempUnit == "fahrenheit")
       {
         JsonVariantConst units = wo["units"];
         if (!units.isNull() && units.is<JsonObjectConst>())
         {
           String tu = jsonText(units.as<JsonObjectConst>()["temperature_unit"]);
           if (tu == "fahrenheit")
-            g_snap.weather.tempUnit = "°F";
+            wd.tempUnit = "F";
           else if (tu == "celsius")
-            g_snap.weather.tempUnit = "°C";
+            wd.tempUnit = "C";
         }
       }
-      if (g_snap.weather.tempUnit == "celsius")
-        g_snap.weather.tempUnit = "°C";
-      if (g_snap.weather.tempUnit == "fahrenheit")
-        g_snap.weather.tempUnit = "°F";
+      if (wd.tempUnit == "celsius" || wd.tempUnit == "°C")
+        wd.tempUnit = "C";
+      if (wd.tempUnit == "fahrenheit" || wd.tempUnit == "°F")
+        wd.tempUnit = "F";
     }
     else
     {
       g_snap.weather.hasData = false;
       g_snap.weather.ok = false;
+      g_snap.weather.error = "";
     }
   }
 
