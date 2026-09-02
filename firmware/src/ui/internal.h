@@ -120,6 +120,7 @@ extern int g_openrouterIdx;
 extern int g_deepseekIdx;
 extern int g_opencodeIdx;
 extern int g_falIdx;
+extern int g_bitcoinIdx;
 
 // Geometria do paginador "< i/N >" no topo do card de detalhe — só existe
 // (g_acctPagerVisible) quando o provedor tem mais de uma conta.
@@ -140,6 +141,7 @@ int openrouterWorstIdx();
 int deepseekWorstIdx();
 int opencodeWorstIdx();
 int falWorstIdx();
+int bitcoinWorstIdx();
 
 // Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
 // selo do header deve mostrar o check verde de sucesso em vez do contador.
@@ -158,6 +160,7 @@ void paintOpenRouter();
 void paintDeepSeek();
 void paintOpenCode();
 void paintFal();
+void paintBitcoin();
 void paintStatus();
 void paintNow();
 void paintNowClock();
@@ -182,6 +185,8 @@ String opencodeRemain(const OpenCodeAccount &o);
 String opencodeBalance(const OpenCodeAccount &o);
 String falRemain(const FalAccount &f);
 String falBalance(const FalAccount &f);
+String bitcoinBalance(const BitcoinAccount &b);
+String bitcoinValueText(const BitcoinAccount &b);
 const char *emptyProvidersMsg();
 
 // Chrome das telas de detalhe / Sistema (card com scroll).

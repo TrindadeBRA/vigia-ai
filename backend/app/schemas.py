@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ProviderId = Literal[
-    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal"
+    "claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin"
 ]
 
 USAGE_EXAMPLE = {
@@ -113,12 +113,26 @@ USAGE_EXAMPLE = {
             "remaining_cents": 2450,
         }
     ],
+    "bitcoin": [
+        {
+            "id": "legacy",
+            "label": "",
+            "ok": True,
+            "error": None,
+            "address": "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
+            "balance_btc": 0.00123456,
+            "price_usd_cents": 6500000,
+            "price_brl_cents": 33000000,
+            "value_usd_cents": 8025,
+            "value_brl_cents": 40740,
+        }
+    ],
 }
 
 SSE_WIRE_EXAMPLE = (
     ": connected\n\n"
     "event: usage\n"
-    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode":[],"fal":[]}\n\n'
+    'data: {"updated_at":"2026-08-31T14:00:00-03:00","claude":[],"gpt":[],"cursor":[],"openrouter":[],"deepseek":[],"opencode":[],"fal":[],"bitcoin":[]}\n\n'
     ": ping\n\n"
 )
 
@@ -167,6 +181,15 @@ class CreditsAccount(AccountBase):
     limit_cents: int | None = None
     used_cents: int | None = None
     remaining_cents: int | None = None
+
+
+class BitcoinAccount(AccountBase):
+    address: str | None = Field(default=None, description="Endereço público da carteira (não é chave privada).")
+    balance_btc: float | None = Field(default=None, description="Saldo on-chain (confirmado + mempool) em BTC.")
+    price_usd_cents: int | None = Field(default=None, description="Cotação do BTC em centavos de USD.")
+    price_brl_cents: int | None = Field(default=None, description="Cotação do BTC em centavos de BRL.")
+    value_usd_cents: int | None = Field(default=None, description="balance_btc × price_usd_cents.")
+    value_brl_cents: int | None = Field(default=None, description="balance_btc × price_brl_cents.")
 
 
 class OpenCodeAccount(AccountBase):
@@ -393,6 +416,7 @@ class UsagePayload(BaseModel):
     deepseek: list[CreditsAccount]
     opencode: list[OpenCodeAccount]
     fal: list[CreditsAccount]
+    bitcoin: list[BitcoinAccount]
     weather: WeatherPayload | None = Field(default=None, description="Dados meteorológicos Open-Meteo, se configurado.")
 
 
@@ -476,6 +500,7 @@ class ConfigPatch(BaseModel):
     deepseek_hidden: bool | None = None
     opencode_hidden: bool | None = None
     fal_hidden: bool | None = None
+    bitcoin_hidden: bool | None = None
     claude_local_label: str | None = None
     gpt_local_label: str | None = None
     cursor_local_label: str | None = None
@@ -483,6 +508,7 @@ class ConfigPatch(BaseModel):
     deepseek_primary_label: str | None = None
     opencode_primary_label: str | None = None
     fal_primary_label: str | None = None
+    bitcoin_primary_label: str | None = None
     claude_paste: str | None = None
     gpt_paste: str | None = None
     cursor_paste: str | None = None
@@ -490,6 +516,7 @@ class ConfigPatch(BaseModel):
     deepseek_paste: str | None = None
     opencode_paste: str | None = None
     fal_paste: str | None = None
+    bitcoin_paste: str | None = None
 
 
 class ConfigSaveResult(BaseModel):

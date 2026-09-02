@@ -70,6 +70,19 @@ export type OpenCodeAccount = {
   remaining_cents: number | null;
 };
 
+export type BitcoinAccount = {
+  id: string;
+  label: string;
+  ok: boolean;
+  error: string | null;
+  address: string | null;
+  balance_btc: number | null;
+  price_usd_cents: number | null;
+  price_brl_cents: number | null;
+  value_usd_cents: number | null;
+  value_brl_cents: number | null;
+};
+
 export type WeatherLocation = {
   name: string;
   latitude: number | null;
@@ -244,6 +257,7 @@ export type UsagePayload = {
   deepseek: CreditsAccount[];
   opencode: OpenCodeAccount[];
   fal: CreditsAccount[];
+  bitcoin: BitcoinAccount[];
   weather?: WeatherPayload | null;
 };
 

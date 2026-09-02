@@ -44,6 +44,9 @@ METRICS: dict[str, list[tuple[str, str, str]]] = {
     "fal": [
         ("remaining_cents", "Saldo restante", "cents"),
     ],
+    "bitcoin": [
+        ("value_usd_cents", "Valor em USD", "cents"),
+    ],
 }
 
 
@@ -62,6 +65,7 @@ PROVIDER_NAMES: dict[str, str] = {
     "deepseek": "DeepSeek",
     "opencode": "OpenCode",
     "fal": "fal.ai",
+    "bitcoin": "Bitcoin",
 }
 
 

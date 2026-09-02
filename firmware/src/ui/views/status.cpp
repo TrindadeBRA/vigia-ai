@@ -61,7 +61,7 @@ void paintStatus()
   // Mostra o tamanho do card atualmente selecionado (se estiver numa view de provider, senão HOME)
   {
     View cv = g_view;
-    if (cv != VIEW_CLAUDE && cv != VIEW_GPT && cv != VIEW_CURSOR && cv != VIEW_OPENROUTER && cv != VIEW_DEEPSEEK && cv != VIEW_OPENCODE && cv != VIEW_FAL)
+    if (cv != VIEW_CLAUDE && cv != VIEW_GPT && cv != VIEW_CURSOR && cv != VIEW_OPENROUTER && cv != VIEW_DEEPSEEK && cv != VIEW_OPENCODE && cv != VIEW_FAL && cv != VIEW_BITCOIN)
     {
       // Se está em HOME/STATUS/NOW, usa o provider com mais uso como referência, ou CLAUDE
       if (g_snap.claudeCount > 0)

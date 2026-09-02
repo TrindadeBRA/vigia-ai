@@ -12,6 +12,8 @@ int weekdaySun0(int year, int mo, int dd);
 String fmtPct(float pct);
 String fmtRemain(float used);
 String fmtUsdSite(int cents);
+String fmtBrlSite(int cents);
+String fmtBtc(float btc);
 
 void drawBar(int x, int y, int w, int h, float pct);
 void drawError(int x, int y, const String& err, uint16_t bg);

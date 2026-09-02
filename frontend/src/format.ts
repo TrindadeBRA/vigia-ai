@@ -55,6 +55,19 @@ export function fmtUsd(cents: number | null | undefined): string {
   return cc === 0 ? `$${reais}` : `$${reais}.${String(cc).padStart(2, "0")}`;
 }
 
+export function fmtBrl(cents: number | null | undefined): string {
+  if (cents == null || cents < 0) return "--";
+  if (cents === 0) return "R$0,00";
+  const reais = Math.trunc(cents / 100);
+  const cc = Math.abs(cents % 100);
+  return `R$${reais.toLocaleString("pt-BR")},${String(cc).padStart(2, "0")}`;
+}
+
+export function fmtBtc(btc: number | null | undefined): string {
+  if (btc == null || btc < 0) return "--";
+  return `${btc.toFixed(8)} BTC`;
+}
+
 export function fmtWhen(raw: string | null | undefined): string {
   if (!raw) return "";
   const s = String(raw).trim();

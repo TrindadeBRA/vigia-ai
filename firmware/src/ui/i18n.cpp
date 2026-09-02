@@ -71,6 +71,9 @@ static const UiStrings kPt = {
     "Nenhum provedor configurado. Preencha no painel do coletor.",
     "Aguardando Wi-Fi. No Wokwi rode ./dev wokwi",
     "Aguardando o coletor...",
+    "Saldo",
+    "Valor",
+    "endereco",
 };
 
 static const UiStrings kEn = {
@@ -142,6 +145,9 @@ static const UiStrings kEn = {
     "No provider configured. Fill one in on the collector panel.",
     "Waiting for Wi-Fi. On Wokwi run ./dev wokwi",
     "Waiting for the collector...",
+    "Balance",
+    "Value",
+    "address",
 };
 
 static const UiStrings kEs = {
@@ -213,6 +219,9 @@ static const UiStrings kEs = {
     "Ningun proveedor configurado. Completalo en el panel del colector.",
     "Esperando Wi-Fi. En Wokwi use ./dev wokwi",
     "Esperando al colector...",
+    "Saldo",
+    "Valor",
+    "direccion",
 };
 
 const UiStrings &uiTr()

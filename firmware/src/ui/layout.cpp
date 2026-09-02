@@ -272,6 +272,30 @@ int falWorstIdx()
   return best;
 }
 
+// Bitcoin e saldo de carteira (pago-conforme-o-mercado, nao assinatura) —
+// "pior" e o valor mais baixo em USD, igual OpenRouter/DeepSeek/fal.ai.
+int bitcoinWorstIdx()
+{
+  int best = 0;
+  int bestVal = 0;
+  bool found = false;
+  for (int i = 0; i < g_snap.bitcoinCount; i++)
+  {
+    int val = g_snap.bitcoin[i].valueUsdCents;
+    if (val < 0)
+    {
+      continue;
+    }
+    if (!found || val < bestVal)
+    {
+      bestVal = val;
+      best = i;
+      found = true;
+    }
+  }
+  return best;
+}
+
 static int currentProviderCount()
 {
   switch (g_view)
@@ -290,6 +314,8 @@ static int currentProviderCount()
     return g_snap.opencodeCount;
   case VIEW_FAL:
     return g_snap.falCount;
+  case VIEW_BITCOIN:
+    return g_snap.bitcoinCount;
   default:
     return 0;
   }
@@ -313,6 +339,8 @@ static int *currentProviderIdx()
     return &g_opencodeIdx;
   case VIEW_FAL:
     return &g_falIdx;
+  case VIEW_BITCOIN:
+    return &g_bitcoinIdx;
   default:
     return nullptr;
   }

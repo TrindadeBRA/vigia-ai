@@ -92,6 +92,9 @@ type Strings = {
   weatherHigh: string;
   weatherLow: string;
   weatherRainProb: string;
+  // Bitcoin
+  bitcoinBalance: string;
+  bitcoinValue: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -180,6 +183,8 @@ export const STR: Record<Lang, Strings> = {
     weatherHigh: "Máx",
     weatherLow: "Mín",
     weatherRainProb: "Chuva",
+    bitcoinBalance: "Saldo",
+    bitcoinValue: "Valor",
   },
   en: {
     overview: "Overview",
@@ -266,6 +271,8 @@ export const STR: Record<Lang, Strings> = {
     weatherHigh: "High",
     weatherLow: "Low",
     weatherRainProb: "Rain",
+    bitcoinBalance: "Balance",
+    bitcoinValue: "Value",
   },
   es: {
     overview: "Resumen",
@@ -352,6 +359,8 @@ export const STR: Record<Lang, Strings> = {
     weatherHigh: "Máx",
     weatherLow: "Mín",
     weatherRainProb: "Lluvia",
+    bitcoinBalance: "Saldo",
+    bitcoinValue: "Valor",
   },
 };
 

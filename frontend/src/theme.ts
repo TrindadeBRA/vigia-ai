@@ -75,6 +75,7 @@ export const PROVIDER_ICON: Record<string, string> = {
   deepseek: "/icons/deepseek.png",
   opencode: "/icons/opencode.png",
   fal: "/icons/fal.png",
+  bitcoin: "/icons/bitcoin.png",
   weather: "/icons/weather.png",
 };
 

@@ -15,11 +15,12 @@ enum View : uint8_t
   VIEW_NOW = 7,
   VIEW_OPENCODE = 8,
   VIEW_FAL = 9,
+  VIEW_BITCOIN = 10,
   // Tema custom (protótipo) — tela cheia, sem header, ver ui/customtheme.h.
   // Só entra por gatilho explícito (botão de recarregar ou tema recebido),
   // nunca pelo swipe/paginação normal de views.
-  VIEW_THEME = 10,
-  VIEW_COUNT = 11
+  VIEW_THEME = 11,
+  VIEW_COUNT = 12
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
@@ -130,6 +131,20 @@ struct FalAccount
   int remainingCents = -1;
 };
 
+struct BitcoinAccount
+{
+  String id;
+  String label;
+  bool ok = false;
+  String error;
+  String address;
+  float balanceBtc = -1;
+  int priceUsdCents = -1;
+  int priceBrlCents = -1;
+  int valueUsdCents = -1;
+  int valueBrlCents = -1;
+};
+
 struct UsageSnapshot
 {
   bool httpOk = false;
@@ -149,6 +164,8 @@ struct UsageSnapshot
   int opencodeCount = 0;
   FalAccount fal[MAX_ACCOUNTS];
   int falCount = 0;
+  BitcoinAccount bitcoin[MAX_ACCOUNTS];
+  int bitcoinCount = 0;
 };
 
 extern TFT_eSPI tft;

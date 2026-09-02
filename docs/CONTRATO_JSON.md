@@ -6,7 +6,9 @@ O JSON viaja em `GET /usage` (uma vez) e em `GET /events` (SSE, `event: usage`).
 
 `Content-Type` em `/usage`: `application/json; charset=utf-8`. Em `/events`: `text/event-stream` (`event: usage` + `data:` o JSON).
 
-**v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`, `opencode_go`, `opencode_zen`, `fal`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
+**v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`, `opencode_go`, `opencode_zen`, `fal`, `bitcoin`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
+
+`bitcoin` não é bem uma "conta" (não há login) — cada item da lista é uma **carteira** identificada pelo endereço público colado no painel; ver `bitcoin[i]` abaixo.
 
 Percentuais: **0–100** (float). Se a API nativa mandar 0–1, o coletor converte.
 
@@ -139,6 +141,20 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "used_cents": null,
       "remaining_cents": 2450
     }
+  ],
+  "bitcoin": [
+    {
+      "id": "legacy",
+      "label": "",
+      "ok": true,
+      "error": null,
+      "address": "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
+      "balance_btc": 0.00123456,
+      "price_usd_cents": 6500000,
+      "price_brl_cents": 33000000,
+      "value_usd_cents": 8025,
+      "value_brl_cents": 40740
+    }
   ]
 }
 ```
@@ -158,8 +174,9 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
 | `opencode_go`  | array de contas | sim (pode ser `[]`) |
 | `opencode_zen` | array de contas | sim (pode ser `[]`) |
 | `fal`          | array de contas | sim (pode ser `[]`) |
+| `bitcoin`      | array de contas | sim (pode ser `[]`) |
 
-### Campos comuns a toda conta, nos 8 provedores
+### Campos comuns a toda conta, nos 9 provedores
 
 | Campo   | Tipo             | Notas                                                                                                                                                      |
 | ------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -269,6 +286,19 @@ Vem de `GET /v1/account/billing` (fal.ai) — créditos pré-pagos; ver `docs/AP
 | `used_cents`      | number ou `null` | Sempre `null` — a API não expõe gasto acumulado               |
 | `remaining_cents` | number ou `null` | `credits.current_balance` × 100 (único campo confiável)       |
 
+### `bitcoin[i]`
+
+Endereço público de carteira colado no painel (não é chave privada) — saldo on-chain via Blockstream Esplora + cotação via CoinGecko; ver `docs/APIS_BITCOIN.md`.
+
+| Campo             | Tipo             | Notas                                                              |
+| ------------------ | ---------------- | ------------------------------------------------------------------ |
+| `address`          | string ou `null` | Endereço público da carteira consultada                            |
+| `balance_btc`      | number ou `null` | Saldo confirmado + mempool, em BTC                                 |
+| `price_usd_cents`  | number ou `null` | Cotação do BTC em centavos de USD                                  |
+| `price_brl_cents`  | number ou `null` | Cotação do BTC em centavos de BRL                                  |
+| `value_usd_cents`  | number ou `null` | `balance_btc × price_usd_cents`, em centavos de USD                |
+| `value_brl_cents`  | number ou `null` | `balance_btc × price_brl_cents`, em centavos de BRL                |
+
 ## Outros endpoints
 
 | Método | Caminho   | Corpo                                                                                                         |
@@ -290,12 +320,12 @@ HTTP 5xx só se o processo do coletor quebrar de fato.
 Uma conta só entra no array se estiver visível — o firmware **não desenha o card** de nenhuma conta que não veio no JSON, em nenhuma tela (Início lista/grade, Agora). Um provedor com array vazio (`[]`) não desenha nenhum card daquele tipo. Origens de "de fora":
 
 1. **Nunca preenchida** — nenhuma credencial local e nenhuma conta extra colada no
-   painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen e fal.ai somem ao
-   apagar a última key.
+   painel (`backend/data/config.json`). OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai e Bitcoin somem ao
+   apagar a última key/endereço.
 2. **Oculta no painel** — a conta **local** de Claude/GPT/Cursor (Keychain/`auth.json`/`state.vscdb`) e
-   a **primeira key** de OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`/`OPENCODE_GO_API_KEY`/`OPENCODE_ZEN_API_KEY`/`FAL_API_KEY`)
+   a **primeira key/endereço** de OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai/Bitcoin (`OPENROUTER_API_KEY`/`DEEPSEEK_API_KEY`/`OPENCODE_GO_API_KEY`/`OPENCODE_ZEN_API_KEY`/`FAL_API_KEY`/`BITCOIN_ADDRESS`)
    têm um interruptor **Mostrar na placa** que grava `CLAUDE_HIDDEN` / `GPT_HIDDEN` / `CURSOR_HIDDEN` /
-   `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` / `OPENCODE_GO_HIDDEN` / `OPENCODE_ZEN_HIDDEN` / `FAL_HIDDEN` em `config.json` — a conta some do array
+   `OPENROUTER_HIDDEN` / `DEEPSEEK_HIDDEN` / `OPENCODE_GO_HIDDEN` / `OPENCODE_ZEN_HIDDEN` / `FAL_HIDDEN` / `BITCOIN_HIDDEN` em `config.json` — a conta some do array
    (sem chamar a API), mas continua salva/logada; só o card some na ESP32. Contas
    extras coladas (`*_ACCOUNTS`) não têm esse interruptor — remover a conta no
    painel é o equivalente a "ocultar".

@@ -13,7 +13,7 @@ from app.config import config_path, data_dir
 
 _LOCK = threading.Lock()
 
-PROVIDERS = ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal")
+PROVIDERS = ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin")
 
 _EMPTY_PROVIDER: dict[str, Any] = {
     "hidden": False,

@@ -173,6 +173,30 @@ String fmtUsdSite(int cents) {
   return String(buf);
 }
 
+String fmtBrlSite(int cents) {
+  if (cents < 0) {
+    return "--";
+  }
+  long reais = cents / 100;
+  int cc = (int)(cents % 100);
+  if (cents == 0) {
+    return "R$0,00";
+  }
+  char buf[24];
+  snprintf(buf, sizeof(buf), "R$%ld,%02d", reais, cc);
+  return String(buf);
+}
+
+// 8 casas decimais (precisao de satoshi) — igual ao frontend (fmtBtc em format.ts).
+String fmtBtc(float btc) {
+  if (btc < 0) {
+    return "--";
+  }
+  char buf[24];
+  snprintf(buf, sizeof(buf), "%.8f BTC", btc);
+  return String(buf);
+}
+
 // Barra em pílula: trilho arredondado + preenchimento arredondado por cima.
 void drawBar(int x, int y, int w, int h, float pct) {
   const int r = h / 2;

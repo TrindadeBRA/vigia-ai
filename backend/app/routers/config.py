@@ -14,6 +14,7 @@ from app.local.claude_oauth import claude_token_candidates, credentials_path, la
 from app.local.cursor_state import cursor_missing_hint, cursor_token_candidates, jwt_expired
 from app.local.gpt_oauth import auth_path as gpt_auth_path, gpt_missing_hint, gpt_token_candidates, gpt_token_expired
 from app.netutil import lan_ipv4
+from app.providers.bitcoin import clean_bitcoin_address
 from app.providers.deepseek import clean_deepseek_key
 from app.providers.fal import clean_fal_key
 from app.providers.opencode import clean_opencode_key
@@ -366,6 +367,7 @@ def config_public(listen_host: str, listen_port: int, hub: Any = None) -> Config
             "deepseek": _key_card(cfg, "deepseek"),
             "opencode": _key_card(cfg, "opencode"),
             "fal": _key_card(cfg, "fal"),
+            "bitcoin": _key_card(cfg, "bitcoin"),
         },
         weather=weather_cfg,
         device=_device_public(hub),
@@ -417,6 +419,7 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
             "deepseek": (body.deepseek_hidden, body.deepseek_primary_label, body.deepseek_paste, "deepseek"),
             "opencode": (body.opencode_hidden, body.opencode_primary_label, body.opencode_paste, "opencode"),
             "fal": (body.fal_hidden, body.fal_primary_label, body.fal_paste, "fal"),
+            "bitcoin": (body.bitcoin_hidden, body.bitcoin_primary_label, body.bitcoin_paste, "bitcoin"),
         }
         for name, (hidden, label, paste, kind) in mapping.items():
             p = cfg["providers"][name]
@@ -445,6 +448,11 @@ def post_config(body: ConfigPatch, request: Request) -> ConfigSaveResult:
                     cleaned = clean_fal_key(secret)
                     if not cleaned:
                         raise HTTPException(400, "API key fal.ai inválida; cole a chave admin (id:secret)")
+                    secret = cleaned
+                elif kind == "bitcoin":
+                    cleaned = clean_bitcoin_address(secret)
+                    if not cleaned:
+                        raise HTTPException(400, "Endereço Bitcoin inválido; cole o endereço público da carteira")
                     secret = cleaned
                 p["paste_secret"] = secret
 
@@ -483,6 +491,11 @@ def add_account(body: AddAccountBody) -> AddAccountResult:
         if not cleaned:
             return AddAccountResult(ok=False, error="API key fal.ai inválida; cole a chave admin (id:secret)")
         secret = cleaned
+    elif body.provider == "bitcoin":
+        cleaned = clean_bitcoin_address(secret)
+        if not cleaned:
+            return AddAccountResult(ok=False, error="Endereço Bitcoin inválido; cole o endereço público da carteira")
+        secret = cleaned
     elif not secret:
         return AddAccountResult(ok=False, error="token vazio")
     account_id = secrets.token_hex(4)
@@ -503,7 +516,7 @@ def add_account(body: AddAccountBody) -> AddAccountResult:
     description="Não apaga a conta local (Keychain / state.vscdb / primeira key).",
 )
 def delete_account(provider: str, account_id: str) -> OkResult:
-    if provider not in ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal"):
+    if provider not in ("claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin"):
         return OkResult(ok=False, error="provider inválido")
     if not account_id:
         return OkResult(ok=False, error="id vazio")
@@ -546,6 +559,9 @@ def clear_secret(name: str) -> OkResult:
         "fal": "fal",
         "fal_paste": "fal",
         "FAL_API_KEY": "fal",
+        "bitcoin": "bitcoin",
+        "bitcoin_paste": "bitcoin",
+        "BITCOIN_ADDRESS": "bitcoin",
     }
     provider = mapping.get(name)
     if not provider:

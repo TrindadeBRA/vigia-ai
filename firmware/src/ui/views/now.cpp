@@ -1,6 +1,7 @@
 #include "ui/internal.h"
 
 #include "ui/i18n.h"
+#include "assets/icons/icon_bitcoin.h"
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
@@ -126,8 +127,9 @@ void paintNow()
   const bool showDeepSeek = g_snap.deepseekCount > 0;
   const bool showOpenCode = g_snap.opencodeCount > 0;
   const bool showFal = g_snap.falCount > 0;
+  const bool showBitcoin = g_snap.bitcoinCount > 0;
   const int n = (int)showClaude + (int)showGpt + (int)showCursor + (int)showOpenRouter +
-                (int)showDeepSeek + (int)showOpenCode + (int)showFal;
+                (int)showDeepSeek + (int)showOpenCode + (int)showFal + (int)showBitcoin;
   if (n == 0)
   {
     drawErrorWrapped(pad, bodyTop, rowW, emptyProvidersMsg(), COL_BG, 2);
@@ -192,6 +194,7 @@ void paintNow()
   const DeepSeekAccount &dsAcct = g_snap.deepseek[showDeepSeek ? deepseekWorstIdx() : 0];
   const OpenCodeAccount &ocAcct = g_snap.opencode[showOpenCode ? opencodeWorstIdx() : 0];
   const FalAccount &falAcct = g_snap.fal[showFal ? falWorstIdx() : 0];
+  const BitcoinAccount &bcAcct = g_snap.bitcoin[showBitcoin ? bitcoinWorstIdx() : 0];
 
   String cs1 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.sessionPercent));
   String cs2 = compact ? String() : (String(t.remainingPrefix) + fmtRemain(claudeAcct.weeklyPercent));
@@ -205,6 +208,8 @@ void paintNow()
   String ds1 = deepseekBalance(dsAcct);
   String oc1 = opencodeRemain(ocAcct);
   String fal1 = falBalance(falAcct);
+  String bc1 = bitcoinBalance(bcAcct);
+  String bc2 = bitcoinValueText(bcAcct);
 
   int slot = 0;
   if (showClaude)
@@ -265,5 +270,11 @@ void paintNow()
     String suffix = accountSuffixText(falAcct.label, g_snap.falCount);
     row(slot++, "fal.ai", suffix, ICON_FAL, falAcct.ok, falAcct.error, t.credits,
         -1, fal1, false, "", -1, "");
+  }
+  if (showBitcoin)
+  {
+    String suffix = accountSuffixText(bcAcct.label, g_snap.bitcoinCount);
+    row(slot++, "Bitcoin", suffix, ICON_BITCOIN, bcAcct.ok, bcAcct.error, t.bitcoinBalance,
+        -1, bc1, true, t.bitcoinValue, -1, bc2);
   }
 }

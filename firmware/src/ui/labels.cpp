@@ -219,6 +219,28 @@ String falBalance(const FalAccount &f)
   return f.remainingCents >= 0 ? fmtUsdSite(f.remainingCents) : String(uiTr().noCredits);
 }
 
+// Bitcoin nao e assinatura nem saldo pago-conforme-uso — e um endereco
+// publico de carteira. O card mostra 2 valores (saldo em BTC e o
+// equivalente em USD/BRL), nunca uma barra de percentual.
+String bitcoinBalance(const BitcoinAccount &b)
+{
+  return b.balanceBtc >= 0 ? fmtBtc(b.balanceBtc) : String(uiTr().noData);
+}
+
+String bitcoinValueText(const BitcoinAccount &b)
+{
+  if (b.valueUsdCents < 0 && b.valueBrlCents < 0)
+  {
+    return String(uiTr().noData);
+  }
+  String s = fmtUsdSite(b.valueUsdCents);
+  if (b.valueBrlCents >= 0)
+  {
+    s += " / " + fmtBrlSite(b.valueBrlCents);
+  }
+  return s;
+}
+
 const char *emptyProvidersMsg()
 {
   if (!g_hasFetchedOk)

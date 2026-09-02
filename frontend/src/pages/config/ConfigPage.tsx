@@ -145,6 +145,18 @@ export default function ConfigPage() {
           usesLocalApp={false}
           {...common}
         />
+        <ProviderCard
+          title="Bitcoin"
+          blurb={c.bitcoinBlurb}
+          providerId="bitcoin"
+          p={cfg.providers.bitcoin}
+          pasteKey="bitcoin_paste"
+          hiddenKey="bitcoin_hidden"
+          labelKey="bitcoin_primary_label"
+          placeholder={c.bitcoinAddressPh}
+          usesLocalApp={false}
+          {...common}
+        />
       </div>
 
       <div className="mt-2 w-full">

@@ -65,6 +65,14 @@ void usageClientLogSnapshot(const char *why)
                   f.label.length() ? f.label.c_str() : "-", f.ok ? 1 : 0, f.percent,
                   f.error.length() ? f.error.c_str() : "-");
   }
+  Serial.printf("  bitcoin carteiras=%d\n", g_snap.bitcoinCount);
+  for (int i = 0; i < g_snap.bitcoinCount; i++)
+  {
+    const BitcoinAccount &b = g_snap.bitcoin[i];
+    Serial.printf("    [%d] id=%s label=%s ok=%d btc=%.8f valorUsd=%d err=%s\n", i, b.id.c_str(),
+                  b.label.length() ? b.label.c_str() : "-", b.ok ? 1 : 0, b.balanceBtc,
+                  b.valueUsdCents, b.error.length() ? b.error.c_str() : "-");
+  }
 }
 
 // Falha total (Wi-Fi fora do ar, HTTP != 200, JSON ilegivel): marca todas as
@@ -109,6 +117,11 @@ void markAllAccountsFailed(const char *msg)
   {
     g_snap.fal[i].ok = false;
     g_snap.fal[i].error = msg;
+  }
+  for (int i = 0; i < g_snap.bitcoinCount; i++)
+  {
+    g_snap.bitcoin[i].ok = false;
+    g_snap.bitcoin[i].error = msg;
   }
 }
 
@@ -306,6 +319,28 @@ bool parseUsageJson(const String &body)
     f.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
     f.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
     f.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
+  }
+
+  g_snap.bitcoinCount = 0;
+  for (JsonVariantConst v : doc["bitcoin"].as<JsonArrayConst>())
+  {
+    if (g_snap.bitcoinCount >= MAX_ACCOUNTS)
+    {
+      Serial.println("bitcoin: mais carteiras do que MAX_ACCOUNTS, ignorando o resto");
+      break;
+    }
+    JsonObjectConst acc = v.as<JsonObjectConst>();
+    BitcoinAccount &b = g_snap.bitcoin[g_snap.bitcoinCount++];
+    b.id = jsonText(acc["id"]);
+    b.label = jsonText(acc["label"]);
+    b.ok = acc["ok"] | false;
+    b.error = acc["error"].isNull() ? "" : String(acc["error"].as<const char *>());
+    b.address = jsonText(acc["address"]);
+    b.balanceBtc = jsonFloatOrNeg(acc["balance_btc"]);
+    b.priceUsdCents = acc["price_usd_cents"].isNull() ? -1 : acc["price_usd_cents"].as<int>();
+    b.priceBrlCents = acc["price_brl_cents"].isNull() ? -1 : acc["price_brl_cents"].as<int>();
+    b.valueUsdCents = acc["value_usd_cents"].isNull() ? -1 : acc["value_usd_cents"].as<int>();
+    b.valueBrlCents = acc["value_brl_cents"].isNull() ? -1 : acc["value_brl_cents"].as<int>();
   }
 
   if (g_snap.updatedAt.length() >= 16)

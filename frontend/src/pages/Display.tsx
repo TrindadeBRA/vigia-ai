@@ -2,14 +2,14 @@ import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
-import type { ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
+import type { BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
 import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
 import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
-import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
@@ -198,6 +198,19 @@ function creditsMetric(
     value: acc.remaining_cents != null ? fmtUsd(acc.remaining_cents) : null,
     sub,
   };
+}
+
+function bitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
+  const value =
+    b.value_usd_cents != null && b.value_brl_cents != null
+      ? `${fmtUsd(b.value_usd_cents)} · ${fmtBrl(b.value_brl_cents)}`
+      : b.value_usd_cents != null
+        ? fmtUsd(b.value_usd_cents)
+        : null;
+  return [
+    { label: t.bitcoinBalance, pct: null, value: b.balance_btc != null ? fmtBtc(b.balance_btc) : null, sub: null },
+    { label: t.bitcoinValue, pct: null, value, sub: null },
+  ];
 }
 
 function Icon({ id, large, compact }: { id: string; large?: boolean; compact?: boolean }) {
@@ -402,6 +415,17 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       title: "fal.ai",
       label: f.label || "",
       metrics: [creditsMetric(t, f)],
+    });
+  }
+  for (const b of data.bitcoin || []) {
+    list.push({
+      id: `bitcoin:${b.id}`,
+      provider: "bitcoin",
+      ok: b.ok,
+      error: b.error,
+      title: "Bitcoin",
+      label: b.label || "",
+      metrics: bitcoinMetrics(b, t),
     });
   }
   // Weather widget — só aparece se habilitado e não oculto

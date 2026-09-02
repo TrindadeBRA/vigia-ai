@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Callable
 
 from app.formatting import utc_now
+from app.providers.bitcoin import bitcoin_fail, fetch_bitcoin_accounts
 from app.providers.claude import claude_fail, fetch_claude_accounts
 from app.providers.cursor import cursor_fail, fetch_cursor_accounts
 from app.providers.deepseek import deepseek_fail, fetch_deepseek_accounts
@@ -122,6 +123,20 @@ def mock_payload() -> dict[str, Any]:
                 "remaining_cents": 2450,
             }
         ],
+        "bitcoin": [
+            {
+                "id": "legacy",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "address": "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
+                "balance_btc": 0.00123456,
+                "price_usd_cents": 6500000,
+                "price_brl_cents": 33000000,
+                "value_usd_cents": 8025,
+                "value_brl_cents": 40740,
+            }
+        ],
         "weather": mock_weather_payload(),
     }
 
@@ -136,6 +151,7 @@ _PROVIDER_JOBS: list[tuple[str, Callable[[dict], list[dict[str, Any]]], Callable
     ("deepseek", fetch_deepseek_accounts, deepseek_fail, "legacy"),
     ("opencode", fetch_opencode_accounts, opencode_fail, "legacy"),
     ("fal", fetch_fal_accounts, fal_fail, "legacy"),
+    ("bitcoin", fetch_bitcoin_accounts, bitcoin_fail, "legacy"),
 ]
 
 

@@ -71,6 +71,9 @@ struct UiStrings
   const char *noProviders;
   const char *waitingWifi;
   const char *waitingCollector;
+  const char *bitcoinBalance;
+  const char *bitcoinValue;
+  const char *bitcoinAddress;
 };
 
 const UiStrings &uiTr();
