@@ -46,25 +46,25 @@ powershell -ExecutionPolicy Bypass -File install-scripts\install-windows.ps1
 
 ## O que cada script faz
 
-| Passo | Detalhe |
-|-------|---------|
-| **1. Dependências** | Detecta o gerenciador (apt/dnf/pacman/zypper/apk no Linux, brew no macOS, winget/choco no Windows) e instala `git`, `python3.11+`, `node 20+`, `curl`, `unzip` se faltarem. Valida versões. Instala `PlatformIO` via `pip` se necessário. |
-| **2. Código** | Clona `https://github.com/TrindadeBRA/vigia-ai.git` em `~/vigia-ai` (ou `$VIGIA_DIR` / `-InstallDir` no Windows). Se já existe, faz `git pull --ff-only`. |
-| **3. Backend** | Cria `backend/.venv`, instala `backend[dev]` (`FastAPI`, `uvicorn`, `pywebpush`, `Pillow`, etc). |
-| **4. Frontend** | `npm install` + `npm run build` → `frontend/dist` (servido pelo FastAPI em `:8787`). |
-| **5. Firmware** | Cria `firmware/src/secrets.h` a partir do `.example`, preenche `USAGE_URL` com o IP da LAN, compila `esp32dev` (`pio run -e esp32dev`), detecta porta serial (`/dev/ttyUSB*`, `/dev/cu.usbserial*`, `COM*`) e grava (`pio run -e esp32dev -t upload`). |
-| **6. Atalhos** | Cria `vigia-ai-start.sh` (ou `.ps1`/`.bat` no Windows) que sobe o servidor. No Linux: `.desktop` em `~/.local/share/applications` + cópia na Área de Trabalho + autostart opcional + `systemd --user` opcional. No macOS: `Vigia AI.command` na Área de Trabalho + `LaunchAgent` opcional + `.app` em `/Applications` opcional. No Windows: `Vigia AI.lnk` na Área de Trabalho + Menu Iniciar + Inicializar / Tarefa Agendada opcional. |
-| **7. Servidor** | Pergunta se quer iniciar agora; se sim, abre `http://127.0.0.1:8787/display/config` no navegador e roda `python -m app.main` em foreground. |
+| Passo               | Detalhe                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Dependências** | Detecta o gerenciador (apt/dnf/pacman/zypper/apk no Linux, brew no macOS, winget/choco no Windows) e instala `git`, `python3.11+`, `node 20+`, `curl`, `unzip` se faltarem. Valida versões. Instala `PlatformIO` via `pip` se necessário.                                                                                                                                                                                               |
+| **2. Código**       | Clona `https://github.com/TrindadeBRA/vigia-ai.git` em `~/vigia-ai` (ou `$VIGIA_DIR` / `-InstallDir` no Windows). Se já existe, faz `git pull --ff-only`.                                                                                                                                                                                                                                                                               |
+| **3. Backend**      | Cria `backend/.venv`, instala `backend[dev]` (`FastAPI`, `uvicorn`, `pywebpush`, `Pillow`, etc).                                                                                                                                                                                                                                                                                                                                        |
+| **4. Frontend**     | `npm install` + `npm run build` → `frontend/dist` (servido pelo FastAPI em `:8787`).                                                                                                                                                                                                                                                                                                                                                    |
+| **5. Firmware**     | Cria `firmware/src/secrets.h` a partir do `.example`, preenche `USAGE_URL` com o IP da LAN, compila `esp32dev` (`pio run -e esp32dev`), detecta porta serial (`/dev/ttyUSB*`, `/dev/cu.usbserial*`, `COM*`) e grava (`pio run -e esp32dev -t upload`).                                                                                                                                                                                  |
+| **6. Atalhos**      | Cria `vigia-ai-start.sh` (ou `.ps1`/`.bat` no Windows) que sobe o servidor. No Linux: `.desktop` em `~/.local/share/applications` + cópia na Área de Trabalho + autostart opcional + `systemd --user` opcional. No macOS: `Vigia AI.command` na Área de Trabalho + `LaunchAgent` opcional + `.app` em `/Applications` opcional. No Windows: `Vigia AI.lnk` na Área de Trabalho + Menu Iniciar + Inicializar / Tarefa Agendada opcional. |
+| **7. Servidor**     | Pergunta se quer iniciar agora; se sim, abre `http://127.0.0.1:8787/display/config` no navegador e roda `python -m app.main` em foreground.                                                                                                                                                                                                                                                                                             |
 
 ## Variáveis e flags
 
-| Variável / Flag | Uso |
-|-----------------|-----|
-| `VIGIA_DIR=/caminho` | Diretório de instalação (padrão `~/vigia-ai`). Ex: `VIGIA_DIR=~/projetos/vigia curl ... | bash` |
-| `Yes` / `-Yes` (Windows) | Não pergunta, assume "sim" para tudo |
-| `-NoFlash` (Windows) | Pula gravação da firmware |
-| `-NoStart` (Windows) | Não inicia o servidor ao final |
-| `-InstallDir` (Windows) | Diretório de instalação |
+| Variável / Flag          | Uso                                                                                     |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| `VIGIA_DIR=/caminho`     | Diretório de instalação (padrão `~/vigia-ai`). Ex: `VIGIA_DIR=~/projetos/vigia curl ... | bash` |
+| `Yes` / `-Yes` (Windows) | Não pergunta, assume "sim" para tudo                                                    |
+| `-NoFlash` (Windows)     | Pula gravação da firmware                                                               |
+| `-NoStart` (Windows)     | Não inicia o servidor ao final                                                          |
+| `-InstallDir` (Windows)  | Diretório de instalação                                                                 |
 
 ## Requisitos
 
