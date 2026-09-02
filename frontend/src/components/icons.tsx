@@ -91,6 +91,17 @@ export function GripIcon(props: { size?: number }) {
   );
 }
 
+export function CanvasIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <rect x={3.5} y={5} width={17} height={14} rx={2.2} stroke="currentColor" strokeWidth={2} />
+      <circle cx={8.5} cy={10} r={1.4} fill="currentColor" />
+      <circle cx={12} cy={14.5} r={1.4} fill="currentColor" />
+      <path d="M15.5 9.5h3.5M17.25 8v3" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function PaletteIcon(props: { size?: number }) {
   return (
     <Svg {...props}>

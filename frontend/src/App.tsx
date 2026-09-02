@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import CanvasPage from "./pages/CanvasPage";
 import Display from "./pages/Display";
 import AlarmsPage from "./pages/config/AlarmsPage";
 import ConfigPage from "./pages/config/ConfigPage";
@@ -12,6 +13,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/display/config" replace />} />
         <Route path="/setup" element={<Navigate to="/display/setup" replace />} />
+        <Route path="/display/canvas" element={<CanvasPage />} />
         <Route path="/display" element={<Display />}>
           <Route path="now" />
           <Route path="config" element={<ConfigPage />} />

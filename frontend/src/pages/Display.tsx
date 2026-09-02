@@ -10,7 +10,7 @@ import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
 import { CurrenciesBoardCard, CurrenciesDetail } from "../components/CurrenciesWidget";
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
-import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
@@ -495,7 +495,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
   // Moedas — card único com N cotações, igual ao clima (o backend já filtra
   // hidden/enabled; se chegou aqui é pra mostrar).
   const cu = data.currencies;
-  if (cu && (cu.items.length || (!cu.ok && cu.error))) {
+  if (cu && (((cu.items?.length) ?? 0) > 0 || (!cu.ok && cu.error))) {
     list.push({
       id: "currencies:main",
       provider: "currencies",
@@ -503,7 +503,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: cu.error,
       title: t.currencies,
       label: cu.base,
-      metrics: cu.items.slice(0, 6).map((it) => ({
+      metrics: (cu.items ?? []).slice(0, 6).map((it) => ({
         label: it.label || it.code,
         pct: null,
         value: it.ok ? fmtCurrencyAmount(it.price, cu.base) : null,
@@ -765,7 +765,7 @@ function ProviderCard({
         type="button"
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink",
-          sm ? "justify-center gap-0" : normalizeSize(size) === "wxl" ? "justify-evenly gap-1" : normalizeSize(size) === "wl" ? "justify-evenly gap-1" : normalizeSize(size) === "xl" ? "justify-evenly gap-1" : normalizeSize(size) === "lg" ? "justify-center gap-1" : p.metrics.length > 1 ? "justify-evenly" : "justify-center",
+          sm ? "justify-center gap-0" : normalizeSize(size) === "wxl" ? "justify-evenly gap-1" : normalizeSize(size) === "wl" ? "justify-evenly gap-1" : normalizeSize(size) === "xl" ? "justify-evenly gap-1" : normalizeSize(size) === "lg" ? "justify-center gap-1" : (p.metrics?.length ?? 0) > 1 ? "justify-evenly" : "justify-center",
         )}
         onClick={onOpen}
       >
@@ -774,8 +774,8 @@ function ProviderCard({
         ) : (
           (() => {
             const ns = normalizeSize(size);
-            const slice = sm ? 2 : ns === "lg" ? 2 : ns === "xl" ? 4 : ns === "wl" ? 4 : ns === "wxl" ? 8 : p.metrics.length;
-            return p.metrics.slice(0, slice).map((m, i) => (
+            const slice = sm ? 2 : ns === "lg" ? 2 : ns === "xl" ? 4 : ns === "wl" ? 4 : ns === "wxl" ? 8 : (p.metrics?.length ?? 0);
+            return (p.metrics ?? []).slice(0, slice).map((m, i) => (
               <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} t={t} />
             ));
           })()
@@ -880,6 +880,9 @@ function Sidebar(props: {
         </button>
         <NavLink to="/display/now" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <ClockIcon size={16} /> {t.now}
+        </NavLink>
+        <NavLink to="/display/canvas" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+          <CanvasIcon size={16} /> {t.canvas}
         </NavLink>
       </div>
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
