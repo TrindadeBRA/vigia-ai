@@ -9,6 +9,7 @@ import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
+import { IconCard, providerSupportsCard, type ThemeIconStyle } from "./ThemeCanvasView";
 import { THEME_STR } from "./themeCopy";
 import {
   ICON_PROVIDERS,
@@ -27,6 +28,7 @@ import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./Wallpa
 type ThemeIcon = {
   id: string;
   provider: ThemeProvider;
+  style: ThemeIconStyle;
   x: number;
   y: number;
   scale: number;
@@ -95,6 +97,7 @@ function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<ThemeIc
   merged.icons = (merged.icons || []).map((icon, idx) => ({
     id: icon.id || `i${idx}`,
     provider: (icon.provider as ThemeProvider) || "claude",
+    style: icon.style === "card" ? "card" : "chip",
     x: icon.x ?? 0.5,
     y: icon.y ?? 0.5,
     scale: icon.scale ?? 1,
@@ -148,6 +151,7 @@ function themeToJson(t: ThemeState, hasWallpaper: boolean) {
     },
     icons: t.icons.map((i) => ({
       provider: i.provider,
+      style: i.style,
       x: i.x,
       y: i.y,
       scale: i.scale,
@@ -498,7 +502,7 @@ export default function ThemeEditorPage() {
     setTheme((t) =>
       t.icons.length >= MAX_ICONS
         ? t
-        : { ...t, icons: [...t.icons, { id, provider, x, y, scale: 1, color: null, metric: defaultMetric(provider) }] },
+        : { ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, metric: defaultMetric(provider) }] },
     );
     setSelected(`icon:${id}`);
   }
@@ -652,7 +656,11 @@ export default function ThemeEditorPage() {
                 onRemove={() => removeIcon(icon.id)}
                 removeLabel={c.removeIcon}
               >
-                <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+                {icon.style === "card" && providerSupportsCard(icon.provider) ? (
+                  <IconCard provider={icon.provider} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} lang={lang} />
+                ) : (
+                  <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+                )}
               </CanvasDot>
             ))}
             {theme.texts.map((txt) => (
@@ -754,7 +762,35 @@ export default function ThemeEditorPage() {
                     ))}
                   </select>
                 </label>
-                {providerHasData(selectedIcon.provider) ? (
+                {providerSupportsCard(selectedIcon.provider) ? (
+                  <label className="flex flex-col gap-1.5">
+                    <span className={cfgFieldLabel}>{c.iconStyle}</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateIcon(selectedIcon.id, { style: "chip" })}
+                        className={cn(
+                          "flex-1 rounded-[10px] border px-3 py-2 text-sm font-[650]",
+                          selectedIcon.style === "chip" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                        )}
+                      >
+                        {c.iconStyleChip}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateIcon(selectedIcon.id, { style: "card" })}
+                        className={cn(
+                          "flex-1 rounded-[10px] border px-3 py-2 text-sm font-[650]",
+                          selectedIcon.style === "card" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                        )}
+                      >
+                        {c.iconStyleCard}
+                      </button>
+                    </div>
+                    <span className="text-xs text-ink3">{c.iconStyleHint}</span>
+                  </label>
+                ) : null}
+                {selectedIcon.style !== "card" && providerHasData(selectedIcon.provider) ? (
                   <label className="flex flex-col gap-1.5">
                     <span className={cfgFieldLabel}>{c.metric}</span>
                     <select

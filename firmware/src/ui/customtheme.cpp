@@ -10,6 +10,7 @@ using fs::File;
 #include <math.h>
 
 #include "net/parse.h"
+#include "ui/i18n.h"
 #include "ui/internal.h"
 #include "assets/icons/icon_adsense.h"
 #include "assets/icons/icon_bitcoin.h"
@@ -44,16 +45,28 @@ enum ThemeIconKind : uint8_t
   TICON_COUNT
 };
 
+// "chip" = ícone + 1 valor (compacto, o padrão de sempre); "card" = o
+// mini-cartão que já existe na Início/Agora (nome + apelido + 1-2 barras),
+// reaproveitado aqui pra quem quer mais contexto que um número solto.
+enum ThemeIconStyle : uint8_t
+{
+  TSTYLE_CHIP = 0,
+  TSTYLE_CARD = 1
+};
+
 struct ThemeIcon
 {
   ThemeIconKind kind = TICON_CLAUDE;
+  ThemeIconStyle style = TSTYLE_CHIP;
   float x = 0.5f;
   float y = 0.5f;
   float scale = 1.0f;
   bool hasColor = false;
   uint16_t color = 0;
   // Chave da métrica do /usage (session_percent, remaining_cents, …).
-  // Vazio = padrão do provedor; "none" = só o ícone.
+  // Vazio = padrão do provedor; "none" = só o ícone. Ignorado no estilo
+  // "card", que sempre mostra as métricas fixas do provedor (ver
+  // themeCardContentFor).
   char metric[24] = {0};
 };
 
@@ -236,6 +249,7 @@ static bool parseTheme(const String &json, CustomTheme &out)
     }
     ThemeIcon icon;
     icon.kind = kind;
+    icon.style = (jsonText(it["style"]) == "card") ? TSTYLE_CARD : TSTYLE_CHIP;
     icon.x = clampf(it["x"] | 0.5f, 0.0f, 1.0f);
     icon.y = clampf(it["y"] | 0.5f, 0.0f, 1.0f);
     icon.scale = clampf(it["scale"] | 1.0f, 0.5f, 4.0f);
@@ -785,6 +799,419 @@ static bool scaleThemeIcon(const ThemeIcon &icon, int &targetW, int &targetH)
   return true;
 }
 
+// --- Estilo "card" ------------------------------------------------------
+//
+// Reaproveita o mesmo mini-cartão (nome + apelido + 1-2 barras) já usado na
+// Início/Agora (ver home.cpp/now.cpp: drawStackedTitle, accountSuffixText,
+// withResta, *Balance()/*Remain()) — só que solto no canvas do tema, em vez
+// de preso a uma grade ou lista. O conteúdo por provedor espelha o que
+// paintNow() já mostra pra cada um, então não reinventa "qual métrica
+// importa aqui" — só o layout muda (empilhado, não em colunas).
+
+struct ThemeCardContent
+{
+  String title;
+  String suffix;
+  bool ok = true;
+  String error;
+  const char *l1 = nullptr;
+  float p1 = -1;
+  String s1;
+  const char *l2 = nullptr;
+  float p2 = -1;
+  String s2;
+};
+
+static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
+{
+  const UiStrings &t = uiTr();
+  ThemeCardContent c;
+  switch (kind)
+  {
+  case TICON_CLAUDE:
+  {
+    c.title = "Claude";
+    if (g_snap.claudeCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const ClaudeAccount &a = g_snap.claude[claudeWorstIdx()];
+    c.suffix = accountSuffixText(a.label, g_snap.claudeCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.session5hShort;
+    c.p1 = a.sessionPercent;
+    c.s1 = withResta(a.sessionPercent, a.sessionResets);
+    c.l2 = t.week;
+    c.p2 = a.weeklyPercent;
+    c.s2 = withResta(a.weeklyPercent, a.weeklyResets);
+    return c;
+  }
+  case TICON_GPT:
+  {
+    if (g_snap.gptCount <= 0)
+    {
+      c.title = "GPT";
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const GptAccount &a = g_snap.gpt[gptWorstIdx()];
+    c.title = gptPlanTitle(a);
+    c.suffix = accountSuffixText(a.label, g_snap.gptCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    const bool two = a.sessionPercent >= 0 && a.weeklyPercent >= 0;
+    if (two)
+    {
+      c.l1 = t.session5hShort;
+      c.p1 = a.sessionPercent;
+      c.s1 = withResta(a.sessionPercent, a.sessionResets);
+      c.l2 = t.week;
+      c.p2 = a.weeklyPercent;
+      c.s2 = withResta(a.weeklyPercent, a.weeklyResets);
+    }
+    else if (a.weeklyPercent >= 0)
+    {
+      c.l1 = t.week;
+      c.p1 = a.weeklyPercent;
+      c.s1 = withResta(a.weeklyPercent, a.weeklyResets);
+    }
+    else
+    {
+      c.l1 = t.session5hShort;
+      c.p1 = a.sessionPercent;
+      c.s1 = withResta(a.sessionPercent, a.sessionResets);
+    }
+    return c;
+  }
+  case TICON_CURSOR:
+  {
+    if (g_snap.cursorCount <= 0)
+    {
+      c.title = "Cursor";
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const CursorAccount &a = g_snap.cursor[cursorWorstIdx()];
+    c.title = cursorPlanTitle(a);
+    c.suffix = accountSuffixText(a.label, g_snap.cursorCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.cursorModelsShort;
+    c.p1 = a.percent;
+    c.s1 = a.cycleEnd.length() ? (String(t.resetPrefix) + fmtWhen(a.cycleEnd)) : String();
+    c.l2 = t.otherShort;
+    c.p2 = a.otherPercent;
+    c.s2 = cursorOndemand(a);
+    return c;
+  }
+  case TICON_OPENROUTER:
+  {
+    c.title = "OpenRouter";
+    if (g_snap.openrouterCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const OpenRouterAccount &a = g_snap.openrouter[openrouterWorstIdx()];
+    c.suffix = accountSuffixText(a.label, g_snap.openrouterCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.credits;
+    c.p1 = -1;
+    c.s1 = openrouterBalance(a);
+    return c;
+  }
+  case TICON_DEEPSEEK:
+  {
+    c.title = "DeepSeek";
+    if (g_snap.deepseekCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const DeepSeekAccount &a = g_snap.deepseek[deepseekWorstIdx()];
+    c.suffix = accountSuffixText(a.label, g_snap.deepseekCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.credits;
+    c.p1 = a.percent;
+    c.s1 = deepseekBalance(a);
+    return c;
+  }
+  case TICON_OPENCODE:
+  {
+    c.title = "OpenCode";
+    if (g_snap.opencodeCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const OpenCodeAccount &a = g_snap.opencode[opencodeWorstIdx()];
+    c.suffix = accountSuffixText(a.label, g_snap.opencodeCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.rolling;
+    c.p1 = a.rollingPercent;
+    c.s1 = opencodeRemain(a);
+    c.l2 = t.week;
+    c.p2 = a.weeklyPercent;
+    c.s2 = withResta(a.weeklyPercent, a.weeklyResets);
+    return c;
+  }
+  case TICON_FAL:
+  {
+    c.title = "fal.ai";
+    if (g_snap.falCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const FalAccount &a = g_snap.fal[falWorstIdx()];
+    c.suffix = accountSuffixText(a.label, g_snap.falCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.credits;
+    c.p1 = -1;
+    c.s1 = falBalance(a);
+    return c;
+  }
+  case TICON_BITCOIN:
+  {
+    c.title = "Bitcoin";
+    if (g_snap.bitcoinCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const BitcoinAccount &a = g_snap.bitcoin[bitcoinWorstIdx()];
+    c.suffix = accountSuffixText(a.label, g_snap.bitcoinCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.bitcoinBalance;
+    c.p1 = -1;
+    c.s1 = bitcoinBalance(a);
+    c.l2 = t.bitcoinValue;
+    c.p2 = -1;
+    c.s2 = bitcoinValueText(a);
+    return c;
+  }
+  case TICON_ADSENSE:
+  {
+    c.title = "AdSense";
+    if (g_snap.adsenseCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    const AdsenseAccount &a = g_snap.adsense[adsenseWorstIdx()];
+    c.suffix = accountSuffixText(a.label, g_snap.adsenseCount);
+    c.ok = a.ok;
+    c.error = a.error;
+    c.l1 = t.adsenseToday;
+    c.p1 = -1;
+    c.s1 = adsenseTodayText(a);
+    c.l2 = t.adsenseWallet;
+    c.p2 = -1;
+    c.s2 = adsenseWalletText(a);
+    return c;
+  }
+  default:
+    return c;
+  }
+}
+
+// Linha "rótulo apagado + valor" com barra opcional (pct<0 = sem barra,
+// mostra só o valor) — mesma forma de paintHomeMetric/paintNowMetric
+// (home.cpp/now.cpp), redesenhada aqui pro card solto do tema (largura e
+// posição livres, não presas a uma grade).
+static int drawThemeCardMetric(int x, int y, int w, const char *label, float pct, const String &sub,
+                                uint16_t bgCol, int barH)
+{
+  const uint8_t font = 1;
+  const int labelH = tft.fontHeight(font);
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(0xAD75, bgCol);
+  tft.drawString(label, x, y, font);
+  tft.setTextDatum(TR_DATUM);
+  tft.setTextColor(COL_TEXT, bgCol);
+  if (pct < 0)
+  {
+    tft.drawString(sub, x + w, y, font);
+    return labelH;
+  }
+  tft.drawString(fmtPct(pct), x + w, y, font);
+  drawBar(x, y + labelH + 2, w, barH, pct);
+  int h = labelH + 2 + barH;
+  if (!sub.length())
+  {
+    return h;
+  }
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(0x8410, bgCol);
+  tft.drawString(sub, x, y + h + 1, font);
+  return h + 1 + tft.fontHeight(font);
+}
+
+// Nome (fonte 2) + apelido opcional embaixo (fonte 1, apagado) — mesma forma
+// de drawStackedTitle (labels.cpp), mas com bg explícito: aquela hardcoda
+// COL_CARD como fundo do texto, que não bate com o kBakedCard/0x1082 do
+// card do tema (o tema ignora o tema claro/escuro do sistema de propósito,
+// já que o fundo aqui é arbitrário — cor ou wallpaper do usuário).
+static void drawThemeCardTitle(int x, int y, int maxW, const String &name, const String &suffix, uint16_t fg,
+                                uint16_t bgCol)
+{
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(fg, bgCol);
+  String n = name;
+  while (n.length() && tft.textWidth(n, 2) > maxW)
+  {
+    n.remove(n.length() - 1);
+  }
+  tft.drawString(n, x, y, 2);
+  if (!suffix.length())
+  {
+    return;
+  }
+  String s = suffix;
+  while (s.length() && tft.textWidth(s, 1) > maxW)
+  {
+    s.remove(s.length() - 1);
+  }
+  if (!s.length())
+  {
+    return;
+  }
+  tft.setTextColor(0xAD75, bgCol);
+  tft.drawString(s, x, y + tft.fontHeight(2) + 1, 1);
+}
+
+static void drawThemeCard(const ThemeIcon &icon)
+{
+  ThemeCardContent c = themeCardContentFor(icon.kind);
+  const float sc = icon.scale;
+  const int pad = max(4, (int)roundf(7 * sc));
+  const int rowGap = max(2, (int)roundf(4 * sc));
+  const int barH = max(3, (int)roundf(5 * sc));
+  const int cardW = constrain((int)roundf(128 * sc), 90, tft.width() - 4);
+
+  int iconW = 0, iconH = 0;
+  const bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
+  const bool hasSuffix = c.suffix.length() > 0;
+  const int stackH = stackedTitleHeight(hasSuffix);
+  const int topRowH = hasIcon ? max(iconH, stackH) : stackH;
+
+  const int textX = pad + (hasIcon ? iconW + 6 : 0);
+  const int innerW = cardW - pad * 2;
+
+  int cx = (int)(icon.x * tft.width());
+  int cy = (int)(icon.y * tft.height());
+  uint16_t bgCol = 0x1082;
+
+  if (!c.ok)
+  {
+    const int cardH = pad * 2 + max(topRowH, (int)tft.fontHeight(1));
+    clampBoxCenter(cx, cy, cardW, cardH, tft.width(), tft.height());
+    const int x0 = cx - cardW / 2;
+    const int y0 = cy - cardH / 2;
+    if (icon.hasColor)
+    {
+      tft.drawRoundRect(x0, y0, cardW, cardH, 8, icon.color);
+      tft.fillRoundRect(x0 + 1, y0 + 1, cardW - 2, cardH - 2, 7, bgCol);
+    }
+    else
+    {
+      tft.fillRoundRect(x0, y0, cardW, cardH, 8, bgCol);
+    }
+    if (hasIcon)
+    {
+      tft.setSwapBytes(true);
+      tft.pushImage(x0 + pad, y0 + (cardH - iconH) / 2, iconW, iconH, g_iconScaleBuf, kBakedCard);
+      tft.setSwapBytes(false);
+    }
+    drawErrorWrapped(x0 + textX, y0 + pad, cardW - textX - pad, c.error.length() ? c.error : c.title, bgCol, 1,
+                      cardH - pad * 2);
+    return;
+  }
+
+  const bool hasRow1 = c.l1 != nullptr;
+  const bool hasRow2 = c.l2 != nullptr;
+  auto rowH = [&](float pct, const String &sub) -> int
+  {
+    if (pct < 0)
+    {
+      return tft.fontHeight(1);
+    }
+    int h = tft.fontHeight(1) + 2 + barH;
+    if (sub.length())
+    {
+      h += 1 + tft.fontHeight(1);
+    }
+    return h;
+  };
+  const int row1H = hasRow1 ? rowH(c.p1, c.s1) : 0;
+  const int row2H = hasRow2 ? rowH(c.p2, c.s2) : 0;
+  const int titleToMetric = max(3, (int)roundf(5 * sc));
+  int contentH = topRowH;
+  if (hasRow1)
+  {
+    contentH += titleToMetric + row1H;
+  }
+  if (hasRow2)
+  {
+    contentH += rowGap + row2H;
+  }
+  const int cardH = pad * 2 + contentH;
+
+  clampBoxCenter(cx, cy, cardW, cardH, tft.width(), tft.height());
+  const int x0 = cx - cardW / 2;
+  const int y0 = cy - cardH / 2;
+
+  if (icon.hasColor)
+  {
+    tft.drawRoundRect(x0, y0, cardW, cardH, 8, icon.color);
+    tft.fillRoundRect(x0 + 1, y0 + 1, cardW - 2, cardH - 2, 7, bgCol);
+  }
+  else
+  {
+    tft.fillRoundRect(x0, y0, cardW, cardH, 8, bgCol);
+  }
+
+  if (hasIcon)
+  {
+    tft.setSwapBytes(true);
+    tft.pushImage(x0 + pad, y0 + pad + (topRowH - iconH) / 2, iconW, iconH, g_iconScaleBuf, kBakedCard);
+    tft.setSwapBytes(false);
+  }
+  drawThemeCardTitle(x0 + textX, y0 + pad + (topRowH - stackH) / 2, cardW - textX - pad, c.title, c.suffix,
+                      icon.hasColor ? icon.color : COL_TEXT, bgCol);
+
+  int y = y0 + pad + topRowH;
+  const int mx = x0 + pad;
+  const int mw = innerW;
+  if (hasRow1)
+  {
+    y += titleToMetric;
+    drawThemeCardMetric(mx, y, mw, c.l1, c.p1, c.s1, bgCol, barH);
+    y += row1H;
+  }
+  if (hasRow2)
+  {
+    y += rowGap;
+    drawThemeCardMetric(mx, y, mw, c.l2, c.p2, c.s2, bgCol, barH);
+  }
+}
+
 static void drawThemeWeather(const ThemeIcon &icon)
 {
   int cx = (int)(icon.x * tft.width());
@@ -857,6 +1284,11 @@ static void drawThemeIcon(const ThemeIcon &icon)
     const int r = (int)(10 * icon.scale);
     clampBoxCenter(cx, cy, r * 2, r * 2, tft.width(), tft.height());
     drawEyeIcon(cx, cy, r, 0, 0, 0.0f);
+    return;
+  }
+  if (icon.style == TSTYLE_CARD)
+  {
+    drawThemeCard(icon);
     return;
   }
   int targetW = 0;

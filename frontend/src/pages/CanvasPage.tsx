@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { fetchConfig, openUsageEvents } from "../api/client";
 import type { UsagePayload } from "../api/types";
+import type { DisplayOutlet } from "./config/usePublicConfig";
 import { ThemeCanvasView, loadThemeDraft, parseSavedThemeJson, type ThemeState } from "./config/ThemeCanvasView";
 
 export default function CanvasPage() {
   const navigate = useNavigate();
+  const outlet = useOutletContext<DisplayOutlet | null>();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [wallpaperId, setWallpaperId] = useState<string | null>(null);
@@ -96,6 +98,7 @@ export default function CanvasPage() {
       now={new Date(now + driftMs)}
       wallpaperId={wallpaperId}
       canvasSize={canvasSize}
+      lang={outlet?.lang || "pt"}
       fullscreen
     />
   );

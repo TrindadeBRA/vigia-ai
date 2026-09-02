@@ -25,8 +25,8 @@ const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout };
 type Pal = (typeof PALETTES)[ThemeName];
-type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null; value?: string | null };
-type ProviderMeta = {
+export type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null; value?: string | null };
+export type ProviderMeta = {
   id: string;
   provider: string;
   ok: boolean;
@@ -259,7 +259,7 @@ function gptSessionMetric(g: GptAccount, t: T, nowMs: number): Metric {
   return { label: t.resetIn, pct: null, sub: fmtCountdown(until, nowMs), countdownAt: until };
 }
 
-function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderMeta[] {
+export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderMeta[] {
   const list: ProviderMeta[] = [];
   for (const c of data.claude || []) {
     const metrics: Metric[] = [];

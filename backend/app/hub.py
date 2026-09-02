@@ -70,7 +70,11 @@ class UsageHub:
                 pass
 
     async def start(self) -> None:
-        await self.refresh()
+        # Não espera o primeiro refresh aqui: ele bate 4+ APIs externas em série
+        # (clima, câmbio, bitcoin, cotas) e isso atrasava o lifespan startup do
+        # FastAPI, deixando o Uvicorn sem responder /health por vários segundos
+        # (o `./dev` só espera 5s). /health não depende de snapshot; /usage e
+        # /events já lidam com hub.snapshot() == None até o primeiro ciclo.
         self._task = asyncio.create_task(self._loop(), name="usage-hub")
 
     async def stop(self) -> None:
@@ -89,6 +93,7 @@ class UsageHub:
 
     async def _loop(self) -> None:
         try:
+            await self.refresh()
             while True:
                 await asyncio.sleep(self.seconds)
                 await self.refresh()
