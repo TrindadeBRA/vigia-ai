@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import secrets
 import threading
 import time
@@ -48,12 +49,28 @@ def _safe_return_to(raw: str | None, port: int) -> str:
     return f"http://{netloc}{path}"
 
 
+def _js_string_literal(value: str) -> str:
+    """JSON-encode `value` for safe embedding inside an inline <script> block.
+
+    Escaping just for JS string syntax is not enough: the HTML tokenizer ends
+    a <script> element on the literal byte sequence "</script", regardless of
+    JS string quoting. Escaping '<', '>' and '&' to \\uXXXX prevents that
+    sequence (and any other HTML-significant text) from ever appearing raw.
+    """
+    encoded = json.dumps(value)
+    return (
+        encoded.replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
 def _html_redirect(url: str, message: str) -> HTMLResponse:
     safe = url.replace("&", "&amp;").replace('"', "&quot;")
     body = (
         "<!doctype html><meta charset=utf-8>"
         f'<meta http-equiv="refresh" content="0;url={safe}">'
-        f"<script>location.replace({url!r})</script>"
+        f"<script>location.replace({_js_string_literal(url)})</script>"
         f"<p>{message}</p>"
     )
     return HTMLResponse(body)
