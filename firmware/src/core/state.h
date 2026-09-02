@@ -145,6 +145,16 @@ struct BitcoinAccount
   int valueBrlCents = -1;
 };
 
+struct WeatherData
+{
+  bool hasData = false;
+  bool ok = false;
+  float temperature = -999;
+  int weatherCode = -1;
+  String tempUnit = "°C";
+  String locationName = "";
+};
+
 struct UsageSnapshot
 {
   bool httpOk = false;
@@ -166,6 +176,7 @@ struct UsageSnapshot
   int falCount = 0;
   BitcoinAccount bitcoin[MAX_ACCOUNTS];
   int bitcoinCount = 0;
+  WeatherData weather;
 };
 
 extern TFT_eSPI tft;

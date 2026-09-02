@@ -106,7 +106,7 @@ static void applyTheme(UiTheme theme)
 
 CardSize normalizeCardSize(uint8_t v)
 {
-  if (v <= (uint8_t)CARD_XL)
+  if (v <= (uint8_t)CARD_WXL)
     return (CardSize)v;
   return CARD_MD;
 }
@@ -118,6 +118,10 @@ CardRect cardRectFor(CardSize s, int cols)
     return {1, 1};
   if (s == CARD_LG)
     return {(uint8_t)min(2, max(1, cols)), 1};
+  if (s == CARD_WL)
+    return {1, 4};
+  if (s == CARD_WXL)
+    return {(uint8_t)min(2, max(1, cols)), 4};
   return {(uint8_t)min(2, max(1, cols)), 2};
 }
 
@@ -253,7 +257,7 @@ void uiCycleCardSize(View v)
   if (v >= VIEW_COUNT)
     return;
   CardSize cur = uiCardSize(v);
-  CardSize nxt = (CardSize)(((uint8_t)cur + 1) % 4);
+  CardSize nxt = (CardSize)(((uint8_t)cur + 1) % 6);
   uiSetCardSize(v, nxt);
 }
 

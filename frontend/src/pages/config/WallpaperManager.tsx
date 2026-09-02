@@ -74,6 +74,8 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
             setWallpapers(j.wallpapers || []);
             setSlideshow(j.slideshow || { enabled: false, interval: 5, order: [], count: 0 });
             setProviders(j.providers || null);
+            // Notifica o canvas do ThemeEditorPage pra atualizar o fundo igual à placa
+            window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
         } catch {
             /* ignore */
         }

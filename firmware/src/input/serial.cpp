@@ -104,5 +104,19 @@ void handleSerial()
         v = VIEW_CLAUDE;
       uiSetCardSize(v, CARD_XL);
     }
+    else if (c == '5')
+    {
+      View v = g_view;
+      if (v == VIEW_HOME || v == VIEW_STATUS)
+        v = VIEW_CLAUDE;
+      uiSetCardSize(v, CARD_WL);
+    }
+    else if (c == '6')
+    {
+      View v = g_view;
+      if (v == VIEW_HOME || v == VIEW_STATUS)
+        v = VIEW_CLAUDE;
+      uiSetCardSize(v, CARD_WXL);
+    }
   }
 }

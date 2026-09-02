@@ -1,5 +1,6 @@
 import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
@@ -480,54 +481,111 @@ function wmoLabel(code: number | null | undefined): string {
   return map[code] || `Código ${code}`;
 }
 
-const CARD_ORDER: CardSize[] = ["sm", "md", "lg", "xl"];
-
-function nextSize(cur: CardSize): CardSize {
-  const idx = CARD_ORDER.indexOf(normalizeSize(cur));
-  return CARD_ORDER[(idx + 1) % CARD_ORDER.length];
-}
+const CARD_ORDER: CardSize[] = ["sm", "md", "lg", "xl", "wl", "wxl"];
 
 function sizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
   if (s === "sm") return t.cardSmall;
   if (s === "md") return t.cardNormal;
   if (s === "lg") return t.cardLarge;
+  if (s === "wl") return t.cardWl;
+  if (s === "wxl") return t.cardWxl;
   return t.cardXl;
 }
 
-function SizeToggle({ size, t, onChange }: { size: CardSize; t: T; onChange: (next: CardSize) => void }) {
+function SizeIcon({ size, className }: { size: CardSize; className?: string }) {
+  const s = normalizeSize(size);
+  if (s === "sm") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-current", className)} />;
+  if (s === "md") return <span className={cn("block size-[11px] rounded-[2px] border-[1.5px] border-current", className)} />;
+  if (s === "lg") return <span className={cn("flex size-[11px] gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
+  if (s === "wl") return <span className={cn("flex size-[11px] flex-col gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
+  if (s === "wxl") return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
+  return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
+}
+
+function SizeMenu({ size, t, onChange }: { size: CardSize; t: T; onChange: (next: CardSize) => void }) {
   const cur = normalizeSize(size);
-  const nxt = nextSize(cur);
-  const label = sizeLabel(nxt, t);
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const menuW = 200;
+      const menuH = CARD_ORDER.length * 36 + 8;
+      let top = r.bottom + 6;
+      let left = r.right - menuW;
+      if (left < 8) left = 8;
+      if (top + menuH > window.innerHeight - 8) top = r.top - menuH - 6;
+      if (top < 8) top = 8;
+      setPos({ top, left });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => { window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true); };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (btnRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+
   return (
-    <button
-      type="button"
-      className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
-      title={label}
-      aria-label={label}
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange(nxt);
-      }}
-    >
-      {cur === "sm" ? (
-        <span className="block size-[7px] rounded-[2px] border-[1.5px] border-current" />
-      ) : cur === "md" ? (
-        <span className="block size-[11px] rounded-[2px] border-[1.5px] border-current" />
-      ) : cur === "lg" ? (
-        <span className="flex size-[11px] gap-px">
-          <span className="flex-1 rounded-[1px] border-[1.4px] border-current" />
-          <span className="flex-1 rounded-[1px] border-[1.4px] border-current" />
-        </span>
-      ) : (
-        <span className="grid size-[11px] grid-cols-2 gap-px">
-          <span className="rounded-[1px] border-[1.4px] border-current" />
-          <span className="rounded-[1px] border-[1.4px] border-current" />
-          <span className="rounded-[1px] border-[1.4px] border-current" />
-          <span className="rounded-[1px] border-[1.4px] border-current" />
-        </span>
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
+        title={sizeLabel(cur, t)}
+        aria-label={sizeLabel(cur, t)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+      >
+        <SizeIcon size={cur} />
+      </button>
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          className="fixed z-[100] min-w-[190px] rounded-xl border border-edge bg-panel p-1 shadow-lg"
+          style={{ top: pos.top, left: pos.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {CARD_ORDER.map((s) => {
+            const active = s === cur;
+            return (
+              <button
+                key={s}
+                role="menuitem"
+                type="button"
+                className={cn("flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors", active ? "bg-accent text-accent-ink" : "text-ink hover:bg-chip")}
+                onClick={(e) => { e.stopPropagation(); onChange(s); setOpen(false); }}
+              >
+                <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-[5px] border", active ? "border-accent-ink/30 bg-accent-ink/15" : "border-edge bg-chip")}><SizeIcon size={s} className={active ? "text-accent-ink" : "text-ink3"} /></span>
+                <span className="flex-1 font-medium leading-none">{sizeLabel(s, t)}</span>
+                {active ? <CheckIcon size={14} /> : null}
+              </button>
+            );
+          })}
+        </div>,
+        document.body,
       )}
-    </button>
+    </>
   );
 }
 
@@ -548,7 +606,7 @@ function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize
       {!lifted ? (
         <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
           <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          <SizeToggle size={size} t={t} onChange={onSetSize} />
+          <SizeMenu size={size} t={t} onChange={onSetSize} />
         </div>
       ) : null}
       <WeatherBoardCard weather={p.weather} config={null} t={t} compact={sm} onOpen={onOpen} />
@@ -613,7 +671,7 @@ function ProviderCard({
           >
             <GripIcon size={14} />
           </button>
-          <SizeToggle size={size} t={t} onChange={onSetSize} />
+          <SizeMenu size={size} t={t} onChange={onSetSize} />
         </div>
       ) : null}
       <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
@@ -630,7 +688,7 @@ function ProviderCard({
         type="button"
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink",
-          sm ? "justify-center gap-0" : normalizeSize(size) === "xl" ? "justify-evenly gap-1" : normalizeSize(size) === "lg" ? "justify-center gap-1" : p.metrics.length > 1 ? "justify-evenly" : "justify-center",
+          sm ? "justify-center gap-0" : normalizeSize(size) === "wxl" ? "justify-evenly gap-1" : normalizeSize(size) === "wl" ? "justify-evenly gap-1" : normalizeSize(size) === "xl" ? "justify-evenly gap-1" : normalizeSize(size) === "lg" ? "justify-center gap-1" : p.metrics.length > 1 ? "justify-evenly" : "justify-center",
         )}
         onClick={onOpen}
       >
@@ -639,7 +697,7 @@ function ProviderCard({
         ) : (
           (() => {
             const ns = normalizeSize(size);
-            const slice = sm ? 2 : ns === "lg" ? 2 : ns === "xl" ? 4 : p.metrics.length;
+            const slice = sm ? 2 : ns === "lg" ? 2 : ns === "xl" ? 4 : ns === "wl" ? 4 : ns === "wxl" ? 8 : p.metrics.length;
             return p.metrics.slice(0, slice).map((m, i) => (
               <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} t={t} />
             ));

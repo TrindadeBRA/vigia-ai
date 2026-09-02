@@ -71,6 +71,8 @@ type Strings = {
   cardNormal: string;
   cardLarge: string;
   cardXl: string;
+  cardWl: string;
+  cardWxl: string;
   dragCard: string;
   resetLayout: string;
   // Weather
@@ -163,6 +165,8 @@ export const STR: Record<Lang, Strings> = {
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",
+    cardWl: "Card largo (1×4)",
+    cardWxl: "Card super largo (2×4)",
     dragCard: "Arrastar",
     resetLayout: "Redefinir grade",
     weather: "Clima",
@@ -251,6 +255,8 @@ export const STR: Record<Lang, Strings> = {
     cardNormal: "Normal card",
     cardLarge: "Large card",
     cardXl: "Extra large card",
+    cardWl: "Wide card (1×4)",
+    cardWxl: "Super wide card (2×4)",
     dragCard: "Drag",
     resetLayout: "Reset layout",
     weather: "Weather",
@@ -339,6 +345,8 @@ export const STR: Record<Lang, Strings> = {
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",
+    cardWl: "Card ancho (1×4)",
+    cardWxl: "Card super ancho (2×4)",
     dragCard: "Arrastrar",
     resetLayout: "Restablecer cuadrícula",
     weather: "Clima",

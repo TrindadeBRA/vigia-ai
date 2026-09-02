@@ -51,6 +51,8 @@ struct UiStrings
   const char *cardMd;
   const char *cardLg;
   const char *cardXl;
+  const char *cardWl;
+  const char *cardWxl;
   const char *themeSection;
   const char *dark;
   const char *light;

@@ -18,6 +18,7 @@ using fs::File;
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
+#include "assets/icons/icon_weather.h"
 
 static const char *kMetaPath = "/theme.json";
 static const char *kBgPath = "/theme_bg.raw";
@@ -34,6 +35,7 @@ enum ThemeIconKind : uint8_t
   TICON_DEEPSEEK,
   TICON_OPENCODE,
   TICON_FAL,
+  TICON_WEATHER,
   TICON_BRAND,
   TICON_COUNT
 };
@@ -123,7 +125,7 @@ static bool hexColorToRgb565(const String &hex, uint16_t &out)
 static bool parseIconKind(const String &s, ThemeIconKind &out)
 {
   static const char *kNames[TICON_COUNT] = {"claude", "gpt", "cursor", "openrouter",
-                                            "deepseek", "opencode", "fal", "brand"};
+                                            "deepseek", "opencode", "fal", "weather", "brand"};
   for (int i = 0; i < TICON_COUNT; i++)
   {
     if (s == kNames[i])
@@ -449,6 +451,8 @@ static IconRef iconRefFor(ThemeIconKind k)
     return {ICON_OPENCODE, ICON_OPENCODE_W, ICON_OPENCODE_H};
   case TICON_FAL:
     return {ICON_FAL, ICON_FAL_W, ICON_FAL_H};
+  case TICON_WEATHER:
+    return {ICON_WEATHER, ICON_WEATHER_W, ICON_WEATHER_H};
   default:
     return {nullptr, 0, 0};
   }
@@ -541,8 +545,117 @@ static void drawThemeBackground(const CustomTheme &t)
 constexpr int kIconScaledMax = 80;
 static uint16_t g_iconScaleBuf[kIconScaledMax * kIconScaledMax];
 
+static const char *wmoIconText(int code)
+{
+  switch (code)
+  {
+  case 0:
+    return "sol";
+  case 1:
+    return "sol/nuv";
+  case 2:
+    return "nuv/sol";
+  case 3:
+    return "nublado";
+  case 45:
+  case 48:
+    return "nevoa";
+  case 51:
+  case 53:
+  case 55:
+  case 56:
+  case 57:
+    return "garoa";
+  case 61:
+  case 63:
+  case 65:
+  case 66:
+  case 67:
+    return "chuva";
+  case 71:
+  case 73:
+  case 75:
+  case 77:
+    return "neve";
+  case 80:
+  case 81:
+  case 82:
+    return "pancada";
+  case 85:
+  case 86:
+    return "neve";
+  case 95:
+  case 96:
+  case 99:
+    return "trovoada";
+  default:
+    return "clima";
+  }
+}
+
+static void drawThemeWeather(const ThemeIcon &icon)
+{
+  const int cx = (int)(icon.x * tft.width());
+  const int cy = (int)(icon.y * tft.height());
+  const WeatherData &w = g_snap.weather;
+  char tempBuf[16];
+  const char *iconLabel = "clima";
+  if (w.hasData && w.ok && w.temperature > -900)
+  {
+    int t = (int)roundf(w.temperature);
+    // TFT_eSPI usa font sem glifo de grau; usa 'o' como fallback visual
+    snprintf(tempBuf, sizeof(tempBuf), "%d%s", t, w.tempUnit.c_str());
+    if (w.weatherCode >= 0)
+      iconLabel = wmoIconText(w.weatherCode);
+  }
+  else
+  {
+    snprintf(tempBuf, sizeof(tempBuf), "--");
+  }
+  const uint8_t font = icon.scale >= 2.0f ? 4 : 2;
+  tft.setTextDatum(MC_DATUM);
+  int iconW = tft.textWidth(iconLabel, font);
+  int tempW = tft.textWidth(tempBuf, font);
+  int gap = 4;
+  int padX = 6;
+  int padY = 4;
+  int boxW = iconW + gap + tempW + padX * 2;
+  int boxH = tft.fontHeight(font) + padY * 2;
+  if (boxW < 40)
+    boxW = 40;
+  if (boxH < 18)
+    boxH = 18;
+  int x0 = cx - boxW / 2;
+  int y0 = cy - boxH / 2;
+  uint16_t bgCol = 0x1082;
+  uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
+  if (icon.hasColor)
+  {
+    tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
+    tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+  }
+  else
+  {
+    tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+  }
+  int totalW = iconW + gap + tempW;
+  int startX = cx - totalW / 2;
+  int textY = cy;
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(fg, bgCol);
+  int iconCx = startX + iconW / 2;
+  int tempCx = startX + iconW + gap + tempW / 2;
+  tft.drawString(iconLabel, iconCx, textY, font);
+  tft.drawString(tempBuf, tempCx, textY, font);
+}
+
 static void drawThemeIcon(const ThemeIcon &icon)
 {
+  if (icon.kind == TICON_WEATHER)
+  {
+    drawThemeWeather(icon);
+    return;
+  }
   const int cx = (int)(icon.x * tft.width());
   const int cy = (int)(icon.y * tft.height());
   if (icon.kind == TICON_BRAND)

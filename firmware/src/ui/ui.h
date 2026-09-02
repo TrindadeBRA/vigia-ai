@@ -27,7 +27,9 @@ enum CardSize : uint8_t
   CARD_SM = 0,
   CARD_MD = 1,
   CARD_LG = 2,
-  CARD_XL = 3
+  CARD_XL = 3,
+  CARD_WL = 4,
+  CARD_WXL = 5
 };
 struct CardRect
 {

@@ -78,6 +78,8 @@ extern int g_cardSizeBtnH;
 extern int g_cardSizeSplit1;
 extern int g_cardSizeSplit2;
 extern int g_cardSizeSplit3;
+extern int g_cardSizeSplit4;
+extern int g_cardSizeSplit5;
 extern View g_cardSizeView;
 extern int g_themeBtnY;
 extern int g_themeBtnH;

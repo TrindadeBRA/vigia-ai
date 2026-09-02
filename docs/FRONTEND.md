@@ -14,7 +14,7 @@ Em desenvolvimento o Vite (`:5173`) faz proxy para o FastAPI (`:8787`). Em produ
 
 Tema/cor/idioma do mostrador ficam no `localStorage` (`vigia_display_prefs`). Paleta em `frontend/src/theme.ts` — mesmos RGB do firmware (`firmware/src/ui/theme.cpp`).
 
-O board de `/display` usa **dnd-kit** em grade de células com 4 tamanhos: **pequeno** 1×1, **normal** 1×1, **grande** 2×1 (retangular, ocupa 2 colunas), **extra grande** 2×2 (ocupa 4 células). O packing é retangular (não quadrado) e evita sobreposição. **Redefinir grade** empilha de novo na ordem das contas. Posição e tamanho ficam no `localStorage` (`BoardLayout.size` com `sm|md|lg|xl`). O firmware espelha os mesmos 4 tamanhos (`CardSize` em `ui/ui.h`, NVS `cs` blob, packing 2 colunas em `views/home.cpp`). MCPs: [MCPS.md](MCPS.md).
+O board de `/display` usa **dnd-kit** em grade de células com 6 tamanhos: **pequeno** 1×1, **normal** 1×1, **grande** 2×1, **extra grande** 2×2, **WL** 1×4 (estreito e alto), **WXL** 2×4 (largo e alto, 8 células). O packing é retangular e evita sobreposição. O botão de tamanho abre um **menu** com todos os tamanhos (não mais ciclo). **Redefinir grade** empilha de novo na ordem das contas. Posição e tamanho ficam no `localStorage` (`BoardLayout.size` com `sm|md|lg|xl|wl|wxl`). O firmware espelha os mesmos 6 tamanhos (`CardSize` em `ui/ui.h`, NVS `cs` blob, packing 2 colunas em `views/home.cpp`, até 20 linhas). MCPs: [MCPS.md](MCPS.md).
 
 ## Marca
 

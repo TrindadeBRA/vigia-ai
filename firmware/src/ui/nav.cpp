@@ -350,14 +350,12 @@ void uiHandleTap(int16_t x, int16_t y)
     if (inRow(g_cardSizeBtnY, g_cardSizeBtnH))
     {
       CardSize ns = CARD_MD;
-      if (x < g_cardSizeSplit1)
-        ns = CARD_SM;
-      else if (x < g_cardSizeSplit2)
-        ns = CARD_MD;
-      else if (x < g_cardSizeSplit3)
-        ns = CARD_LG;
-      else
-        ns = CARD_XL;
+      if (x < g_cardSizeSplit1) ns = CARD_SM;
+      else if (x < g_cardSizeSplit2) ns = CARD_MD;
+      else if (x < g_cardSizeSplit3) ns = CARD_LG;
+      else if (x < g_cardSizeSplit4) ns = CARD_XL;
+      else if (x < g_cardSizeSplit5) ns = CARD_WL;
+      else ns = CARD_WXL;
       uiSetCardSize(g_cardSizeView, ns);
       return;
     }
