@@ -229,6 +229,8 @@ export function AdSenseConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
         </Button>
       </ActionRow>
 
+      {!hasClient && !credsReady ? <p className={cfgHint}>{c.adsenseNeedCreds}</p> : null}
+
       {lastMsg ? <FieldStatus status={lastMsg.status} message={lastMsg.message} /> : null}
     </article>
   );

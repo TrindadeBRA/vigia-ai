@@ -90,6 +90,7 @@ export type ConfigCopy = {
   adsenseClientSecretPh: string;
   adsenseRedirectHint: (url: string) => string;
   adsenseLogin: string;
+  adsenseNeedCreds: string;
   adsenseLogout: string;
   adsenseLogoutOk: string;
   adsenseOauthOk: string;
@@ -275,6 +276,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     adsenseClientSecretPh: "GOCSPX-…",
     adsenseRedirectHint: (url) => `URI de redirecionamento (cadastrar no cliente OAuth Web): ${url}`,
     adsenseLogin: "Entrar com Google",
+    adsenseNeedCreds: "Cole o Client ID e o Client Secret reais no fold acima (o texto cinza é só exemplo). Depois o botão liga.",
     adsenseLogout: "Sair do Google",
     adsenseLogoutOk: "Login Google apagado.",
     adsenseOauthOk: "AdSense conectado.",
@@ -456,6 +458,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     adsenseClientSecretPh: "GOCSPX-…",
     adsenseRedirectHint: (url) => `Redirect URI (register it on the Web OAuth client): ${url}`,
     adsenseLogin: "Sign in with Google",
+    adsenseNeedCreds: "Paste the real Client ID and Client Secret in the fold above (the gray text is only an example). Then the button turns on.",
     adsenseLogout: "Sign out of Google",
     adsenseLogoutOk: "Google login cleared.",
     adsenseOauthOk: "AdSense connected.",
@@ -637,6 +640,7 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     adsenseClientSecretPh: "GOCSPX-…",
     adsenseRedirectHint: (url) => `URI de redirección (registrar en el cliente OAuth Web): ${url}`,
     adsenseLogin: "Entrar con Google",
+    adsenseNeedCreds: "Pega el Client ID y el Client Secret reales en el fold de arriba (el texto gris es solo un ejemplo). Después se activa el botón.",
     adsenseLogout: "Salir de Google",
     adsenseLogoutOk: "Login de Google borrado.",
     adsenseOauthOk: "AdSense conectado.",
