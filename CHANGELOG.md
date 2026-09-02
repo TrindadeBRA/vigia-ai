@@ -20,6 +20,7 @@ All notable changes to this project are documented here.
 ### Fixed
 
 - OpenCode Go: `percent` das janelas rolling/weekly/monthly usava `as_percent()` (fração 0–1, certo pro Claude), mas a API do OpenCode já devolve 0–100 — `percent: 1.0` (1% usado) virava 100% na tela. Trocado para `as_percent_points()`, igual ao Cursor.
+- Claude: no schema novo (`limits[]`), o campo `percent` também já vem 0–100, mas o parser usava `as_percent()` (a mesma função certa pro `utilization` do schema antigo). Sessão/semana com uso baixo logo após o reset (ex.: 1%) virava 100% na tela. Trocado para `as_percent_points()` quando `utilization` não está presente.
 
 ### Changed
 

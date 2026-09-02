@@ -1,4 +1,4 @@
-export type CardSize = "sm" | "sw" | "sx" | "md" | "lg" | "xl" | "wl" | "wxl";
+export type CardSize = "sm" | "sw" | "sx" | "sc" | "scw" | "md" | "lg" | "xl" | "wl" | "wxl";
 
 export type Cell = { r: number; c: number };
 
@@ -45,7 +45,7 @@ export function colsForWidth(width: number): number {
 }
 
 export function normalizeSize(s: string | undefined): CardSize {
-  if (s === "sm" || s === "sw" || s === "sx" || s === "md" || s === "lg" || s === "xl" || s === "wl" || s === "wxl") return s;
+  if (s === "sm" || s === "sw" || s === "sx" || s === "sc" || s === "scw" || s === "md" || s === "lg" || s === "xl" || s === "wl" || s === "wxl") return s;
   // migração: "lg" antigo (2×2) vira "xl" (extra grande), resto vira "md" (normal)
   if (s === "lg") return "xl";
   return "md";
@@ -54,7 +54,7 @@ export function normalizeSize(s: string | undefined): CardSize {
 export function rectFor(size: CardSize | undefined, cols: number): Rect {
   const s = normalizeSize(size);
   // grid 1/4: sm/sw/sx 2×1 quarter ≈188×83 retângulo largo, md 2×2 quarter ≈188×180 quadrado
-  if (s === "sm" || s === "sw" || s === "sx") return { w: 2, h: 1 };
+  if (s === "sm" || s === "sw" || s === "sx" || s === "sc" || s === "scw") return { w: 2, h: 1 };
   if (s === "md") return { w: 2, h: 2 };
   if (s === "lg") return { w: Math.min(4, Math.max(2, cols)), h: 2 };
   if (s === "wl") return { w: 2, h: 8 };

@@ -75,6 +75,9 @@ type Strings = {
   cardSmall: string;
   cardSmallWeek: string;
   cardSmallOnDemand: string;
+  cardSmallPrefix: string;
+  cardSmallCrypto: string;
+  cardSmallCryptoWeek: string;
   cardNormal: string;
   cardLarge: string;
   cardXl: string;
@@ -181,6 +184,9 @@ export const STR: Record<Lang, Strings> = {
     cardSmall: "Pequeno · 5h",
     cardSmallWeek: "Pequeno · semana",
     cardSmallOnDemand: "Pequeno · on-demand",
+    cardSmallPrefix: "Pequeno ·",
+    cardSmallCrypto: "Pequeno · cripto 1",
+    cardSmallCryptoWeek: "Pequeno · cripto 2",
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",
@@ -282,6 +288,9 @@ export const STR: Record<Lang, Strings> = {
     cardSmall: "Small · 5h",
     cardSmallWeek: "Small · week",
     cardSmallOnDemand: "Small · on-demand",
+    cardSmallPrefix: "Small ·",
+    cardSmallCrypto: "Small · crypto 1",
+    cardSmallCryptoWeek: "Small · crypto 2",
     cardNormal: "Normal card",
     cardLarge: "Large card",
     cardXl: "Extra large card",
@@ -383,6 +392,9 @@ export const STR: Record<Lang, Strings> = {
     cardSmall: "Pequeño · 5h",
     cardSmallWeek: "Pequeño · semana",
     cardSmallOnDemand: "Pequeño · on-demand",
+    cardSmallPrefix: "Pequeño ·",
+    cardSmallCrypto: "Pequeño · cripto 1",
+    cardSmallCryptoWeek: "Pequeño · cripto 2",
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",

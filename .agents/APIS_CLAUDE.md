@@ -46,7 +46,7 @@ Forma antiga (objeto por janela):
 
 `utilization` pode vir **0–1** ou **0–100**. O coletor normaliza para 0–100.
 
-Forma com `limits[]` (mais nova em alguns clientes): itens com `kind` (`session` / `weekly_all` / etc.), `percent`, `resets_at`.
+Forma com `limits[]` (mais nova em alguns clientes): itens com `kind` (`session` / `weekly_all` / etc.), `percent`, `resets_at`. Esse `percent` já vem **0–100** (não fração 0–1) — o parser (`_win`/loop de `limits` em `backend/app/providers/claude.py`) usa `as_percent_points()` quando `utilization` não está presente. Usar `as_percent()` aqui faz `percent: 1` (1% usado, comum logo após o reset da janela) virar 100% na tela.
 
 ## Rate limit
 

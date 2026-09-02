@@ -21,6 +21,21 @@ def test_parse_claude_windows() -> None:
     assert parsed["weekly_percent"] == 18.5
 
 
+def test_parse_claude_limits_percent_is_already_0_100() -> None:
+    """`limits[].percent` já vem 0–100; `as_percent` antigo multiplicava 1 → 100."""
+    parsed = parse_claude_payload(
+        {
+            "limits": [
+                {"kind": "session", "percent": 1, "resets_at": "2026-08-31T04:55:26-03:00"},
+                {"kind": "weekly_all", "percent": 27, "resets_at": "2026-09-04T03:45:26-03:00"},
+            ]
+        }
+    )
+    assert parsed["ok"] is True
+    assert parsed["session_percent"] == 1.0
+    assert parsed["weekly_percent"] == 27.0
+
+
 def test_parse_gpt_plus_windows() -> None:
     parsed = parse_gpt_payload(
         {
