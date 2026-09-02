@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
 KEYCHAIN_SERVICES = ("Claude Code-credentials",)
+KEYCHAIN_CACHE_TTL_S = 30.0
 
 _last_keychain_err: str | None = None
+_keychain_cache: tuple[float, tuple[str | None, int | None, str | None]] | None = None
 
 
 def parse_oauth_blob(data: Any) -> tuple[str | None, int | None]:
@@ -77,7 +80,12 @@ def last_keychain_error() -> str | None:
 
 
 def from_macos_keychain() -> tuple[str | None, int | None, str | None]:
-    global _last_keychain_err
+    global _last_keychain_err, _keychain_cache
+    if _keychain_cache is not None:
+        cached_at, result = _keychain_cache
+        if time.monotonic() - cached_at < KEYCHAIN_CACHE_TTL_S:
+            _last_keychain_err = result[2]
+            return result
     _last_keychain_err = None
     if os.uname().sysname != "Darwin":
         return None, None, None
@@ -106,9 +114,12 @@ def from_macos_keychain() -> tuple[str | None, int | None, str | None]:
             best = (token, exp)
     if best:
         _last_keychain_err = None
-        return best[0], best[1], None
-    _last_keychain_err = last_err
-    return None, None, last_err
+        result = (best[0], best[1], None)
+    else:
+        _last_keychain_err = last_err
+        result = (None, None, last_err)
+    _keychain_cache = (time.monotonic(), result)
+    return result
 
 
 def credentials_path(cfg: dict | None = None) -> Path:
