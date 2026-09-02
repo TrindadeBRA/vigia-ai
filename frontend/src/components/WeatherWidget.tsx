@@ -5,10 +5,6 @@ import type { T } from "../i18n";
 import { PROVIDER_ICON } from "../theme";
 import { cardLabel, emptyNote, errorText, iconChip, iconImg, metricCard, metricsGrid, num } from "../tw";
 
-function WeatherIcon({ code, size = 28 }: { code: number | null | undefined; size?: number }) {
-    return <span style={{ fontSize: size, lineHeight: 1 }} aria-hidden>{wmoEmoji(code)}</span>;
-}
-
 function MiniHour({ time, temp, code, precipProb, tempUnit }: { time: string; temp: number | null | undefined; code: number | null | undefined; precipProb: number | null | undefined; tempUnit: string }) {
     return (
         <div className="flex min-w-[56px] flex-col items-center gap-1 rounded-xl border border-edge bg-chip px-2 py-2">
@@ -67,7 +63,12 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
         return (
             <button type="button" onClick={onOpen} className="flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left">
                 <div className="mb-1.5 flex items-center gap-2">
-                    <WeatherIcon code={cur?.weather_code} size={22} />
+                    <div className="relative shrink-0">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
+                            <img className="size-3.5 object-contain" src={PROVIDER_ICON.weather} alt="weather" draggable={false} />
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 flex size-[14px] items-center justify-center rounded-full bg-panel text-[10px] leading-none shadow-[0_0_0_1px_var(--card-border)]">{wmoEmoji(cur?.weather_code)}</span>
+                    </div>
                     <div className="min-w-0 flex-1">
                         <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-bold leading-none">{locName || t.weather}</div>
                         <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{wmoLabel(cur?.weather_code)}</div>
@@ -87,7 +88,12 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
     return (
         <button type="button" onClick={onOpen} className="flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left">
             <div className="mb-2.5 flex items-center gap-2.5">
-                <WeatherIcon code={cur?.weather_code} size={32} />
+                <div className="relative shrink-0">
+                    <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
+                        <img className="size-[23px] object-contain" src={PROVIDER_ICON.weather} alt="weather" draggable={false} />
+                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5 flex size-[18px] items-center justify-center rounded-full bg-panel text-[13px] leading-none shadow-[0_0_0_1px_var(--card-border)]">{wmoEmoji(cur?.weather_code)}</span>
+                </div>
                 <div className="min-w-0 flex-1">
                     <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[14px] font-bold leading-none">{locName || t.weather}</div>
                     <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[12px] text-ink3">{wmoLabel(cur?.weather_code)}</div>

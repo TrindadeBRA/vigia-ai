@@ -152,3 +152,23 @@ export function ArrowLeftIcon(props: { size?: number; className?: string }) {
 export function ChevronRightIcon(props: { size?: number; className?: string }) {
   return <Svg {...props} d="M9 18l6-6-6-6" />;
 }
+
+export function CopyIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <rect x={9} y={9} width={10} height={10} rx={1.6} stroke="currentColor" strokeWidth={2} />
+      <path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function TrashIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path d="M4 7h16" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 7l.5 9.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5L17 7" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 11v4M14 11v4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}

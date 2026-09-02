@@ -1,4 +1,4 @@
-export type CardSize = "sm" | "md" | "lg" | "xl" | "wl" | "wxl";
+export type CardSize = "sm" | "sw" | "md" | "lg" | "xl" | "wl" | "wxl";
 
 export type Cell = { r: number; c: number };
 
@@ -17,24 +17,35 @@ export const CELL_MIN = 168;
 export const CELL_GAP = 14;
 export const SLOT_MIN = 104;
 export const CELL_ROW = 0.96;
+// unidade = meia linha normal: permite card pequeno = 1/2 do normal (2 pequenos empilham = 1 normal)
+// grid 1/4 = quarter: 4 unidades = 1 normal, pequeno quadradinho = 2×2 quarter = mesmo visual mas grid mais fino
+export const CELL_ROW_HALF = 0.48;
 
 export function rowPxFor(cellPx: number): number {
   return Math.max(88, Math.round(cellPx * CELL_ROW));
 }
+export function halfRowPxFor(cellPx: number): number {
+  return Math.max(44, Math.round((rowPxFor(cellPx) - CELL_GAP) / 2));
+}
+export function quarterRowPxFor(cellPx: number): number {
+  return Math.max(22, Math.round((halfRowPxFor(cellPx) - CELL_GAP) / 2));
+}
 
-export const MIN_PAD_ROWS = 3;
+export const MIN_PAD_ROWS = 12;
 
 export function emptyBoard(): BoardLayout {
   return { size: {}, pos: {} };
 }
 
 export function colsForWidth(width: number): number {
-  if (width <= 0) return 4;
-  return Math.max(1, Math.floor((width + CELL_GAP) / (CELL_MIN + CELL_GAP)));
+  if (width <= 0) return 8;
+  // grid 1/4: largura da célula = metade do normal, então dobra colunas visuais mas mantém mesmo tamanho de card
+  const quarterMin = Math.max(84, Math.round(CELL_MIN / 2));
+  return Math.max(2, Math.floor((width + CELL_GAP) / (quarterMin + CELL_GAP)));
 }
 
 export function normalizeSize(s: string | undefined): CardSize {
-  if (s === "sm" || s === "md" || s === "lg" || s === "xl" || s === "wl" || s === "wxl") return s;
+  if (s === "sm" || s === "sw" || s === "md" || s === "lg" || s === "xl" || s === "wl" || s === "wxl") return s;
   // migração: "lg" antigo (2×2) vira "xl" (extra grande), resto vira "md" (normal)
   if (s === "lg") return "xl";
   return "md";
@@ -42,11 +53,13 @@ export function normalizeSize(s: string | undefined): CardSize {
 
 export function rectFor(size: CardSize | undefined, cols: number): Rect {
   const s = normalizeSize(size);
-  if (s === "sm" || s === "md") return { w: 1, h: 1 };
-  if (s === "lg") return { w: Math.min(2, Math.max(1, cols)), h: 1 };
-  if (s === "wl") return { w: 1, h: 4 };
-  if (s === "wxl") return { w: Math.min(2, Math.max(1, cols)), h: 4 };
-  return { w: Math.min(2, Math.max(1, cols)), h: 2 };
+  // grid 1/4: sm/sw 2×1 quarter ≈188×83 retângulo largo, md 2×2 quarter ≈188×180 quadrado
+  if (s === "sm" || s === "sw") return { w: 2, h: 1 };
+  if (s === "md") return { w: 2, h: 2 };
+  if (s === "lg") return { w: Math.min(4, Math.max(2, cols)), h: 2 };
+  if (s === "wl") return { w: 2, h: 8 };
+  if (s === "wxl") return { w: Math.min(4, Math.max(2, cols)), h: 8 };
+  return { w: Math.min(4, Math.max(2, cols)), h: 4 };
 }
 
 export function spanFor(size: CardSize | undefined, cols: number): number {
@@ -114,13 +127,13 @@ export function rowCount(ids: string[], board: BoardLayout, cols: number, pad = 
 }
 
 export function padRowsForHeight(leftoverPx: number, cellPx = SLOT_MIN): number {
-  const rowH = cellPx + CELL_GAP;
+  const rowH = rowPxFor(cellPx) + CELL_GAP;
   if (leftoverPx <= 0) return MIN_PAD_ROWS;
   return Math.max(MIN_PAD_ROWS, Math.ceil((leftoverPx + CELL_GAP) / rowH));
 }
 
 function firstFree(occ: Map<string, string>, rect: Rect, cols: number, rows: number): Cell {
-  const limit = Math.max(rows, 8);
+  const limit = Math.max(rows, 16);
   for (let r = 0; r < limit; r++) {
     for (let c = 0; c <= cols - rect.w; c++) {
       if (isFree(occ, { r, c }, rect, cols)) return { r, c };
@@ -134,7 +147,7 @@ function packRowMajor(ids: string[], size: Record<string, CardSize>, cols: numbe
   const pos: Record<string, Cell> = {};
   for (const id of ids) {
     const rect = rectFor(size[id], cols);
-    const cell = firstFree(occ, rect, cols, 32);
+    const cell = firstFree(occ, rect, cols, 64);
     pos[id] = cell;
     visitRect(cell, rect, (r, c) => occ.set(`${r}:${c}`, id));
   }
@@ -172,7 +185,7 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
       const occ = occupancy(ids.filter((id) => pos[id]), { size, pos }, cols);
       for (const id of missing) {
         const rect = rectFor(size[id], cols);
-        const cell = firstFree(occ, rect, cols, 32);
+        const cell = firstFree(occ, rect, cols, 64);
         pos[id] = cell;
         visitRect(cell, rect, (r, c) => occ.set(`${r}:${c}`, id));
       }
@@ -259,7 +272,7 @@ export function fitBoard(ids: string[], board: BoardLayout, cols: number): Board
     for (const id of ids) {
       if (!conflicted.has(id)) continue;
       const rect = rectFor(next.size[id], cols);
-      const cell = firstFree(fresh, rect, cols, 32);
+      const cell = firstFree(fresh, rect, cols, 64);
       pos[id] = cell;
       visitRect(cell, rect, (r, c) => fresh.set(`${r}:${c}`, id));
     }
@@ -275,6 +288,17 @@ export function sameBoard(a: BoardLayout | undefined, b: BoardLayout, ids: strin
     const pa = a.pos?.[id];
     const pb = b.pos?.[id];
     if (!pa || !pb || pa.r !== pb.r || pa.c !== pb.c) return false;
+  }
+  // clones extras: se b tem clone de ids que a não tem (ou vice-versa), não é igual
+  const aKeys = new Set([...Object.keys(a.pos || {}), ...Object.keys(a.size || {})]);
+  const bKeys = new Set([...Object.keys(b.pos || {}), ...Object.keys(b.size || {})]);
+  for (const k of bKeys) {
+    if (!aKeys.has(k) && isCloneId(k) && ids.includes(baseIdFromClone(k))) return false;
+    if (!aKeys.has(k) && ids.includes(k)) return false;
+  }
+  for (const k of aKeys) {
+    if (!bKeys.has(k) && isCloneId(k) && ids.includes(baseIdFromClone(k))) return false;
+    if (!bKeys.has(k) && ids.includes(k)) return false;
   }
   return true;
 }
@@ -317,7 +341,7 @@ export function setCardSize(ids: string[], board: BoardLayout, id: string, size:
   if (!pos) return next;
   const rect = rectFor(size, cols);
   const dest = clampCell(pos, rect, cols);
-  if (rect.w === 1 && rect.h === 1) return withLayoutCols({ ...next, pos: { ...board.pos, [id]: dest } }, cols);
+  if (rect.w <= 2 && rect.h <= 2) return withLayoutCols({ ...next, pos: { ...board.pos, [id]: dest } }, cols);
   return placeCard(ids, next, id, dest, cols);
 }
 
@@ -338,4 +362,63 @@ export function dropTarget(overId: string, board: BoardLayout): Cell | null {
   if (slot) return slot;
   const pos = board.pos[overId];
   return pos || null;
+}
+
+// ── Clones: múltiplos blocos do mesmo provider (ex: 2× Claude) ──────────
+
+export const CLONE_SEP = "::clone:";
+
+export function isCloneId(id: string): boolean {
+  return id.includes(CLONE_SEP);
+}
+
+export function baseIdFromClone(id: string): string {
+  const idx = id.indexOf(CLONE_SEP);
+  return idx >= 0 ? id.slice(0, idx) : id;
+}
+
+export function nextCloneId(baseId: string, board: BoardLayout): string {
+  let max = 0;
+  for (const key of Object.keys(board.pos)) {
+    if (key === baseId || key.startsWith(baseId + CLONE_SEP)) {
+      const suffix = key.slice(baseId.length + CLONE_SEP.length);
+      const n = parseInt(suffix, 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  }
+  for (const key of Object.keys(board.size)) {
+    if (key.startsWith(baseId + CLONE_SEP)) {
+      const suffix = key.slice(baseId.length + CLONE_SEP.length);
+      const n = parseInt(suffix, 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  }
+  return `${baseId}${CLONE_SEP}${max + 1}`;
+}
+
+export function duplicateBoard(ids: string[], board: BoardLayout, id: string, cols: number): BoardLayout {
+  const baseId = baseIdFromClone(id);
+  if (!ids.includes(baseId) && !ids.includes(id)) return board;
+  const newId = nextCloneId(baseId, board);
+  const size = board.size[id] || board.size[baseId] || "md";
+  const next: BoardLayout = { size: { ...board.size, [newId]: size as CardSize }, pos: { ...board.pos }, layoutCols: board.layoutCols };
+  const occ = occupancy([...ids, newId], { ...board, size: next.size, pos: next.pos }, cols);
+  // place new clone at first free
+  const rect = rectFor(size as CardSize, cols);
+  const free = firstFree(occ, rect, cols, 64);
+  // firstFree was computed with newId already in occupancy? recalc without newId
+  const occ2 = occupancy(ids, board, cols);
+  const free2 = firstFree(occ2, rect, cols, 64);
+  next.pos[newId] = free2;
+  void free;
+  return next;
+}
+
+export function removeCloneBoard(board: BoardLayout, id: string): BoardLayout {
+  if (!isCloneId(id)) return board;
+  const size = { ...board.size };
+  const pos = { ...board.pos };
+  delete size[id];
+  delete pos[id];
+  return { ...board, size, pos };
 }

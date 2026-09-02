@@ -4,13 +4,15 @@ import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
-import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
+import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropTarget, duplicateBoard, emptyBoard, emptyCells, isCloneId, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, removeCloneBoard, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
 import { CurrenciesBoardCard, CurrenciesDetail } from "../components/CurrenciesWidget";
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
-import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { ClaudeBoardCard, ClaudeDetail, claudeAllowedSizes } from "../components/cards/ClaudeCard";
+import { CursorBoardCard, CursorDetail, cursorAllowedSizes } from "../components/cards/CursorCard";
+import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, CopyIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
@@ -530,11 +532,34 @@ function wmoLabel(code: number | null | undefined): string {
   return map[code] || `Código ${code}`;
 }
 
-const CARD_ORDER: CardSize[] = ["sm", "md", "lg", "xl", "wl", "wxl"];
+// ── Clones: expande ProviderMeta com blocos duplicados salvos no board ─────
+
+function expandProvidersWithClones(base: ProviderMeta[], board: BoardLayout | undefined): ProviderMeta[] {
+  if (!board) return base;
+  const byId = new Map(base.map((p) => [p.id, p]));
+  const out: ProviderMeta[] = [...base];
+  // coleta clones salvos em board.pos/size que começam com baseId + CLONE_SEP
+  for (const key of new Set([...Object.keys(board.pos), ...Object.keys(board.size)])) {
+    if (!isCloneId(key)) continue;
+    const baseId = baseIdFromClone(key);
+    const orig = byId.get(baseId);
+    if (!orig) continue;
+    if (out.some((p) => p.id === key)) continue;
+    out.push({ ...orig, id: key });
+  }
+  return out;
+}
+
+function baseIdForProvider(id: string): string {
+  return isCloneId(id) ? baseIdFromClone(id) : id;
+}
+
+const CARD_ORDER: CardSize[] = ["sm", "sw", "md", "lg", "xl", "wl", "wxl"];
 
 function sizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
   if (s === "sm") return t.cardSmall;
+  if (s === "sw") return t.cardSmallWeek;
   if (s === "md") return t.cardNormal;
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
@@ -545,6 +570,7 @@ function sizeLabel(size: CardSize, t: T): string {
 function SizeIcon({ size, className }: { size: CardSize; className?: string }) {
   const s = normalizeSize(size);
   if (s === "sm") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-current", className)} />;
+  if (s === "sw") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-dashed border-current", className)} />;
   if (s === "md") return <span className={cn("block size-[11px] rounded-[2px] border-[1.5px] border-current", className)} />;
   if (s === "lg") return <span className={cn("flex size-[11px] gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
   if (s === "wl") return <span className={cn("flex size-[11px] flex-col gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
@@ -552,8 +578,11 @@ function SizeIcon({ size, className }: { size: CardSize; className?: string }) {
   return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
 }
 
-function SizeMenu({ size, t, onChange }: { size: CardSize; t: T; onChange: (next: CardSize) => void }) {
+function SizeMenu({ size, t, onChange, allowed }: { size: CardSize; t: T; onChange: (next: CardSize) => void; allowed?: CardSize[] }) {
   const cur = normalizeSize(size);
+  const order = allowed && allowed.length ? allowed : CARD_ORDER;
+  // Se o tamanho atual não está entre os permitidos (ex: veio de localStorage antigo com wxl), mostra mesmo assim
+  const displayOrder = order.includes(cur) ? order : [...order, cur];
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -564,12 +593,12 @@ function SizeMenu({ size, t, onChange }: { size: CardSize; t: T; onChange: (next
     const update = () => {
       const r = btnRef.current?.getBoundingClientRect();
       if (!r) return;
-      const menuW = 200;
-      const menuH = CARD_ORDER.length * 36 + 8;
-      let top = r.bottom + 6;
+      const menuW = 110;
+      const menuH = displayOrder.length * 20 + 4;
+      let top = r.bottom + 4;
       let left = r.right - menuW;
       if (left < 8) left = 8;
-      if (top + menuH > window.innerHeight - 8) top = r.top - menuH - 6;
+      if (top + menuH > window.innerHeight - 8) top = r.top - menuH - 4;
       if (top < 8) top = 8;
       setPos({ top, left });
     };
@@ -598,7 +627,7 @@ function SizeMenu({ size, t, onChange }: { size: CardSize; t: T; onChange: (next
       <button
         ref={btnRef}
         type="button"
-        className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
+        className="flex size-[18px] shrink-0 items-center justify-center rounded-md text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
         title={sizeLabel(cur, t)}
         aria-label={sizeLabel(cur, t)}
         aria-haspopup="menu"
@@ -611,23 +640,23 @@ function SizeMenu({ size, t, onChange }: { size: CardSize; t: T; onChange: (next
         <div
           ref={menuRef}
           role="menu"
-          className="fixed z-[100] min-w-[190px] rounded-xl border border-edge bg-panel p-1 shadow-lg"
+          className="fixed z-[100] min-w-[110px] rounded-lg border border-edge bg-panel p-0.5 shadow-lg"
           style={{ top: pos.top, left: pos.left }}
           onClick={(e) => e.stopPropagation()}
         >
-          {CARD_ORDER.map((s) => {
+          {displayOrder.map((s) => {
             const active = s === cur;
             return (
               <button
                 key={s}
                 role="menuitem"
                 type="button"
-                className={cn("flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors", active ? "bg-accent text-accent-ink" : "text-ink hover:bg-chip")}
+                className={cn("flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-[11px] transition-colors", active ? "bg-accent text-accent-ink" : "text-ink hover:bg-chip")}
                 onClick={(e) => { e.stopPropagation(); onChange(s); setOpen(false); }}
               >
-                <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-[5px] border", active ? "border-accent-ink/30 bg-accent-ink/15" : "border-edge bg-chip")}><SizeIcon size={s} className={active ? "text-accent-ink" : "text-ink3"} /></span>
+                <span className={cn("flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border", active ? "border-accent-ink/30 bg-accent-ink/15" : "border-edge bg-chip")}><SizeIcon size={s} className={active ? "text-accent-ink" : "text-ink3"} /></span>
                 <span className="flex-1 font-medium leading-none">{sizeLabel(s, t)}</span>
-                {active ? <CheckIcon size={14} /> : null}
+                {active ? <CheckIcon size={10} /> : null}
               </button>
             );
           })}
@@ -638,8 +667,9 @@ function SizeMenu({ size, t, onChange }: { size: CardSize; t: T; onChange: (next
   );
 }
 
-function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void }) {
+function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
   const sm = normalizeSize(size) === "sm";
+  const isClone = isCloneId(p.id);
   return (
     <div
       className={cn(
@@ -655,7 +685,9 @@ function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize
       {!lifted ? (
         <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
           <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
           <SizeMenu size={size} t={t} onChange={onSetSize} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
         </div>
       ) : null}
       <WeatherBoardCard weather={p.weather} config={null} t={t} compact={sm} onOpen={onOpen} />
@@ -663,8 +695,9 @@ function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize
   );
 }
 
-function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void }) {
+function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
   const sm = normalizeSize(size) === "sm";
+  const isClone = isCloneId(p.id);
   return (
     <div
       className={cn(
@@ -680,10 +713,70 @@ function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetS
       {!lifted ? (
         <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
           <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
           <SizeMenu size={size} t={t} onChange={onSetSize} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
         </div>
       ) : null}
       <CurrenciesBoardCard currencies={p.currencies} t={t} compact={sm} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function ClaudeTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
+  const allowed = claudeAllowedSizes(null, p.metrics);
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
+        </div>
+      ) : null}
+      <ClaudeBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function CursorTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
+  const allowed = cursorAllowedSizes(null, p.metrics);
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
+        </div>
+      ) : null}
+      <CursorBoardCard metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
     </div>
   );
 }
@@ -699,6 +792,8 @@ function ProviderCard({
   grip,
   onOpen,
   onSetSize,
+  onDuplicate,
+  onRemove,
 }: {
   p: ProviderMeta;
   pal: Pal;
@@ -710,13 +805,21 @@ function ProviderCard({
   grip?: object;
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
+  onDuplicate?: (id: string) => void;
+  onRemove?: (id: string) => void;
 }) {
-  // Weather e Moedas têm seu próprio card (sem ícone de provedor genérico)
+  // Cards dedicados com layout por tamanho
+  if (p.provider === "claude") {
+    return <ClaudeTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "cursor") {
+    return <CursorTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
   if (p.provider === "weather" || p.kind === "weather") {
-    return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} />;
+    return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
   if (p.provider === "currencies" || p.kind === "currencies") {
-    return <CurrenciesTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} />;
+    return <CurrenciesTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
   const sm = normalizeSize(size) === "sm";
   return (
@@ -748,7 +851,9 @@ function ProviderCard({
           >
             <GripIcon size={14} />
           </button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
           <SizeMenu size={size} t={t} onChange={onSetSize} />
+          {isCloneId(p.id) && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
         </div>
       ) : null}
       <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
@@ -810,6 +915,8 @@ function BoardTile({
   rect,
   onOpen,
   onSetSize,
+  onDuplicate,
+  onRemove,
 }: {
   p: ProviderMeta;
   pal: Pal;
@@ -821,6 +928,8 @@ function BoardTile({
   rect: { w: number; h: number };
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
+  onDuplicate?: (id: string) => void;
+  onRemove?: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: p.id });
   const { setNodeRef: setDropRef } = useDroppable({ id: p.id });
@@ -843,6 +952,8 @@ function BoardTile({
         grip={{ ...attributes, ...listeners }}
         onOpen={onOpen}
         onSetSize={onSetSize}
+        onDuplicate={onDuplicate}
+        onRemove={onRemove}
       />
     </div>
   );
@@ -957,13 +1068,13 @@ function Overview({
   const ids = providers.map((p) => p.id);
   const idsKey = ids.join("|");
   const gridRef = useRef<HTMLDivElement>(null);
-  const [cols, setCols] = useState(4);
-  const [pad, setPad] = useState(3);
+  const [cols, setCols] = useState(8);
+  const [pad, setPad] = useState(12);
   const [fillPx, setFillPx] = useState(0);
   const [cellPx, setCellPx] = useState(104);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
-  const rowPx = rowPxFor(cellPx);
+  const unitPx = rowPxFor(cellPx);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
@@ -986,7 +1097,7 @@ function Overview({
       const lastBottom = tiles.reduce((max, node) => Math.max(max, node.getBoundingClientRect().bottom), gridBox.top);
       const leftover = Math.round(mainBottom - lastBottom);
       setFillPx(Math.max(0, Math.round(mainBottom - gridBox.top)));
-      setPad(padRowsForHeight(leftover, rowPxFor(cell)));
+      setPad(padRowsForHeight(leftover, cell));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -1023,6 +1134,17 @@ function Overview({
     });
   }
 
+  function handleDuplicate(id: string) {
+    onBoard((b) => {
+      const cur = displayBoard(ids, b, cols);
+      return duplicateBoard(ids, cur, id, cols);
+    });
+  }
+
+  function handleRemove(id: string) {
+    onBoard((b) => removeCloneBoard(b, id));
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       <div className="mb-[18px] flex w-full flex-wrap items-end justify-between gap-3">
@@ -1035,7 +1157,17 @@ function Overview({
             type="button"
             className="ml-1 cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
             title={t.resetLayout}
-            onClick={() => onBoard((b) => packBoard(ids, displayBoard(ids, b, cols), cols))}
+            onClick={() =>
+              onBoard((b) => {
+                const baseIds = ids.filter((id) => !isCloneId(id));
+                const clean: BoardLayout = { size: {}, pos: {}, layoutCols: b.layoutCols };
+                for (const id of baseIds) {
+                  if (b.size[id]) clean.size[id] = b.size[id];
+                  if (b.pos[id]) clean.pos[id] = b.pos[id];
+                }
+                return packBoard(baseIds, displayBoard(baseIds, clean, cols), cols);
+              })
+            }
           >
             {t.resetLayout}
           </button>
@@ -1062,7 +1194,7 @@ function Overview({
             className={cn(overviewBoard, "min-h-0 flex-1")}
             style={{
               gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-              gridAutoRows: rowPx,
+              gridAutoRows: unitPx,
               minHeight: fillPx > 0 ? fillPx : undefined,
             }}
           >
@@ -1093,6 +1225,8 @@ function Overview({
                   rect={rectFor(size, cols)}
                   onOpen={() => onOpen(id)}
                   onSetSize={(next) => onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols))}
+                  onDuplicate={handleDuplicate}
+                  onRemove={handleRemove}
                 />
               );
             })}
@@ -1101,7 +1235,7 @@ function Overview({
             {active ? (
               <div
                 className="pointer-events-none cursor-grabbing"
-                style={(() => { const r = rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * rowPx + (r.h - 1) * CELL_GAP) }; })()}
+                style={(() => { const r = rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * unitPx + (r.h - 1) * CELL_GAP) }; })()}
               >
                 <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => { }} onSetSize={() => { }} />
               </div>
@@ -1189,27 +1323,7 @@ function Kv({ k, v }: { k: string; v: ReactNode }) {
 }
 
 function ClaudeBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: ClaudeAccount; t: T; pal: Pal; nowMs: number }) {
-  const c = account;
-  const sessionClock = fmtCountdown(c.session_resets_at, nowMs);
-  return (
-    <>
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard
-          label={t.window5h}
-          pct={c.session_percent}
-          pal={pal}
-          sub={joinParts(
-            c.session_percent != null ? `${t.left} ${fmtRemain(c.session_percent)}` : null,
-            sessionClock ? `${t.resetIn} ${sessionClock}` : c.session_resets_at ? `${t.resetPrefix}${fmtWhen(c.session_resets_at)}` : null,
-          )}
-        />
-        <MetricCard label={t.weekLimit} pct={c.weekly_percent} pal={pal} sub={remainLine(t, c.weekly_percent, c.weekly_resets_at)} />
-        {c.sonnet_percent != null ? <MetricCard label={t.sonnetWeek} pct={c.sonnet_percent} pal={pal} sub={remainLine(t, c.sonnet_percent, c.sonnet_resets_at)} /> : null}
-        {c.opus_percent != null ? <MetricCard label={t.opusWeek} pct={c.opus_percent} pal={pal} sub={remainLine(t, c.opus_percent, c.opus_resets_at)} /> : null}
-      </MetricsGrid>
-    </>
-  );
+  return <ClaudeDetail account={account} updatedAt={data.updated_at} t={t} pal={pal} nowMs={nowMs} />;
 }
 
 function GptBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: GptAccount; t: T; pal: Pal; nowMs: number }) {
@@ -1231,37 +1345,7 @@ function GptBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account
 }
 
 function CursorBody({ data, account, t, pal, nowMs }: { data: UsagePayload; account: CursorAccount; t: T; pal: Pal; nowMs: number }) {
-  const c = account;
-  const cycleClock = fmtCountdown(c.cycle_end, nowMs);
-  const ondemandPct = c.used_cents != null && c.limit_cents != null && c.limit_cents > 0 ? clamp((c.used_cents / c.limit_cents) * 100, 0, 100) : null;
-  const hasLegacy = c.requests_used != null && (c.requests_limit || 0) > 0;
-  return (
-    <>
-      <MetaChips items={[{ k: t.plan, v: c.plan }, { k: t.cycle, v: cycleClock ? `${t.resetIn} ${cycleClock}` : fmtWhen(c.cycle_end) }, { k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard label={t.cursorModels} pct={c.percent} pal={pal} sub={remainLine(t, c.percent)} />
-        <MetricCard label={t.otherModels} pct={c.other_percent} pal={pal} sub={remainLine(t, c.other_percent)} />
-        <MetricCard
-          label={t.ondemand}
-          pct={ondemandPct}
-          value={c.used_cents != null ? fmtUsd(c.used_cents) : null}
-          pal={pal}
-          sub={joinParts(
-            c.limit_cents != null ? `${t.cap} ${fmtUsd(c.limit_cents)}` : null,
-            c.remaining_cents != null ? `${t.left} ${fmtUsd(c.remaining_cents)}` : null,
-            (c.bonus_cents || 0) > 0 ? `${t.bonus} ${fmtUsd(c.bonus_cents)}` : null,
-          )}
-        />
-      </MetricsGrid>
-      {hasLegacy ? (
-        <div className={`${metricCard} w-full`}>
-          <div className="mb-1.5 text-[12.5px] tracking-[.1px] text-ink3">{t.requestsLegacy}</div>
-          <Kv k={t.usedCount} v={String(c.requests_used)} />
-          <Kv k={t.limit} v={String(c.requests_limit)} />
-        </div>
-      ) : null}
-    </>
-  );
+  return <CursorDetail account={account} updatedAt={data.updated_at} t={t} pal={pal} nowMs={nowMs} />;
 }
 
 function OpenRouterBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
@@ -1597,9 +1681,10 @@ export default function Display() {
 
   useEffect(() => {
     if (!data || section !== "account") return;
-    const providers = buildProviders(data, t);
-    if (!providers.some((p) => p.id === selectedId)) setSection("overview");
-  }, [data, section, selectedId, t]);
+    const base = buildProviders(data, t);
+    const expanded = expandProvidersWithClones(base, prefs.board);
+    if (!expanded.some((p) => p.id === selectedId) && !base.some((p) => p.id === baseIdForProvider(selectedId || ""))) setSection("overview");
+  }, [data, section, selectedId, t, prefs.board]);
 
   function goOverview() {
     navigate("/display");
@@ -1607,13 +1692,17 @@ export default function Display() {
   }
 
   const providers = data ? buildProviders(data, t, now) : [];
+  const displayProviders = expandProvidersWithClones(providers, prefs.board);
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null = null;
   if (data && section === "account") {
-    meta = providers.find((p) => p.id === selectedId) || null;
+    // clones usam id "base::clone:N" — resolve para base para buscar ProviderMeta e conta
+    const baseSelected = selectedId ? baseIdForProvider(selectedId) : null;
+    meta = (baseSelected ? displayProviders.find((p) => p.id === selectedId) || providers.find((p) => p.id === baseSelected) : null) || null;
     if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies") {
-      const idx = meta.id.indexOf(":");
-      const accountId = meta.id.slice(idx + 1);
+      const baseId = baseIdForProvider(meta.id);
+      const idx = baseId.indexOf(":");
+      const accountId = baseId.slice(idx + 1);
       const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "bitcoin" | "adsense";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
@@ -1679,7 +1768,7 @@ export default function Display() {
             <>
               {section === "overview" ? (
                 <Overview
-                  providers={providers}
+                  providers={displayProviders}
                   updatedAt={data.updated_at}
                   now={now}
                   t={t}
@@ -1687,7 +1776,7 @@ export default function Display() {
                   board={prefs.board || emptyBoard()}
                   onBoard={(fn) =>
                     setPrefs((p) => {
-                      const ids = providers.map((x) => x.id);
+                      const ids = displayProviders.map((x) => x.id);
                       const next = fn(p.board || emptyBoard());
                       if (sameBoard(p.board, next, ids)) return p;
                       return { ...p, board: next };

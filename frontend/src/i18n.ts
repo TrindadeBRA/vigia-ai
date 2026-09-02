@@ -73,6 +73,7 @@ type Strings = {
   alarms: string;
   configCta: string;
   cardSmall: string;
+  cardSmallWeek: string;
   cardNormal: string;
   cardLarge: string;
   cardXl: string;
@@ -176,7 +177,8 @@ export const STR: Record<Lang, Strings> = {
     theme: "Tema",
     alarms: "Alarmes",
     configCta: "Configurar contas",
-    cardSmall: "Card pequeno",
+    cardSmall: "Pequeno · 5h",
+    cardSmallWeek: "Pequeno · semana",
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",
@@ -275,7 +277,8 @@ export const STR: Record<Lang, Strings> = {
     theme: "Theme",
     alarms: "Alarms",
     configCta: "Set up accounts",
-    cardSmall: "Small card",
+    cardSmall: "Small · 5h",
+    cardSmallWeek: "Small · week",
     cardNormal: "Normal card",
     cardLarge: "Large card",
     cardXl: "Extra large card",
@@ -374,7 +377,8 @@ export const STR: Record<Lang, Strings> = {
     theme: "Tema",
     alarms: "Alarmas",
     configCta: "Configurar cuentas",
-    cardSmall: "Card pequeño",
+    cardSmall: "Pequeño · 5h",
+    cardSmallWeek: "Pequeño · semana",
     cardNormal: "Card normal",
     cardLarge: "Card grande",
     cardXl: "Card extra grande",
