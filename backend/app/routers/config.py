@@ -26,6 +26,7 @@ from app.schemas import (
     ConfigPatch,
     ConfigPublic,
     ConfigSaveResult,
+    CurrenciesConfig,
     DevicePublic,
     ListenPublic,
     OkResult,
@@ -344,6 +345,11 @@ def config_public(listen_host: str, listen_port: int, hub: Any = None) -> Config
         weather_cfg = WeatherConfig.model_validate(weather_raw)
     except Exception:
         weather_cfg = WeatherConfig()
+    currencies_raw = cfg.get("currencies") or {}
+    try:
+        currencies_cfg = CurrenciesConfig.model_validate(currencies_raw)
+    except Exception:
+        currencies_cfg = CurrenciesConfig()
     return ConfigPublic(
         in_docker=in_docker(),
         mock=bool(cfg.get("mock")),
@@ -370,6 +376,7 @@ def config_public(listen_host: str, listen_port: int, hub: Any = None) -> Config
             "bitcoin": _key_card(cfg, "bitcoin"),
         },
         weather=weather_cfg,
+        currencies=currencies_cfg,
         device=_device_public(hub),
     )
 

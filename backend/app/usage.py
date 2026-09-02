@@ -8,6 +8,7 @@ from typing import Any, Callable
 from app.formatting import utc_now
 from app.providers.bitcoin import bitcoin_fail, fetch_bitcoin_accounts
 from app.providers.claude import claude_fail, fetch_claude_accounts
+from app.providers.currencies import fetch_currency_quotes, mock_currencies_payload
 from app.providers.cursor import cursor_fail, fetch_cursor_accounts
 from app.providers.deepseek import deepseek_fail, fetch_deepseek_accounts
 from app.providers.fal import fal_fail, fetch_fal_accounts
@@ -138,6 +139,7 @@ def mock_payload() -> dict[str, Any]:
             }
         ],
         "weather": mock_weather_payload(),
+        "currencies": mock_currencies_payload(),
     }
 
 
@@ -186,6 +188,22 @@ def _fetch_weather(cfg: dict) -> dict[str, Any]:
                 "location": weather_cfg.get("location"), "units": weather_cfg.get("units")}
 
 
+def _fetch_currencies(cfg: dict) -> dict[str, Any] | None:
+    """Busca cotações; respeita hidden/enabled e mock, igual ao clima."""
+    ccfg = cfg.get("currencies") or {}
+    base = ccfg.get("base") or "BRL"
+    if ccfg.get("hidden"):
+        return {"ok": True, "error": None, "updated_at": None, "base": base, "items": []}
+    if not ccfg.get("enabled"):
+        return None
+    if cfg.get("mock"):
+        return mock_currencies_payload()
+    try:
+        return fetch_currency_quotes(ccfg)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc), "updated_at": utc_now(), "base": base, "items": []}
+
+
 def build_payload() -> dict[str, Any]:
     cfg = load()
     if cfg.get("mock"):
@@ -193,23 +211,31 @@ def build_payload() -> dict[str, Any]:
         for name, *_rest in _PROVIDER_JOBS:
             if provider_cfg(cfg, name).get("hidden"):
                 payload[name] = []
-        # weather mock já vem no payload; respeita hidden/enabled
+        # weather/currencies mock já vem no payload; respeita hidden/enabled
         wcfg = cfg.get("weather") or {}
         if wcfg.get("hidden") or not wcfg.get("enabled"):
             payload["weather"] = None
+        ccfg = cfg.get("currencies") or {}
+        if ccfg.get("hidden") or not ccfg.get("enabled"):
+            payload["currencies"] = None
         return payload
     # Cada provedor é uma chamada de rede bloqueante independente (ver
     # app/http_util.py, timeout de 20s por request) — rodar em paralelo evita
     # que N provedores lentos somem suas latências uma atrás da outra, o que
     # já estourou o timeout de /health do `./dev` script no boot com 8
     # provedores sequenciais.
-    with ThreadPoolExecutor(max_workers=len(_PROVIDER_JOBS) + 1) as pool:
+    with ThreadPoolExecutor(max_workers=len(_PROVIDER_JOBS) + 2) as pool:
         futures = [pool.submit(_fetch_one, name, fetch_fn, fail_fn, fallback_id, cfg)
                    for name, fetch_fn, fail_fn, fallback_id in _PROVIDER_JOBS]
         weather_future = pool.submit(_fetch_weather, cfg)
+        currencies_future = pool.submit(_fetch_currencies, cfg)
         results = dict(future.result() for future in futures)
         try:
             results["weather"] = weather_future.result()
         except Exception as exc:  # noqa: BLE001
             results["weather"] = {"ok": False, "error": str(exc), "updated_at": utc_now(), "current": None, "hourly": None, "daily": None}
+        try:
+            results["currencies"] = currencies_future.result()
+        except Exception as exc:  # noqa: BLE001
+            results["currencies"] = {"ok": False, "error": str(exc), "updated_at": utc_now(), "base": (cfg.get("currencies") or {}).get("base") or "BRL", "items": []}
     return {"updated_at": utc_now(), **results}

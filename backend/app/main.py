@@ -20,6 +20,7 @@ from app.hub import UsageHub
 from app.netutil import lan_ipv4
 from app.routers.alarms import router as alarms_router
 from app.routers.config import router as config_router
+from app.routers.currencies import router as currencies_router
 from app.routers.push import router as push_router
 from app.routers.theme import router as theme_router
 from app.routers.usage import router as usage_router
@@ -112,6 +113,7 @@ def create_app() -> FastAPI:
     app.include_router(push_router)
     app.include_router(wallpapers_router)
     app.include_router(weather_router)
+    app.include_router(currencies_router)
 
     dist = frontend_dist()
     if dist is not None:

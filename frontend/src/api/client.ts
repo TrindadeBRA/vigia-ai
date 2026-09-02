@@ -183,3 +183,51 @@ export async function fetchWeather(): Promise<import("./types").WeatherPayload> 
   if (!res.ok) throw new Error(`weather HTTP ${res.status}`);
   return res.json() as Promise<import("./types").WeatherPayload>;
 }
+
+// ── Cotação de moedas ───────────────────────────────────────────────
+
+export async function fetchCurrenciesConfig(): Promise<import("./types").CurrenciesConfig> {
+  const res = await fetch("/api/currencies/config", { cache: "no-store" });
+  if (!res.ok) throw new Error(`currencies config HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").CurrenciesConfig>;
+}
+
+export async function patchCurrenciesConfig(body: { enabled?: boolean; hidden?: boolean; base?: string }): Promise<MutateResult> {
+  const res = await fetch("/api/currencies/config", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as MutateResult & { detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data, res.status) };
+  return { ok: true };
+}
+
+export async function addCurrencyItem(body: { kind: "fiat" | "crypto"; code: string; label?: string }): Promise<MutateResult> {
+  const res = await fetch("/api/currencies/items", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as MutateResult & { detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data, res.status) };
+  return { ok: true };
+}
+
+export async function deleteCurrencyItem(id: string): Promise<MutateResult> {
+  const res = await fetch(`/api/currencies/items/${id}`, { method: "DELETE" });
+  return readMutate(res);
+}
+
+export async function searchCurrencyCoins(q: string, count = 8): Promise<import("./types").CurrencySearchResult[]> {
+  const res = await fetch(`/api/currencies/search?q=${encodeURIComponent(q)}&count=${count}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`currencies search HTTP ${res.status}`);
+  const data = (await res.json()) as { results?: import("./types").CurrencySearchResult[] };
+  return data.results || [];
+}
+
+export async function fetchCurrencies(): Promise<import("./types").CurrenciesPayload> {
+  const res = await fetch("/api/currencies", { cache: "no-store" });
+  if (!res.ok) throw new Error(`currencies HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").CurrenciesPayload>;
+}

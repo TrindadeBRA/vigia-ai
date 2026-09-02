@@ -34,6 +34,9 @@ def _log_failures(payload: dict[str, Any]) -> None:
     w = payload.get("weather")
     if isinstance(w, dict) and not w.get("ok") and w.get("error"):
         print(f"[{utc_now()}] ERRO weather: {w.get('error')}")
+    cu = payload.get("currencies")
+    if isinstance(cu, dict) and not cu.get("ok") and cu.get("error"):
+        print(f"[{utc_now()}] ERRO currencies: {cu.get('error')}")
 
 
 class UsageHub:

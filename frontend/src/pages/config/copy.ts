@@ -151,6 +151,23 @@ export type ConfigCopy = {
   weatherVarsHint: string;
   weatherNotConfigured: string;
   weatherPoweredBy: string;
+  // Financeiro
+  financeiroTitle: string;
+  financeiroLead: string;
+  currenciesTitle: string;
+  currenciesLead: string;
+  currenciesEnabled: string;
+  currenciesBaseLabel: string;
+  currenciesListLabel: string;
+  currenciesEmpty: string;
+  currenciesAddTitle: string;
+  currenciesKindFiat: string;
+  currenciesKindCrypto: string;
+  currenciesAdd: string;
+  currenciesSearchPh: string;
+  currenciesSearch: string;
+  currenciesSearching: string;
+  currenciesNoResults: string;
 };
 
 export const CONFIG_STR: Record<Lang, ConfigCopy> = {
@@ -303,6 +320,22 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherVarsHint: "Escolha quais dados o coletor busca no Open-Meteo. Todas as opções da API estão disponíveis.",
     weatherNotConfigured: "Configure a cidade para ver o clima.",
     weatherPoweredBy: "Dados por Open-Meteo.com",
+    financeiroTitle: "Financeiro",
+    financeiroLead: "Carteira Bitcoin e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
+    currenciesTitle: "Cotação de moedas",
+    currenciesLead: "Adicione quantas moedas quiser — fiat (dólar, euro...) ou cripto — e veja a cotação convertida para a moeda base.",
+    currenciesEnabled: "Mostrar no painel",
+    currenciesBaseLabel: "Moeda base (cotações convertidas para)",
+    currenciesListLabel: "Moedas acompanhadas",
+    currenciesEmpty: "Nenhuma moeda adicionada ainda.",
+    currenciesAddTitle: "Adicionar moeda",
+    currenciesKindFiat: "Moeda (câmbio)",
+    currenciesKindCrypto: "Criptomoeda",
+    currenciesAdd: "Adicionar",
+    currenciesSearchPh: "ex.: ethereum, solana...",
+    currenciesSearch: "Buscar",
+    currenciesSearching: "Buscando…",
+    currenciesNoResults: "Nenhuma criptomoeda encontrada.",
   },
   en: {
     title: "Settings",
@@ -453,6 +486,22 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherVarsHint: "Choose which data the collector fetches from Open-Meteo. All API options are available.",
     weatherNotConfigured: "Set the city to see the weather.",
     weatherPoweredBy: "Data by Open-Meteo.com",
+    financeiroTitle: "Finance",
+    financeiroLead: "Bitcoin wallet and currency quotes — dollar, euro, crypto, whatever you want to track.",
+    currenciesTitle: "Currency quotes",
+    currenciesLead: "Add as many currencies as you want — fiat (dollar, euro...) or crypto — and see the rate converted to your base currency.",
+    currenciesEnabled: "Show on display",
+    currenciesBaseLabel: "Base currency (quotes converted to)",
+    currenciesListLabel: "Tracked currencies",
+    currenciesEmpty: "No currency added yet.",
+    currenciesAddTitle: "Add currency",
+    currenciesKindFiat: "Currency (forex)",
+    currenciesKindCrypto: "Cryptocurrency",
+    currenciesAdd: "Add",
+    currenciesSearchPh: "e.g. ethereum, solana...",
+    currenciesSearch: "Search",
+    currenciesSearching: "Searching…",
+    currenciesNoResults: "No cryptocurrency found.",
   },
   es: {
     title: "Configuración",
@@ -603,6 +652,22 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherVarsHint: "Elige qué datos busca el colector en Open-Meteo. Todas las opciones de la API están disponibles.",
     weatherNotConfigured: "Configura la ciudad para ver el clima.",
     weatherPoweredBy: "Datos por Open-Meteo.com",
+    financeiroTitle: "Finanzas",
+    financeiroLead: "Billetera Bitcoin y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
+    currenciesTitle: "Cotización de monedas",
+    currenciesLead: "Agrega las monedas que quieras — fiat (dólar, euro...) o cripto — y mira la cotización convertida a tu moneda base.",
+    currenciesEnabled: "Mostrar en el panel",
+    currenciesBaseLabel: "Moneda base (cotizaciones convertidas a)",
+    currenciesListLabel: "Monedas seguidas",
+    currenciesEmpty: "Ninguna moneda añadida todavía.",
+    currenciesAddTitle: "Añadir moneda",
+    currenciesKindFiat: "Moneda (cambio)",
+    currenciesKindCrypto: "Criptomoneda",
+    currenciesAdd: "Añadir",
+    currenciesSearchPh: "ej.: ethereum, solana...",
+    currenciesSearch: "Buscar",
+    currenciesSearching: "Buscando…",
+    currenciesNoResults: "Ninguna criptomoneda encontrada.",
   },
 };
 

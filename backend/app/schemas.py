@@ -403,6 +403,65 @@ class WeatherPatch(BaseModel):
     display_fields: dict[str, bool] | None = None
 
 
+# ── Cotação de moedas (fiat + cripto) ──────────────────────────────────
+
+CurrencyKind = Literal["fiat", "crypto"]
+
+
+class CurrencyItem(BaseModel):
+    id: str
+    kind: CurrencyKind
+    code: str = Field(description="ISO 4217 (fiat, ex.: USD) ou id do CoinGecko (cripto, ex.: ethereum).")
+    label: str = ""
+
+
+class CurrenciesConfig(BaseModel):
+    enabled: bool = False
+    hidden: bool = False
+    base: str = Field(default="BRL", description="Moeda em que todas as cotações são mostradas.")
+    items: list[CurrencyItem] = Field(default_factory=list)
+
+
+class CurrencyQuote(BaseModel):
+    id: str
+    kind: CurrencyKind
+    code: str
+    label: str = ""
+    price: float | None = Field(default=None, description="Valor de 1 unidade de `code` em `base`.")
+    ok: bool = True
+    error: str | None = None
+
+
+class CurrenciesPayload(BaseModel):
+    ok: bool = True
+    error: str | None = None
+    updated_at: str | None = None
+    base: str = "BRL"
+    items: list[CurrencyQuote] = Field(default_factory=list)
+
+
+class CurrencyItemBody(BaseModel):
+    kind: CurrencyKind
+    code: str
+    label: str = ""
+
+
+class CurrenciesPatch(BaseModel):
+    enabled: bool | None = None
+    hidden: bool | None = None
+    base: str | None = None
+
+
+class CurrencySearchResult(BaseModel):
+    id: str
+    symbol: str
+    name: str
+
+
+class CurrencySearchResponse(BaseModel):
+    results: list[CurrencySearchResult] = Field(default_factory=list)
+
+
 class UsagePayload(BaseModel):
     """Contrato da placa e do mostrador. Mesmo JSON em GET /usage e no evento SSE `usage`."""
 
@@ -418,6 +477,7 @@ class UsagePayload(BaseModel):
     fal: list[CreditsAccount]
     bitcoin: list[BitcoinAccount]
     weather: WeatherPayload | None = Field(default=None, description="Dados meteorológicos Open-Meteo, se configurado.")
+    currencies: CurrenciesPayload | None = Field(default=None, description="Cotações de moedas configuradas, se habilitado.")
 
 
 class HealthPayload(BaseModel):
@@ -486,6 +546,7 @@ class ConfigPublic(BaseModel):
     restart_needed_for_port: bool = False
     providers: dict[str, ProviderCardPublic]
     weather: WeatherConfig = Field(default_factory=WeatherConfig)
+    currencies: CurrenciesConfig = Field(default_factory=CurrenciesConfig)
     device: DevicePublic = Field(default_factory=DevicePublic)
 
 

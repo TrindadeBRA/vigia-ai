@@ -68,6 +68,19 @@ export function fmtBtc(btc: number | null | undefined): string {
   return `${btc.toFixed(8)} BTC`;
 }
 
+const CURRENCY_LOCALE: Record<string, string> = { pt: "pt-BR", en: "en-US", es: "es-AR" };
+
+/** Formata um preço na moeda `base` (ISO 4217) respeitando o idioma da UI. */
+export function fmtCurrencyAmount(price: number | null | undefined, base: string, lang: string = "pt"): string {
+  if (price == null || !Number.isFinite(price)) return "--";
+  const locale = CURRENCY_LOCALE[lang] || "pt-BR";
+  try {
+    return new Intl.NumberFormat(locale, { style: "currency", currency: base, maximumFractionDigits: price >= 1 ? 2 : 6 }).format(price);
+  } catch {
+    return `${price.toFixed(2)} ${base}`;
+  }
+}
+
 export function fmtWhen(raw: string | null | undefined): string {
   if (!raw) return "";
   const s = String(raw).trim();

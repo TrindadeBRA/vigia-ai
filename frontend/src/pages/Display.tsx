@@ -3,14 +3,15 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
-import type { BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
+import type { BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
 import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
+import { CurrenciesBoardCard, CurrenciesDetail } from "../components/CurrenciesWidget";
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
 import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
-import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
@@ -32,9 +33,10 @@ type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather";
+  kind?: "provider" | "weather" | "currencies";
   weather?: WeatherPayload | null;
   weatherConfig?: WeatherConfig | null;
+  currencies?: CurrenciesPayload | null;
 };
 
 function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
@@ -464,6 +466,27 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       });
     }
   }
+  // Moedas — card único com N cotações, igual ao clima (o backend já filtra
+  // hidden/enabled; se chegou aqui é pra mostrar).
+  const cu = data.currencies;
+  if (cu && (cu.items.length || (!cu.ok && cu.error))) {
+    list.push({
+      id: "currencies:main",
+      provider: "currencies",
+      ok: cu.ok,
+      error: cu.error,
+      title: t.currencies,
+      label: cu.base,
+      metrics: cu.items.slice(0, 6).map((it) => ({
+        label: it.label || it.code,
+        pct: null,
+        value: it.ok ? fmtCurrencyAmount(it.price, cu.base) : null,
+        sub: it.ok ? null : it.error,
+      })),
+      kind: "currencies",
+      currencies: cu,
+    });
+  }
   return list;
 }
 
@@ -614,6 +637,31 @@ function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize
   );
 }
 
+function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void }) {
+  const sm = normalizeSize(size) === "sm";
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-3 pb-2.5 pt-2.5" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          <SizeMenu size={size} t={t} onChange={onSetSize} />
+        </div>
+      ) : null}
+      <CurrenciesBoardCard currencies={p.currencies} t={t} compact={sm} onOpen={onOpen} />
+    </div>
+  );
+}
+
 function ProviderCard({
   p,
   pal,
@@ -637,9 +685,12 @@ function ProviderCard({
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
 }) {
-  // Weather tem seu próprio card
+  // Weather e Moedas têm seu próprio card (sem ícone de provedor genérico)
   if (p.provider === "weather" || p.kind === "weather") {
     return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} />;
+  }
+  if (p.provider === "currencies" || p.kind === "currencies") {
+    return <CurrenciesTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} />;
   }
   const sm = normalizeSize(size) === "sm";
   return (
@@ -819,9 +870,7 @@ function Sidebar(props: {
           ) : (
             providers.map((p) => (
               <button key={p.id} className={cn(sideItem, "shrink-0", section === "account" && selectedId === p.id && !onPage && sideItemActive)} onClick={() => { onSelect(p.id); onClose(); }}>
-                <div className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
-                  <img className="size-[13px] object-contain" src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
-                </div>
+                <img className="size-[22px] shrink-0 object-contain" src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
                 <div className="min-w-0 flex-1">
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap font-semibold">{p.title}</div>
                   {p.label ? <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{p.label}</div> : null}
@@ -1303,6 +1352,26 @@ function FalBody({ data, account, t, pal }: { data: UsagePayload; account: Credi
   );
 }
 
+function BitcoinBody({ data, account, t, pal }: { data: UsagePayload; account: BitcoinAccount; t: T; pal: Pal }) {
+  const b = account;
+  const value =
+    b.value_usd_cents != null && b.value_brl_cents != null
+      ? `${fmtUsd(b.value_usd_cents)} · ${fmtBrl(b.value_brl_cents)}`
+      : b.value_usd_cents != null
+        ? fmtUsd(b.value_usd_cents)
+        : t.noData;
+  return (
+    <>
+      {b.address ? <div className="px-0.5 text-[12.5px] tracking-[.1px] text-ink3">{b.address}</div> : null}
+      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
+      <MetricsGrid>
+        <MetricCard label={t.bitcoinBalance} pct={null} pal={pal} value={b.balance_btc != null ? fmtBtc(b.balance_btc) : null} />
+        <MetricCard label={t.bitcoinValue} pct={null} pal={pal} value={value} />
+      </MetricsGrid>
+    </>
+  );
+}
+
 function WeatherAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   const w = data.weather;
   // Busca config do weather via payload (location/units) — se não tiver, usa defaults
@@ -1321,10 +1390,27 @@ function WeatherAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   );
 }
 
-function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
-  // Weather tem página própria
+function CurrenciesAccountPage({ data, t }: { data: UsagePayload; t: T }) {
+  return (
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="text-[28px] leading-none">💱</span>
+        <div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.currencies}</div>
+        </div>
+      </div>
+      <CurrenciesDetail currencies={data.currencies} t={t} />
+    </div>
+  );
+}
+
+function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
+  // Weather e Moedas têm página própria (sem "conta" única)
   if (meta.provider === "weather" || meta.kind === "weather") {
     return <WeatherAccountPage data={data} t={t} />;
+  }
+  if (meta.provider === "currencies" || meta.kind === "currencies") {
+    return <CurrenciesAccountPage data={data} t={t} />;
   }
   let body: ReactNode = null;
   if (meta.ok && account) {
@@ -1335,6 +1421,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
     else if (meta.provider === "opencode") body = <OpenCodeBody data={data} account={account as OpenCodeAccount} t={t} pal={pal} />;
     else if (meta.provider === "fal") body = <FalBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
+    else if (meta.provider === "bitcoin") body = <BitcoinBody data={data} account={account as BitcoinAccount} t={t} pal={pal} />;
   }
   return (
     <div className={`w-full ${viewFade}`}>
@@ -1541,13 +1628,13 @@ export default function Display() {
 
   const providers = data ? buildProviders(data, t, now) : [];
   let meta: ProviderMeta | null = null;
-  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | null = null;
+  let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | null = null;
   if (data && section === "account") {
     meta = providers.find((p) => p.id === selectedId) || null;
-    if (meta && meta.provider !== "weather" && meta.kind !== "weather") {
+    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies") {
       const idx = meta.id.indexOf(":");
       const accountId = meta.id.slice(idx + 1);
-      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal";
+      const key = meta.provider as "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "bitcoin";
       rawAccount = (data[key] || []).find((a) => a.id === accountId) ?? null;
     }
   }

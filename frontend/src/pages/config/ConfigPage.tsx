@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Skeleton } from "../../components/Skeleton";
 import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
+import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { Button, Fold } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
@@ -145,6 +146,19 @@ export default function ConfigPage() {
           usesLocalApp={false}
           {...common}
         />
+      </div>
+
+      <div className="mt-2 w-full">
+        <h2 className="mb-1 mt-0 text-base font-bold">{c.weatherTitle}</h2>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.weatherLead}</p>
+      </div>
+      <WeatherConfigCard weather={cfg.weather} c={c} onReload={reload} />
+
+      <div className="mt-2 w-full">
+        <h2 className="mb-1 mt-0 text-base font-bold">{c.financeiroTitle}</h2>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.financeiroLead}</p>
+      </div>
+      <div className={cfgGrid}>
         <ProviderCard
           title="Bitcoin"
           blurb={c.bitcoinBlurb}
@@ -158,12 +172,7 @@ export default function ConfigPage() {
           {...common}
         />
       </div>
-
-      <div className="mt-2 w-full">
-        <h2 className="mb-1 mt-0 text-base font-bold">{c.weatherTitle}</h2>
-        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.weatherLead}</p>
-      </div>
-      <WeatherConfigCard weather={cfg.weather} c={c} onReload={reload} />
+      <CurrenciesConfigCard currencies={cfg.currencies} c={c} onReload={reload} />
     </div>
   );
 }

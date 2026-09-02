@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 from copy import deepcopy
 from pathlib import Path
@@ -88,6 +89,14 @@ _WEATHER_DEFAULT: dict[str, Any] = {
 }
 
 
+_CURRENCIES_DEFAULT: dict[str, Any] = {
+    "enabled": False,
+    "hidden": False,
+    "base": "BRL",
+    "items": [],
+}
+
+
 _WALLPAPER_PROVIDERS_DEFAULT: dict[str, Any] = {
     "pexels_key": "",
     "unsplash_key": "",
@@ -111,6 +120,7 @@ def default_config() -> dict[str, Any]:
         "push": {"vapid_public_key": "", "vapid_private_key": "", "subscriptions": []},
         "alarms": [],
         "weather": deepcopy(_WEATHER_DEFAULT),
+        "currencies": deepcopy(_CURRENCIES_DEFAULT),
         "wallpapers": {
             "providers": deepcopy(_WALLPAPER_PROVIDERS_DEFAULT),
             "slideshow": deepcopy(_SLIDESHOW_DEFAULT),
@@ -368,6 +378,33 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
     for fk, fv in raw_fields.items():
         if fk in disp["fields"]:
             disp["fields"][fk] = bool(fv)
+    # Cotação de moedas (fiat + cripto, lista livre do usuário)
+    raw_cur = raw.get("currencies") if isinstance(raw.get("currencies"), dict) else {}
+    cur = cfg["currencies"]
+    cur["enabled"] = bool(raw_cur.get("enabled", cur["enabled"]))
+    cur["hidden"] = bool(raw_cur.get("hidden", cur["hidden"]))
+    raw_base = raw_cur.get("base")
+    if isinstance(raw_base, str) and re.match(r"^[A-Za-z]{3}$", raw_base.strip()):
+        cur["base"] = raw_base.strip().upper()
+    raw_items = raw_cur.get("items")
+    if isinstance(raw_items, list):
+        cleaned_items: list[dict[str, Any]] = []
+        for it in raw_items:
+            if not isinstance(it, dict) or not it.get("id"):
+                continue
+            kind = it.get("kind")
+            code = str(it.get("code") or "").strip()
+            if kind not in ("fiat", "crypto") or not code:
+                continue
+            cleaned_items.append(
+                {
+                    "id": str(it["id"]),
+                    "kind": kind,
+                    "code": code.upper() if kind == "fiat" else code.lower(),
+                    "label": str(it.get("label") or ""),
+                }
+            )
+        cur["items"] = cleaned_items
     # Wallpapers / slideshow
     raw_wp = raw.get("wallpapers") if isinstance(raw.get("wallpapers"), dict) else {}
     wp = cfg["wallpapers"]

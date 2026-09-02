@@ -248,6 +248,42 @@ export type WeatherGeocodingResult = {
   postcodes?: string[] | null;
 };
 
+export type CurrencyKind = "fiat" | "crypto";
+
+export type CurrencyItem = {
+  id: string;
+  kind: CurrencyKind;
+  code: string;
+  label: string;
+};
+
+export type CurrenciesConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  base: string;
+  items: CurrencyItem[];
+};
+
+export type CurrencyQuote = {
+  id: string;
+  kind: CurrencyKind;
+  code: string;
+  label: string;
+  price: number | null;
+  ok: boolean;
+  error: string | null;
+};
+
+export type CurrenciesPayload = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  base: string;
+  items: CurrencyQuote[];
+};
+
+export type CurrencySearchResult = { id: string; symbol: string; name: string };
+
 export type UsagePayload = {
   updated_at: string;
   claude: ClaudeAccount[];
@@ -259,6 +295,7 @@ export type UsagePayload = {
   fal: CreditsAccount[];
   bitcoin: BitcoinAccount[];
   weather?: WeatherPayload | null;
+  currencies?: CurrenciesPayload | null;
 };
 
 export type AccountPublic = { id: string; label: string; suffix: string | null };
@@ -319,5 +356,6 @@ export type ConfigPublic = {
   restart_needed_for_port: boolean;
   providers: Record<string, ProviderCardPublic>;
   weather: WeatherConfig;
+  currencies: CurrenciesConfig;
   device: DevicePublic;
 };
