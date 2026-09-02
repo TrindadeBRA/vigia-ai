@@ -12,10 +12,11 @@ import { CurrenciesBoardCard, CurrenciesDetail } from "../components/CurrenciesW
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
 import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
-import { STR, WEEKDAYS, type Lang, type T } from "../i18n";
+import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { ConfigOutlet } from "./config/ConfigPage";
+import NowPage from "./NowPage";
 
 const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
   const hits = pointerWithin(args);
@@ -855,7 +856,6 @@ function Sidebar(props: {
   onOverview: () => void;
   onSelect: (id: string) => void;
   onClose: () => void;
-  onNow: () => void;
   nowActive: boolean;
   configActive: boolean;
   setupActive: boolean;
@@ -863,7 +863,7 @@ function Sidebar(props: {
   alarmsActive: boolean;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, setupActive, temaActive, alarmsActive, t } = props;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, temaActive, alarmsActive, t } = props;
   const onPage = configActive || setupActive || temaActive || alarmsActive;
   const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
   return (
@@ -878,9 +878,9 @@ function Sidebar(props: {
         <button className={cn(sideItem, section === "overview" && !nowActive && !onPage && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
           <GridIcon size={16} /> {t.overview}
         </button>
-        <button className={cn(sideItem, nowActive && sideItemActive)} onClick={() => { onNow(); onClose(); }}>
+        <NavLink to="/display/now" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <ClockIcon size={16} /> {t.now}
-        </button>
+        </NavLink>
       </div>
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
         <div className={heading}>{t.accounts}</div>
@@ -894,7 +894,7 @@ function Sidebar(props: {
             </div>
           ) : (
             providers.map((p) => (
-              <button key={p.id} className={cn(sideItem, "shrink-0", section === "account" && selectedId === p.id && !onPage && sideItemActive)} onClick={() => { onSelect(p.id); onClose(); }}>
+              <button key={p.id} data-provider-id={p.id} className={cn(sideItem, "shrink-0", section === "account" && selectedId === p.id && !onPage && sideItemActive)} onClick={() => { onSelect(p.id); onClose(); }}>
                 <img className="size-[22px] shrink-0 object-contain" src={PROVIDER_ICON[p.provider]} alt={p.provider} draggable={false} />
                 <div className="min-w-0 flex-1">
                   <div className="overflow-hidden text-ellipsis whitespace-nowrap font-semibold">{p.title}</div>
@@ -1110,62 +1110,6 @@ function Overview({
   );
 }
 
-function NowRow({ p, pal }: { p: ProviderMeta; pal: Pal }) {
-  const half = p.metrics.length === 1;
-  return (
-    <div className={cn("min-w-0 flex-[1_1_100%] rounded-[13px] border border-edge bg-panel px-3.5 py-3 shadow-now [.flat_&]:shadow-none", half && "basis-[calc(50%-4.5px)]")}>
-      <div className="mb-2.5 flex items-center gap-[9px]">
-        <Icon id={p.provider} />
-        <div className="min-w-0 flex-1">
-          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650] leading-none">{p.title}</div>
-          {p.label ? <div className={cardLabel}>{p.label}</div> : null}
-        </div>
-      </div>
-      {!p.ok ? (
-        <div className={errorText}>{p.error || ""}</div>
-      ) : (
-        <div className="flex gap-[18px]">
-          {p.metrics.map((m, i) => (
-            <div key={i} className="min-w-0 flex-1">
-              <div className="mb-[5px] flex justify-between text-xs">
-                <span className="text-ink2">{m.label}</span>
-                {m.pct != null ? <span className={`${num} font-bold`}>{fmtPct(m.pct)}</span> : null}
-              </div>
-              {m.pct != null ? (
-                <div className={barTrack}>
-                  <div className={barFill} style={barFillStyle(m.pct, pal)} />
-                </div>
-              ) : (
-                <div className={`${num} text-[13.5px] font-bold`}>{m.sub || "--"}</div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NowView({ data, prefs, t, pal, nowMs, driftMs, secs, pollS, showCheck, onClose }: { data: UsagePayload; prefs: Prefs; t: T; pal: Pal; nowMs: number; driftMs: number; secs: number; pollS: number; showCheck: boolean; onClose: () => void }) {
-  const clockNow = new Date(nowMs + driftMs);
-  const pad2 = (n: number) => String(n).padStart(2, "0");
-  const timeStr = `${pad2(clockNow.getHours())}:${pad2(clockNow.getMinutes())}:${pad2(clockNow.getSeconds())}`;
-  const weekday = WEEKDAYS[prefs.lang][clockNow.getDay()];
-  const dateStr = `${weekday}  ${pad2(clockNow.getDate())}/${pad2(clockNow.getMonth() + 1)}/${clockNow.getFullYear()}`;
-  const providers = buildProviders(data, t, nowMs);
-  return (
-    <div className="relative flex h-full min-h-0 w-full cursor-pointer flex-col items-center justify-center overflow-y-auto bg-[radial-gradient(900px_420px_at_50%_30%,var(--glow),transparent_65%),var(--bg)] px-3.5 py-7" onClick={onClose}>
-      <div className="absolute right-3.5 top-3.5">
-        <Badge secs={secs} total={pollS} showCheck={showCheck} pal={pal} />
-      </div>
-      <div className={`${num} text-[clamp(42px,12vw,66px)] font-[620] tracking-[-1px] [text-shadow:0_0_40px_var(--glow)] [.flat_&]:[text-shadow:none]`}>{timeStr}</div>
-      <div className="mb-[26px] mt-1.5 text-sm capitalize tracking-[.2px] text-ink2">{dateStr}</div>
-      <div className="flex w-full max-w-[480px] flex-wrap gap-[9px]">
-        {providers.length === 0 ? <div className={emptyNote}>{t.noProviders}</div> : providers.map((p) => <NowRow key={p.id} p={p} pal={pal} />)}
-      </div>
-    </div>
-  );
-}
 
 function joinParts(...parts: Array<string | null | undefined>): string | null {
   const out = parts.filter((p): p is string => Boolean(p && p.trim()));
@@ -1552,12 +1496,12 @@ export default function Display() {
   const isSetup = Boolean(useMatch("/display/setup"));
   const isTema = Boolean(useMatch("/display/tema"));
   const isAlarms = Boolean(useMatch("/display/alarmes"));
-  const isNested = isConfig || isSetup || isTema || isAlarms;
+  const isNow = Boolean(useMatch("/display/now"));
+  const isNested = isConfig || isSetup || isTema || isAlarms || isNow;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [nowOpen, setNowOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pollMs, setPollMs] = useState(POLL_MS);
@@ -1655,15 +1599,6 @@ export default function Display() {
   function goOverview() {
     navigate("/display");
     setSection("overview");
-    setNowOpen(false);
-  }
-
-  if (nowOpen && data) {
-    return (
-      <div className={shellClass}>
-        <NowView data={data} prefs={prefs} t={t} pal={pal} nowMs={now} driftMs={driftMs} secs={secsLeft} pollS={pollS} showCheck={showCheck} onClose={() => setNowOpen(false)} />
-      </div>
-    );
   }
 
   const providers = data ? buildProviders(data, t, now) : [];
@@ -1687,10 +1622,10 @@ export default function Display() {
           <Logo size={28} />
         </button>
         <div className="flex-1" />
-        <button className={`${num} flex cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2.5 py-[7px] text-[14.5px] font-semibold text-ink transition-colors duration-150 hover:bg-chip`} onClick={() => { if (data) setNowOpen(true); }} title={t.now}>
+        <NavLink to="/display/now" className={`${num} flex cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2.5 py-[7px] text-[14.5px] font-semibold text-ink transition-colors duration-150 hover:bg-chip`} title={t.now}>
           <span className="size-1.5 shrink-0 rounded-full bg-good shadow-[0_0_5px_var(--good)] [.flat_&]:shadow-none" />
           {fmtClock(now + driftMs)}
-        </button>
+        </NavLink>
         <button className={cn(iconBtn, settingsOpen && "text-accent")} onClick={() => setSettingsOpen((v) => !v)} title={t.settings}>
           <SettingsIcon size={19} />
         </button>
@@ -1704,19 +1639,20 @@ export default function Display() {
           selectedId={selectedId}
           open={sidebarOpen}
           t={t}
-          nowActive={nowOpen}
+          nowActive={isNow}
           configActive={isConfig}
           setupActive={isSetup}
           temaActive={isTema}
           alarmsActive={isAlarms}
           onOverview={goOverview}
-          onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); setNowOpen(false); }}
-          onNow={() => { if (data) setNowOpen(true); }}
+          onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
           onClose={() => setSidebarOpen(false)}
         />
         <main className="min-w-0 flex-1 overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]">
-          {isNested ? (
+          {isNested && !isNow ? (
             <Outlet context={outlet} />
+          ) : isNow && data ? (
+            <NowPage data={data} prefs={prefs} providers={providers} t={t} nowMs={now} driftMs={driftMs} />
           ) : !data ? (
             fetchFailed ? (
               <div className={emptyNote}>{t.fetchFail}</div>
