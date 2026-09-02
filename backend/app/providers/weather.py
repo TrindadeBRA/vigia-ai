@@ -232,7 +232,7 @@ def fetch_weather_data(cfg_weather: dict[str, Any] | None = None) -> dict[str, A
         return weather_fail(str(exc))
 
     try:
-        data = http_json(url, timeout=15.0)
+        data = http_json(url, timeout=15.0, provider="WEATHER")
     except RuntimeError as exc:
         return weather_fail(str(exc))
 
@@ -360,7 +360,7 @@ def search_cities(query: str, count: int = 5, language: str = "pt") -> dict[str,
     qs = urllib.parse.urlencode(params)
     url = f"{GEOCODING_URL}?{qs}"
     try:
-        data = http_json(url, timeout=10.0)
+        data = http_json(url, timeout=10.0, provider="WEATHER")
     except RuntimeError as exc:
         raise RuntimeError(f"Busca de cidade falhou: {exc}") from exc
     if not isinstance(data, dict):

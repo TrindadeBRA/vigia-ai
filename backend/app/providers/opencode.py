@@ -141,6 +141,7 @@ def fetch_opencode_one(raw_key: str) -> dict[str, Any]:
                     "Accept": "application/json",
                     "User-Agent": OPENCODE_USER_AGENT,
                 },
+                provider="OPENCODE",
             )
         except RuntimeError as exc:
             combined["error"] = str(exc)

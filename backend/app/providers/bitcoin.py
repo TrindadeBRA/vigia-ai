@@ -57,7 +57,7 @@ def bitcoin_fail(msg: str) -> dict[str, Any]:
 
 def _fetch_balance_sat(address: str) -> int:
     url = BLOCKSTREAM_ADDRESS_URL + urllib.parse.quote(address, safe="")
-    data = http_json(url, timeout=15.0)
+    data = http_json(url, timeout=15.0, provider="BTC")
     if not isinstance(data, dict):
         raise RuntimeError("resposta inesperada do explorador de blocos")
     chain = data.get("chain_stats") or {}
@@ -68,7 +68,7 @@ def _fetch_balance_sat(address: str) -> int:
 
 
 def _fetch_btc_price() -> tuple[int | None, int | None]:
-    data = fetch_simple_price(["bitcoin"], ["usd", "brl"])
+    data = fetch_simple_price(["bitcoin"], ["usd", "brl"], provider="BTC")
     btc = data.get("bitcoin") or {}
     return _cents(btc.get("usd")), _cents(btc.get("brl"))
 

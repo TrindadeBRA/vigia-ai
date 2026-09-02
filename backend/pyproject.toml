@@ -17,12 +17,12 @@ dependencies = [
   "python-multipart>=0.0.12",
   "pywebpush>=2.0",
   "Pillow>=10.0",
+  "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3",
-  "httpx>=0.27",
   "ruff>=0.8",
 ]
 

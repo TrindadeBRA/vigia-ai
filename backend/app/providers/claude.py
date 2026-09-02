@@ -98,6 +98,7 @@ def fetch_claude_one(token: str) -> dict[str, Any]:
                 "Accept": "application/json",
                 "User-Agent": CLAUDE_USER_AGENT,
             },
+            provider="CLAUDE",
         )
     except RuntimeError as exc:
         msg = str(exc)

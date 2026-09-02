@@ -122,7 +122,7 @@ def _fetch_cursor_with_token(token: str, plan: str | None) -> dict[str, Any]:
     }
     dash_err = "GetCurrentPeriodUsage vazio"
     try:
-        data = http_json(CURSOR_USAGE_URL, method="POST", headers=headers, body=b"{}")
+        data = http_json(CURSOR_USAGE_URL, method="POST", headers=headers, body=b"{}", provider="CURSOR")
         if isinstance(data, dict):
             parsed = parse_cursor_dashboard(data, plan)
             if parsed and parsed.get("ok"):
@@ -136,6 +136,7 @@ def _fetch_cursor_with_token(token: str, plan: str | None) -> dict[str, Any]:
         data = http_json(
             CURSOR_AUTH_USAGE_URL,
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            provider="CURSOR",
         )
         if isinstance(data, dict):
             parsed = parse_cursor_auth_usage(data, plan)

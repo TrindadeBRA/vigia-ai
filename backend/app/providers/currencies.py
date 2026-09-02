@@ -48,7 +48,7 @@ def search_crypto(query: str, count: int = 8) -> list[dict[str, Any]]:
     count = max(1, min(15, count))
     qs = urllib.parse.urlencode({"query": query})
     try:
-        data = http_json(f"{COINGECKO_SEARCH_URL}?{qs}", timeout=10.0)
+        data = http_json(f"{COINGECKO_SEARCH_URL}?{qs}", timeout=10.0, provider="CURRENCIES")
     except RuntimeError:
         return []
     coins = data.get("coins") if isinstance(data, dict) else None
@@ -78,7 +78,7 @@ def _fetch_forex_rates(base: str) -> dict[str, Any]:
             return hit[1]
         stale = hit[1] if hit is not None else None
     try:
-        data = http_json(f"{FOREX_URL}{urllib.parse.quote(key)}", timeout=15.0)
+        data = http_json(f"{FOREX_URL}{urllib.parse.quote(key)}", timeout=15.0, provider="CURRENCIES")
         if not (isinstance(data, dict) and data.get("result") == "success" and isinstance(data.get("rates"), dict)):
             raise RuntimeError("resposta inesperada da API de câmbio")
         rates = data["rates"]
@@ -156,7 +156,7 @@ def fetch_currency_quotes(cfg_currencies: dict[str, Any]) -> dict[str, Any]:
     crypto_error: str | None = None
     if crypto_codes:
         try:
-            crypto_prices = fetch_simple_price(crypto_codes, [base.lower()])
+            crypto_prices = fetch_simple_price(crypto_codes, [base.lower()], provider="CURRENCIES")
         except RuntimeError as exc:
             crypto_error = str(exc)
 

@@ -125,7 +125,7 @@ def fetch_gpt_one(token: str, account_id: str | None = None) -> dict[str, Any]:
     if account_id:
         headers["ChatGPT-Account-Id"] = account_id.strip()
     try:
-        data = http_json(GPT_USAGE_URL, headers=headers)
+        data = http_json(GPT_USAGE_URL, headers=headers, provider="GPT")
     except RuntimeError as exc:
         return gpt_fail(str(exc))
     if not isinstance(data, dict):
