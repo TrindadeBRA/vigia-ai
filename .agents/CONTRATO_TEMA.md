@@ -2,7 +2,8 @@
 
 Protótipo, fora do fluxo normal do coletor — placas sem tema custom
 continuam funcionando exatamente como antes, e isso não tem relação com
-`CONTRATO_JSON.md` (`/usage`).
+`CONTRATO_JSON.md` (`/usage`). Painel: `/display/theme` (slugs em inglês;
+`/display/tema` redireciona).
 
 Mudar este contrato = atualizar este doc, `firmware/src/ui/customtheme.cpp`,
 `backend/app/routers/theme.py` **e** `frontend/src/pages/config/ThemeEditorPage.tsx`.
@@ -68,7 +69,7 @@ sempre converte fração → pixel na hora de desenhar, contra
   "background": { "type": "color", "color": "#10151A" },
   "clock": { "enabled": true, "x": 0.5, "y": 0.16, "scale": 2, "format24h": true, "color": "#F7F7F7", "showBackground": true, "autoColor": false },
   "icons": [
-    { "provider": "claude", "x": 0.25, "y": 0.55, "scale": 1.5, "color": "#E1C6A0" },
+    { "provider": "claude", "x": 0.25, "y": 0.55, "scale": 1.5, "color": "#E1C6A0", "metric": "session_percent" },
     { "provider": "brand", "x": 0.75, "y": 0.55, "scale": 1.0 }
   ],
   "texts": [
@@ -86,8 +87,29 @@ sempre converte fração → pixel na hora de desenhar, contra
 - `clock.autoColor`: `boolean` (default `false`) — quando `true`, a cor do texto do relógio é calculada automaticamente via `generateReadableColor` sobre `background.color` (WCAG AA 4.5:1), ignorando `clock.color`.
 - `scale`: multiplicador de tamanho, clamp **0.5–4.0**.
 - `icons[].provider`: `claude` | `gpt` | `cursor` | `openrouter` | `deepseek`
-  | `opencode` | `fal` | `weather` | `brand` (o olho da marca). Item com provider
-  desconhecido é ignorado, o resto do tema continua válido.
+  | `opencode` | `fal` | `bitcoin` | `adsense` | `weather` | `brand` (o olho da marca).
+  Item com provider desconhecido é ignorado, o resto do tema continua válido.
+- `icons[].metric`: chave da cota do `/usage` desenhada **junto** com o ícone
+  (é o ponto do tema — ver limites das IAs de relance). Omitido = métrica
+  padrão daquele provedor. `"none"` = só o ícone, sem número.
+
+  | Provider     | Padrão              | Outras |
+  | ------------ | ------------------- | ------ |
+  | `claude`     | `session_percent`   | `weekly_percent`, `sonnet_percent`, `opus_percent` |
+  | `gpt`        | `session_percent`   | `weekly_percent` |
+  | `cursor`     | `percent`           | `other_percent`, `remaining_cents` |
+  | `openrouter` | `remaining_cents`   | `percent` |
+  | `deepseek`   | `remaining_cents`   | `percent` |
+  | `opencode`   | `rolling_percent`   | `weekly_percent`, `monthly_percent`, `remaining_cents` |
+  | `fal`        | `remaining_cents`   | — |
+  | `bitcoin`    | `value_usd_cents`   | `balance_btc` |
+  | `adsense`    | `unpaid_cents`      | `today_cents` |
+  | `weather`    | (sempre temperatura; ignora `metric`) | — |
+  | `brand`      | (sem métrica)       | — |
+
+  Com várias contas do mesmo provedor, a placa usa a que mais precisa de
+  atenção (mesmo critério da Início: `*WorstIdx()`). `weather` continua
+  sendo um chip próprio (condição + temperatura).
 - Limites: até **8** ícones, até **4** textos (`texts[].text` até 23 chars) —
   o excesso é descartado silenciosamente.
 - JSON inválido → erro, tema anterior **não** é alterado.
@@ -200,7 +222,8 @@ disparam preflight).
 - O botão de recarregar no header só existe no header **vertical**
   (esquerda/direita) — no horizontal a barra já é apertada demais pra mais
   um ícone.
-- Só os 7 ícones de provedor + a marca — sem upload de ícone/PNG arbitrário.
+- Só os ícones de provedor + a marca — sem upload de ícone/PNG arbitrário.
+  Cada ícone de IA/saldo mostra a cota ao vivo (métrica escolhida no painel).
 - Relógio mostra só `HH:MM` (sem segundos) e repinta a tela inteira 1x por
   minuto — sem blitting parcial.
 - No Wokwi, o LittleFS não monta (`fs_ok: false`) — o tema (JSON pequeno e a

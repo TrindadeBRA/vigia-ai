@@ -1,41 +1,46 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { openUsageEvents } from "../../api/client";
+import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
 import { Logo } from "../../components/Logo";
 import { Skeleton } from "../../components/Skeleton";
-import { fmtTemp, wmoEmoji } from "../../format";
 import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
-import { cfgFieldLabel, cfgGrid, cfgStatus, pageCol, viewFade } from "../../tw";
+import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
 import { THEME_STR } from "./themeCopy";
-import { Button, Card, Checkbox, FieldStatus, TextField } from "./ui";
+import {
+  ICON_PROVIDERS,
+  PROVIDER_METRICS,
+  defaultMetric,
+  formatThemeMetric,
+  metricLabel,
+  providerHasData,
+  weatherEmoji,
+  type ThemeProvider,
+} from "./themeMetrics";
+import { Button, Card, Checkbox, FieldStatus, Fold, TextField } from "./ui";
 import type { ConfigOutlet } from "./usePublicConfig";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./WallpaperManager";
 
-type Provider = "claude" | "gpt" | "cursor" | "openrouter" | "deepseek" | "opencode" | "fal" | "brand" | "weather";
-
-type ThemeIcon = { id: string; provider: Provider; x: number; y: number; scale: number; color: string | null };
+type ThemeIcon = {
+  id: string;
+  provider: ThemeProvider;
+  x: number;
+  y: number;
+  scale: number;
+  color: string | null;
+  metric: string;
+};
 type ThemeText = { id: string; x: number; y: number; scale: number; color: string | null; text: string };
 type ThemeClock = { enabled: boolean; x: number; y: number; scale: number; color: string | null; format24h: boolean; showBackground: boolean; autoColor: boolean };
 type ThemeBg = { color: string };
 type ThemeState = { background: ThemeBg; clock: ThemeClock; icons: ThemeIcon[]; texts: ThemeText[] };
 
 type WallpaperItem = { id: string; source: string; provider?: string | null; external_id?: string | null; preview_url?: string | null; created_at?: string | null; has_preview: boolean };
-
-const ICON_PROVIDERS: { id: Provider; label: string }[] = [
-  { id: "claude", label: "Claude" },
-  { id: "gpt", label: "GPT" },
-  { id: "cursor", label: "Cursor" },
-  { id: "openrouter", label: "OpenRouter" },
-  { id: "deepseek", label: "DeepSeek" },
-  { id: "opencode", label: "OpenCode" },
-  { id: "fal", label: "fal.ai" },
-  { id: "weather", label: "Clima" },
-  { id: "brand", label: "VIGIA AI" },
-];
 
 const DEFAULT_THEME: ThemeState = {
   background: { color: "#10151a" },
@@ -44,7 +49,8 @@ const DEFAULT_THEME: ThemeState = {
   texts: [],
 };
 
-const STORAGE_KEY = "vigia_theme_draft_v1";
+const STORAGE_KEY = "vigia_theme_draft_v2";
+const STORAGE_KEY_V1 = "vigia_theme_draft_v1";
 const MAX_ICONS = 8;
 const MAX_TEXTS = 4;
 
@@ -52,9 +58,6 @@ function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
-// 127.0.0.1/localhost SEM porta é o gateway do Wokwi (wokwigw) na porta 80 —
-// não existe nada lá. Com porta (ex. "127.0.0.1:8090") é válido: é o forward
-// que `./dev wokwi` monta pra placa simulada. Ver docs/CONTRATO_TEMA.md.
 function isBareLoopback(ip: string): boolean {
   const v = ip.trim().toLowerCase();
   return v === "127.0.0.1" || v === "localhost" || v === "::1";
@@ -74,20 +77,24 @@ function formatClock(d: Date, format24h: boolean): string {
   return `${String(h).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-function migrateTheme(raw: Partial<ThemeState>): ThemeState {
+function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<ThemeIcon> & { provider?: string }> }): ThemeState {
   const merged = { ...DEFAULT_THEME, ...raw } as ThemeState;
-  // Migração: campos novos do relógio (showBackground, autoColor) para drafts antigos
   if (merged.clock) {
     if (typeof merged.clock.showBackground !== "boolean") merged.clock.showBackground = DEFAULT_THEME.clock.showBackground;
     if (typeof merged.clock.autoColor !== "boolean") merged.clock.autoColor = DEFAULT_THEME.clock.autoColor;
   }
+  merged.icons = (merged.icons || []).map((icon) => ({
+    ...icon,
+    provider: (icon.provider as ThemeProvider) || "claude",
+    metric: icon.metric || defaultMetric((icon.provider as ThemeProvider) || "claude"),
+  }));
   return merged;
 }
 
 function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState) => void] {
   const [theme, setTheme] = useState<ThemeState>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY_V1);
       if (raw) return migrateTheme(JSON.parse(raw) as Partial<ThemeState>);
     } catch {
       /* ignore */
@@ -118,7 +125,14 @@ function themeToJson(t: ThemeState, hasWallpaper: boolean) {
       autoColor: t.clock.autoColor,
       ...(t.clock.color ? { color: t.clock.color } : {}),
     },
-    icons: t.icons.map((i) => ({ provider: i.provider, x: i.x, y: i.y, scale: i.scale, ...(i.color ? { color: i.color } : {}) })),
+    icons: t.icons.map((i) => ({
+      provider: i.provider,
+      x: i.x,
+      y: i.y,
+      scale: i.scale,
+      metric: i.metric || defaultMetric(i.provider),
+      ...(i.color ? { color: i.color } : {}),
+    })),
     texts: t.texts.map((x) => ({ text: x.text, x: x.x, y: x.y, scale: x.scale, ...(x.color ? { color: x.color } : {}) })),
   };
 }
@@ -165,7 +179,7 @@ function CanvasDot({
       onPointerMove={onPointerMove}
       style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
       className={cn(
-        "absolute flex -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none select-none items-center justify-center rounded-full outline-none active:cursor-grabbing",
+        "absolute flex -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none select-none items-center justify-center rounded-[10px] outline-none active:cursor-grabbing",
         selected ? "ring-2 ring-accent ring-offset-2 ring-offset-transparent" : "ring-1 ring-white/40",
       )}
     >
@@ -203,9 +217,6 @@ function ScaleField({ label, value, onChange }: { label: string; value: number; 
 const checkerBg =
   "linear-gradient(45deg,#8888 25%,transparent 25%),linear-gradient(-45deg,#8888 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#8888 75%),linear-gradient(-45deg,transparent 75%,#8888 75%)";
 
-// Círculo de cor + swatch clicável (o <input type=color> nativo fica
-// invisível por cima, só pra abrir o seletor do SO) — reutilizado em fundo,
-// relógio, ícones e textos.
 function ColorSwatch({ value, onChange, size = 36 }: { value: string | null; onChange: (v: string) => void; size?: number }) {
   return (
     <label
@@ -265,9 +276,63 @@ function ColorField({
   );
 }
 
+function IconChip({
+  provider,
+  metric,
+  color,
+  scale,
+  zoom,
+  usage,
+}: {
+  provider: ThemeProvider;
+  metric: string;
+  color: string | null;
+  scale: number;
+  zoom: number;
+  usage: UsagePayload | null;
+}) {
+  const value = formatThemeMetric(usage, provider, metric);
+  const iconPx = 20 * scale * zoom;
+  if (provider === "weather") {
+    return (
+      <div className="flex items-center gap-1 rounded-md bg-black/35 px-2 py-1" style={{ border: color ? `1.5px solid ${color}` : undefined }}>
+        <span style={{ fontSize: `${14 * scale * zoom}px`, lineHeight: 1 }}>{weatherEmoji(usage)}</span>
+        <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
+          {value || "--"}
+        </span>
+      </div>
+    );
+  }
+  const glyph =
+    provider === "brand" ? (
+      <Logo size={iconPx} />
+    ) : (
+      <img src={PROVIDER_ICON[provider]} alt={provider} draggable={false} style={{ width: iconPx, height: iconPx, objectFit: "contain" }} />
+    );
+  if (!value) {
+    return (
+      <div className="rounded-full bg-black/25" style={{ padding: Math.max(2, 4 * zoom), boxShadow: color ? `0 0 0 2px ${color}` : undefined }}>
+        {glyph}
+      </div>
+    );
+  }
+  return (
+    <div
+      className="flex items-center gap-1.5 rounded-md bg-black/35 px-2 py-1"
+      style={{ border: color ? `1.5px solid ${color}` : undefined }}
+    >
+      {glyph}
+      <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export default function ThemeEditorPage() {
   const ctx = useOutletContext<ConfigOutlet | null>();
-  const c = THEME_STR[ctx?.lang || "pt"];
+  const lang = ctx?.lang || "pt";
+  const c = THEME_STR[lang];
   const { cfg, phase, reload, setPhase } = usePublicConfig();
 
   const [theme, setTheme] = useThemeDraft();
@@ -281,7 +346,7 @@ export default function ThemeEditorPage() {
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [screenshotFullscreen, setScreenshotFullscreen] = useState(false);
   const [now, setNow] = useState(() => new Date());
-  const [weatherPreview, setWeatherPreview] = useState<{ temp: number | null; code: number | null; unit: string } | null>(null);
+  const [usage, setUsage] = useState<UsagePayload | null>(null);
   const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
   const [currentWallpaperId, setCurrentWallpaperId] = useState<string | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
@@ -304,31 +369,24 @@ export default function ThemeEditorPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const applyUsage = (d: unknown) => {
-      if (cancelled) return;
-      const w = (d as { weather?: { current?: { temperature_2m?: number | null; weather_code?: number | null }; current_units?: Record<string, string> } })?.weather;
-      if (w?.current) {
-        setWeatherPreview({ temp: w.current.temperature_2m ?? null, code: w.current.weather_code ?? null, unit: w.current_units?.["temperature_2m"] || "°C" });
-      }
-    };
     fetch("/usage", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then(applyUsage)
-      .catch(() => { });
-    fetch("/api/weather", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: unknown) => {
-        if (cancelled) return;
-        const cur = (d as { current?: { temperature_2m?: number | null; weather_code?: number | null }; current_units?: Record<string, string> })?.current;
-        if (cur) setWeatherPreview({ temp: cur.temperature_2m ?? null, code: cur.weather_code ?? null, unit: (d as { current_units?: Record<string, string> })?.current_units?.["temperature_2m"] || "°C" });
+      .then((d: UsagePayload | null) => {
+        if (!cancelled && d) setUsage(d);
       })
-      .catch(() => { });
+      .catch(() => {});
+    const stop = openUsageEvents(
+      (d) => {
+        if (!cancelled) setUsage(d);
+      },
+      () => {},
+    );
     return () => {
       cancelled = true;
+      stop();
     };
   }, []);
 
-  // Carrega wallpapers — o canvas mostra o papel selecionado (o mesmo que a placa baixa em GET /api/theme/background).
   const fetchWallpapers = useCallback(async () => {
     try {
       const r = await fetch("/api/wallpapers", { cache: "no-store" });
@@ -349,10 +407,6 @@ export default function ThemeEditorPage() {
     return () => window.removeEventListener("vigia:wallpapers-updated", onUpdate);
   }, [fetchWallpapers]);
 
-  // Resolução real da placa reportada ao coletor (header X-Vigia-Screen em
-  // GET /usage e /events, ver firmware/src/net/client.cpp) — acerta o
-  // tamanho do fundo sem precisar digitar o IP (esse só é usado no card de
-  // depuração, pra enviar direto e pro screenshot).
   useEffect(() => {
     if (cfg?.device.width && cfg.device.height) {
       setCanvasSize({ width: cfg.device.width, height: cfg.device.height });
@@ -360,10 +414,6 @@ export default function ThemeEditorPage() {
     }
   }, [cfg?.device.width, cfg?.device.height]);
 
-  // Quantos px CSS o canvas de fato ocupa na tela vs. o tamanho real (em px
-  // do device) — sem isso, ícone/relógio/texto ficam com tamanho fixo em CSS
-  // e desproporcionais na placa de verdade (o canvas pode renderizar bem
-  // maior ou menor que a resolução real dependendo da largura da janela).
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -380,10 +430,6 @@ export default function ThemeEditorPage() {
   useEffect(() => {
     if (!deviceIp) return;
     const id = window.setTimeout(() => {
-      // Sem { cache: "no-store" } de propósito: essa opção faz o browser
-      // injetar Cache-Control/Pragma no request, o que dispara um preflight
-      // CORS extra — a placa já responde sem Content-Type: cache aqui é
-      // inofensivo (é só o tamanho do canvas).
       fetch(`http://${deviceIp}/theme`)
         .then((r) => (r.ok ? (r.json() as Promise<{ width?: number; height?: number }>) : null))
         .then((d) => {
@@ -392,9 +438,7 @@ export default function ThemeEditorPage() {
             setCanvasKnown(true);
           }
         })
-        .catch(() => {
-          /* placa fora do ar ou CORS — segue com a proporção padrão */
-        });
+        .catch(() => {});
     }, 600);
     return () => window.clearTimeout(id);
   }, [deviceIp]);
@@ -405,9 +449,16 @@ export default function ThemeEditorPage() {
   function updateText(id: string, patch: Partial<ThemeText>) {
     setTheme((t) => ({ ...t, texts: t.texts.map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
   }
-  function addIcon() {
+  function addIcon(provider: ThemeProvider = "claude") {
     const id = uid();
-    setTheme((t) => (t.icons.length >= MAX_ICONS ? t : { ...t, icons: [...t.icons, { id, provider: "claude", x: 0.5, y: 0.5, scale: 1, color: null }] }));
+    const n = theme.icons.length;
+    const x = 0.22 + (n % 4) * 0.2;
+    const y = 0.48 + Math.floor(n / 4) * 0.22;
+    setTheme((t) =>
+      t.icons.length >= MAX_ICONS
+        ? t
+        : { ...t, icons: [...t.icons, { id, provider, x, y, scale: 1, color: null, metric: defaultMetric(provider) }] },
+    );
     setSelected(`icon:${id}`);
   }
   function removeIcon(id: string) {
@@ -416,7 +467,7 @@ export default function ThemeEditorPage() {
   }
   function addText() {
     const id = uid();
-    setTheme((t) => (t.texts.length >= MAX_TEXTS ? t : { ...t, texts: [...t.texts, { id, text: "VIGIA AI", x: 0.5, y: 0.5, scale: 1, color: null }] }));
+    setTheme((t) => (t.texts.length >= MAX_TEXTS ? t : { ...t, texts: [...t.texts, { id, text: "VIGIA AI", x: 0.5, y: 0.82, scale: 1, color: null }] }));
     setSelected(`text:${id}`);
   }
   function removeText(id: string) {
@@ -424,9 +475,6 @@ export default function ThemeEditorPage() {
     setSelected(null);
   }
 
-  // Salva no coletor (mesma origem do painel — sem CORS, sem IP da placa).
-  // A placa é quem busca (botão de recarregar no header, ver
-  // firmware/src/net/client.cpp:themeClientReload e docs/CONTRATO_TEMA.md).
   async function saveTheme() {
     const hasWallpaper = Boolean(currentWallpaperId);
     const r2 = await fetch("/api/theme/meta", {
@@ -445,8 +493,12 @@ export default function ThemeEditorPage() {
     return j.ok ? { ok: true } : { ok: false, error: j.error || c.removeError };
   }
 
+  const selectedIcon = selected?.startsWith("icon:") ? theme.icons.find((i) => i.id === selected.slice(5)) : undefined;
+  const selectedText = selected?.startsWith("text:") ? theme.texts.find((x) => x.id === selected.slice(5)) : undefined;
+  const providerLabel = (p: ThemeProvider) => ICON_PROVIDERS.find((x) => x.id === p)?.label || p;
+
   if (phase === "loading" && !cfg) {
-    return <Skeleton page="config" />;
+    return <Skeleton page="theme" />;
   }
   if (phase === "error" && !cfg) {
     return (
@@ -456,317 +508,387 @@ export default function ThemeEditorPage() {
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
         </header>
         <p className={`${cfgStatus} text-bad`}>{c.offline}</p>
-        <Button onClick={() => { setPhase("loading"); void reload(); }}>{c.retry}</Button>
+        <Button
+          onClick={() => {
+            setPhase("loading");
+            void reload();
+          }}
+        >
+          {c.retry}
+        </Button>
       </div>
     );
   }
 
   return (
     <div className={`${pageCol} ${viewFade}`}>
-      <header className="w-full">
-        <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
-        <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
+      <header className="flex w-full flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
+          <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => void send.run(saveTheme, { success: c.savedOk, error: c.saveError })} loading={send.busy}>
+            {send.busy ? c.saving : c.save}
+          </Button>
+          <Button variant="ghost" onClick={() => void remove.run(removeSavedTheme, { success: c.removedOk, error: c.removeError })} loading={remove.busy}>
+            {remove.busy ? c.removing : c.remove}
+          </Button>
+        </div>
       </header>
+      <FieldStatus status={send.status} message={send.message} />
+      <FieldStatus status={remove.status} message={remove.message} />
 
-      <Card title={c.canvasTitle} lead={c.canvasHint}>
-        {!canvasKnown ? <p className={cfgStatus}>{c.canvasNoDevice}</p> : null}
-        {currentWallpaperId || localPreviewUrl ? (
-          <p className={cfgStatus}>
-            Papel de parede em uso
-          </p>
-        ) : wallpapers.length > 0 ? (
-          <p className={`${cfgStatus} text-warn`}>Papéis de parede cadastrados mas nenhum selecionado</p>
-        ) : null}
-        <div
-          ref={canvasRef}
-          className="relative mx-auto w-full max-w-[560px] touch-none select-none overflow-hidden rounded-[14px] border border-edge"
-          style={{
-            aspectRatio: `${canvasSize.width} / ${canvasSize.height}`,
-            background: theme.background.color,
-          }}
-          onPointerDown={() => setSelected(null)}
-        >
-          {/* Fundo: exatamente como a placa — se há wallpaper, mostra a imagem com cover (mesmo crop do backend _image_to_raw); senão cor sólida */}
-          {localPreviewUrl || currentWallpaperId ? (
-            <img
-              key={localPreviewUrl || currentWallpaperId}
-              src={localPreviewUrl || `/api/wallpapers/${currentWallpaperId}/preview`}
-              alt=""
-              draggable={false}
-              className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
-              style={{ imageRendering: "auto" }}
-              onError={(e) => {
-                if (localPreviewUrl) return;
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
+      <div className="grid w-full items-start gap-[14px] lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
+        <Card title={c.canvasTitle} lead={c.canvasHint}>
+          {!canvasKnown ? <p className={cfgStatus}>{c.canvasNoDevice}</p> : null}
+          {currentWallpaperId || localPreviewUrl ? (
+            <p className={cfgStatus}>{c.wallpaperInUse}</p>
+          ) : wallpapers.length > 0 ? (
+            <p className={`${cfgStatus} text-warn`}>{c.wallpaperNoneSelected}</p>
           ) : null}
-          {theme.clock.enabled ? (
-            <CanvasDot
-              x={theme.clock.x}
-              y={theme.clock.y}
-              canvasRef={canvasRef}
-              selected={selected === "clock"}
-              title={c.clock}
-              onSelect={() => setSelected("clock")}
-              onDrag={(x, y) => setTheme((t) => ({ ...t, clock: { ...t.clock, x, y } }))}
-            >
-              {(() => {
-                const autoPair = theme.clock.autoColor ? ntcGenerateReadableColor(theme.background.color) : null;
-                const autoTextColor = autoPair ? autoPair[0] : null;
-                const effectiveColor = theme.clock.autoColor ? (autoTextColor || theme.clock.color) : theme.clock.color;
-                const bgClass = theme.clock.showBackground ? "bg-black/35" : "bg-transparent";
-                return (
-                  <span
-                    className={`whitespace-nowrap rounded-md px-2 py-1 font-mono font-bold text-white ${bgClass}`}
-                    style={{ color: effectiveColor || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
-                  >
-                    {formatClock(now, theme.clock.format24h)}
-                  </span>
-                );
-              })()}
-            </CanvasDot>
-          ) : null}
-          {theme.icons.map((icon) => (
-            <CanvasDot
-              key={icon.id}
-              x={icon.x}
-              y={icon.y}
-              canvasRef={canvasRef}
-              selected={selected === `icon:${icon.id}`}
-              title={icon.provider}
-              onSelect={() => setSelected(`icon:${icon.id}`)}
-              onDrag={(x, y) => updateIcon(icon.id, { x, y })}
-              onRemove={() => removeIcon(icon.id)}
-              removeLabel={c.removeIcon}
-            >
-              {icon.provider === "weather" ? (
-                <div
-                  className="flex items-center gap-1 rounded-md bg-black/35 px-2 py-1"
-                  style={{ border: icon.color ? `1.5px solid ${icon.color}` : undefined }}
-                >
-                  <span style={{ fontSize: `${14 * icon.scale * zoom}px`, lineHeight: 1 }}>{wmoEmoji(weatherPreview?.code)}</span>
-                  <span
-                    className="whitespace-nowrap font-mono font-bold text-white"
-                    style={{ color: icon.color || undefined, fontSize: `${11 * icon.scale * zoom}px` }}
-                  >
-                    {weatherPreview?.temp != null ? fmtTemp(weatherPreview.temp, weatherPreview.unit) : "26°C"}
-                  </span>
-                </div>
-              ) : (
-                <div
-                  className="rounded-full bg-black/25"
-                  style={{ padding: Math.max(2, 4 * zoom), boxShadow: icon.color ? `0 0 0 2px ${icon.color}` : undefined }}
-                >
-                  {icon.provider === "brand" ? (
-                    <Logo size={20 * icon.scale * zoom} />
-                  ) : (
-                    <img
-                      src={PROVIDER_ICON[icon.provider]}
-                      alt={icon.provider}
-                      draggable={false}
-                      style={{ width: 20 * icon.scale * zoom, height: 20 * icon.scale * zoom, objectFit: "contain" }}
-                    />
+          <div
+            ref={canvasRef}
+            className="relative mx-auto w-full max-w-[560px] touch-none select-none overflow-hidden rounded-[14px] border border-edge"
+            style={{
+              aspectRatio: `${canvasSize.width} / ${canvasSize.height}`,
+              background: theme.background.color,
+            }}
+            onPointerDown={() => setSelected(null)}
+          >
+            {localPreviewUrl || currentWallpaperId ? (
+              <img
+                key={localPreviewUrl || currentWallpaperId}
+                src={localPreviewUrl || `/api/wallpapers/${currentWallpaperId}/preview`}
+                alt=""
+                draggable={false}
+                className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
+                style={{ imageRendering: "auto" }}
+                onError={(e) => {
+                  if (localPreviewUrl) return;
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : null}
+            {theme.clock.enabled ? (
+              <CanvasDot
+                x={theme.clock.x}
+                y={theme.clock.y}
+                canvasRef={canvasRef}
+                selected={selected === "clock"}
+                title={c.clock}
+                onSelect={() => setSelected("clock")}
+                onDrag={(x, y) => setTheme((t) => ({ ...t, clock: { ...t.clock, x, y } }))}
+              >
+                {(() => {
+                  const autoPair = theme.clock.autoColor ? ntcGenerateReadableColor(theme.background.color) : null;
+                  const autoTextColor = autoPair ? autoPair[0] : null;
+                  const effectiveColor = theme.clock.autoColor ? autoTextColor || theme.clock.color : theme.clock.color;
+                  const bgClass = theme.clock.showBackground ? "bg-black/35" : "bg-transparent";
+                  return (
+                    <span
+                      className={`whitespace-nowrap rounded-md px-2 py-1 font-mono font-bold text-white ${bgClass}`}
+                      style={{ color: effectiveColor || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
+                    >
+                      {formatClock(now, theme.clock.format24h)}
+                    </span>
+                  );
+                })()}
+              </CanvasDot>
+            ) : null}
+            {theme.icons.map((icon) => (
+              <CanvasDot
+                key={icon.id}
+                x={icon.x}
+                y={icon.y}
+                canvasRef={canvasRef}
+                selected={selected === `icon:${icon.id}`}
+                title={`${providerLabel(icon.provider)} ${formatThemeMetric(usage, icon.provider, icon.metric)}`}
+                onSelect={() => setSelected(`icon:${icon.id}`)}
+                onDrag={(x, y) => updateIcon(icon.id, { x, y })}
+                onRemove={() => removeIcon(icon.id)}
+                removeLabel={c.removeIcon}
+              >
+                <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+              </CanvasDot>
+            ))}
+            {theme.texts.map((txt) => (
+              <CanvasDot
+                key={txt.id}
+                x={txt.x}
+                y={txt.y}
+                canvasRef={canvasRef}
+                selected={selected === `text:${txt.id}`}
+                title={txt.text}
+                onSelect={() => setSelected(`text:${txt.id}`)}
+                onDrag={(x, y) => updateText(txt.id, { x, y })}
+                onRemove={() => removeText(txt.id)}
+                removeLabel={c.removeText}
+              >
+                <span className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white" style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}>
+                  {txt.text || "…"}
+                </span>
+              </CanvasDot>
+            ))}
+          </div>
+        </Card>
+
+        <div className="flex flex-col gap-[14px]">
+          <Card title={c.elements}>
+            <div className="flex flex-col gap-1">
+              {theme.clock.enabled ? (
+                <button
+                  type="button"
+                  onClick={() => setSelected("clock")}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
+                    selected === "clock" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
                   )}
-                </div>
-              )}
-            </CanvasDot>
-          ))}
-          {theme.texts.map((txt) => (
-            <CanvasDot
-              key={txt.id}
-              x={txt.x}
-              y={txt.y}
-              canvasRef={canvasRef}
-              selected={selected === `text:${txt.id}`}
-              title={txt.text}
-              onSelect={() => setSelected(`text:${txt.id}`)}
-              onDrag={(x, y) => updateText(txt.id, { x, y })}
-              onRemove={() => removeText(txt.id)}
-              removeLabel={c.removeText}
-            >
-              <span className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white" style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}>
-                {txt.text || "…"}
-              </span>
-            </CanvasDot>
-          ))}
+                >
+                  <span className="font-mono text-[12px] text-ink3">{formatClock(now, theme.clock.format24h)}</span>
+                  <span className="font-[650]">{c.clock}</span>
+                </button>
+              ) : null}
+              {theme.icons.map((icon) => {
+                const value = formatThemeMetric(usage, icon.provider, icon.metric);
+                return (
+                  <button
+                    type="button"
+                    key={icon.id}
+                    onClick={() => setSelected(`icon:${icon.id}`)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
+                      selected === `icon:${icon.id}` ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                    )}
+                  >
+                    {icon.provider === "brand" ? (
+                      <Logo size={18} />
+                    ) : icon.provider === "weather" ? (
+                      <span className="text-[15px]">{weatherEmoji(usage)}</span>
+                    ) : (
+                      <img src={PROVIDER_ICON[icon.provider]} alt="" className="size-[18px] object-contain" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate font-[650]">{providerLabel(icon.provider)}</span>
+                    <span className="shrink-0 font-mono text-[12px] text-ink2">{value || (icon.metric === "none" ? c.metricNone : "—")}</span>
+                  </button>
+                );
+              })}
+              {theme.texts.map((txt) => (
+                <button
+                  type="button"
+                  key={txt.id}
+                  onClick={() => setSelected(`text:${txt.id}`)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
+                    selected === `text:${txt.id}` ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate font-[650]">{txt.text || "…"}</span>
+                </button>
+              ))}
+              {!theme.clock.enabled && theme.icons.length === 0 && theme.texts.length === 0 ? <p className={cfgStatus}>{c.noIcons}</p> : null}
+            </div>
+          </Card>
+
+          {selectedIcon ? (
+            <Card title={providerLabel(selectedIcon.provider)}>
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1.5">
+                  <span className={cfgFieldLabel}>{c.icons}</span>
+                  <select
+                    className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink"
+                    value={selectedIcon.provider}
+                    onChange={(e) => {
+                      const provider = e.target.value as ThemeProvider;
+                      updateIcon(selectedIcon.id, { provider, metric: defaultMetric(provider) });
+                    }}
+                  >
+                    {ICON_PROVIDERS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {providerHasData(selectedIcon.provider) ? (
+                  <label className="flex flex-col gap-1.5">
+                    <span className={cfgFieldLabel}>{c.metric}</span>
+                    <select
+                      className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink"
+                      value={selectedIcon.metric}
+                      onChange={(e) => updateIcon(selectedIcon.id, { metric: e.target.value })}
+                    >
+                      {PROVIDER_METRICS[selectedIcon.provider].map((m) => (
+                        <option key={m.key} value={m.key}>
+                          {metricLabel(m.key, lang)} — {formatThemeMetric(usage, selectedIcon.provider, m.key)}
+                        </option>
+                      ))}
+                      <option value="none">{c.metricNone}</option>
+                    </select>
+                    <span className="text-xs text-ink3">{c.metricHint}</span>
+                  </label>
+                ) : null}
+                <ScaleField label={c.size} value={selectedIcon.scale} onChange={(v) => updateIcon(selectedIcon.id, { scale: v })} />
+                <ColorField label={c.color} value={selectedIcon.color} onChange={(v) => updateIcon(selectedIcon.id, { color: v })} noneLabel={c.colorNone} lang={lang} />
+                <Button variant="ghost" onClick={() => removeIcon(selectedIcon.id)}>
+                  {c.removeIcon}
+                </Button>
+              </div>
+            </Card>
+          ) : selected === "clock" ? (
+            <Card title={c.clock}>
+              <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: e.target.checked } }))} />
+              <Checkbox label={c.clockFormat24h} checked={theme.clock.format24h} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, format24h: e.target.checked } }))} />
+              <Checkbox label={c.clockShowBackground} checked={theme.clock.showBackground} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, showBackground: e.target.checked } }))} />
+              <Checkbox label={c.clockAutoColor} checked={theme.clock.autoColor} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, autoColor: e.target.checked } }))} />
+              {theme.clock.autoColor ? <p className={`${cfgStatus} text-accent`}>{c.clockAutoColorActive}</p> : null}
+              <ScaleField label={c.size} value={theme.clock.scale} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, scale: v } }))} />
+              <div className={theme.clock.autoColor ? "pointer-events-none opacity-50" : ""}>
+                <ColorField label={c.color} value={theme.clock.color} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, color: v } }))} noneLabel={c.colorNone} lang={lang} />
+              </div>
+            </Card>
+          ) : selectedText ? (
+            <Card title={c.texts}>
+              <div className="flex flex-col gap-3">
+                <TextField label={c.texts} value={selectedText.text} maxLength={23} placeholder={c.textPh} onChange={(e) => updateText(selectedText.id, { text: e.target.value })} />
+                <ScaleField label={c.size} value={selectedText.scale} onChange={(v) => updateText(selectedText.id, { scale: v })} />
+                <ColorField label={c.color} value={selectedText.color} onChange={(v) => updateText(selectedText.id, { color: v })} noneLabel={c.colorNone} lang={lang} />
+                <Button variant="ghost" onClick={() => removeText(selectedText.id)}>
+                  {c.removeText}
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <Card title={c.selectHint}>
+              <p className={cfgStatus}>{c.canvasHint}</p>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      <Card title={c.addProvider} lead={theme.icons.length ? undefined : c.noIcons}>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+          {ICON_PROVIDERS.map((p) => {
+            const value = formatThemeMetric(usage, p.id, defaultMetric(p.id));
+            const onTheme = theme.icons.some((i) => i.provider === p.id);
+            const disabled = theme.icons.length >= MAX_ICONS;
+            return (
+              <button
+                type="button"
+                key={p.id}
+                disabled={disabled}
+                onClick={() => addIcon(p.id)}
+                className="flex items-center gap-2 rounded-[12px] border border-edge bg-canvas px-3 py-2.5 text-left hover:border-accent/50 hover:bg-chip disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {p.id === "brand" ? (
+                  <Logo size={22} />
+                ) : p.id === "weather" ? (
+                  <span className="text-[18px]">{weatherEmoji(usage)}</span>
+                ) : (
+                  <img src={PROVIDER_ICON[p.id]} alt="" className="size-[22px] object-contain" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-[650]">{p.label}</span>
+                  <span className="block truncate font-mono text-[11px] text-ink3">{value || (onTheme ? c.placed : c.metricNone)}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={addText} disabled={theme.texts.length >= MAX_TEXTS}>
+            {c.addText}
+          </Button>
+          {!theme.clock.enabled ? (
+            <Button variant="secondary" onClick={() => { setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: true } })); setSelected("clock"); }}>
+              {c.clockEnabled}
+            </Button>
+          ) : null}
         </div>
       </Card>
 
-      <div className={cfgGrid}>
+      <div className="grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))]">
         <Card title={c.background}>
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
               <ColorSwatch value={theme.background.color} onChange={(v) => setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} size={40} />
               <span className="font-mono text-[13px] text-ink">{theme.background.color.toUpperCase()}</span>
             </div>
-            <NameToColorPicker value={theme.background.color} onChange={(v) => v && setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} lang={ctx?.lang || "pt"} allowClear={false} />
+            <NameToColorPicker value={theme.background.color} onChange={(v) => v && setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} lang={lang} allowClear={false} />
           </div>
         </Card>
 
-        <Card title={c.icons} action={<Button variant="secondary" onClick={addIcon} disabled={theme.icons.length >= MAX_ICONS}>{c.addIcon}</Button>}>
-          {selected?.startsWith("icon:") ? (
-            (() => {
-              const id = selected.slice(5);
-              const icon = theme.icons.find((i) => i.id === id);
-              if (!icon) return <p className={cfgStatus}>{c.selectHint}</p>;
-              return (
-                <div className="flex flex-col gap-3">
-                  <label className="flex flex-col gap-1.5">
-                    <span className={cfgFieldLabel}>{c.icons}</span>
-                    <select
-                      className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink"
-                      value={icon.provider}
-                      onChange={(e) => updateIcon(id, { provider: e.target.value as Provider })}
-                    >
-                      {ICON_PROVIDERS.map((p) => (
-                        <option key={p.id} value={p.id}>{p.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <ScaleField label={c.size} value={icon.scale} onChange={(v) => updateIcon(id, { scale: v })} />
-                  <ColorField label={c.color} value={icon.color} onChange={(v) => updateIcon(id, { color: v })} noneLabel={c.colorNone} lang={ctx?.lang || "pt"} />
-                  <Button variant="ghost" onClick={() => removeIcon(id)}>{c.removeIcon}</Button>
-                </div>
-              );
-            })()
-          ) : (
-            <p className={cfgStatus}>{c.selectHint}</p>
-          )}
-        </Card>
-
-        <Card title={c.clock}>
-          <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: e.target.checked } }))} />
-          <Checkbox label={c.clockFormat24h} checked={theme.clock.format24h} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, format24h: e.target.checked } }))} />
-          <Checkbox label={c.clockShowBackground} checked={theme.clock.showBackground} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, showBackground: e.target.checked } }))} />
-          <Checkbox label={c.clockAutoColor} checked={theme.clock.autoColor} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, autoColor: e.target.checked } }))} />
-          {theme.clock.autoColor ? <p className={`${cfgStatus} text-accent`}>{c.clockAutoColorActive}</p> : null}
-          {theme.clock.autoColor ? <p className={cfgStatus}>{c.clockAutoColorHint}</p> : null}
-          {theme.clock.autoColor ? (
-            (() => {
-              const pair = ntcGenerateReadableColor(theme.background.color);
-              return pair ? (
-                <div className="flex items-center gap-2 rounded-[10px] border border-edge bg-panel px-3 py-2">
-                  <span className="size-6 shrink-0 rounded-full border border-edge" style={{ background: pair[0] }} aria-hidden />
-                  <span className="font-mono text-[12px] text-ink">{pair[0].toUpperCase()}</span>
-                  <span className="text-[11px] text-ink3">sobre {theme.background.color.toUpperCase()}</span>
-                </div>
-              ) : (
-                <p className={`${cfgStatus} text-warn`}>{c.ntcLoading}</p>
-              );
-            })()
-          ) : null}
-          <ScaleField label={c.size} value={theme.clock.scale} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, scale: v } }))} />
-          <div className={theme.clock.autoColor ? "opacity-50 pointer-events-none" : ""}>
-            <ColorField label={c.color} value={theme.clock.color} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, color: v } }))} noneLabel={c.colorNone} lang={ctx?.lang || "pt"} />
-          </div>
-        </Card>
-
-        <Card title={c.texts} action={<Button variant="secondary" onClick={addText} disabled={theme.texts.length >= MAX_TEXTS}>{c.addText}</Button>}>
-          {selected?.startsWith("text:") ? (
-            (() => {
-              const id = selected.slice(5);
-              const txt = theme.texts.find((x) => x.id === id);
-              if (!txt) return <p className={cfgStatus}>{c.selectHint}</p>;
-              return (
-                <div className="flex flex-col gap-3">
-                  <TextField label={c.texts} value={txt.text} maxLength={23} placeholder={c.textPh} onChange={(e) => updateText(id, { text: e.target.value })} />
-                  <ScaleField label={c.size} value={txt.scale} onChange={(v) => updateText(id, { scale: v })} />
-                  <ColorField label={c.color} value={txt.color} onChange={(v) => updateText(id, { color: v })} noneLabel={c.colorNone} lang={ctx?.lang || "pt"} />
-                  <Button variant="ghost" onClick={() => removeText(id)}>{c.removeText}</Button>
-                </div>
-              );
-            })()
-          ) : (
-            <p className={cfgStatus}>{c.selectHint}</p>
-          )}
-        </Card>
-
-        <Card title={c.save} lead={c.saveLead}>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => void send.run(saveTheme, { success: c.savedOk, error: c.saveError })} loading={send.busy}>
-              {send.busy ? c.saving : c.save}
-            </Button>
-            <Button variant="ghost" onClick={() => void remove.run(removeSavedTheme, { success: c.removedOk, error: c.removeError })} loading={remove.busy}>
-              {remove.busy ? c.removing : c.remove}
-            </Button>
-          </div>
-          <FieldStatus status={send.status} message={send.message} />
-          <FieldStatus status={remove.status} message={remove.message} />
-        </Card>
-
-        <WallpaperManager
-          lang={ctx?.lang || "pt"}
-          onSelectedChange={handleWallpaperSelected}
-          onLocalPreview={setLocalPreviewUrl}
-        >
-          <div className="col-span-full">
-            <WallpaperLibrary />
-          </div>
-
-          <Card title={c.debugTitle} lead={c.debugLead}>
-            <TextField
-              label={c.deviceIpLabel}
-              value={deviceIp}
-              placeholder="192.168.0.42"
-              hint={c.deviceIpHint}
-              onChange={(e) => { setIpTouched(true); setDeviceIp(e.target.value); }}
-            />
-            {!deviceIp ? (
-              <p className={cfgStatus}>{c.deviceUnknown}</p>
-            ) : (
-              <>
-                {cfg?.device.last_seen_s != null ? <p className={cfgStatus}>{c.deviceSeen(cfg.device.last_seen_s)}</p> : null}
-                {isBareLoopback(deviceIp) ? <p className={`${cfgStatus} text-warn`}>{c.deviceLoopback}</p> : null}
-              </>
-            )}
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="secondary"
-                disabled={!deviceIp.trim()}
-                loading={screenshotLoading}
-                onClick={() => {
-                  setScreenshotLoading(true);
-                  setScreenshotUrl(`http://${deviceIp.trim()}/theme/screenshot?t=${Date.now()}`);
-                }}
-              >
-                {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
-              </Button>
-              <p className={cfgStatus}>{c.screenshotHint}</p>
-              {screenshotUrl ? (
-                <button
-                  type="button"
-                  className="w-fit cursor-zoom-in border-0 bg-transparent p-0"
-                  onClick={() => setScreenshotFullscreen(true)}
-                >
-                  <img
-                    src={screenshotUrl}
-                    alt={c.screenshotButton}
-                    className="w-full max-w-[320px] rounded-[10px] border border-edge"
-                    onLoad={() => setScreenshotLoading(false)}
-                    onError={() => {
-                      setScreenshotLoading(false);
-                      setScreenshotUrl(null);
-                      screenshot.fail(c.screenshotError);
-                    }}
-                  />
-                </button>
-              ) : null}
-              <FieldStatus status={screenshot.status} message={screenshot.message} />
-            </div>
+        {selected !== "clock" ? (
+          <Card title={c.clock}>
+            <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: e.target.checked } }))} />
+            <p className={cfgStatus}>{c.position}</p>
           </Card>
-
-          <div className="col-span-full">
-            <WallpaperProviders />
-          </div>
-        </WallpaperManager>
+        ) : null}
       </div>
 
+      <WallpaperManager lang={lang} onSelectedChange={handleWallpaperSelected} onLocalPreview={setLocalPreviewUrl}>
+        <div className="col-span-full">
+          <WallpaperLibrary />
+        </div>
+        <div className="col-span-full">
+          <WallpaperProviders />
+        </div>
+      </WallpaperManager>
+
+      <Fold summary={c.debugTitle} defaultOpen={false}>
+        <p className={cfgStatus}>{c.debugLead}</p>
+        <TextField
+          label={c.deviceIpLabel}
+          value={deviceIp}
+          placeholder="192.168.0.42"
+          hint={c.deviceIpHint}
+          onChange={(e) => {
+            setIpTouched(true);
+            setDeviceIp(e.target.value);
+          }}
+        />
+        {!deviceIp ? (
+          <p className={cfgStatus}>{c.deviceUnknown}</p>
+        ) : (
+          <>
+            {cfg?.device.last_seen_s != null ? <p className={cfgStatus}>{c.deviceSeen(cfg.device.last_seen_s)}</p> : null}
+            {isBareLoopback(deviceIp) ? <p className={`${cfgStatus} text-warn`}>{c.deviceLoopback}</p> : null}
+          </>
+        )}
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="secondary"
+            disabled={!deviceIp.trim()}
+            loading={screenshotLoading}
+            onClick={() => {
+              setScreenshotLoading(true);
+              setScreenshotUrl(`http://${deviceIp.trim()}/theme/screenshot?t=${Date.now()}`);
+            }}
+          >
+            {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
+          </Button>
+          <p className={cfgStatus}>{c.screenshotHint}</p>
+          {screenshotUrl ? (
+            <button type="button" className="w-fit cursor-zoom-in border-0 bg-transparent p-0" onClick={() => setScreenshotFullscreen(true)}>
+              <img
+                src={screenshotUrl}
+                alt={c.screenshotButton}
+                className="w-full max-w-[320px] rounded-[10px] border border-edge"
+                onLoad={() => setScreenshotLoading(false)}
+                onError={() => {
+                  setScreenshotLoading(false);
+                  setScreenshotUrl(null);
+                  screenshot.fail(c.screenshotError);
+                }}
+              />
+            </button>
+          ) : null}
+          <FieldStatus status={screenshot.status} message={screenshot.message} />
+        </div>
+      </Fold>
+
       {screenshotFullscreen && screenshotUrl ? (
-        <div
-          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/90 p-6"
-          onClick={() => setScreenshotFullscreen(false)}
-        >
+        <div className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/90 p-6" onClick={() => setScreenshotFullscreen(false)}>
           <img src={screenshotUrl} alt={c.screenshotButton} className="max-h-full max-w-full rounded-[10px] object-contain" />
         </div>
       ) : null}

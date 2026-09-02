@@ -17,6 +17,7 @@ from app.providers.gpt import fetch_gpt_accounts, gpt_fail
 from app.providers.opencode import fetch_opencode_accounts, opencode_fail
 from app.providers.openrouter import fetch_openrouter_accounts, openrouter_fail
 from app.providers.weather import fetch_weather_data, mock_weather_payload
+from app.refresh_cache import cache, fingerprint
 from app.store import load, provider as provider_cfg
 
 
@@ -177,28 +178,52 @@ def _fetch_one(
     fail_fn: Callable[[str], dict[str, Any]],
     fallback_id: str,
     cfg: dict,
+    *,
+    force: bool = False,
 ) -> tuple[str, list[dict[str, Any]]]:
+    fp = fingerprint(cfg, name)
+    if not cache.due(name, fingerprint=fp, force=force):
+        hit = cache.get(name)
+        if isinstance(hit, list):
+            return name, hit
     try:
-        return name, fetch_fn(cfg)
+        value = fetch_fn(cfg)
     except Exception as exc:  # noqa: BLE001
-        return name, [{"id": fallback_id, "label": "", **fail_fn(str(exc))}]
+        value = [{"id": fallback_id, "label": "", **fail_fn(str(exc))}]
+        return name, cache.take(name, value, fingerprint=fp, error=exc)
+    return name, cache.take(name, value, fingerprint=fp)
 
 
-def _fetch_weather(cfg: dict) -> dict[str, Any]:
+def _fetch_weather(cfg: dict, *, force: bool = False) -> dict[str, Any] | None:
     """Busca clima; respeita hidden/enabled e mock."""
     weather_cfg = cfg.get("weather") or {}
     if weather_cfg.get("hidden") or not weather_cfg.get("enabled"):
-        return None  # type: ignore[return-value]
+        return None
     if cfg.get("mock"):
         return mock_weather_payload()
+    fp = fingerprint(cfg, "weather")
+    if not cache.due("weather", fingerprint=fp, force=force):
+        hit = cache.get("weather")
+        if hit is not None:
+            return hit
     try:
-        return fetch_weather_data(weather_cfg)
+        value = fetch_weather_data(weather_cfg)
     except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc), "updated_at": utc_now(), "current": None, "hourly": None, "daily": None,
-                "location": weather_cfg.get("location"), "units": weather_cfg.get("units")}
+        value = {
+            "ok": False,
+            "error": str(exc),
+            "updated_at": utc_now(),
+            "current": None,
+            "hourly": None,
+            "daily": None,
+            "location": weather_cfg.get("location"),
+            "units": weather_cfg.get("units"),
+        }
+        return cache.take("weather", value, fingerprint=fp, error=exc)
+    return cache.take("weather", value, fingerprint=fp)
 
 
-def _fetch_currencies(cfg: dict) -> dict[str, Any] | None:
+def _fetch_currencies(cfg: dict, *, force: bool = False) -> dict[str, Any] | None:
     """Busca cotações; respeita hidden/enabled e mock, igual ao clima."""
     ccfg = cfg.get("currencies") or {}
     base = ccfg.get("base") or "BRL"
@@ -206,13 +231,20 @@ def _fetch_currencies(cfg: dict) -> dict[str, Any] | None:
         return None
     if cfg.get("mock"):
         return mock_currencies_payload()
+    fp = fingerprint(cfg, "currencies")
+    if not cache.due("currencies", fingerprint=fp, force=force):
+        hit = cache.get("currencies")
+        if hit is not None:
+            return hit
     try:
-        return fetch_currency_quotes(ccfg)
+        value = fetch_currency_quotes(ccfg)
     except Exception as exc:  # noqa: BLE001
-        return {"ok": False, "error": str(exc), "updated_at": utc_now(), "base": base, "items": []}
+        value = {"ok": False, "error": str(exc), "updated_at": utc_now(), "base": base, "items": []}
+        return cache.take("currencies", value, fingerprint=fp, error=exc)
+    return cache.take("currencies", value, fingerprint=fp)
 
 
-def build_payload() -> dict[str, Any]:
+def build_payload(*, force_quota: bool = False) -> dict[str, Any]:
     cfg = load()
     if cfg.get("mock"):
         payload = mock_payload()
@@ -233,10 +265,12 @@ def build_payload() -> dict[str, Any]:
     # já estourou o timeout de /health do `./dev` script no boot com 8
     # provedores sequenciais.
     with ThreadPoolExecutor(max_workers=len(_PROVIDER_JOBS) + 2) as pool:
-        futures = [pool.submit(_fetch_one, name, fetch_fn, fail_fn, fallback_id, cfg)
-                   for name, fetch_fn, fail_fn, fallback_id in _PROVIDER_JOBS]
-        weather_future = pool.submit(_fetch_weather, cfg)
-        currencies_future = pool.submit(_fetch_currencies, cfg)
+        futures = [
+            pool.submit(_fetch_one, name, fetch_fn, fail_fn, fallback_id, cfg, force=force_quota)
+            for name, fetch_fn, fail_fn, fallback_id in _PROVIDER_JOBS
+        ]
+        weather_future = pool.submit(_fetch_weather, cfg, force=force_quota)
+        currencies_future = pool.submit(_fetch_currencies, cfg, force=force_quota)
         results = dict(future.result() for future in futures)
         try:
             results["weather"] = weather_future.result()

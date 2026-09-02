@@ -1,6 +1,6 @@
 # Alarmes e notificações push (protótipo)
 
-Painel `/display/alarmes`: regras de **provedor + métrica + limiar** que
+Painel `/display/alarms`: regras de **provedor + métrica + limiar** que
 disparam uma notificação **Web Push** quando cruzadas. Fora do contrato JSON
 principal (`CONTRATO_JSON.md`) — não mexe em `/usage` nem no firmware.
 
@@ -73,7 +73,7 @@ Isso significa, na prática:
 ## "Enviei o teste e não chegou nada"
 
 Antes de suspeitar do backend/`pywebpush`, isola o problema direto no
-DevTools (aba `/display/alarmes`, `F12` → Console):
+DevTools (aba `/display/alarms`, `F12` → Console):
 
 ```js
 const reg = await navigator.serviceWorker.getRegistration();
@@ -113,7 +113,7 @@ enquanto a aba está em primeiro plano.
 
 ## Como testar
 
-`./dev up`, abrir `http://127.0.0.1:5173/display/alarmes` (ou `:8787` no
+`./dev up`, abrir `http://127.0.0.1:5173/display/alarms` (ou `:8787` no
 build). Ativar mock (`/display/config`) pra ter valores previsíveis, criar
 uma regra com limiar abaixo do valor mockado, clicar "Ativar notificações" e
 depois "Enviar teste". Pra ver o disparo automático, force um ciclo com

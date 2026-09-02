@@ -3,18 +3,31 @@
 from __future__ import annotations
 
 import re
+import threading
+import time
 import urllib.parse
 from typing import Any
 
 from app.formatting import utc_now
 from app.http_util import http_json
+from app.providers.coingecko import fetch_simple_price
 
 _FIAT_RE = re.compile(r"^[A-Za-z]{3}$")
 _CRYPTO_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
-COINGECKO_PRICE_URL = "https://api.coingecko.com/api/v3/simple/price"
 COINGECKO_SEARCH_URL = "https://api.coingecko.com/api/v3/search"
 FOREX_URL = "https://open.er-api.com/v6/latest/"
+
+# open.er-api.com: 1.500 req/mês e o câmbio só atualiza 1×/dia. 1 h = ~720/mês.
+FOREX_TTL_S = 3600
+
+_forex_lock = threading.Lock()
+_forex_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+
+
+def reset_forex_cache() -> None:
+    with _forex_lock:
+        _forex_cache.clear()
 
 
 def clean_fiat_code(raw: str) -> str | None:
@@ -55,11 +68,35 @@ def search_crypto(query: str, count: int = 8) -> list[dict[str, Any]]:
     return out
 
 
+def _fetch_forex_rates(base: str) -> dict[str, Any]:
+    """Câmbio open.er-api.com com TTL de 1 h (o feed é diário; o teto é 1.500/mês)."""
+    key = base.upper()
+    now = time.monotonic()
+    with _forex_lock:
+        hit = _forex_cache.get(key)
+        if hit is not None and (now - hit[0]) < FOREX_TTL_S:
+            return hit[1]
+        stale = hit[1] if hit is not None else None
+    try:
+        data = http_json(f"{FOREX_URL}{urllib.parse.quote(key)}", timeout=15.0)
+        if not (isinstance(data, dict) and data.get("result") == "success" and isinstance(data.get("rates"), dict)):
+            raise RuntimeError("resposta inesperada da API de câmbio")
+        rates = data["rates"]
+        with _forex_lock:
+            _forex_cache[key] = (time.monotonic(), rates)
+        return rates
+    except RuntimeError:
+        if stale is not None:
+            return stale
+        raise
+
+
 def _quote_item(
     item: dict[str, Any],
     crypto_prices: dict[str, Any],
     fiat_rates: dict[str, Any] | None,
     fiat_error: str | None,
+    crypto_error: str | None,
     base: str,
 ) -> dict[str, Any]:
     kind = item.get("kind")
@@ -74,6 +111,9 @@ def _quote_item(
         "error": None,
     }
     if kind == "crypto":
+        if crypto_error:
+            out["error"] = crypto_error
+            return out
         entry = crypto_prices.get(code)
         price = entry.get(base.lower()) if isinstance(entry, dict) else None
         if price is None:
@@ -113,28 +153,22 @@ def fetch_currency_quotes(cfg_currencies: dict[str, Any]) -> dict[str, Any]:
     need_fiat = any(i.get("kind") == "fiat" and str(i.get("code") or "").upper() != base for i in items)
 
     crypto_prices: dict[str, Any] = {}
+    crypto_error: str | None = None
     if crypto_codes:
         try:
-            qs = urllib.parse.urlencode({"ids": ",".join(crypto_codes), "vs_currencies": base.lower()})
-            data = http_json(f"{COINGECKO_PRICE_URL}?{qs}", timeout=15.0)
-            if isinstance(data, dict):
-                crypto_prices = data
-        except RuntimeError:
-            crypto_prices = {}
+            crypto_prices = fetch_simple_price(crypto_codes, [base.lower()])
+        except RuntimeError as exc:
+            crypto_error = str(exc)
 
     fiat_rates: dict[str, Any] | None = None
     fiat_error: str | None = None
     if need_fiat:
         try:
-            data = http_json(f"{FOREX_URL}{urllib.parse.quote(base)}", timeout=15.0)
-            if isinstance(data, dict) and data.get("result") == "success" and isinstance(data.get("rates"), dict):
-                fiat_rates = data["rates"]
-            else:
-                fiat_error = "resposta inesperada da API de câmbio"
+            fiat_rates = _fetch_forex_rates(base)
         except RuntimeError as exc:
             fiat_error = str(exc)
 
-    quoted = [_quote_item(i, crypto_prices, fiat_rates, fiat_error, base) for i in items]
+    quoted = [_quote_item(i, crypto_prices, fiat_rates, fiat_error, crypto_error, base) for i in items]
     return {"ok": True, "error": None, "updated_at": utc_now(), "base": base, "items": quoted}
 
 

@@ -859,12 +859,12 @@ function Sidebar(props: {
   nowActive: boolean;
   configActive: boolean;
   setupActive: boolean;
-  temaActive: boolean;
+  themeActive: boolean;
   alarmsActive: boolean;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, setupActive, temaActive, alarmsActive, t } = props;
-  const onPage = configActive || setupActive || temaActive || alarmsActive;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, onNow, nowActive, configActive, setupActive, themeActive, alarmsActive, t } = props;
+  const onPage = configActive || setupActive || themeActive || alarmsActive;
   const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
   return (
     <nav
@@ -914,10 +914,10 @@ function Sidebar(props: {
         <NavLink to="/display/setup" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <ChipIcon size={16} /> {t.board}
         </NavLink>
-        <NavLink to="/display/tema" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
-          <PaletteIcon size={16} /> {t.tema}
+        <NavLink to="/display/theme" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+          <PaletteIcon size={16} /> {t.theme}
         </NavLink>
-        <NavLink to="/display/alarmes" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+        <NavLink to="/display/alarms" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <BellIcon size={16} /> {t.alarms}
         </NavLink>
         <a className={sideItem} href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener noreferrer">
@@ -1550,9 +1550,9 @@ export default function Display() {
   const navigate = useNavigate();
   const isConfig = Boolean(useMatch("/display/config"));
   const isSetup = Boolean(useMatch("/display/setup"));
-  const isTema = Boolean(useMatch("/display/tema"));
-  const isAlarms = Boolean(useMatch("/display/alarmes"));
-  const isNested = isConfig || isSetup || isTema || isAlarms;
+  const isTheme = Boolean(useMatch("/display/theme") || useMatch("/display/tema"));
+  const isAlarms = Boolean(useMatch("/display/alarms") || useMatch("/display/alarmes"));
+  const isNested = isConfig || isSetup || isTheme || isAlarms;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -1707,7 +1707,7 @@ export default function Display() {
           nowActive={nowOpen}
           configActive={isConfig}
           setupActive={isSetup}
-          temaActive={isTema}
+          themeActive={isTheme}
           alarmsActive={isAlarms}
           onOverview={goOverview}
           onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); setNowOpen(false); }}

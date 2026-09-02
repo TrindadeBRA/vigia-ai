@@ -20,7 +20,16 @@ export type ThemeCopy = {
   clockAutoColorActive: string;
   icons: string;
   addIcon: string;
+  addProvider: string;
   removeIcon: string;
+  metric: string;
+  metricNone: string;
+  metricHint: string;
+  elements: string;
+  noIcons: string;
+  wallpaperInUse: string;
+  wallpaperNoneSelected: string;
+  placed: string;
   texts: string;
   addText: string;
   removeText: string;
@@ -114,14 +123,14 @@ export type ThemeCopy = {
 
 export const THEME_STR: Record<Lang, ThemeCopy> = {
   pt: {
-    title: "Tema personalizado",
+    title: "Tema da placa",
     lead:
-      "Protótipo: monte um fundo, relógio e ícones dos provedores pra tela Início da placa. Salva no coletor — a placa busca sozinha pelo botão de recarregar no header (ícone de download, abaixo do relógio).",
+      "Monte o fundo, o relógio e os provedores na tela cheia da placa. Cada ícone traz a cota ao vivo — escolha qual métrica mostrar. Salva no coletor; a placa aplica pelo botão de recarregar no header (ícone de download, abaixo do relógio).",
     loadError: "Não deu pra carregar as configurações do painel.",
     offline: "Coletor offline — confira se o ./dev up está rodando.",
     retry: "Tentar de novo",
     canvasTitle: "Canvas (proporção da tela da placa)",
-    canvasHint: "Arraste o relógio, os ícones e os textos pra posicionar. Clique num elemento pra editar cor e tamanho.",
+    canvasHint: "Arraste pra posicionar. Clique num elemento (ou na lista ao lado) pra escolher a métrica, a cor e o tamanho.",
     canvasNoDevice: "Sem contato com a placa ainda — editando na proporção padrão (480×320). Acerta sozinho assim que ela falar com o coletor.",
     background: "Fundo",
     backgroundColor: "Cor de fundo",
@@ -134,7 +143,16 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     clockAutoColorActive: "Cor automática ativa — cor manual ignorada",
     icons: "Ícones",
     addIcon: "Adicionar ícone",
+    addProvider: "Adicionar no canvas",
     removeIcon: "Remover ícone",
+    metric: "Dado no ícone",
+    metricNone: "Só o ícone",
+    metricHint: "A placa desenha este valor ao lado do logo, atualizado a cada ciclo do coletor.",
+    elements: "No canvas",
+    noIcons: "Nenhum provedor no tema ainda. Clique num card abaixo pra adicionar ícone + cota.",
+    wallpaperInUse: "Papel de parede em uso",
+    wallpaperNoneSelected: "Papéis cadastrados, mas nenhum selecionado",
+    placed: "No tema",
     texts: "Textos",
     addText: "Adicionar texto",
     removeText: "Remover texto",
@@ -227,14 +245,14 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importError: "Falha ao importar",
   },
   en: {
-    title: "Custom theme",
+    title: "Board theme",
     lead:
-      "Prototype: build a background, clock and provider icons for the board's Home screen. It saves to the collector — the board fetches it itself via the reload button in the header (download icon, below the clock).",
+      "Build the background, clock and providers for the board's full-screen view. Each icon shows live quota — pick which metric to display. It saves to the collector; the board applies it via the reload button in the header (download icon, below the clock).",
     loadError: "Couldn't load the panel settings.",
     offline: "Collector offline — check that ./dev up is running.",
     retry: "Retry",
     canvasTitle: "Canvas (board screen proportions)",
-    canvasHint: "Drag the clock, icons and texts to position them. Click an element to edit its color and size.",
+    canvasHint: "Drag to position. Click an element (or the list beside the canvas) to pick its metric, color and size.",
     canvasNoDevice: "No contact with the board yet — editing at the default 480×320 proportions. Fixes itself once it talks to the collector.",
     background: "Background",
     backgroundColor: "Background color",
@@ -247,7 +265,16 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     clockAutoColorActive: "Auto color active — manual color ignored",
     icons: "Icons",
     addIcon: "Add icon",
+    addProvider: "Add to canvas",
     removeIcon: "Remove icon",
+    metric: "Data on the icon",
+    metricNone: "Icon only",
+    metricHint: "The board draws this value next to the logo, updated each collector cycle.",
+    elements: "On canvas",
+    noIcons: "No providers on the theme yet. Click a card below to add icon + quota.",
+    wallpaperInUse: "Wallpaper in use",
+    wallpaperNoneSelected: "Wallpapers saved, but none selected",
+    placed: "On theme",
     texts: "Texts",
     addText: "Add text",
     removeText: "Remove text",
@@ -340,14 +367,14 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importError: "Failed to import",
   },
   es: {
-    title: "Tema personalizado",
+    title: "Tema de la placa",
     lead:
-      "Prototipo: arma un fondo, reloj e íconos de los proveedores para la pantalla Inicio de la placa. Se guarda en el colector — la placa lo busca sola con el botón de recargar en el header (ícono de descarga, debajo del reloj).",
+      "Armá el fondo, el reloj y los proveedores para la pantalla completa de la placa. Cada ícono muestra la cuota en vivo — elegí qué métrica mostrar. Se guarda en el colector; la placa lo aplica con el botón de recargar en el header (ícono de descarga, debajo del reloj).",
     loadError: "No se pudo cargar la configuración del panel.",
     offline: "Colector fuera de línea — verificá que ./dev up esté corriendo.",
     retry: "Reintentar",
     canvasTitle: "Lienzo (proporción de la pantalla de la placa)",
-    canvasHint: "Arrastrá el reloj, los íconos y los textos para ubicarlos. Hacé clic en un elemento para editar su color y tamaño.",
+    canvasHint: "Arrastrá para ubicar. Hacé clic en un elemento (o en la lista al lado) para elegir métrica, color y tamaño.",
     canvasNoDevice: "Todavía sin contacto con la placa — editando con la proporción por defecto (480×320). Se ajusta solo en cuanto hable con el colector.",
     background: "Fondo",
     backgroundColor: "Color de fondo",
@@ -360,7 +387,16 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     clockAutoColorActive: "Color automático activo — color manual ignorado",
     icons: "Íconos",
     addIcon: "Agregar ícono",
+    addProvider: "Agregar al lienzo",
     removeIcon: "Quitar ícono",
+    metric: "Dato en el ícono",
+    metricNone: "Solo el ícono",
+    metricHint: "La placa dibuja este valor junto al logo, actualizado en cada ciclo del colector.",
+    elements: "En el lienzo",
+    noIcons: "Todavía sin proveedores en el tema. Hacé clic en una tarjeta abajo para agregar ícono + cuota.",
+    wallpaperInUse: "Fondo en uso",
+    wallpaperNoneSelected: "Fondos guardados, pero ninguno seleccionado",
+    placed: "En el tema",
     texts: "Textos",
     addText: "Agregar texto",
     removeText: "Quitar texto",

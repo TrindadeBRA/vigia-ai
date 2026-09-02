@@ -57,3 +57,7 @@ Claude, GPT e Cursor: Keychain / `~/.codex/auth.json` / `state.vscdb` primeiro; 
 ## Sem autenticação no coletor (v1)
 
 Rede doméstica. Quem pedir rede hostil pode acrescentar um token estático no header depois, no coletor **e** no firmware.
+
+## SSE a 60 s, cada API no próprio ritmo
+
+Firmware e `/display` continuam recebendo o JSON a cada `USAGE_INTERVAL_S`. O coletor é quem diferencia o intervalo real: `RefreshCache` por provedor + cliente CoinGecko compartilhado (Bitcoin e `currencies` no mesmo bucket IP). A API *keyless* da CoinGecko (~10–30/min, dado já cacheado 1–5 min do lado deles) 429a se pollada a cada 60 s — por isso a cotação vive num TTL de 5 min, com last-good. `GET /usage` só força as cotas de assinatura; martelar o endpoint não aumenta a cota da CoinGecko.

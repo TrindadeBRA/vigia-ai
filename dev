@@ -296,7 +296,7 @@ cmd_sim() {
   echo "3. Neste terminal deve aparecer: Client connected"
   echo "   se não aparecer, o Wokwi não está usando o gateway."
   echo ""
-  echo "Editor de tema (/display/tema) na placa simulada: IP \"127.0.0.1:${THEME_SIM_PORT}\""
+  echo "Editor de tema (/display/theme) na placa simulada: IP \"127.0.0.1:${THEME_SIM_PORT}\""
   echo "(o coletor detecta a placa como 127.0.0.1 — completa a porta à mão nesse campo)."
   echo "Ctrl+C encerra o gateway (e o backend, se este script o tiver subido)."
   wait

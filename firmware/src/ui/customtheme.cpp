@@ -11,6 +11,8 @@ using fs::File;
 
 #include "net/parse.h"
 #include "ui/internal.h"
+#include "assets/icons/icon_adsense.h"
+#include "assets/icons/icon_bitcoin.h"
 #include "assets/icons/icon_claude.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
@@ -36,6 +38,8 @@ enum ThemeIconKind : uint8_t
   TICON_OPENCODE,
   TICON_FAL,
   TICON_WEATHER,
+  TICON_BITCOIN,
+  TICON_ADSENSE,
   TICON_BRAND,
   TICON_COUNT
 };
@@ -48,6 +52,9 @@ struct ThemeIcon
   float scale = 1.0f;
   bool hasColor = false;
   uint16_t color = 0;
+  // Chave da métrica do /usage (session_percent, remaining_cents, …).
+  // Vazio = padrão do provedor; "none" = só o ícone.
+  char metric[24] = {0};
 };
 
 struct ThemeText
@@ -125,7 +132,8 @@ static bool hexColorToRgb565(const String &hex, uint16_t &out)
 static bool parseIconKind(const String &s, ThemeIconKind &out)
 {
   static const char *kNames[TICON_COUNT] = {"claude", "gpt", "cursor", "openrouter",
-                                            "deepseek", "opencode", "fal", "weather", "brand"};
+                                            "deepseek", "opencode", "fal", "weather", "bitcoin",
+                                            "adsense", "brand"};
   for (int i = 0; i < TICON_COUNT; i++)
   {
     if (s == kNames[i])
@@ -201,6 +209,11 @@ static bool parseTheme(const String &json, CustomTheme &out)
     {
       icon.hasColor = true;
       icon.color = col;
+    }
+    String metric = jsonText(it["metric"]);
+    if (metric.length())
+    {
+      metric.toCharArray(icon.metric, sizeof(icon.metric));
     }
     t.icons[t.iconCount++] = icon;
   }
@@ -453,6 +466,10 @@ static IconRef iconRefFor(ThemeIconKind k)
     return {ICON_FAL, ICON_FAL_W, ICON_FAL_H};
   case TICON_WEATHER:
     return {ICON_WEATHER, ICON_WEATHER_W, ICON_WEATHER_H};
+  case TICON_BITCOIN:
+    return {ICON_BITCOIN, ICON_BITCOIN_W, ICON_BITCOIN_H};
+  case TICON_ADSENSE:
+    return {ICON_ADSENSE, ICON_ADSENSE_W, ICON_ADSENSE_H};
   default:
     return {nullptr, 0, 0};
   }
@@ -545,6 +562,195 @@ static void drawThemeBackground(const CustomTheme &t)
 constexpr int kIconScaledMax = 80;
 static uint16_t g_iconScaleBuf[kIconScaledMax * kIconScaledMax];
 
+static const char *defaultMetricFor(ThemeIconKind k)
+{
+  switch (k)
+  {
+  case TICON_CLAUDE:
+  case TICON_GPT:
+    return "session_percent";
+  case TICON_CURSOR:
+    return "percent";
+  case TICON_OPENROUTER:
+  case TICON_DEEPSEEK:
+  case TICON_FAL:
+    return "remaining_cents";
+  case TICON_OPENCODE:
+    return "rolling_percent";
+  case TICON_BITCOIN:
+    return "value_usd_cents";
+  case TICON_ADSENSE:
+    return "unpaid_cents";
+  default:
+    return "";
+  }
+}
+
+static const char *resolvedMetric(const ThemeIcon &icon)
+{
+  if (icon.kind == TICON_BRAND || icon.kind == TICON_WEATHER)
+  {
+    return "";
+  }
+  if (strcmp(icon.metric, "none") == 0)
+  {
+    return "";
+  }
+  if (icon.metric[0])
+  {
+    return icon.metric;
+  }
+  return defaultMetricFor(icon.kind);
+}
+
+static String themeIconValue(const ThemeIcon &icon)
+{
+  const char *m = resolvedMetric(icon);
+  if (!m[0])
+  {
+    return "";
+  }
+  switch (icon.kind)
+  {
+  case TICON_CLAUDE:
+  {
+    if (g_snap.claudeCount <= 0)
+      return "--";
+    const ClaudeAccount &a = g_snap.claude[claudeWorstIdx()];
+    if (strcmp(m, "weekly_percent") == 0)
+      return fmtPct(a.weeklyPercent);
+    if (strcmp(m, "sonnet_percent") == 0)
+      return fmtPct(a.sonnetPercent);
+    if (strcmp(m, "opus_percent") == 0)
+      return fmtPct(a.opusPercent);
+    return fmtPct(a.sessionPercent);
+  }
+  case TICON_GPT:
+  {
+    if (g_snap.gptCount <= 0)
+      return "--";
+    const GptAccount &a = g_snap.gpt[gptWorstIdx()];
+    if (strcmp(m, "weekly_percent") == 0)
+      return fmtPct(a.weeklyPercent);
+    return fmtPct(a.sessionPercent);
+  }
+  case TICON_CURSOR:
+  {
+    if (g_snap.cursorCount <= 0)
+      return "--";
+    const CursorAccount &a = g_snap.cursor[cursorWorstIdx()];
+    if (strcmp(m, "other_percent") == 0)
+      return fmtPct(a.otherPercent);
+    if (strcmp(m, "remaining_cents") == 0)
+      return fmtUsdSite(a.remainingCents);
+    return fmtPct(a.percent);
+  }
+  case TICON_OPENROUTER:
+  {
+    if (g_snap.openrouterCount <= 0)
+      return "--";
+    const OpenRouterAccount &a = g_snap.openrouter[openrouterWorstIdx()];
+    if (strcmp(m, "percent") == 0)
+      return fmtPct(a.percent);
+    return fmtUsdSite(a.remainingCents);
+  }
+  case TICON_DEEPSEEK:
+  {
+    if (g_snap.deepseekCount <= 0)
+      return "--";
+    const DeepSeekAccount &a = g_snap.deepseek[deepseekWorstIdx()];
+    if (strcmp(m, "percent") == 0)
+      return fmtPct(a.percent);
+    return fmtUsdSite(a.remainingCents);
+  }
+  case TICON_OPENCODE:
+  {
+    if (g_snap.opencodeCount <= 0)
+      return "--";
+    const OpenCodeAccount &a = g_snap.opencode[opencodeWorstIdx()];
+    if (strcmp(m, "weekly_percent") == 0)
+      return fmtPct(a.weeklyPercent);
+    if (strcmp(m, "monthly_percent") == 0)
+      return fmtPct(a.monthlyPercent);
+    if (strcmp(m, "remaining_cents") == 0)
+      return fmtUsdSite(a.remainingCents);
+    return fmtPct(a.rollingPercent);
+  }
+  case TICON_FAL:
+  {
+    if (g_snap.falCount <= 0)
+      return "--";
+    return falBalance(g_snap.fal[falWorstIdx()]);
+  }
+  case TICON_BITCOIN:
+  {
+    if (g_snap.bitcoinCount <= 0)
+      return "--";
+    const BitcoinAccount &a = g_snap.bitcoin[bitcoinWorstIdx()];
+    if (strcmp(m, "balance_btc") == 0)
+      return bitcoinBalance(a);
+    return fmtUsdSite(a.valueUsdCents);
+  }
+  case TICON_ADSENSE:
+  {
+    if (g_snap.adsenseCount <= 0)
+      return "--";
+    const AdsenseAccount &a = g_snap.adsense[adsenseWorstIdx()];
+    if (strcmp(m, "today_cents") == 0)
+      return adsenseTodayText(a);
+    return adsenseWalletText(a);
+  }
+  default:
+    return "";
+  }
+}
+
+static bool scaleThemeIcon(const ThemeIcon &icon, int &targetW, int &targetH)
+{
+  IconRef ref = iconRefFor(icon.kind);
+  if (!ref.data)
+  {
+    return false;
+  }
+  targetW = constrain((int)(ref.w * icon.scale), 6, kIconScaledMax);
+  targetH = constrain((int)(ref.h * icon.scale), 6, kIconScaledMax);
+  for (int ty = 0; ty < targetH; ty++)
+  {
+    int sy = ty * ref.h / targetH;
+    for (int tx = 0; tx < targetW; tx++)
+    {
+      int sx = tx * ref.w / targetW;
+      uint16_t p = pgm_read_word(&ref.data[sy * ref.w + sx]);
+      uint16_t out;
+      if (p == kBakedCard)
+      {
+        out = kBakedCard;
+      }
+      else if (icon.hasColor)
+      {
+        int r5 = (p >> 11) & 0x1F;
+        int g6 = (p >> 5) & 0x3F;
+        int b5 = p & 0x1F;
+        int luma = (r5 * 8 * 30 + g6 * 4 * 59 + b5 * 8 * 11) / 100;
+        int tr = (icon.color >> 11) & 0x1F;
+        int tg = (icon.color >> 5) & 0x3F;
+        int tb = icon.color & 0x1F;
+        out = (uint16_t)(((tr * luma / 255) << 11) | ((tg * luma / 255) << 5) | (tb * luma / 255));
+        if (out == kBakedCard)
+        {
+          out ^= 0x0001;
+        }
+      }
+      else
+      {
+        out = p;
+      }
+      g_iconScaleBuf[ty * targetW + tx] = out;
+    }
+  }
+  return true;
+}
+
 static void drawThemeWeather(const ThemeIcon &icon)
 {
   const int cx = (int)(icon.x * tft.width());
@@ -617,50 +823,50 @@ static void drawThemeIcon(const ThemeIcon &icon)
     drawEyeIcon(cx, cy, r, 0, 0, 0.0f);
     return;
   }
-  IconRef ref = iconRefFor(icon.kind);
-  if (!ref.data)
+  int targetW = 0;
+  int targetH = 0;
+  if (!scaleThemeIcon(icon, targetW, targetH))
   {
     return;
   }
-  int targetW = constrain((int)(ref.w * icon.scale), 6, kIconScaledMax);
-  int targetH = constrain((int)(ref.h * icon.scale), 6, kIconScaledMax);
-  for (int ty = 0; ty < targetH; ty++)
+  String val = themeIconValue(icon);
+  if (!val.length())
   {
-    int sy = ty * ref.h / targetH;
-    for (int tx = 0; tx < targetW; tx++)
-    {
-      int sx = tx * ref.w / targetW;
-      uint16_t p = pgm_read_word(&ref.data[sy * ref.w + sx]);
-      uint16_t out;
-      if (p == kBakedCard)
-      {
-        out = kBakedCard; // fica transparente (pushImage abaixo pula esse valor)
-      }
-      else if (icon.hasColor)
-      {
-        int r5 = (p >> 11) & 0x1F;
-        int g6 = (p >> 5) & 0x3F;
-        int b5 = p & 0x1F;
-        int luma = (r5 * 8 * 30 + g6 * 4 * 59 + b5 * 8 * 11) / 100; // ~0..255
-        int tr = (icon.color >> 11) & 0x1F;
-        int tg = (icon.color >> 5) & 0x3F;
-        int tb = icon.color & 0x1F;
-        out = (uint16_t)(((tr * luma / 255) << 11) | ((tg * luma / 255) << 5) | (tb * luma / 255));
-        if (out == kBakedCard)
-        {
-          out ^= 0x0001; // nunca colide com o sentinela de transparência
-        }
-      }
-      else
-      {
-        out = p;
-      }
-      g_iconScaleBuf[ty * targetW + tx] = out;
-    }
+    tft.setSwapBytes(true);
+    tft.pushImage(cx - targetW / 2, cy - targetH / 2, targetW, targetH, g_iconScaleBuf, kBakedCard);
+    tft.setSwapBytes(false);
+    return;
   }
+  const uint8_t font = icon.scale >= 2.0f ? 4 : 2;
+  int textW = tft.textWidth(val, font);
+  int textH = tft.fontHeight(font);
+  int gap = 4;
+  int padX = 6;
+  int padY = 4;
+  int innerH = targetH > textH ? targetH : textH;
+  int boxW = padX + targetW + gap + textW + padX;
+  int boxH = innerH + padY * 2;
+  int x0 = cx - boxW / 2;
+  int y0 = cy - boxH / 2;
+  uint16_t bgCol = 0x1082;
+  uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
+  if (icon.hasColor)
+  {
+    tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
+    tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+  }
+  else
+  {
+    tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+  }
+  int iconX = x0 + padX;
+  int iconY = cy - targetH / 2;
   tft.setSwapBytes(true);
-  tft.pushImage(cx - targetW / 2, cy - targetH / 2, targetW, targetH, g_iconScaleBuf, kBakedCard);
+  tft.pushImage(iconX, iconY, targetW, targetH, g_iconScaleBuf, kBakedCard);
   tft.setSwapBytes(false);
+  tft.setTextDatum(ML_DATUM);
+  tft.setTextColor(fg, bgCol);
+  tft.drawString(val, iconX + targetW + gap, cy, font);
 }
 
 static void drawThemeText(const ThemeText &t)

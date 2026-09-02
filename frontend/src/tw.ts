@@ -36,7 +36,7 @@ export const cfgGrid =
   "grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))] [&>form]:contents";
 
 export const overviewGrid =
-  "grid w-full items-start gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr))]";
+  "grid w-full items-stretch gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,168px),1fr))]";
 
 export const overviewBoard = "grid w-full items-stretch gap-[14px]";
 

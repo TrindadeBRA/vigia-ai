@@ -64,7 +64,7 @@ type Strings = {
   config: string;
   setup: string;
   board: string;
-  tema: string;
+  theme: string;
   alarms: string;
   configCta: string;
   cardSmall: string;
@@ -163,7 +163,7 @@ export const STR: Record<Lang, Strings> = {
     config: "Configurações",
     setup: "Ajustes",
     board: "Placa e rede",
-    tema: "Tema",
+    theme: "Tema",
     alarms: "Alarmes",
     configCta: "Configurar contas",
     cardSmall: "Card pequeno",
@@ -257,7 +257,7 @@ export const STR: Record<Lang, Strings> = {
     config: "Settings",
     setup: "Setup",
     board: "Board and network",
-    tema: "Theme",
+    theme: "Theme",
     alarms: "Alarms",
     configCta: "Set up accounts",
     cardSmall: "Small card",
@@ -351,7 +351,7 @@ export const STR: Record<Lang, Strings> = {
     config: "Configuración",
     setup: "Ajustes",
     board: "Placa y red",
-    tema: "Tema",
+    theme: "Tema",
     alarms: "Alarmas",
     configCta: "Configurar cuentas",
     cardSmall: "Card pequeño",

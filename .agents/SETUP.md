@@ -23,7 +23,8 @@ Precisa de **Python ≥ 3.11**, **Node 20+** e, para firmware, [PlatformIO Core]
 | O quê | URL |
 | --- | --- |
 | Painel (contas, mock, `secrets.h`) | http://127.0.0.1:5173/display/config |
-| Alarmes e notificações push | http://127.0.0.1:5173/display/alarmes |
+| Tema da placa | http://127.0.0.1:5173/display/theme |
+| Alarmes e notificações push | http://127.0.0.1:5173/display/alarms |
 | Mostrador web | http://127.0.0.1:5173/display |
 | Swagger | http://127.0.0.1:8787/docs |
 | Contrato JSON | `GET http://127.0.0.1:8787/usage` |
@@ -142,7 +143,7 @@ O JSON público (`claude[]`, `gpt[]`, `cursor[]`, …) tem `ok`, percentuais, re
 
 ## Provedores
 
-Várias contas por serviço. O coletor consulta as APIs a cada 60 s (`USAGE_INTERVAL_S`) e espalha o resultado por SSE — placa e abas de `/display` **não** multiplicam as chamadas. Cuidado com **429** no Claude; a comunidade sugere ~180 s se bater rate limit (`USAGE_INTERVAL_S=180`).
+Várias contas por serviço. O coletor monta o snapshot a cada 60 s (`USAGE_INTERVAL_S`) e espalha por SSE — placa e abas de `/display` **não** multiplicam as chamadas. Cada API de terceiro tem TTL próprio (CoinGecko ~5 min). Cuidado com **429** no Claude; a comunidade sugere ~180 s se bater rate limit (`USAGE_INTERVAL_S=180`).
 
 | Serviço | Padrão neste computador | Plano B (painel) |
 | --- | --- | --- |

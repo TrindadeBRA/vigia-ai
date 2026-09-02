@@ -7,6 +7,7 @@ import urllib.parse
 from typing import Any
 
 from app.http_util import http_json
+from app.providers.coingecko import fetch_simple_price
 from app.store import provider as provider_cfg
 
 _ADDRESS_RE = re.compile(
@@ -15,9 +16,6 @@ _ADDRESS_RE = re.compile(
 _INVISIBLE = ("﻿", "​", "‌", "‍", "\xa0")
 
 BLOCKSTREAM_ADDRESS_URL = "https://blockstream.info/api/address/"
-COINGECKO_PRICE_URL = (
-    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,brl"
-)
 
 SATS_PER_BTC = 100_000_000
 
@@ -70,26 +68,17 @@ def _fetch_balance_sat(address: str) -> int:
 
 
 def _fetch_btc_price() -> tuple[int | None, int | None]:
-    data = http_json(COINGECKO_PRICE_URL, timeout=15.0)
-    if not isinstance(data, dict):
-        raise RuntimeError("resposta inesperada da cotação")
+    data = fetch_simple_price(["bitcoin"], ["usd", "brl"])
     btc = data.get("bitcoin") or {}
     return _cents(btc.get("usd")), _cents(btc.get("brl"))
 
 
-def fetch_bitcoin_one(raw_address: str) -> dict[str, Any]:
-    address = clean_bitcoin_address(raw_address or "")
-    if not address:
-        return bitcoin_fail("Endereço Bitcoin inválido; cole o endereço público da carteira")
-    try:
-        balance_sat = _fetch_balance_sat(address)
-    except RuntimeError as exc:
-        return bitcoin_fail(str(exc))
-    try:
-        price_usd_cents, price_brl_cents = _fetch_btc_price()
-    except RuntimeError as exc:
-        return bitcoin_fail(str(exc))
-
+def _account_from_balance(
+    address: str,
+    balance_sat: int,
+    price_usd_cents: int | None,
+    price_brl_cents: int | None,
+) -> dict[str, Any]:
     balance_btc = balance_sat / SATS_PER_BTC
     value_usd_cents = (
         int(round(balance_btc * price_usd_cents)) if price_usd_cents is not None else None
@@ -109,6 +98,21 @@ def fetch_bitcoin_one(raw_address: str) -> dict[str, Any]:
     }
 
 
+def fetch_bitcoin_one(raw_address: str) -> dict[str, Any]:
+    address = clean_bitcoin_address(raw_address or "")
+    if not address:
+        return bitcoin_fail("Endereço Bitcoin inválido; cole o endereço público da carteira")
+    try:
+        balance_sat = _fetch_balance_sat(address)
+    except RuntimeError as exc:
+        return bitcoin_fail(str(exc))
+    try:
+        price_usd_cents, price_brl_cents = _fetch_btc_price()
+    except RuntimeError as exc:
+        return bitcoin_fail(str(exc))
+    return _account_from_balance(address, balance_sat, price_usd_cents, price_brl_cents)
+
+
 def fetch_bitcoin_accounts(cfg: dict) -> list[dict[str, Any]]:
     p = provider_cfg(cfg, "bitcoin")
     accounts = list(p.get("accounts") or [])
@@ -116,11 +120,46 @@ def fetch_bitcoin_accounts(cfg: dict) -> list[dict[str, Any]]:
         legacy = str(p.get("paste_secret") or "").strip()
         if legacy:
             accounts = [{"id": "legacy", "label": str(p.get("local_label") or ""), "secret": legacy}]
-    out: list[dict[str, Any]] = []
+    cleaned_accounts: list[tuple[str, str, str | None]] = []
+    need_price = False
     for acc in accounts:
         address = str(acc.get("secret") or "").strip()
         label = str(acc.get("label") or "").strip()
         aid = str(acc.get("id") or "extra")
-        result = fetch_bitcoin_one(address)
-        out.append({"id": aid, "label": label, **result})
+        cleaned = clean_bitcoin_address(address)
+        if cleaned:
+            need_price = True
+        cleaned_accounts.append((aid, label, cleaned))
+
+    price_usd_cents: int | None = None
+    price_brl_cents: int | None = None
+    price_error: str | None = None
+    if need_price:
+        try:
+            price_usd_cents, price_brl_cents = _fetch_btc_price()
+        except RuntimeError as exc:
+            price_error = str(exc)
+
+    out: list[dict[str, Any]] = []
+    for aid, label, address in cleaned_accounts:
+        if not address:
+            out.append(
+                {
+                    "id": aid,
+                    "label": label,
+                    **bitcoin_fail("Endereço Bitcoin inválido; cole o endereço público da carteira"),
+                }
+            )
+            continue
+        if price_error:
+            out.append({"id": aid, "label": label, **bitcoin_fail(price_error)})
+            continue
+        try:
+            balance_sat = _fetch_balance_sat(address)
+        except RuntimeError as exc:
+            out.append({"id": aid, "label": label, **bitcoin_fail(str(exc))})
+            continue
+        out.append(
+            {"id": aid, "label": label, **_account_from_balance(address, balance_sat, price_usd_cents, price_brl_cents)}
+        )
     return out

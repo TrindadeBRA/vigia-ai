@@ -13,7 +13,7 @@
 ## Fluxo (hardware)
 
 1. Usuário inicia `./dev up` no Mac (mesma LAN da ESP32) e abre as configs em `http://127.0.0.1:5173/display/config`.
-2. Coletor consulta as APIs a cada ciclo do hub (`USAGE_INTERVAL_S`, padrão 60 s) e empurra o JSON por `GET /events`. `GET /usage` força um ciclo.
+2. Coletor monta o snapshot a cada ciclo do hub (`USAGE_INTERVAL_S`, padrão 60 s) e empurra o JSON por `GET /events`. Cada API de terceiro tem o próprio TTL. `GET /usage` força um ciclo das cotas de assinatura.
 3. ESP32 conecta no Wi-Fi, abre SSE em `/events` (a partir de `USAGE_URL`), parseia JSON, redesenha.
 4. O intervalo real das APIs é o ciclo do coletor, não o poll de cada cliente. Falha de um provedor não apaga o outro se o JSON ainda trouxer o campo.
 

@@ -95,9 +95,9 @@ class UsageHub:
         except asyncio.CancelledError:
             return
 
-    async def refresh(self) -> dict[str, Any]:
+    async def refresh(self, *, force_quota: bool = False) -> dict[str, Any]:
         async with self._lock:
-            payload = await asyncio.to_thread(build_payload)
+            payload = await asyncio.to_thread(build_payload, force_quota=force_quota)
             self._latest = payload
             _log_failures(payload)
             self._broadcast(payload)

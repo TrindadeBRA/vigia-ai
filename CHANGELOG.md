@@ -19,6 +19,9 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Rota do editor de tema: `/display/theme` (inglês, como as demais slugs). `/display/tema` redireciona. Alarmes: `/display/alarms` (`/display/alarmes` redireciona).
+- Tema da placa: cada ícone de provedor mostra uma **métrica de cota ao vivo** (sessão, saldo, etc.) escolhida no editor — firmware desenha ícone + valor; o painel gerencia provedor e métrica no canvas.
+
 - Início da placa abre em **grade** por padrão.
 - `.agents/REESCRITA.md` removido — o monorepo (`firmware/`, `backend/`, `frontend/`, `./dev`) é o estado vigente. Índice aponta para ARQUITETURA e CONTRIBUTING.
 

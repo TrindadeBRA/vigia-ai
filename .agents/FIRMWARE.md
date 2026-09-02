@@ -49,7 +49,7 @@ src/
 ## Tema personalizado (protótipo)
 
 Além do coletor, a placa passa a escutar HTTP na **porta 80** só pra receber
-o tema montado em `/display/tema` (fundo, relógio, ícones dos provedores —
+o tema montado em `/display/theme` (fundo, relógio, ícones **com a cota** —
 ver [CONTRATO_TEMA.md](CONTRATO_TEMA.md)). Usa `WebServer.h` e `LittleFS.h`
 (ambos já vêm no core do ESP32 Arduino, sem `lib_deps` novo) — a tabela de
 partições padrão do `esp32dev` já reserva espaço de sobra pro `theme.json` e

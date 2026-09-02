@@ -15,8 +15,10 @@ export default function App() {
         <Route path="/display" element={<Display />}>
           <Route path="config" element={<ConfigPage />} />
           <Route path="setup" element={<SetupPage />} />
-          <Route path="tema" element={<ThemeEditorPage />} />
-          <Route path="alarmes" element={<AlarmsPage />} />
+          <Route path="theme" element={<ThemeEditorPage />} />
+          <Route path="tema" element={<Navigate to="/display/theme" replace />} />
+          <Route path="alarms" element={<AlarmsPage />} />
+          <Route path="alarmes" element={<Navigate to="/display/alarms" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -141,7 +141,7 @@ export default function AlarmsPage() {
     if (!labelDirty) setLabel(suggestedLabel);
   }, [suggestedLabel, labelDirty]);
 
-  if (phase === "loading" && !data) return <Skeleton page="config" />;
+  if (phase === "loading" && !data) return <Skeleton page="alarms" />;
 
   if (phase === "error" && !data) {
     return (

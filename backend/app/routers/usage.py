@@ -67,11 +67,13 @@ def health(request: Request) -> HealthPayload:
     summary="Cotas na hora",
     operation_id="get_usage",
     description=(
-        "Consulta Claude, GPT, Cursor, OpenRouter e DeepSeek **neste request**, "
+        "Consulta as cotas **neste request** (Claude, GPT, Cursor, …), "
         "grava o snapshot no hub e avisa todos os clientes de `GET /events`.\n\n"
         "HTTP **200** mesmo quando uma conta vem com `ok: false`. "
         "Use no `curl`, no botão «Atualizar consumo» e no Try it out do Swagger. "
-        "A placa e o `/display` **não** fazem poll neste path — eles escutam `/events`."
+        "A placa e o `/display` **não** fazem poll neste path — eles escutam `/events`.\n\n"
+        "Cotações de mercado (Bitcoin/CoinGecko, câmbio, clima, AdSense) respeitam o "
+        "TTL de cada API mesmo neste GET — martelar o endpoint não aumenta a cota da CoinGecko."
     ),
     response_description="Mesmo schema do evento SSE `usage`. HTTP 200 com falha parcial.",
 )
@@ -79,7 +81,7 @@ async def usage(request: Request) -> UsagePayload:
     hub = request.app.state.hub
     if request.client and request.headers.get("x-vigia-device") == "esp32":
         hub.note_device(request.client.host, request.headers.get("x-vigia-screen"))
-    payload = await hub.refresh()
+    payload = await hub.refresh(force_quota=True)
     return UsagePayload.model_validate(payload)
 
 
@@ -102,8 +104,9 @@ async def usage(request: Request) -> UsagePayload:
         "```\n\n"
         "O JSON em `data:` é **idêntico** ao de `GET /usage` "
         "(schema `UsagePayload`). Comentários `: ping` a cada ~15 s mantêm NAT/ESP32 acordados. "
-        "O coletor consulta as APIs a cada `USAGE_INTERVAL_S` (padrão 60 s) e empurra um `usage` "
-        "a todos os inscritos. `GET /usage` força um ciclo extra.\n\n"
+        "O coletor monta um snapshot a cada `USAGE_INTERVAL_S` (padrão 60 s) e empurra um `usage` "
+        "a todos os inscritos. Cada API de terceiro tem o próprio TTL (CoinGecko ~5 min) — "
+        "o SSE continua a 60 s com last-good. `GET /usage` força um ciclo extra só das cotas de assinatura.\n\n"
         "O Try it out do Swagger **segura a conexão** (stream infinito) — para um JSON único use `/usage`."
     ),
     response_class=StreamingResponse,

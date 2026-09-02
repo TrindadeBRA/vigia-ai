@@ -44,9 +44,11 @@ Sem autenticação. Resposta:
 
 O coletor converte para centavos (`price_usd_cents`, `price_brl_cents`) e multiplica pelo saldo para `value_usd_cents` / `value_brl_cents`.
 
+N carteiras compartilham **uma** chamada de cotação. Bitcoin e a lista de moedas (`currencies`) usam o mesmo cliente (`app/providers/coingecko.py`), com TTL de **5 min**, coalescência se as duas rodarem juntas, e last-good se vier **HTTP 429**. A API *keyless* da CoinGecko é ~10–30 chamadas/min por IP (dinâmico), cacheia 1–5 min do lado deles, e **não** é adequada pra poll a cada 60 s — por isso o hub continua a 60 s no SSE, mas a cotação só é rebatida quando o TTL vence. O saldo (Blockstream) segue o ciclo do hub.
+
 ## Erros parciais
 
-Se o saldo ou a cotação falharem (endereço inválido, rede fora do ar, rate limit de qualquer uma das duas APIs), a conta inteira vira `ok: false` com a mensagem da etapa que falhou — não há "saldo sem cotação" ou vice-versa no JSON.
+Se o saldo ou a cotação falharem (endereço inválido, rede fora do ar, rate limit de qualquer uma das duas APIs) **e** não houver last-good, a conta inteira vira `ok: false` com a mensagem da etapa que falhou — não há "saldo sem cotação" ou vice-versa no JSON. Em 429 com cache, o card continua `ok` com o último preço bom.
 
 ## O que a tela mostra
 

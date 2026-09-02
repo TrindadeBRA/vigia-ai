@@ -12,7 +12,7 @@ Não há API key. Escopo: `https://www.googleapis.com/auth/adsense.readonly`.
    `http://127.0.0.1:8787/api/oauth/adsense/callback`
    (a porta segue a do coletor; o painel mostra a URI exata).
 4. Cole o Client ID e o Client Secret no fold **Credenciais do Google Cloud** da seção Financeiro.
-5. **Entrar com Google** — o coletor grava o `refresh_token`. O callback **não** pode ser o Vite (`:5173`) nem `/display/alarmes`.
+5. **Entrar com Google** — o coletor grava o `refresh_token`. O callback **não** pode ser o Vite (`:5173`) nem `/display/alarms`.
 
 Se o Google não devolver `refresh_token`, revogue o acesso em [myaccount.google.com/permissions](https://myaccount.google.com/permissions) e entre de novo (`prompt=consent` + `access_type=offline`).
 

@@ -18,4 +18,4 @@ Claude, GPT and Cursor usage endpoints are **not** public contracts. Treat 401/4
 
 ## Rate limits
 
-There is **one** upstream cycle on the collector (`USAGE_INTERVAL_S`, default 60 s) pushed to all SSE clients. `GET /usage` forces an extra cycle. The Claude OAuth usage endpoint rate-limits if hammered; keep the interval around 60–180 s.
+There is **one** SSE snapshot cycle on the collector (`USAGE_INTERVAL_S`, default 60 s) pushed to all clients. Each third-party API has its own TTL (CoinGecko ~5 min). `GET /usage` forces an extra cycle of subscription quotas only. The Claude OAuth usage endpoint rate-limits if hammered; keep that interval around 60–180 s.

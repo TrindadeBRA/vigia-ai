@@ -98,7 +98,7 @@ def search(q: str = Query(..., min_length=2, description="Nome ou símbolo"), co
     return CurrencySearchResponse(results=search_crypto(q, count))
 
 
-@router.get("", response_model=CurrenciesPayload, summary="Cotações atuais (força fetch)")
+@router.get("", response_model=CurrenciesPayload, summary="Cotações atuais")
 def get_quotes() -> CurrenciesPayload:
     cfg = load()
     ccfg = cfg.get("currencies") or {}

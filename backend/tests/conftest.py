@@ -7,6 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.providers.coingecko import reset as reset_coingecko
+from app.providers.currencies import reset_forex_cache
+from app.refresh_cache import cache
 from app.store import default_config, save
 
 
@@ -16,6 +19,9 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     monkeypatch.setenv("HOST", "127.0.0.1")
     monkeypatch.setenv("PORT", "8787")
     monkeypatch.setenv("USAGE_INTERVAL_S", "60")
+    cache.reset()
+    reset_coingecko()
+    reset_forex_cache()
     cfg = default_config()
     cfg["mock"] = True
     save(cfg)
