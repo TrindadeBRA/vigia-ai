@@ -11,6 +11,19 @@ FRONTEND_PORT=5173
 # (forward embutido dele, sem precisar de --forward) — dá pra testar o
 # upload de tema (protótipo, ver .agents/CONTRATO_TEMA.md) sem hardware real.
 THEME_SIM_PORT=9080
+# Amarelo pros logs do gateway wokwigw (mesmo espírito do magenta em
+# backend/app/http_util.py pras chamadas de saída — cada fonte com sua cor).
+_GW_YELLOW='\033[33m'
+_GW_RESET='\033[0m'
+colorize_gateway() {
+  if [ -t 1 ]; then
+    while IFS= read -r line; do
+      printf '%b%s%b\n' "$_GW_YELLOW" "$line" "$_GW_RESET"
+    done
+  else
+    cat
+  fi
+}
 WOKWIGW_BIN="$ROOT_DIR/.tools/wokwigw"
 WOKWIGW_VERSION="v2.0.1"
 WOKWIGW_ASSET=""
@@ -30,8 +43,10 @@ uso: ./dev <comando>
 
   ./dev                 esta ajuda
   ./dev up              backend FastAPI + frontend Vite
-  ./dev up --docker     Compose na raiz
+  ./dev up --docker     Compose na raiz (anexado, Ctrl+C encerra)
+  ./dev up --docker -d  Compose na raiz em background (sobrevive ao terminal)
   ./dev down            encerra o que este script deixou em :8787 / :5173
+  ./dev down --docker   docker compose down
   ./dev wokwi           coletor + gateway Wokwi + compila o firmware simulado
                      (atalhos: simulador, sim)
   ./dev firmware build  compila a placa (esp32dev)
@@ -215,6 +230,13 @@ ours_on_port() {
 }
 
 cmd_down() {
+  if [ "${1:-}" = "--docker" ]; then
+    if ! command -v docker >/dev/null 2>&1; then
+      echo "docker não encontrado." >&2
+      exit 1
+    fi
+    exec docker compose -f "$ROOT_DIR/compose.yaml" down
+  fi
   local pid port killed=0
   for port in "$BACKEND_PORT" "$FRONTEND_PORT"; do
     for pid in $(listen_pids "$port"); do
@@ -243,12 +265,24 @@ cmd_down() {
 }
 
 cmd_up() {
-  if [ "${1:-}" = "--docker" ]; then
+  local docker_mode=0 detach=0
+  for arg in "$@"; do
+    case "$arg" in
+      --docker) docker_mode=1 ;;
+      -d|--detach) detach=1 ;;
+    esac
+  done
+  if [ "$docker_mode" -eq 1 ]; then
     if ! command -v docker >/dev/null 2>&1; then
       echo "docker não encontrado." >&2
       exit 1
     fi
     echo "painel: http://127.0.0.1:${BACKEND_PORT}/display/config"
+    if [ "$detach" -eq 1 ]; then
+      docker compose -f "$ROOT_DIR/compose.yaml" up --build -d
+      echo "rodando em background. 'docker compose logs -f' pra ver logs, './dev down --docker' pra parar."
+      exit 0
+    fi
     exec docker compose -f "$ROOT_DIR/compose.yaml" up --build
   fi
   require_port_free "$BACKEND_PORT" "backend"
@@ -271,7 +305,7 @@ cmd_sim() {
   if nc -z 127.0.0.1 9011 2>/dev/null; then
     echo "gateway ja esta em :9011"
   else
-    "$WOKWIGW_BIN" --listenPort 9011 &
+    "$WOKWIGW_BIN" --listenPort 9011 2>&1 | colorize_gateway &
     PIDS+=("$!")
     local i
     for i in $(seq 1 20); do
@@ -322,7 +356,7 @@ fi
 case "$1" in
   -h|--help|help) usage ;;
   up) shift; cmd_up "$@" ;;
-  down) cmd_down ;;
+  down) shift; cmd_down "$@" ;;
   wokwi|simulador|sim) cmd_sim ;;
   test) cmd_test ;;
   lint) cmd_lint ;;

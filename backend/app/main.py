@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -101,12 +100,6 @@ def create_app() -> FastAPI:
     app.state.listen_port = port
 
     app.add_middleware(CloseConnectionMiddleware)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS", "PATCH"],
-        allow_headers=["Content-Type"],
-    )
     app.include_router(usage_router)
     app.include_router(config_router)
     app.include_router(adsense_router)

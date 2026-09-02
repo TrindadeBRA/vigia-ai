@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useOutletContext } from "react-router-dom";
 import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
@@ -10,6 +9,7 @@ import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
+import { IconCard, providerSupportsCard, type ThemeIconStyle } from "./ThemeCanvasView";
 import { THEME_STR } from "./themeCopy";
 import {
   ICON_PROVIDERS,
@@ -22,13 +22,13 @@ import {
   type ThemeProvider,
 } from "./themeMetrics";
 import { Button, Card, Checkbox, FieldStatus, Fold, TextField } from "./ui";
-import type { ConfigOutlet } from "./usePublicConfig";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./WallpaperManager";
 
 type ThemeIcon = {
   id: string;
   provider: ThemeProvider;
+  style: ThemeIconStyle;
   x: number;
   y: number;
   scale: number;
@@ -58,6 +58,17 @@ function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
+// Espelha o clampBoxCenter do firmware (ui/customtheme.cpp): mantém a caixa
+// do widget inteira dentro do canvas, mesmo perto das bordas — sem isso, a
+// prévia web (que só recorta via overflow:hidden) parecia caber onde a
+// placa de fato cortava o widget, já que os tamanhos de caixa nunca eram
+// levados em conta na posição exibida.
+function clampBoxCenter(rawCenter: number, boxSize: number, containerSize: number): number {
+  if (!containerSize || !boxSize) return rawCenter;
+  if (boxSize >= containerSize) return containerSize / 2;
+  return clamp(rawCenter, boxSize / 2, containerSize - boxSize / 2);
+}
+
 function isBareLoopback(ip: string): boolean {
   const v = ip.trim().toLowerCase();
   return v === "127.0.0.1" || v === "localhost" || v === "::1";
@@ -83,10 +94,23 @@ function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<ThemeIc
     if (typeof merged.clock.showBackground !== "boolean") merged.clock.showBackground = DEFAULT_THEME.clock.showBackground;
     if (typeof merged.clock.autoColor !== "boolean") merged.clock.autoColor = DEFAULT_THEME.clock.autoColor;
   }
-  merged.icons = (merged.icons || []).map((icon) => ({
-    ...icon,
+  merged.icons = (merged.icons || []).map((icon, idx) => ({
+    id: icon.id || `i${idx}`,
     provider: (icon.provider as ThemeProvider) || "claude",
+    style: icon.style === "card" ? "card" : "chip",
+    x: icon.x ?? 0.5,
+    y: icon.y ?? 0.5,
+    scale: icon.scale ?? 1,
+    color: icon.color ?? null,
     metric: icon.metric || defaultMetric((icon.provider as ThemeProvider) || "claude"),
+  }));
+  merged.texts = (merged.texts || []).map((txt, idx) => ({
+    id: txt.id || `t${idx}`,
+    text: txt.text || "",
+    x: txt.x ?? 0.5,
+    y: txt.y ?? 0.5,
+    scale: txt.scale ?? 1,
+    color: txt.color ?? null,
   }));
   return merged;
 }
@@ -127,6 +151,7 @@ function themeToJson(t: ThemeState, hasWallpaper: boolean) {
     },
     icons: t.icons.map((i) => ({
       provider: i.provider,
+      style: i.style,
       x: i.x,
       y: i.y,
       scale: i.scale,
@@ -141,6 +166,7 @@ function CanvasDot({
   x,
   y,
   canvasRef,
+  containerSize,
   selected,
   title,
   onSelect,
@@ -152,6 +178,7 @@ function CanvasDot({
   x: number;
   y: number;
   canvasRef: React.RefObject<HTMLDivElement | null>;
+  containerSize: { width: number; height: number };
   selected: boolean;
   title: string;
   onSelect: () => void;
@@ -160,6 +187,20 @@ function CanvasDot({
   removeLabel?: string;
   children: React.ReactNode;
 }) {
+  const dotRef = useRef<HTMLDivElement>(null);
+  const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = dotRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect;
+      if (r) setBoxSize({ width: r.width, height: r.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     onSelect();
@@ -170,14 +211,18 @@ function CanvasDot({
     const rect = canvasRef.current.getBoundingClientRect();
     onDrag(clamp((e.clientX - rect.left) / rect.width, 0, 1), clamp((e.clientY - rect.top) / rect.height, 0, 1));
   };
+  const { width: cw, height: ch } = containerSize;
+  const left = cw > 0 ? clampBoxCenter(x * cw, boxSize.width, cw) : x * 100;
+  const top = ch > 0 ? clampBoxCenter(y * ch, boxSize.height, ch) : y * 100;
   return (
     <div
+      ref={dotRef}
       role="button"
       tabIndex={0}
       title={title}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
+      style={cw > 0 && ch > 0 ? { left: `${left}px`, top: `${top}px` } : { left: `${left}%`, top: `${top}%` }}
       className={cn(
         "absolute flex -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none select-none items-center justify-center rounded-[10px] outline-none active:cursor-grabbing",
         selected ? "ring-2 ring-accent ring-offset-2 ring-offset-transparent" : "ring-1 ring-white/40",
@@ -330,10 +375,8 @@ function IconChip({
 }
 
 export default function ThemeEditorPage() {
-  const ctx = useOutletContext<ConfigOutlet | null>();
-  const lang = ctx?.lang || "pt";
+  const { cfg, phase, reload, setPhase, lang } = usePublicConfig();
   const c = THEME_STR[lang];
-  const { cfg, phase, reload, setPhase } = usePublicConfig();
 
   const [theme, setTheme] = useThemeDraft();
   const [selected, setSelected] = useState<string | null>(null);
@@ -423,9 +466,11 @@ export default function ThemeEditorPage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [phase, cfg]);
 
   const zoom = canvasSize.width > 0 && canvasRenderedW > 0 ? canvasRenderedW / canvasSize.width : 1;
+  const canvasRenderedH = canvasSize.width > 0 ? canvasRenderedW * (canvasSize.height / canvasSize.width) : 0;
+  const containerSize = { width: canvasRenderedW, height: canvasRenderedH };
 
   useEffect(() => {
     if (!deviceIp) return;
@@ -457,7 +502,7 @@ export default function ThemeEditorPage() {
     setTheme((t) =>
       t.icons.length >= MAX_ICONS
         ? t
-        : { ...t, icons: [...t.icons, { id, provider, x, y, scale: 1, color: null, metric: defaultMetric(provider) }] },
+        : { ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, metric: defaultMetric(provider) }] },
     );
     setSelected(`icon:${id}`);
   }
@@ -575,6 +620,7 @@ export default function ThemeEditorPage() {
                 x={theme.clock.x}
                 y={theme.clock.y}
                 canvasRef={canvasRef}
+                containerSize={containerSize}
                 selected={selected === "clock"}
                 title={c.clock}
                 onSelect={() => setSelected("clock")}
@@ -602,6 +648,7 @@ export default function ThemeEditorPage() {
                 x={icon.x}
                 y={icon.y}
                 canvasRef={canvasRef}
+                containerSize={containerSize}
                 selected={selected === `icon:${icon.id}`}
                 title={`${providerLabel(icon.provider)} ${formatThemeMetric(usage, icon.provider, icon.metric)}`}
                 onSelect={() => setSelected(`icon:${icon.id}`)}
@@ -609,7 +656,11 @@ export default function ThemeEditorPage() {
                 onRemove={() => removeIcon(icon.id)}
                 removeLabel={c.removeIcon}
               >
-                <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+                {icon.style === "card" && providerSupportsCard(icon.provider) ? (
+                  <IconCard provider={icon.provider} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} lang={lang} />
+                ) : (
+                  <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+                )}
               </CanvasDot>
             ))}
             {theme.texts.map((txt) => (
@@ -618,6 +669,7 @@ export default function ThemeEditorPage() {
                 x={txt.x}
                 y={txt.y}
                 canvasRef={canvasRef}
+                containerSize={containerSize}
                 selected={selected === `text:${txt.id}`}
                 title={txt.text}
                 onSelect={() => setSelected(`text:${txt.id}`)}
@@ -710,7 +762,35 @@ export default function ThemeEditorPage() {
                     ))}
                   </select>
                 </label>
-                {providerHasData(selectedIcon.provider) ? (
+                {providerSupportsCard(selectedIcon.provider) ? (
+                  <label className="flex flex-col gap-1.5">
+                    <span className={cfgFieldLabel}>{c.iconStyle}</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateIcon(selectedIcon.id, { style: "chip" })}
+                        className={cn(
+                          "flex-1 rounded-[10px] border px-3 py-2 text-sm font-[650]",
+                          selectedIcon.style === "chip" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                        )}
+                      >
+                        {c.iconStyleChip}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateIcon(selectedIcon.id, { style: "card" })}
+                        className={cn(
+                          "flex-1 rounded-[10px] border px-3 py-2 text-sm font-[650]",
+                          selectedIcon.style === "card" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                        )}
+                      >
+                        {c.iconStyleCard}
+                      </button>
+                    </div>
+                    <span className="text-xs text-ink3">{c.iconStyleHint}</span>
+                  </label>
+                ) : null}
+                {selectedIcon.style !== "card" && providerHasData(selectedIcon.provider) ? (
                   <label className="flex flex-col gap-1.5">
                     <span className={cfgFieldLabel}>{c.metric}</span>
                     <select

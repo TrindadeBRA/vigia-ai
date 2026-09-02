@@ -24,7 +24,7 @@ function QuoteRow({ code, label, kind, price, ok, error, base, compact }: { code
 // caixa é o tile que a envolve (Display.tsx), igual ao WeatherBoardCard. ──
 
 export function CurrenciesBoardCard({ currencies, t, compact, onOpen }: { currencies: CurrenciesPayload | null | undefined; t: T; compact?: boolean; onOpen?: () => void }) {
-    if (!currencies || !currencies.items.length) {
+    if (!currencies || !((currencies.items?.length) ?? 0)) {
         return (
             <div className="flex h-full min-h-0 w-full flex-col">
                 <div className="mb-2 flex items-center gap-2">
@@ -36,7 +36,7 @@ export function CurrenciesBoardCard({ currencies, t, compact, onOpen }: { curren
         );
     }
 
-    const shown = compact ? currencies.items.slice(0, 3) : currencies.items.slice(0, 6);
+    const shown = compact ? (currencies.items ?? []).slice(0, 3) : (currencies.items ?? []).slice(0, 6);
 
     return (
         <button type="button" onClick={onOpen} className="flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left">
@@ -65,14 +65,14 @@ export function CurrenciesDetail({ currencies, t }: { currencies: CurrenciesPayl
     if (!currencies.ok && currencies.error) {
         return <div className={metricCard}><div className={errorText}>{currencies.error}</div></div>;
     }
-    if (!currencies.items.length) {
+    if (!((currencies.items?.length) ?? 0)) {
         return <div className={emptyNote}>{t.currenciesEmpty}</div>;
     }
     return (
         <div className="flex w-full flex-col gap-[10px]">
             <div className={cardLabel}>{t.currencies} · {currencies.base}</div>
             <div className={`${metricCard} flex flex-col gap-2.5`}>
-                {currencies.items.map((it) => (
+                {currencies.items?.map((it) => (
                     <QuoteRow key={it.id} code={it.code} label={it.label} kind={it.kind} price={it.price} ok={it.ok} error={it.error} base={currencies.base} />
                 ))}
             </div>

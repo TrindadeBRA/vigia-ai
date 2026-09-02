@@ -25,6 +25,10 @@ export type ThemeCopy = {
   metric: string;
   metricNone: string;
   metricHint: string;
+  iconStyle: string;
+  iconStyleChip: string;
+  iconStyleCard: string;
+  iconStyleHint: string;
   elements: string;
   noIcons: string;
   wallpaperInUse: string;
@@ -148,6 +152,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     metric: "Dado no ícone",
     metricNone: "Só o ícone",
     metricHint: "A placa desenha este valor ao lado do logo, atualizado a cada ciclo do coletor.",
+    iconStyle: "Estilo",
+    iconStyleChip: "Ícone simples",
+    iconStyleCard: "Cartão completo",
+    iconStyleHint: "O cartão mostra nome, conta e até 2 barras de uso — o mesmo mini-cartão da Início/Agora da placa.",
     elements: "No canvas",
     noIcons: "Nenhum provedor no tema ainda. Clique num card abaixo pra adicionar ícone + cota.",
     wallpaperInUse: "Papel de parede em uso",
@@ -270,6 +278,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     metric: "Data on the icon",
     metricNone: "Icon only",
     metricHint: "The board draws this value next to the logo, updated each collector cycle.",
+    iconStyle: "Style",
+    iconStyleChip: "Simple icon",
+    iconStyleCard: "Full card",
+    iconStyleHint: "The card shows name, account and up to 2 usage bars — the same mini-card from the board's Home/Now screens.",
     elements: "On canvas",
     noIcons: "No providers on the theme yet. Click a card below to add icon + quota.",
     wallpaperInUse: "Wallpaper in use",
@@ -392,6 +404,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     metric: "Dato en el ícono",
     metricNone: "Solo el ícono",
     metricHint: "La placa dibuja este valor junto al logo, actualizado en cada ciclo del colector.",
+    iconStyle: "Estilo",
+    iconStyleChip: "Ícono simple",
+    iconStyleCard: "Tarjeta completa",
+    iconStyleHint: "La tarjeta muestra nombre, cuenta y hasta 2 barras de uso — la misma mini-tarjeta de Inicio/Ahora de la placa.",
     elements: "En el lienzo",
     noIcons: "Todavía sin proveedores en el tema. Hacé clic en una tarjeta abajo para agregar ícono + cuota.",
     wallpaperInUse: "Fondo en uso",

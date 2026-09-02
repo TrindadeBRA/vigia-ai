@@ -78,6 +78,7 @@ def fetch_deepseek_one(raw_key: str) -> dict[str, Any]:
         data = http_json(
             DEEPSEEK_BALANCE_URL,
             headers={"Authorization": f"Bearer {key}", "Accept": "application/json"},
+            provider="DEEPSEEK",
         )
     except RuntimeError as exc:
         return deepseek_fail(str(exc))

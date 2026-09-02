@@ -59,6 +59,7 @@ def exchange_code(client_id: str, client_secret: str, port: int, code: str) -> d
             "redirect_uri": redirect_uri(port),
             "grant_type": "authorization_code",
         },
+        provider="ADSENSE",
     )
     if not isinstance(data, dict) or not data.get("refresh_token"):
         raise RuntimeError("Google não devolveu refresh_token — revogue o acesso em myaccount.google.com/permissions e entre de novo")
@@ -74,6 +75,7 @@ def refresh_access_token(client_id: str, client_secret: str, refresh_token: str)
             "refresh_token": refresh_token,
             "grant_type": "refresh_token",
         },
+        provider="ADSENSE",
     )
     if not isinstance(data, dict) or not data.get("access_token"):
         raise RuntimeError("falha ao renovar o login Google — entre de novo no painel")
@@ -183,7 +185,7 @@ def _bearer(token: str) -> dict[str, str]:
 
 def fetch_adsense_one(access_token: str) -> dict[str, Any]:
     try:
-        accounts = http_json(ADSENSE_ACCOUNTS_URL, headers=_bearer(access_token))
+        accounts = http_json(ADSENSE_ACCOUNTS_URL, headers=_bearer(access_token), provider="ADSENSE")
     except RuntimeError as exc:
         return adsense_fail(str(exc))
     items = (accounts or {}).get("accounts") if isinstance(accounts, dict) else None
@@ -198,7 +200,9 @@ def fetch_adsense_one(access_token: str) -> dict[str, Any]:
     unpaid_cents: int | None = None
     currency: str | None = None
     try:
-        payments = http_json(f"https://adsense.googleapis.com/v2/{account_name}/payments", headers=_bearer(access_token))
+        payments = http_json(
+            f"https://adsense.googleapis.com/v2/{account_name}/payments", headers=_bearer(access_token), provider="ADSENSE"
+        )
         if isinstance(payments, dict):
             unpaid_cents, currency = parse_unpaid_payments(payments)
     except RuntimeError as exc:
@@ -210,7 +214,7 @@ def fetch_adsense_one(access_token: str) -> dict[str, Any]:
             f"https://adsense.googleapis.com/v2/{account_name}/reports:generate"
             "?dateRange=TODAY&metrics=ESTIMATED_EARNINGS"
         )
-        report = http_json(report_url, headers=_bearer(access_token))
+        report = http_json(report_url, headers=_bearer(access_token), provider="ADSENSE")
         if isinstance(report, dict):
             today_cents, report_currency = parse_estimated_earnings(report)
             currency = currency or report_currency

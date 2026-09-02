@@ -91,7 +91,7 @@ export default function AlarmsPage() {
     void reload();
   }, [reload]);
 
-  const providers = data ? Object.keys(data.metrics) : [];
+  const providers = data ? Object.keys(data.metrics || {}) : [];
   const [provider, setProvider] = useState("");
   const [metric, setMetric] = useState("");
   const [threshold, setThreshold] = useState(80);

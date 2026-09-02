@@ -60,6 +60,11 @@ type Strings = {
   autoNote: () => string;
   fetchFail: string;
   now: string;
+  canvas: string;
+  canvasLead: string;
+  canvasEdit: string;
+  canvasEmpty: string;
+  canvasDraftHint: string;
   closeSettings: string;
   config: string;
   setup: string;
@@ -159,6 +164,11 @@ export const STR: Record<Lang, Strings> = {
     autoNote: () => "Ao vivo (SSE). Toque para forçar uma consulta agora.",
     fetchFail: "Não foi possível falar com o coletor.",
     now: "Agora",
+    canvas: "Canvas",
+    canvasLead: "Tela de descanso com o tema configurado — igual à placa.",
+    canvasEdit: "Editar tema",
+    canvasEmpty: "Nenhum elemento no tema ainda.",
+    canvasDraftHint: "Exibindo rascunho local — salve em Editar tema para sincronizar com a placa.",
     closeSettings: "Fechar",
     config: "Configurações",
     setup: "Ajustes",
@@ -253,6 +263,11 @@ export const STR: Record<Lang, Strings> = {
     autoNote: () => "Live (SSE). Tap to force a fetch now.",
     fetchFail: "Could not reach the collector.",
     now: "Now",
+    canvas: "Canvas",
+    canvasLead: "Rest screen with your configured theme — same as the board.",
+    canvasEdit: "Edit theme",
+    canvasEmpty: "No theme elements yet.",
+    canvasDraftHint: "Showing local draft — save in Edit theme to sync with the board.",
     closeSettings: "Close",
     config: "Settings",
     setup: "Setup",
@@ -347,6 +362,11 @@ export const STR: Record<Lang, Strings> = {
     autoNote: () => "En vivo (SSE). Toca para forzar una consulta ahora.",
     fetchFail: "No se pudo contactar al colector.",
     now: "Ahora",
+    canvas: "Canvas",
+    canvasLead: "Pantalla de reposo con el tema configurado — igual que la placa.",
+    canvasEdit: "Editar tema",
+    canvasEmpty: "Aún no hay elementos en el tema.",
+    canvasDraftHint: "Mostrando borrador local — guarda en Editar tema para sincronizar con la placa.",
     closeSettings: "Cerrar",
     config: "Configuración",
     setup: "Ajustes",

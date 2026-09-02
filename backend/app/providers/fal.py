@@ -80,6 +80,7 @@ def fetch_fal_one(raw_key: str) -> dict[str, Any]:
         data = http_json(
             FAL_BILLING_URL,
             headers={"Authorization": f"Key {key}", "Accept": "application/json"},
+            provider="FAL",
         )
     except RuntimeError as exc:
         return fal_fail(str(exc))

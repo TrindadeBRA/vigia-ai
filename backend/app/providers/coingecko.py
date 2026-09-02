@@ -44,7 +44,7 @@ def _query(ids: Sequence[str], vs: Sequence[str]) -> str | None:
     return urllib.parse.urlencode({"ids": ",".join(clean_ids), "vs_currencies": ",".join(clean_vs)})
 
 
-def fetch_simple_price(ids: Sequence[str], vs_currencies: Sequence[str]) -> dict[str, Any]:
+def fetch_simple_price(ids: Sequence[str], vs_currencies: Sequence[str], *, provider: str = "CRYPTO") -> dict[str, Any]:
     """Devolve o JSON do CoinGecko, com TTL, coalescência e last-good em 429."""
     qs = _query(ids, vs_currencies)
     if not qs:
@@ -68,7 +68,7 @@ def fetch_simple_price(ids: Sequence[str], vs_currencies: Sequence[str]) -> dict
             break
 
     try:
-        data = http_json(f"{SIMPLE_PRICE_URL}?{qs}", timeout=15.0)
+        data = http_json(f"{SIMPLE_PRICE_URL}?{qs}", timeout=15.0, provider=provider)
         if not isinstance(data, dict):
             raise RuntimeError("resposta inesperada da cotação")
         with _lock:

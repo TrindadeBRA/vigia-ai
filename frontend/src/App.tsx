@@ -4,6 +4,7 @@ import AlarmsPage from "./pages/config/AlarmsPage";
 import ConfigPage from "./pages/config/ConfigPage";
 import SetupPage from "./pages/config/SetupPage";
 import ThemeEditorPage from "./pages/config/ThemeEditorPage";
+import CanvasPage from "./pages/CanvasPage";
 import "./index.css";
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/setup" element={<Navigate to="/display/setup" replace />} />
         <Route path="/display" element={<Display />}>
           <Route path="now" />
+          <Route path="canvas" element={<CanvasPage />} />
           <Route path="config" element={<ConfigPage />} />
           <Route path="setup" element={<SetupPage />} />
           <Route path="theme" element={<ThemeEditorPage />} />

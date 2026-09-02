@@ -82,6 +82,7 @@ def fetch_openrouter_one(raw_key: str) -> dict[str, Any]:
         data = http_json(
             OPENROUTER_CREDITS_URL,
             headers={"Authorization": f"Bearer {key}", "Accept": "application/json"},
+            provider="OPENROUTER",
         )
     except RuntimeError as exc:
         return openrouter_fail(str(exc))

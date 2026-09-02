@@ -2,18 +2,72 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import re
-import urllib.error
+import sys
+import time
 import urllib.parse
-import urllib.request
 from typing import Any
+
+import httpx
 
 from app import __version__
 
 _RETRY_AFTER_RE = re.compile(r"retry-after=(\d+(?:\.\d+)?)", re.IGNORECASE)
 
 DEFAULT_USER_AGENT = f"VigiaAI/{__version__} (local collector)"
+
+# Client único e persistente pro processo inteiro: reusa conexões keep-alive
+# por host (pool interno do httpx) em vez de abrir TCP+TLS do zero em cada
+# chamada. Thread-safe — os providers rodam em paralelo num ThreadPoolExecutor
+# (ver app/usage.py), então todos compartilham este client.
+_client = httpx.Client(timeout=20.0, headers={"User-Agent": DEFAULT_USER_AGENT})
+
+# Log das chamadas de saída (Claude, Cursor, weather, ...) no mesmo espírito do
+# access log do uvicorn (`INFO:     127.0.0.1:12345 - "GET /path HTTP/1.1" 200 OK`),
+# só que com o provider no lugar do rótulo de nível e outra cor — dá pra ver
+# no mesmo terminal qual fonte está sendo atualizada nesse instante.
+_MAGENTA = "\033[35m"
+_RESET = "\033[0m"
+_USE_COLOR = sys.stdout.isatty()
+# "UPDATE - OPENROUTER:" / "UPDATE - CURRENCIES:" são os rótulos mais longos.
+_PREFIX_WIDTH = 21
+
+
+def _level_prefix(label: str) -> str:
+    prefix = f"UPDATE - {label}:".ljust(_PREFIX_WIDTH)
+    return f"{_MAGENTA}{prefix}{_RESET}" if _USE_COLOR else prefix
+
+
+def _label_from_host(netloc: str) -> str:
+    """Fallback quando o chamador não passa `provider` explicitamente."""
+    host = netloc.split(":")[0]
+    parts = host.split(".")
+    core = parts[-2] if len(parts) >= 2 else host
+    return core.upper()
+
+
+def _log_outbound(
+    method: str,
+    url: str,
+    *,
+    label: str,
+    status: int | None,
+    elapsed_ms: float,
+    error: str | None = None,
+) -> None:
+    parsed = urllib.parse.urlsplit(url)
+    path = parsed.path or "/"
+    if parsed.query:
+        path += f"?{parsed.query}"
+    request_line = f'"{method} {path} HTTP/1.1"'
+    prefix = _level_prefix(label)
+    if error is not None:
+        print(f"{prefix}{parsed.netloc} - {request_line} falhou ({elapsed_ms:.0f}ms): {error}")
+        return
+    reason = http.client.responses.get(status or 0, "")
+    print(f"{prefix}{parsed.netloc} - {request_line} {status} {reason} ({elapsed_ms:.0f}ms)")
 
 
 class HttpError(RuntimeError):
@@ -38,14 +92,12 @@ def _parse_retry_after(raw: str | None) -> float | None:
         return None
 
 
-def _rate_limit_extra(exc: urllib.error.HTTPError) -> str:
-    if not exc.headers:
-        return ""
+def _rate_limit_extra(resp: httpx.Response) -> str:
     bits: list[str] = []
-    retry = exc.headers.get("Retry-After")
+    retry = resp.headers.get("Retry-After")
     if retry:
         bits.append(f"retry-after={retry}")
-    for key, val in exc.headers.items():
+    for key, val in resp.headers.items():
         low = key.lower()
         if "ratelimit" in low.replace("-", "") and val:
             bits.append(f"{key}={val}")
@@ -92,32 +144,37 @@ def http_json(
     headers: dict[str, str] | None = None,
     body: bytes | None = None,
     timeout: float = 20.0,
+    provider: str | None = None,
 ) -> Any:
     hdrs = dict(headers or {})
-    hdrs.setdefault("User-Agent", DEFAULT_USER_AGENT)
     try:
         for key, val in hdrs.items():
             key.encode("latin-1")
             val.encode("latin-1")
     except UnicodeEncodeError as exc:
         raise RuntimeError("token com caractere especial; cole de novo no painel") from exc
-    req = urllib.request.Request(url, data=body, method=method, headers=hdrs)
+    label = (provider or _label_from_host(urllib.parse.urlsplit(url).netloc)).upper()
+    start = time.perf_counter()
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
+        resp = _client.request(method, url, content=body, headers=hdrs, timeout=timeout)
     except UnicodeEncodeError as exc:
         raise RuntimeError("token com caractere especial; cole de novo no painel") from exc
-    except urllib.error.HTTPError as exc:
-        err_body = exc.read().decode("utf-8", errors="replace")[:300]
-        extra = _rate_limit_extra(exc)
-        retry = _parse_retry_after(exc.headers.get("Retry-After") if exc.headers else None)
+    except httpx.RequestError as exc:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        _log_outbound(method, url, label=label, status=None, elapsed_ms=elapsed_ms, error=str(exc))
+        raise RuntimeError(f"rede {method} {url}: {exc}") from exc
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    _log_outbound(method, url, label=label, status=resp.status_code, elapsed_ms=elapsed_ms)
+    if resp.status_code >= 400:
+        err_body = resp.content.decode("utf-8", errors="replace")[:300]
+        extra = _rate_limit_extra(resp)
+        retry = _parse_retry_after(resp.headers.get("Retry-After"))
         raise HttpError(
-            f"HTTP {exc.code} {method} {url}{extra}: {err_body}",
-            status=int(exc.code),
+            f"HTTP {resp.status_code} {method} {url}{extra}: {err_body}",
+            status=resp.status_code,
             retry_after_s=retry,
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"rede {method} {url}: {exc.reason}") from exc
+        )
+    raw = resp.content.decode("utf-8", errors="replace")
     if not raw:
         return {}
     try:
@@ -126,7 +183,7 @@ def http_json(
         raise RuntimeError(f"JSON inválido de {url}: {exc}") from exc
 
 
-def http_form(url: str, fields: dict[str, str], *, timeout: float = 20.0) -> Any:
+def http_form(url: str, fields: dict[str, str], *, timeout: float = 20.0, provider: str | None = None) -> Any:
     body = urllib.parse.urlencode(fields).encode("utf-8")
     return http_json(
         url,
@@ -134,4 +191,5 @@ def http_form(url: str, fields: dict[str, str], *, timeout: float = 20.0) -> Any
         headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"},
         body=body,
         timeout=timeout,
+        provider=provider,
     )

@@ -10,6 +10,7 @@ import tempfile
 import time
 from pathlib import Path
 from shutil import copy2
+from typing import Any
 
 
 def state_db_path(cfg: dict | None = None) -> Path:
@@ -35,39 +36,63 @@ def state_db_path(cfg: dict | None = None) -> Path:
     return candidates[0]
 
 
-def read_item(db_path: Path, key: str) -> str | None:
-    if not db_path.is_file():
+CURSOR_STATE_CACHE_TTL_S = 30.0
+
+_cursor_state_cache: tuple[float, Path, list[tuple[str, str, str | None]]] | None = None
+
+
+def _clean_value(val: Any) -> str | None:
+    if val is None:
         return None
-    fd, tmp = tempfile.mkstemp(suffix=".vscdb")
-    os.close(fd)
-    try:
-        copy2(db_path, tmp)
-        con = sqlite3.connect(tmp)
-        try:
-            row = con.execute("SELECT value FROM ItemTable WHERE key = ?", (key,)).fetchone()
-        finally:
-            con.close()
-    except sqlite3.Error:
-        return None
-    finally:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-    if not row or row[0] is None:
-        return None
-    val = row[0]
     if isinstance(val, bytes):
         val = val.decode("utf-8", errors="replace")
     s = str(val).strip().strip('"')
     return s or None
 
 
+def read_items(db_path: Path, keys: list[str]) -> dict[str, str | None]:
+    """Lê várias chaves com uma única cópia do state.vscdb (que pode ter ~1 GB)."""
+    if not db_path.is_file():
+        return dict.fromkeys(keys)
+    fd, tmp = tempfile.mkstemp(suffix=".vscdb")
+    os.close(fd)
+    try:
+        copy2(db_path, tmp)
+        con = sqlite3.connect(tmp)
+        try:
+            placeholders = ",".join("?" * len(keys))
+            rows = con.execute(f"SELECT key, value FROM ItemTable WHERE key IN ({placeholders})", keys).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return dict.fromkeys(keys)
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+    values = dict.fromkeys(keys)
+    for key, value in rows:
+        values[key] = _clean_value(value)
+    return values
+
+
+def read_item(db_path: Path, key: str) -> str | None:
+    return read_items(db_path, [key])[key]
+
+
 def cursor_token_candidates(cfg: dict | None = None) -> list[tuple[str, str, str | None]]:
+    global _cursor_state_cache
+    db = state_db_path(cfg)
+    if _cursor_state_cache is not None:
+        cached_at, cached_db, cached_result = _cursor_state_cache
+        if cached_db == db and time.monotonic() - cached_at < CURSOR_STATE_CACHE_TTL_S:
+            return cached_result
+
     found: list[tuple[str, str, str | None]] = []
     seen: set[str] = set()
-    db = state_db_path(cfg)
-    plan = read_item(db, "cursorAuth/stripeMembershipType")
+    values = read_items(db, ["cursorAuth/stripeMembershipType", "cursorAuth/accessToken"])
+    plan = values["cursorAuth/stripeMembershipType"]
 
     def add(source: str, token: str | None) -> None:
         if not token or token in seen:
@@ -75,7 +100,8 @@ def cursor_token_candidates(cfg: dict | None = None) -> list[tuple[str, str, str
         seen.add(token)
         found.append((source, token, plan))
 
-    add("vscdb", read_item(db, "cursorAuth/accessToken"))
+    add("vscdb", values["cursorAuth/accessToken"])
+    _cursor_state_cache = (time.monotonic(), db, found)
     return found
 
 

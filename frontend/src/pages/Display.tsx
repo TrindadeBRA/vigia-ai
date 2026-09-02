@@ -1,7 +1,7 @@
 import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
 import { CELL_GAP, colsForWidth, displayBoard, dropTarget, emptyBoard, emptyCells, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
@@ -10,12 +10,12 @@ import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
 import { CurrenciesBoardCard, CurrenciesDetail } from "../components/CurrenciesWidget";
 import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
-import { BellIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
+import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
-import type { ConfigOutlet } from "./config/ConfigPage";
+import type { DisplayOutlet } from "./config/usePublicConfig";
 import NowPage from "./NowPage";
 
 const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
@@ -25,8 +25,8 @@ const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout };
 type Pal = (typeof PALETTES)[ThemeName];
-type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null; value?: string | null };
-type ProviderMeta = {
+export type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null; value?: string | null };
+export type ProviderMeta = {
   id: string;
   provider: string;
   ok: boolean;
@@ -259,7 +259,7 @@ function gptSessionMetric(g: GptAccount, t: T, nowMs: number): Metric {
   return { label: t.resetIn, pct: null, sub: fmtCountdown(until, nowMs), countdownAt: until };
 }
 
-function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderMeta[] {
+export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderMeta[] {
   const list: ProviderMeta[] = [];
   for (const c of data.claude || []) {
     const metrics: Metric[] = [];
@@ -495,7 +495,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
   // Moedas — card único com N cotações, igual ao clima (o backend já filtra
   // hidden/enabled; se chegou aqui é pra mostrar).
   const cu = data.currencies;
-  if (cu && (cu.items.length || (!cu.ok && cu.error))) {
+  if (cu && (((cu.items?.length) ?? 0) > 0 || (!cu.ok && cu.error))) {
     list.push({
       id: "currencies:main",
       provider: "currencies",
@@ -503,7 +503,7 @@ function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): ProviderM
       error: cu.error,
       title: t.currencies,
       label: cu.base,
-      metrics: cu.items.slice(0, 6).map((it) => ({
+      metrics: (cu.items ?? []).slice(0, 6).map((it) => ({
         label: it.label || it.code,
         pct: null,
         value: it.ok ? fmtCurrencyAmount(it.price, cu.base) : null,
@@ -765,7 +765,7 @@ function ProviderCard({
         type="button"
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink",
-          sm ? "justify-center gap-0" : normalizeSize(size) === "wxl" ? "justify-evenly gap-1" : normalizeSize(size) === "wl" ? "justify-evenly gap-1" : normalizeSize(size) === "xl" ? "justify-evenly gap-1" : normalizeSize(size) === "lg" ? "justify-center gap-1" : p.metrics.length > 1 ? "justify-evenly" : "justify-center",
+          sm ? "justify-center gap-0" : normalizeSize(size) === "wxl" ? "justify-evenly gap-1" : normalizeSize(size) === "wl" ? "justify-evenly gap-1" : normalizeSize(size) === "xl" ? "justify-evenly gap-1" : normalizeSize(size) === "lg" ? "justify-center gap-1" : (p.metrics?.length ?? 0) > 1 ? "justify-evenly" : "justify-center",
         )}
         onClick={onOpen}
       >
@@ -774,8 +774,8 @@ function ProviderCard({
         ) : (
           (() => {
             const ns = normalizeSize(size);
-            const slice = sm ? 2 : ns === "lg" ? 2 : ns === "xl" ? 4 : ns === "wl" ? 4 : ns === "wxl" ? 8 : p.metrics.length;
-            return p.metrics.slice(0, slice).map((m, i) => (
+            const slice = sm ? 2 : ns === "lg" ? 2 : ns === "xl" ? 4 : ns === "wl" ? 4 : ns === "wxl" ? 8 : (p.metrics?.length ?? 0);
+            return (p.metrics ?? []).slice(0, slice).map((m, i) => (
               <MetricRow key={i} {...m} pal={pal} compact={sm} nowMs={nowMs} t={t} />
             ));
           })()
@@ -880,6 +880,9 @@ function Sidebar(props: {
         </button>
         <NavLink to="/display/now" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <ClockIcon size={16} /> {t.now}
+        </NavLink>
+        <NavLink to="/display/canvas" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+          <CanvasIcon size={16} /> {t.canvas}
         </NavLink>
       </div>
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
@@ -1492,12 +1495,14 @@ function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetch
 
 export default function Display() {
   const navigate = useNavigate();
-  const isConfig = Boolean(useMatch("/display/config"));
-  const isSetup = Boolean(useMatch("/display/setup"));
-  const isTheme = Boolean(useMatch("/display/theme") || useMatch("/display/tema"));
-  const isAlarms = Boolean(useMatch("/display/alarms") || useMatch("/display/alarmes"));
-  const isNow = Boolean(useMatch("/display/now"));
-  const isNested = isConfig || isSetup || isTheme || isAlarms || isNow;
+  const { pathname } = useLocation();
+  const isConfig = pathname === "/display/config";
+  const isSetup = pathname === "/display/setup";
+  const isTheme = pathname === "/display/theme" || pathname === "/display/tema";
+  const isCanvas = pathname === "/display/canvas";
+  const isAlarms = pathname === "/display/alarms" || pathname === "/display/alarmes";
+  const isNow = pathname === "/display/now";
+  const isNested = isConfig || isSetup || isTheme || isCanvas || isAlarms || isNow;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -1519,7 +1524,7 @@ export default function Display() {
   const flat = prefs.theme === "contrast";
   const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
   const t = STR[prefs.lang];
-  const outlet: ConfigOutlet = { lang: prefs.lang };
+  const outlet: DisplayOutlet = { lang: prefs.lang, data, nowMs: now, driftMs };
   const shellClass = cn(shell, flat && "flat");
   const pollS = pollMs / 1000;
   const showCheck = Boolean(okFlashAt && now - okFlashAt < FETCH_OK_FLASH_MS);
@@ -1614,8 +1619,11 @@ export default function Display() {
     }
   }
 
+  const showOutlet = isCanvas || (isNested && !isNow);
+
   return (
-    <div className={shellClass}>
+    <div className={cn(shellClass, isCanvas && "fixed inset-0 z-50 overflow-hidden bg-black")}>
+      {!isCanvas ? (
       <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none">
         <button className={`${iconBtn} hidden max-[860px]:flex`} onClick={() => setSidebarOpen(true)}><MenuIcon size={19} /></button>
         <button className="group/brand flex cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
@@ -1631,8 +1639,10 @@ export default function Display() {
         </button>
         <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} onClick={() => void loadUsage()} />
       </div>
-      <div className="flex min-h-0 flex-1">
-        {sidebarOpen ? <div className="fixed inset-x-0 bottom-0 top-14 z-[25] bg-black/45 min-[861px]:hidden" onClick={() => setSidebarOpen(false)} /> : null}
+      ) : null}
+      <div className={cn("flex min-h-0 flex-1", isCanvas && "h-full w-full")}>
+        {!isCanvas && sidebarOpen ? <div className="fixed inset-x-0 bottom-0 top-14 z-[25] bg-black/45 min-[861px]:hidden" onClick={() => setSidebarOpen(false)} /> : null}
+        {!isCanvas ? (
         <Sidebar
           providers={providers}
           section={section}
@@ -1648,8 +1658,14 @@ export default function Display() {
           onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
           onClose={() => setSidebarOpen(false)}
         />
-        <main className="min-w-0 flex-1 overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]">
-          {isNested && !isNow ? (
+        ) : null}
+        <main
+          className={cn(
+            "min-w-0 flex-1",
+            isCanvas ? "h-full overflow-hidden p-0" : "overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]",
+          )}
+        >
+          {showOutlet ? (
             <Outlet context={outlet} />
           ) : isNow && data ? (
             <NowPage data={data} prefs={prefs} providers={providers} t={t} nowMs={now} driftMs={driftMs} />
@@ -1685,7 +1701,7 @@ export default function Display() {
           )}
         </main>
       </div>
-      {settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
+      {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   );
 }
