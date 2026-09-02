@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigia AI — Nunca mais seja pego sem cota no meio do flow</title>
+  <meta name="description" content="Vigia AI: o painel de mesa que vigia suas cotas de IA 24/7. Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode e fal.ai num único mostrador — ESP32 + TFT touch ou navegador. Sem expor um token sequer. Open source, MIT." />
+  <meta name="keywords" content="Vigia AI, cotas IA, Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai, ESP32, TFT, dashboard, monitoramento, uso IA" />
+  <meta name="author" content="Vigia AI" />
+  <meta name="theme-color" content="#101419" />
+  <link rel="canonical" href="https://trindadebra.github.io/vigia-ai/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://trindadebra.github.io/vigia-ai/" />
+  <meta property="og:title" content="Vigia AI — Nunca mais seja pego sem cota no meio do flow" />
+  <meta property="og:description" content="8 provedores, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT 3,5&quot; touch ou navegador. Zero tokens expostos. Alarmes, temas, wallpapers e muito mais." />
+  <meta property="og:image" content="https://trindadebra.github.io/vigia-ai/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="pt_BR" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Vigia AI — Nunca mais seja pego sem cota no meio do flow" />
+  <meta name="twitter:description" content="8 provedores, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT touch ou navegador. Zero tokens expostos." />
+  <meta name="twitter:image" content="https://trindadebra.github.io/vigia-ai/assets/og-image.png" />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/../favicon-32x32.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0b0d10',
+            surface: '#101419',
+            panel: '#192021',
+            edge: '#3a3d42',
+            track: '#292d31',
+            chip: '#212a2c',
+            accent: { DEFAULT: '#e63931', soft: '#ff8f89', glow: 'rgba(230,57,49,.14)' },
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          animation: {
+            'fade-in': 'fadeIn .6s ease-out',
+            'slide-up': 'slideUp .7s ease-out',
+            'pulse-glow': 'pulseGlow 2.5s ease-in-out infinite',
+            'float': 'float 6s ease-in-out infinite',
+          },
+          keyframes: {
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            slideUp: { '0%': { opacity: '0', transform: 'translateY(18px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            pulseGlow: { '0%,100%': { boxShadow: '0 0 20px rgba(230,57,49,.25)' }, '50%': { boxShadow: '0 0 36px rgba(230,57,49,.45)' } },
+            float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { --accent: #e63931; --accent-ink: #fff; }
+    * { scrollbar-width: thin; scrollbar-color: #3a3d42 transparent; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #3a3d42; border-radius: 999px; }
+    .glass { backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2); }
+    .card-hover { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+    .card-hover:hover { transform: translateY(-3px); border-color: rgba(230,57,49,.35) !important; box-shadow: 0 12px 32px rgba(0,0,0,.35), 0 0 0 1px rgba(230,57,49,.08); }
+    .shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); background-size: 200% 100%; animation: shimmer 2.2s infinite; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .bar-fill { background: linear-gradient(180deg, rgba(255,255,255,.18), transparent); }
+  </style>
+</head>
+<body class="bg-ink font-sans text-neutral-200 antialiased selection:bg-accent selection:text-white">
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-50 border-b border-white/[0.07] bg-ink/75 glass">
+    <div class="relative mx-auto flex max-w-[1200px] items-center justify-between px-6 py-3.5">
+      <a href="#top" class="flex items-center gap-2.5 text-[17px] font-extrabold tracking-tight text-white">
+        <span class="flex size-8 items-center justify-center rounded-lg bg-panel border border-edge shadow-sm">
+          <span class="size-3 rounded-full bg-accent shadow-[0_0_10px_rgba(230,57,49,.6)]"></span>
+        </span>
+        Vigia<span class="font-mono font-bold text-accent">AI</span>
+        <span class="hidden sm:inline-flex ml-1 rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold tracking-widest text-neutral-400">OPEN SOURCE · MIT</span>
+      </a>
+
+      <nav class="hidden items-center gap-1 text-[13.5px] font-medium text-neutral-400 lg:flex">
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#problema">O problema</a>
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#recursos">Recursos</a>
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#provedores">Provedores</a>
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#dashboard">Dashboard</a>
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#como-funciona">Como funciona</a>
+        <a class="ml-2 inline-flex items-center gap-1.5 rounded-full bg-white text-ink px-4 py-1.5 text-[13px] font-bold hover:bg-neutral-100 transition" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+
+      <button id="nav-toggle" aria-label="Abrir menu" aria-expanded="false" class="flex flex-col gap-1.5 p-2 lg:hidden">
+        <span class="h-0.5 w-6 rounded bg-white"></span>
+        <span class="h-0.5 w-6 rounded bg-white"></span>
+        <span class="h-0.5 w-6 rounded bg-white"></span>
+      </button>
+
+      <div id="mobile-menu" class="hidden absolute inset-x-0 top-full flex-col gap-1 border-t border-white/10 bg-surface px-6 py-6 text-sm text-neutral-300 lg:hidden">
+        <a class="py-2 hover:text-white" href="#problema">O problema</a>
+        <a class="py-2 hover:text-white" href="#recursos">Recursos</a>
+        <a class="py-2 hover:text-white" href="#provedores">Provedores</a>
+        <a class="py-2 hover:text-white" href="#dashboard">Dashboard</a>
+        <a class="py-2 hover:text-white" href="#como-funciona">Como funciona</a>
+        <a class="mt-2 inline-flex w-fit rounded-full bg-white px-4 py-2 text-sm font-bold text-ink" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="relative overflow-hidden">
+      <div class="pointer-events-none absolute inset-0">
+        <div class="absolute inset-0 bg-[radial-gradient(900px_520px_at_18%_-8%,rgba(230,57,49,0.18),transparent_60%),radial-gradient(700px_420px_at_88%_12%,rgba(58,178,222,0.10),transparent_60%),radial-gradient(600px_380px_at_50%_100%,rgba(74,210,82,0.07),transparent_60%)]"></div>
+        <div class="absolute inset-0 opacity-[0.035]" style="background-image: linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px); background-size: 32px 32px;"></div>
+      </div>
+
+      <div class="relative mx-auto max-w-[1200px] px-6 py-14 md:py-20">
+        <div class="grid gap-10 md:grid-cols-[1.05fr_.95fr] md:items-center">
+          <div class="animate-slide-up">
+            <div class="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-bold tracking-widest text-accent-soft">
+              <span class="size-1.5 rounded-full bg-accent animate-pulse"></span>
+              SEMPRE LIGADO · TEMPO REAL · 100% LOCAL
+            </div>
+            <h1 class="mt-5 text-[34px] font-extrabold leading-[0.95] tracking-tight text-white md:text-[48px]">
+              Nunca mais seja
+              <span class="bg-gradient-to-r from-accent to-[#ff8f89] bg-clip-text text-transparent">pego sem cota</span>
+              no meio do flow.
+            </h1>
+            <p class="mt-5 max-w-[56ch] text-[17px] leading-relaxed text-neutral-300">
+              <strong class="font-semibold text-white">8 provedores. Múltiplas contas cada. Um único mostrador.</strong>
+              O <span class="font-semibold text-white">Vigia AI</span> vigia suas cotas de IA 24/7 — na sua mesa com <strong class="text-white">ESP32 + TFT 3,5" touch</strong> ou direto no navegador. Sem expor um token sequer.
+            </p>
+
+            <!-- Provider pills -->
+            <div class="mt-6 flex flex-wrap gap-2">
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/claude.png" alt="" class="size-4 object-contain" /> Claude</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/gpt.png" alt="" class="size-4 object-contain" /> GPT</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/cursor.png" alt="" class="size-4 object-contain" /> Cursor</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/openrouter.png" alt="" class="size-4 object-contain" /> OpenRouter</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/deepseek.png" alt="" class="size-4 object-contain" /> DeepSeek</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/opencode.png" alt="" class="size-4 object-contain" /> OpenCode</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/fal.png" alt="" class="size-4 object-contain" /> fal.ai</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img src="assets/icons/bitcoin.png" alt="" class="size-4 object-contain" /> Bitcoin</span>
+            </div>
+
+            <div class="mt-8 flex flex-wrap gap-3">
+              <a class="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(230,57,49,.35)] hover:bg-[#d6322b] transition" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.7 5.47 7.78.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.7-.96-.09-.24-.48-.96-.82-1.16-.28-.15-.68-.53-.01-.54.63-.01 1.08.6 1.23.85.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.2-3.64-.91-3.64-4.05 0-.89.31-1.63.82-2.2-.08-.2-.36-1.05.08-2.18 0 0 .67-.22 2.2.85a7.34 7.34 0 0 1 4 0c1.53-1.07 2.2-.85 2.2-.85.44 1.13.16 1.98.08 2.18.51.57.82 1.3.82 2.2 0 3.15-1.87 3.85-3.65 4.05.29.26.54.76.54 1.53 0 1.11-.01 2-.01 2.27 0 .22.15.48.55.4A8.22 8.22 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"/></svg>
+                Começar agora — é grátis
+              </a>
+              <a class="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-7 py-3.5 text-[15px] font-semibold text-white hover:bg-white/10 transition" href="#dashboard">
+                Ver o dashboard ao vivo →
+              </a>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center gap-3 text-xs text-neutral-400">
+              <span class="inline-flex items-center gap-1.5"><span class="size-2 rounded-full bg-emerald-400"></span> MIT · Open Source</span>
+              <span class="opacity-40">·</span>
+              <span>Python 3.11+ · Node 20+ · FastAPI · React · PlatformIO</span>
+            </div>
+
+            <!-- Trust bar -->
+            <div class="mt-8 grid grid-cols-3 gap-3 max-w-[520px]">
+              <div class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
+                <div class="font-mono text-xl font-bold text-white">8</div>
+                <div class="text-[11px] font-semibold tracking-widest text-neutral-400">PROVEDORES</div>
+              </div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
+                <div class="font-mono text-xl font-bold text-white">∞</div>
+                <div class="text-[11px] font-semibold tracking-widest text-neutral-400">CONTAS</div>
+              </div>
+              <div class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
+                <div class="font-mono text-xl font-bold text-white">0</div>
+                <div class="text-[11px] font-semibold tracking-widest text-neutral-400">TOKENS EXPOSTOS</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero visual: dashboard mock -->
+          <div class="relative animate-float">
+            <div class="absolute -inset-4 -z-10 rounded-[28px] bg-gradient-to-br from-accent/20 via-transparent to-[#3ab2de]/15 blur-2xl"></div>
+            <div class="overflow-hidden rounded-[20px] border border-white/10 bg-panel shadow-[0_24px_64px_rgba(0,0,0,.55)]">
+              <!-- Window chrome -->
+              <div class="flex items-center justify-between border-b border-white/10 bg-ink/60 px-4 py-3">
+                <div class="flex items-center gap-1.5">
+                  <span class="size-3 rounded-full bg-[#ff5f56]"></span>
+                  <span class="size-3 rounded-full bg-[#ffbd2e]"></span>
+                  <span class="size-3 rounded-full bg-[#27c93f]"></span>
+                </div>
+                <span class="font-mono text-[11px] font-semibold tracking-widest text-neutral-400">VIGIA AI · /display</span>
+                <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><span class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span> AO VIVO</span>
+              </div>
+              <!-- Mock cards -->
+              <div class="p-4 sm:p-5">
+                <div class="grid grid-cols-2 gap-3">
+                  <!-- Claude -->
+                  <div class="rounded-2xl border border-edge bg-ink p-4">
+                    <div class="flex items-center gap-2">
+                      <img src="assets/icons/claude.png" alt="" class="size-7 rounded-lg bg-white p-1 object-contain" />
+                      <div class="min-w-0">
+                        <div class="text-[12px] font-bold leading-none text-white">Claude</div>
+                        <div class="text-[11px] text-neutral-400">Sessão 5h · Semana</div>
+                      </div>
+                      <span class="ml-auto rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">OK</span>
+                    </div>
+                    <div class="mt-3 space-y-2.5">
+                      <div>
+                        <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Sessão</span><span class="font-mono font-semibold text-white">42%</span></div>
+                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track"><div class="h-full rounded-full bg-[#e63931] bar-fill" style="width:42%"></div></div>
+                      </div>
+                      <div>
+                        <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Semana</span><span class="font-mono font-semibold text-white">18%</span></div>
+                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track"><div class="h-full rounded-full bg-[#8cbe94] bar-fill" style="width:18%"></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Cursor -->
+                  <div class="rounded-2xl border border-edge bg-ink p-4">
+                    <div class="flex items-center gap-2">
+                      <img src="assets/icons/cursor.png" alt="" class="size-7 rounded-lg bg-white p-1 object-contain" />
+                      <div class="min-w-0">
+                        <div class="text-[12px] font-bold leading-none text-white">Cursor</div>
+                        <div class="text-[11px] text-neutral-400">Pro · Ciclo mensal</div>
+                      </div>
+                      <span class="ml-auto rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">35%</span>
+                    </div>
+                    <div class="mt-3 space-y-2.5">
+                      <div>
+                        <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Modelos Cursor</span><span class="font-mono font-semibold text-white">35%</span></div>
+                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track"><div class="h-full rounded-full bg-[#e6a65a] bar-fill" style="width:35%"></div></div>
+                      </div>
+                      <div class="flex justify-between text-[11px] text-neutral-400"><span>Restam</span><span class="font-mono text-white">$13,00</span></div>
+                    </div>
+                  </div>
+                  <!-- GPT -->
+                  <div class="rounded-2xl border border-edge bg-ink p-4">
+                    <div class="flex items-center gap-2">
+                      <img src="assets/icons/gpt.png" alt="" class="size-7 rounded-lg bg-white p-1 object-contain" />
+                      <div class="min-w-0">
+                        <div class="text-[12px] font-bold leading-none text-white">GPT</div>
+                        <div class="text-[11px] text-neutral-400">Plus · Codex</div>
+                      </div>
+                      <span class="ml-auto rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">OK</span>
+                    </div>
+                    <div class="mt-3">
+                      <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Janela curta</span><span class="font-mono font-semibold text-white">12%</span></div>
+                      <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track"><div class="h-full rounded-full bg-[#8cbe94] bar-fill" style="width:12%"></div></div>
+                    </div>
+                  </div>
+                  <!-- OpenRouter + extras -->
+                  <div class="rounded-2xl border border-edge bg-ink p-4">
+                    <div class="flex items-center gap-2">
+                      <img src="assets/icons/openrouter.png" alt="" class="size-7 rounded-lg bg-white p-1 object-contain" />
+                      <div class="min-w-0">
+                        <div class="text-[12px] font-bold leading-none text-white">OpenRouter</div>
+                        <div class="text-[11px] text-neutral-400">Créditos</div>
+                      </div>
+                      <span class="ml-auto font-mono text-xs font-bold text-white">$24,50</span>
+                    </div>
+                    <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div class="rounded-lg bg-white/[0.04] border border-white/5 py-2"><div class="text-[10px] tracking-widest text-neutral-400">DEEPSEEK</div><div class="font-mono text-xs font-bold text-white">$8,20</div></div>
+                      <div class="rounded-lg bg-white/[0.04] border border-white/5 py-2"><div class="text-[10px] tracking-widest text-neutral-400">FAL.AI</div><div class="font-mono text-xs font-bold text-white">$12,40</div></div>
+                      <div class="rounded-lg bg-white/[0.04] border border-white/5 py-2"><div class="text-[10px] tracking-widest text-neutral-400">BTC</div><div class="font-mono text-xs font-bold text-white">0.0012</div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                  <span class="text-xs text-neutral-400">Atualizado agora · <span class="font-mono text-white">SSE /events</span> · 1 ciclo para todos</span>
+                  <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300"><span class="size-1.5 rounded-full bg-emerald-400"></span> Tempo real</span>
+                </div>
+              </div>
+            </div>
+            <!-- Floating badge -->
+            <div class="absolute -bottom-3 -right-2 hidden sm:flex items-center gap-2 rounded-full border border-white/10 bg-panel px-3 py-2 shadow-xl">
+              <span class="flex size-7 items-center justify-center rounded-full bg-accent text-white">⚡</span>
+              <span class="text-xs font-semibold text-white">Um ciclo. Todos os clientes.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOCIAL PROOF / LOGOS -->
+    <section class="border-y border-white/[0.06] bg-white/[0.02] py-6">
+      <div class="mx-auto max-w-[1200px] px-6">
+        <p class="text-center text-[11px] font-bold tracking-[0.18em] text-neutral-500">FEITO PARA QUEM VIVE DE IA — DEV, CRIADOR, POWER USER</p>
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-neutral-400">
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Claude Code</span>
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Codex CLI</span>
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Cursor IDE</span>
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">OpenRouter</span>
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">DeepSeek</span>
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">OpenCode</span>
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">fal.ai</span>
+          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Bitcoin</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- O PROBLEMA -->
+    <section id="problema" class="py-16 md:py-20">
+      <div class="mx-auto grid max-w-[1200px] gap-10 px-6 md:grid-cols-2 md:items-center">
+        <div>
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">O PROBLEMA QUE NINGUÉM AGUENTA MAIS</p>
+          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">5 assinaturas, 5 abas, 0 visibilidade. Até travar no meio da entrega.</h2>
+          <p class="mt-4 leading-relaxed text-neutral-300">
+            Você usa <strong class="text-white">Claude, ChatGPT/Codex, Cursor, OpenRouter e DeepSeek</strong> no mesmo dia — cada um com sua cota, sua janela de reset e sua aba pra checar. Na prática, só descobre que estourou o limite quando o autocomplete morre no meio da task.
+          </p>
+          <div class="mt-6 grid gap-3">
+            <div class="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-300">✕</span>
+              <div><div class="text-sm font-semibold text-white">Sem Vigia</div><div class="text-sm text-neutral-400">Abrir 5 abas, lembrar de conferir, levar susto no meio do flow.</div></div>
+            </div>
+            <div class="flex gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">✓</span>
+              <div><div class="text-sm font-semibold text-white">Com Vigia</div><div class="text-sm text-neutral-300">Um mostrador sempre ligado. Você olha e já sabe. Sem <code class="rounded bg-white/10 px-1 py-0.5 font-mono text-xs text-accent-soft">curl</code>, sem susto.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="relative">
+          <div class="absolute -inset-3 -z-10 rounded-[20px] bg-gradient-to-br from-accent/15 to-transparent blur-xl"></div>
+          <div class="overflow-hidden rounded-2xl border border-white/10 bg-panel shadow-xl">
+            <img src="assets/firmware/display-home-grid.png" alt="Início em grade com as contas no firmware" class="w-full" loading="lazy" />
+            <div class="border-t border-white/10 bg-ink/60 px-4 py-3 text-center text-xs text-neutral-400">Firmware real — ESP32 + TFT 3,5" touch · grade, lista e detalhe por conta</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ONDE RODA -->
+    <section class="border-y border-white/[0.06] bg-white/[0.02] py-16">
+      <div class="mx-auto max-w-[1200px] px-6">
+        <div class="mx-auto max-w-2xl text-center">
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">ONDE RODA</p>
+          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">Um gadget de mesa — mas o firmware é opcional.</h2>
+          <p class="mt-3 text-neutral-400">Do tamanho de um despertador na mesa, ou como página web num monitor extra e até no celular. Você escolhe.</p>
+        </div>
+        <div class="mt-10 grid gap-5 md:grid-cols-3">
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">🖥️</div>
+            <h3 class="mt-4 text-[15px] font-bold text-white">Físico — sempre à vista</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">ESP32 Dev Module + TFT SPI 3,5" touch (XPT2046). Tela sempre ligada na mesa. QR code na tela abre o painel de qualquer aparelho na mesma Wi-Fi.</p>
+            <div class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">ILI9488 320×480 · Touch nativo</div>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">🌐</div>
+            <h3 class="mt-4 text-[15px] font-bold text-white">Web — sem hardware</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><code class="font-mono text-accent-soft">/display</code> replica a placa no navegador. Responsivo, com sidebar no desktop e menu no mobile. Tema e cor salvos no <code class="font-mono text-xs">localStorage</code>.</p>
+            <div class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">React + SSE · Drag & drop</div>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">🧪</div>
+            <h3 class="mt-4 text-[15px] font-bold text-white">Simulado — sem soldar</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><a class="font-semibold text-accent-soft hover:underline" href="https://wokwi.com/" target="_blank" rel="noopener">Wokwi</a> no VS Code. Mesmo sketch, Wi-Fi simulada + coletor real via <code class="font-mono text-xs">wokwigw</code>. Teste tudo antes de comprar a placa.</p>
+            <div class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">PlatformIO · wokwi env</div>
+          </div>
+        </div>
+        <div class="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-ink">
+          <img src="assets/firmware/wokwi-wiring.png" alt="Diagrama de montagem ESP32 + TFT 3,5&quot; touch no Wokwi" class="w-full" loading="lazy" />
+        </div>
+      </div>
+    </section>
+
+    <!-- RECURSOS — grade apelativa -->
+    <section id="recursos" class="py-16 md:py-20">
+      <div class="mx-auto max-w-[1200px] px-6">
+        <div class="mx-auto max-w-2xl text-center">
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">POR QUE O VIGIA VAI VIRAR SEU FAVORITO</p>
+          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">Tudo que um mostrador de cotas precisa ser — e um pouco mais.</h2>
+          <p class="mt-3 text-neutral-400">Feito para quem vive de IA e não pode se dar ao luxo de parar no meio.</p>
+        </div>
+
+        <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-accent/15 border border-accent/20 text-accent">◉</div>
+            <h3 class="mt-4 font-bold text-white">8 provedores, N contas cada</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai — e <strong class="text-neutral-200">Bitcoin</strong> (saldo on-chain). Cada provedor vira uma lista de contas com apelido opcional.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/20 text-emerald-300">⚡</div>
+            <h3 class="mt-4 font-bold text-white">Tempo real de verdade</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Um único ciclo no coletor a cada 60s, distribuído por <code class="font-mono text-xs text-accent-soft">SSE /events</code>. Placa e abas não multiplicam chamadas. <code class="font-mono text-xs">GET /usage</code> força um ciclo extra.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-sky-500/15 border border-sky-500/20 text-sky-300">🔒</div>
+            <h3 class="mt-4 font-bold text-white">Zero tokens expostos</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">A placa e o navegador só veem percentuais, datas e <code class="font-mono text-xs text-accent-soft">ok: true/false</code>. Tokens ficam no host (Keychain, <code class="font-mono text-xs">auth.json</code>, <code class="font-mono text-xs">state.vscdb</code>).</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/20 text-violet-300">👆</div>
+            <h3 class="mt-4 font-bold text-white">Touch nativo + drag & drop</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Grade ou lista na Início, detalhe por conta com paginador <span class="font-mono text-xs">‹ i/N ›</span>, configurações direto na tela. No web, arraste cards e redimensione.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/20 text-amber-300">🔔</div>
+            <h3 class="mt-4 font-bold text-white">Alarmes + push que salvam o dia</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Regras por provedor + métrica + limiar, edge-triggered. Quando cruzar, dispara <strong class="text-neutral-200">Web Push (VAPID)</strong> no navegador. Nome sugerido automaticamente.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-pink-500/15 border border-pink-500/20 text-pink-300">🎨</div>
+            <h3 class="mt-4 font-bold text-white">3 temas × 7 cores · PT/EN/ES</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Escuro, claro e alto contraste. 7 cores de destaque. Wallpapers, slideshow e editor de tema visual com ícones, textos e relógio.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-500/20 text-cyan-300">🌦️</div>
+            <h3 class="mt-4 font-bold text-white">Clima + Bitcoin no mesmo lugar</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Previsão Open-Meteo (atual, horária, diária) e saldo de carteira BTC via Blockstream + cotação CoinGecko — sem chave privada, só endereço público.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-neutral-500/15 border border-white/10 text-neutral-200">↻</div>
+            <h3 class="mt-4 font-bold text-white">Resiliente por design</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Falha numa conta (<code class="font-mono text-xs text-accent-soft">ok: false</code>) nunca derruba as outras. HTTP 200 sempre. Sem OAuth próprio — reusa o login que você já fez.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-white">QR</div>
+            <h3 class="mt-4 font-bold text-white">QR code + rede sem dor</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Tela Sistema mostra IP, painel e QR code. Qualquer aparelho na mesma Wi-Fi abre as configurações. Sem expor nada na internet.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROVEDORES — detalhado -->
+    <section id="provedores" class="border-y border-white/[0.06] bg-white/[0.02] py-16">
+      <div class="mx-auto max-w-[1200px] px-6">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">PROVEDORES SUPORTADOS</p>
+            <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white">Cada cota no seu lugar. Cada conta com seu card.</h2>
+          </div>
+          <p class="max-w-[48ch] text-sm text-neutral-400">Múltiplas contas por provedor (ex.: Claude pessoal + empresa). O firmware mostra a que mais precisa de atenção; o web mostra todas.</p>
+        </div>
+
+        <div class="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/claude.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">Claude</div><div class="text-xs text-neutral-400">Anthropic · OAuth</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• Sessão 5h + semana + Sonnet/Opus</li><li>• Keychain / <code class="font-mono">~/.claude</code></li><li>• <code class="font-mono">GET /api/oauth/usage</code></li></ul>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/gpt.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">GPT</div><div class="text-xs text-neutral-400">ChatGPT / Codex</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• Janela curta + longa + plano</li><li>• <code class="font-mono">~/.codex/auth.json</code></li><li>• <code class="font-mono">/backend-api/wham/usage</code></li></ul>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/cursor.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">Cursor</div><div class="text-xs text-neutral-400">Dashboard Connect</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• Modelos Cursor + outros + ciclo</li><li>• <code class="font-mono">state.vscdb</code> (cópia)</li><li>• Connect RPC + fallback</li></ul>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/openrouter.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">OpenRouter</div><div class="text-xs text-neutral-400">Créditos</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• Saldo em centavos</li><li>• API key colada no painel</li><li>• Consulta de créditos</li></ul>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/deepseek.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">DeepSeek</div><div class="text-xs text-neutral-400">Saldo</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• <code class="font-mono">GET /user/balance</code></li><li>• API key no painel</li><li>• Sem barra histórica — saldo direto</li></ul>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/opencode.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">OpenCode</div><div class="text-xs text-neutral-400">Go + Zen</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• Go: assinatura mensal</li><li>• Zen: créditos pré-pagos</li><li>• Rolling / semanal / mensal</li></ul>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/fal.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">fal.ai</div><div class="text-xs text-neutral-400">Créditos</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• <code class="font-mono">GET /v1/account/billing</code></li><li>• API key escopo Admin</li><li>• Saldo pré-pago</li></ul>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <div class="flex items-center gap-3"><img src="assets/icons/bitcoin.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" /><div><div class="text-sm font-bold text-white">Bitcoin</div><div class="text-xs text-neutral-400">Carteira · só leitura</div></div></div>
+            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400"><li>• Endereço público (sem chave privada)</li><li>• Blockstream Esplora + CoinGecko</li><li>• BTC + USD/BRL</li></ul>
+          </div>
+        </div>
+
+        <div class="mt-6 flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">+ <img src="assets/icons/weather.png" alt="" class="size-4 object-contain" /> Clima Open-Meteo (atual, horária, diária)</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">Múltiplas contas por provedor · apelido opcional</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">Resiliente: <code class="font-mono text-accent-soft">ok: false</code> isola a falha</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD AO VIVO — estilo do app -->
+    <section id="dashboard" class="py-16 md:py-20">
+      <div class="mx-auto max-w-[1200px] px-6">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">O MOSTRADOR</p>
+            <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">O mesmo visual na mesa e no navegador.</h2>
+            <p class="mt-2 max-w-[60ch] text-sm leading-relaxed text-neutral-400">Firmware TFT e <code class="font-mono text-accent-soft">/display</code> compartilham o mesmo contrato JSON. Tema, cor e idioma salvos no navegador. Arraste, redimensione, escolha grade ou lista.</p>
+          </div>
+          <a href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener" class="hidden md:inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.08] transition">Ver capturas no GitHub →</a>
+        </div>
+
+        <!-- Gallery -->
+        <div class="mt-8 grid gap-4 md:grid-cols-3">
+          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
+            <img src="assets/firmware/display-home-grid.png" alt="Início em grade no firmware" class="w-full" loading="lazy" />
+            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Firmware — grade · toque para detalhar</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
+            <img src="assets/firmware/display-detail-claude.png" alt="Detalhe Claude no firmware" class="w-full" loading="lazy" />
+            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Firmware — detalhe Claude · sessão, semana, Sonnet/Opus</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
+            <img src="assets/firmware/display-settings-theme.png" alt="Temas e cores" class="w-full" loading="lazy" />
+            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Firmware — temas e cor de destaque</figcaption>
+          </figure>
+        </div>
+        <div class="mt-4 grid gap-4 md:grid-cols-3">
+          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel md:col-span-2">
+            <img src="assets/web/web-overview.png" alt="Visão geral do mostrador web" class="w-full" loading="lazy" />
+            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Web — visão geral · sidebar no desktop, hambúrguer no mobile</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
+            <img src="assets/web/web-mobile.png" alt="Mostrador web no celular" class="mx-auto h-full max-h-[420px] w-auto object-contain p-2" loading="lazy" />
+            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Web — responsivo · cabe no bolso</figcaption>
+          </figure>
+        </div>
+        <div class="mt-4 grid gap-4 md:grid-cols-2">
+          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
+            <img src="assets/web/web-config.png" alt="Painel de configuração" class="w-full" loading="lazy" />
+            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Painel — contas, rede, wallpapers, clima e alarmes</figcaption>
+          </figure>
+          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
+            <img src="assets/web/web-settings.png" alt="Aparência" class="w-full" loading="lazy" />
+            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Aparência — 3 temas × 7 cores · PT / EN / ES</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMO FUNCIONA -->
+    <section id="como-funciona" class="border-y border-white/[0.06] bg-white/[0.02] py-16">
+      <div class="mx-auto grid max-w-[1200px] gap-10 px-6 md:grid-cols-2 md:items-center">
+        <div class="order-2 md:order-1">
+          <div class="rounded-2xl border border-white/10 bg-panel p-5 shadow-xl">
+            <div class="flex flex-col items-center gap-2.5">
+              <div class="w-full rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-center">
+                <div class="text-sm font-bold text-white">Assinaturas</div>
+                <div class="font-mono text-xs text-neutral-400">Claude · GPT · Cursor · OpenRouter · DeepSeek · OpenCode · fal.ai</div>
+              </div>
+              <div class="font-mono text-[11px] tracking-widest text-neutral-500">↓ TOKENS SÓ NO HOST</div>
+              <div class="w-full rounded-xl border border-white/10 bg-ink px-4 py-3 text-center">
+                <div class="text-sm font-bold text-white">Backend FastAPI · :8787</div>
+                <div class="font-mono text-xs text-neutral-400">GET /events (SSE) · GET /usage · GET /docs (Swagger)</div>
+              </div>
+              <div class="font-mono text-[11px] tracking-widest text-neutral-500">↓ JSON SEM TOKEN</div>
+              <div class="grid w-full grid-cols-2 gap-3">
+                <div class="rounded-xl border border-white/10 bg-ink px-3 py-3 text-center"><div class="text-sm font-bold text-white">ESP32 / Wokwi</div><div class="text-xs text-neutral-400">escuta o stream</div></div>
+                <div class="rounded-xl border border-white/10 bg-ink px-3 py-3 text-center"><div class="text-sm font-bold text-white">React <span class="font-mono text-accent-soft">/display</span></div><div class="text-xs text-neutral-400">réplica da placa</div></div>
+              </div>
+            </div>
+            <div class="mt-4 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-neutral-400">
+              <span class="text-white">GET /usage</span> → JSON com <span class="text-white">percentuais e datas</span>, nunca Bearer.<br />
+              <span class="text-white">GET /events</span> → <span class="text-white">SSE</span> · um ciclo para todos os clientes.
+            </div>
+          </div>
+        </div>
+        <div class="order-1 md:order-2">
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">COMO FUNCIONA — SEM MÁGICA</p>
+          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white">Um ciclo. Todos os clientes. Sem susto.</h2>
+          <ol class="mt-6 space-y-4">
+            <li class="flex gap-3"><span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">1</span><span class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">Tokens ficam no seu computador</strong> (Keychain, <code class="font-mono text-xs text-accent-soft">~/.codex/auth.json</code>, <code class="font-mono text-xs text-accent-soft">state.vscdb</code>). O Vigia <strong class="text-white">reusa</strong> o login que os apps oficiais já fizeram — igual eles fazem pra desenhar a própria barra de uso.</span></li>
+            <li class="flex gap-3"><span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">2</span><span class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">Um ciclo a cada 60s</strong> consulta todas as APIs e empurra o mesmo JSON por SSE. Placa e abas não multiplicam chamadas. <code class="font-mono text-xs text-accent-soft">GET /usage</code> força um ciclo extra.</span></li>
+            <li class="flex gap-3"><span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">3</span><span class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">JSON na LAN tem percentuais e datas, nunca o Bearer.</strong> Falha numa conta (<code class="font-mono text-xs text-accent-soft">ok: false</code>) não derruba as outras. HTTP 200 sempre.</span></li>
+          </ol>
+          <div class="mt-6 flex flex-wrap gap-2">
+            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/SETUP.md" target="_blank" rel="noopener">Guia técnico completo →</a>
+            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/CONTRATO_JSON.md" target="_blank" rel="noopener">Contrato JSON →</a>
+            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/ARQUITETURA.md" target="_blank" rel="noopener">Arquitetura →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEGURANÇA -->
+    <section class="py-12">
+      <div class="mx-auto max-w-[1200px] px-6">
+        <div class="flex flex-col gap-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5 md:flex-row md:items-start md:gap-4">
+          <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300">⚠️</span>
+          <div class="min-w-0">
+            <div class="text-sm font-bold text-amber-100">LAN only — e isso é proposital.</div>
+            <p class="mt-1 text-sm leading-relaxed text-amber-100/80">Os endpoints de cota do Claude, GPT e Cursor <strong>não são API pública</strong> — são os mesmos que o CLI/IDE já usam neste computador. <strong>Não exponha a porta 8787 na internet.</strong> A placa <strong>nunca</strong> guarda tokens — só percentuais e datas. O coletor não é OAuth client: não emite, não renova, só reusa o que já está no host.</p>
+          </div>
+        </div>
+        <div class="mt-4 grid gap-3 md:grid-cols-3">
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"><div class="text-xs font-bold tracking-widest text-neutral-400">PRIVACIDADE</div><div class="mt-1 text-sm text-neutral-300">JSON público nunca carrega Bearer, Keychain ou dump de SQLite.</div></div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"><div class="text-xs font-bold tracking-widest text-neutral-400">RESILIÊNCIA</div><div class="mt-1 text-sm text-neutral-300">Token expirado vira <code class="font-mono text-xs text-accent-soft">ok: false</code> só naquela conta.</div></div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"><div class="text-xs font-bold tracking-widest text-neutral-400">SEM SURPRESA</div><div class="mt-1 text-sm text-neutral-300">Endpoints não oficiais podem mudar — a quebra fica isolada.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="border-y border-white/[0.06] bg-white/[0.02] py-16 md:py-20">
+      <div class="mx-auto max-w-[720px] px-6 text-center">
+        <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">COMECE AGORA — 1 COMANDO</p>
+        <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">De zero ao mostrador em segundos.</h2>
+        <p class="mt-3 text-neutral-400">Precisa de <strong class="text-white">Python ≥ 3.11</strong>, <strong class="text-white">Node 20+</strong> e, para o firmware, <strong class="text-white">PlatformIO Core</strong>.</p>
+        <div class="mt-8 inline-flex flex-col items-center gap-3">
+          <pre class="rounded-2xl border border-white/10 bg-ink px-6 py-4 font-mono text-[15px] font-bold text-accent-soft shadow-xl"><code>./dev up</code></pre>
+          <span class="font-mono text-xs text-neutral-500">Sobe coletor + mostrador em <span class="text-accent-soft">http://127.0.0.1:8787/display</span></span>
+        </div>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          <a class="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-bold text-white shadow-[0_8px_24px_rgba(230,57,49,.35)] hover:bg-[#d6322b] transition" href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">⭐ Ver no GitHub</a>
+          <a class="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-7 py-3.5 text-sm font-semibold text-white hover:bg-white/10 transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/SETUP.md" target="_blank" rel="noopener">📖 Guia completo de setup</a>
+        </div>
+        <div class="mt-6 flex flex-wrap justify-center gap-2 text-xs">
+          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/HARDWARE.md" target="_blank" rel="noopener">Hardware</a>
+          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/FIRMWARE.md" target="_blank" rel="noopener">Firmware</a>
+          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/NOTIFICACOES.md" target="_blank" rel="noopener">Alarmes & Push</a>
+          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/CONTRATO_TEMA.md" target="_blank" rel="noopener">Temas</a>
+          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribuir</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-white/10 py-8">
+    <div class="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 px-6 text-sm text-neutral-400 md:flex-row">
+      <div class="flex items-center gap-2.5 font-extrabold tracking-tight text-white">
+        <span class="flex size-7 items-center justify-center rounded-lg bg-panel border border-edge"><span class="size-2.5 rounded-full bg-accent"></span></span>
+        Vigia<span class="font-mono text-accent">AI</span>
+        <span class="ml-2 text-xs font-medium text-neutral-500">Licença MIT · feito por <a class="font-semibold text-accent-soft hover:underline" href="https://github.com/TrindadeBRA" target="_blank" rel="noopener">TrindadeBRA</a></span>
+      </div>
+      <div class="flex flex-wrap items-center gap-5 text-xs font-medium">
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribuir</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/SECURITY.md" target="_blank" rel="noopener">Segurança</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">Código de Conduta</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/LICENSE" target="_blank" rel="noopener">Licença</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const toggle = document.getElementById('nav-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    toggle.addEventListener('click', () => {
+      const isOpen = mobileMenu.classList.contains('flex');
+      mobileMenu.classList.toggle('flex', !isOpen);
+      mobileMenu.classList.toggle('hidden', isOpen);
+      toggle.setAttribute('aria-expanded', String(!isOpen));
+    });
+    mobileMenu.querySelectorAll('a').forEach((a) =>
+      a.addEventListener('click', () => {
+        mobileMenu.classList.remove('flex');
+        mobileMenu.classList.add('hidden');
+        toggle.setAttribute('aria-expanded', 'false');
+      })
+    );
+  </script>
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Vigia AI",
+    "description": "Painel de mesa para cotas de IA — 8 provedores, múltiplas contas, tempo real, sem expor tokens. ESP32 + TFT touch ou navegador.",
+    "url": "https://trindadebra.github.io/vigia-ai/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS, Windows",
+    "license": "https://github.com/TrindadeBRA/vigia-ai/blob/main/LICENSE",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+    "author": { "@type": "Organization", "name": "TrindadeBRA", "url": "https://github.com/TrindadeBRA" },
+    "codeRepository": "https://github.com/TrindadeBRA/vigia-ai"
+  }
+  </script>
+</body>
+</html>

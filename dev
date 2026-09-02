@@ -9,7 +9,7 @@ BACKEND_PORT=8787
 FRONTEND_PORT=5173
 # wokwigw expõe a porta 80 da placa simulada em 127.0.0.1:9080 por padrão
 # (forward embutido dele, sem precisar de --forward) — dá pra testar o
-# upload de tema (protótipo, ver docs/CONTRATO_TEMA.md) sem hardware real.
+# upload de tema (protótipo, ver .agents/CONTRATO_TEMA.md) sem hardware real.
 THEME_SIM_PORT=9080
 WOKWIGW_BIN="$ROOT_DIR/.tools/wokwigw"
 WOKWIGW_VERSION="v2.0.1"

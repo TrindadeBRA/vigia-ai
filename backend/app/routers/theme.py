@@ -1,7 +1,7 @@
 """Tema personalizado (protótipo) — o coletor só guarda os bytes que o painel
 manda e devolve pra placa buscar (GET). Não valida o JSON do tema (é opaco
 pro coletor, quem entende o schema é o firmware/frontend — ver
-docs/CONTRATO_TEMA.md); não faz parte do contrato de /usage."""
+.agents/CONTRATO_TEMA.md); não faz parte do contrato de /usage."""
 
 from __future__ import annotations
 

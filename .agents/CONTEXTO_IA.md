@@ -35,7 +35,7 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 ## Regras para quem gera código
 
 1. **Tokens nunca vão no firmware**, no `diagram.json`, nem em commit. Só `backend/data/config.json` (gitignored) ou arquivos locais do Claude/Cursor.
-2. **Não altere o contrato JSON** sem atualizar `docs/CONTRATO_JSON.md`, os modelos Pydantic em `backend/app/schemas.py` **e** o parser em `firmware/src/net/parse.cpp`.
+2. **Não altere o contrato JSON** sem atualizar `CONTRATO_JSON.md`, os modelos Pydantic em `backend/app/schemas.py` **e** o parser em `firmware/src/net/parse.cpp`.
 3. Endpoints de cota são **não oficiais**. Trate 401/429/HTML como falha de um provedor; o outro deve continuar `ok` se possível.
 4. **Um ciclo de APIs no coletor**: o hub consulta os provedores a cada `USAGE_INTERVAL_S` (padrão 60 s) e empurra o JSON por `GET /events` (SSE). `GET /usage` força um ciclo extra e avisa os inscritos. Não volte ao poll por cliente (placa + cada aba de `/display`).
 5. Ambiente **Wokwi**: Wi-Fi simulada + coletor real via `wokwigw`. Mock só como flag no painel.

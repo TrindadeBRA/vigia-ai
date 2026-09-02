@@ -1,7 +1,7 @@
 """Rotas de Web Push: chave pública VAPID e assinaturas do navegador.
 
 Só funciona em contexto seguro (HTTPS ou http://127.0.0.1) — pelo IP da LAN o
-navegador bloqueia `pushManager.subscribe()`. Ver docs/NOTIFICACOES.md.
+navegador bloqueia `pushManager.subscribe()`. Ver .agents/NOTIFICACOES.md.
 """
 
 from __future__ import annotations

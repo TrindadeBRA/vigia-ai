@@ -74,7 +74,7 @@ No painel, **Modo mock** grava JSON falso (útil sem login).
 
 Cada provedor aceita mais de uma conta — ex.: Claude pessoal + Claude da empresa — cada uma com um apelido opcional, na seção **Contas adicionais** de cada card no painel `/`. Claude e Cursor sempre têm a conta **local** (Keychain/`state.vscdb`, com apelido opcional próprio) mais quantas contas extras coladas você quiser; OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen e fal.ai são só uma lista de keys coladas (sem conta "local"). Guardado em `CLAUDE_ACCOUNTS`/`CURSOR_ACCOUNTS`/`OPENROUTER_ACCOUNTS`/`DEEPSEEK_ACCOUNTS`/`OPENCODE_GO_ACCOUNTS`/`OPENCODE_ZEN_ACCOUNTS`/`FAL_ACCOUNTS` (`data/config.json`, JSON com `id`/`label`/token ou key por conta — gitignored, igual ao resto).
 
-`GET /usage` reflete isso: cada provedor vira uma **lista** de contas (ver `docs/CONTRATO_JSON.md`), uma chamada real por conta. O `/display` mostra um card por conta; o firmware físico (tela pequena) continua com um card por *tipo* de provedor na Início, mostrando a que mais precisa de atenção — o detalhe ganha um paginador **‹ i/N ›** pra ver as outras (`docs/TOUCH.md`).
+`GET /usage` reflete isso: cada provedor vira uma **lista** de contas (ver `CONTRATO_JSON.md`), uma chamada real por conta. O `/display` mostra um card por conta; o firmware físico (tela pequena) continua com um card por *tipo* de provedor na Início, mostrando a que mais precisa de atenção — o detalhe ganha um paginador **‹ i/N ›** pra ver as outras (`TOUCH.md`).
 
 Apelido só ASCII no firmware — a fonte da TFT_eSPI não cobre acentos/Latin-1 (mesma limitação dos textos do próprio app, ver `src/i18n.h`); no `/display` acentos aparecem normalmente.
 

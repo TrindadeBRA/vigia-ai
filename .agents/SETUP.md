@@ -85,7 +85,7 @@ app oficial (Claude Code / Codex / Cursor)
         ↓
 coletor FastAPI  :8787   (backend/app/providers/* + local/*)
     1. lê o token  2. GET/POST no endpoint de cota  3. normaliza
-        ↓  JSON sem token  (docs/CONTRATO_JSON.md)
+        ↓  JSON sem token  (CONTRATO_JSON.md)
 GET /usage  (na hora)   ·   GET /events  (SSE a cada USAGE_INTERVAL_S)
         ↓
 firmware ESP32  ·  /display  ·  /display/config
@@ -197,7 +197,7 @@ Depois, no editor: `Cmd+Shift+P` → **Wokwi: Start Simulator**. O display no Wo
 | [`firmware/`](../firmware/) | PlatformIO (`esp32dev` + `wokwi`) |
 | [`backend/`](../backend/) | FastAPI, OpenAPI, provedores |
 | [`frontend/`](../frontend/) | Vite + React + TypeScript |
-| [`docs/`](.) | Contrato, APIs, hardware |
+| [``](.) | Contrato, APIs, hardware |
 | [`./dev`](../dev) | Único script de desenvolvimento |
 
 Arquitetura completa: [`ARQUITETURA.md`](ARQUITETURA.md). Contrato da placa: [`CONTRATO_JSON.md`](CONTRATO_JSON.md). Para agentes de IA: [`../AGENTS.md`](../AGENTS.md) e [`CONTEXTO_IA.md`](CONTEXTO_IA.md).
