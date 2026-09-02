@@ -2,7 +2,8 @@ import type { WeatherConfig, WeatherPayload } from "../api/types";
 import { cn } from "../cn";
 import { fmtDayLabel, fmtHourLabel, fmtHumidity, fmtPrecip, fmtPressure, fmtTemp, fmtWind, windDir, wmoEmoji, wmoLabel } from "../format";
 import type { T } from "../i18n";
-import { cardLabel, emptyNote, errorText, metricCard, metricsGrid, num } from "../tw";
+import { PROVIDER_ICON } from "../theme";
+import { cardLabel, emptyNote, errorText, iconChip, iconImg, metricCard, metricsGrid, num } from "../tw";
 
 function WeatherIcon({ code, size = 28 }: { code: number | null | undefined; size?: number }) {
     return <span style={{ fontSize: size, lineHeight: 1 }} aria-hidden>{wmoEmoji(code)}</span>;
@@ -44,7 +45,9 @@ export function WeatherBoardCard({ weather, config, t, compact, onOpen }: { weat
         return (
             <div className="flex h-full min-h-0 w-full flex-col">
                 <div className="mb-2 flex items-center gap-2">
-                    <span className="text-[18px]">🌤️</span>
+                    <div className={iconChip}>
+                        <img className={iconImg} src={PROVIDER_ICON.weather} alt="" draggable={false} />
+                    </div>
                     <span className="text-[13px] font-bold">{t.weather}</span>
                     {locName ? <span className="text-xs text-ink3">{locName}</span> : null}
                 </div>

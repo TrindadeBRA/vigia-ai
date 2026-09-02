@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { patchWeatherConfig, searchCities, setWeatherLocation } from "../../api/client";
 import type { WeatherConfig, WeatherGeocodingResult } from "../../api/types";
 import { useRequest } from "../../hooks/useRequest";
-import { cfgCard, cfgFieldLabel, cfgHint } from "../../tw";
+import { PROVIDER_ICON } from "../../theme";
+import { cfgCard, cfgFieldLabel, cfgHint, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
 import { Button, Checkbox, FieldStatus, Fold, Switch, TextField } from "./ui";
 
@@ -123,9 +124,14 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
     return (
         <section className={cfgCard}>
             <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                    <h2 className="m-0 text-[15.5px] font-bold">{c.weatherTitle}</h2>
-                    <p className="mb-0 mt-1 text-[13.5px] leading-[1.55] text-ink2">{c.weatherLead}</p>
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className={iconChip}>
+                        <img className={iconImg} src={PROVIDER_ICON.weather} alt="" draggable={false} />
+                    </div>
+                    <div className="min-w-0">
+                        <h2 className="m-0 text-[15.5px] font-bold">{c.weatherTitle}</h2>
+                        <p className="mb-0 mt-1 text-[13.5px] leading-[1.55] text-ink2">{c.weatherLead}</p>
+                    </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
                     <Switch

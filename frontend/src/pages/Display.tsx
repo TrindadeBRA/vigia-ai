@@ -1418,7 +1418,7 @@ function WeatherAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   return (
     <div className={`w-full ${viewFade}`}>
       <div className="mb-4 flex items-center gap-3">
-        <span className="text-[28px] leading-none">🌤️</span>
+        <Icon id="weather" large />
         <div>
           <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.weather}</div>
           {w?.location?.name ? <div className={cardLabel}>{w.location.name}{w.location.country ? `, ${w.location.country}` : ""}</div> : null}
