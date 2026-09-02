@@ -19,15 +19,16 @@ export function getBitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
 }
 
 export function bitcoinAllowedSizes(_b: BitcoinAccount | null, _metrics?: Metric[]): CardSize[] {
-  return ["sm", "sw", "md", "lg"];
+  return ["sm", "sw", "sx", "md", "lg"];
 }
 
-export const BITCOIN_ALLOWED_ALL: CardSize[] = ["sm", "sw", "md", "lg"];
+export const BITCOIN_ALLOWED_ALL: CardSize[] = ["sm", "sw", "sx", "md", "lg"];
 
 export function bitcoinSizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
   if (s === "sm") return "Pequeno · dólar";
   if (s === "sw") return "Pequeno · real";
+  if (s === "sx") return "Pequeno · BTC";
   if (s === "md") return t.cardNormal;
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
@@ -114,7 +115,7 @@ export function BitcoinBoardCard({
 }) {
   const metrics = metricsProp ?? [];
   const ns = normalizeSize(size);
-  const isCompact = ns === "sm" || ns === "sw";
+  const isCompact = ns === "sm" || ns === "sw" || ns === "sx";
 
   if (!ok) {
     return (
@@ -127,9 +128,11 @@ export function BitcoinBoardCard({
     );
   }
 
-  if (ns === "sm" || ns === "sw") {
-    const isBrl = ns === "sw";
-    const single = isBrl ? metrics[2] || metrics[1] : metrics[1] || metrics[0];
+  if (ns === "sm" || ns === "sw" || ns === "sx") {
+    const single = ns === "sw" ? metrics[2] || metrics[1] : ns === "sx" ? metrics[0] : metrics[1] || metrics[0];
+    // BTC tem 8 casas + sufixo "BTC" — comprido demais pra 1 linha com o
+    // rótulo padrão; mostra só o número, sem repetir a unidade.
+    const value = ns === "sx" ? single?.value?.replace(/\s*BTC$/, "") : single?.value;
     return (
       <div className="flex h-full min-h-0 w-full items-center gap-2.5 overflow-hidden">
         <div className="relative shrink-0">
@@ -138,11 +141,11 @@ export function BitcoinBoardCard({
           </div>
           <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", ok ? "bg-good" : "bg-bad")} />
         </div>
-        <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-visible border-0 bg-transparent p-0 text-left" onClick={onOpen}>
+        <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
           {single ? (
             <>
               <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-semibold leading-none text-ink3">{single.label}</div>
-              <div className={cn(num, "mt-1 text-[13px] font-[800] leading-tight py-0.5 [overflow-wrap:anywhere]")}>{single.value || "--"}</div>
+              <div className={cn(num, "mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-[800] leading-tight py-0.5")}>{value || "--"}</div>
             </>
           ) : null}
         </button>

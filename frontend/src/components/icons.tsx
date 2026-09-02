@@ -172,3 +172,21 @@ export function TrashIcon(props: { size?: number; className?: string }) {
     </Svg>
   );
 }
+
+export function DownloadIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4v10m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function UploadIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path d="M12 14V4m0 0l-4 4m4-4l4 4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}

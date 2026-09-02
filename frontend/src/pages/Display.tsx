@@ -1,5 +1,5 @@
 import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
@@ -15,7 +15,7 @@ import { CurrenciesBoardCard, CurrenciesDetail, currenciesAllowedSizes, currenci
 import { WeatherBoardCard, WeatherDetail, weatherAllowedSizes, weatherSizeLabel } from "../components/cards/WeatherCard";
 import { CursorBoardCard, CursorDetail, cursorAllowedSizes, cursorSizeLabel } from "../components/cards/CursorCard";
 import { GptBoardCard, GptDetail, gptAllowedSizes, gptSizeLabel } from "../components/cards/GptCard";
-import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, CopyIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon } from "../components/icons";
+import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, CopyIcon, DownloadIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
@@ -476,6 +476,35 @@ function wmoLabel(code: number | null | undefined): string {
     95: "Trovoada", 96: "Trovoada c/ granizo", 99: "Trovoada c/ granizo forte",
   };
   return map[code] || `Código ${code}`;
+}
+
+// ── Exportar/importar grade (board.size/pos) como JSON ─────────────────
+
+function downloadBoardJson(board: BoardLayout) {
+  const payload = { version: 1, exported_at: new Date().toISOString(), board };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `vigia-grade-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseBoardJson(text: string): BoardLayout | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const candidate = data && typeof data === "object" && "board" in (data as Record<string, unknown>) ? (data as Record<string, unknown>).board : data;
+  if (!candidate || typeof candidate !== "object") return null;
+  const { size, pos } = candidate as Record<string, unknown>;
+  if (typeof size !== "object" || size === null || typeof pos !== "object" || pos === null) return null;
+  return candidate as BoardLayout;
 }
 
 // ── Clones: expande ProviderMeta com blocos duplicados salvos no board ─────
@@ -1093,6 +1122,46 @@ function Sidebar(props: {
   );
 }
 
+function GridIOButtons({ board, onImport, t }: { board: BoardLayout; onImport: (b: BoardLayout) => void; t: T }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function flash(text: string) {
+    setMsg(text);
+    window.setTimeout(() => setMsg((m) => (m === text ? null : m)), 3000);
+  }
+
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseBoardJson(String(reader.result || ""));
+      if (!parsed) {
+        flash(t.gridImportError);
+        return;
+      }
+      onImport(parsed);
+      flash(t.gridImported);
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button type="button" className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink" title={t.exportGrid} aria-label={t.exportGrid} onClick={() => downloadBoardJson(board)}>
+        <DownloadIcon size={14} />
+      </button>
+      <button type="button" className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink" title={t.importGrid} aria-label={t.importGrid} onClick={() => inputRef.current?.click()}>
+        <UploadIcon size={14} />
+      </button>
+      <input ref={inputRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
+      {msg ? <span className="text-[11.5px] text-ink3">{msg}</span> : null}
+    </div>
+  );
+}
+
 function Overview({
   providers,
   updatedAt,
@@ -1198,15 +1267,16 @@ function Overview({
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="mb-[18px] flex w-full flex-wrap items-end justify-between gap-3">
-        <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px] max-[860px]:text-[19px]">{t.overview}</h1>
+      <div className="mb-[18px] flex w-full flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink2">
           <span className={cn("size-[7px] shrink-0 rounded-full", failing ? "bg-bad shadow-[0_0_5px_var(--bad)]" : "bg-good shadow-[0_0_5px_var(--good)]", "[.flat_&]:shadow-none")} />
           <span>{failing ? t.errorsCount(failing) : t.allOk}</span>
           <span className={num}>{agoS != null ? `· ${agoS < 3 ? t.agoNow : t.agoSecs(agoS)}` : ""}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="ml-1 cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
+            className="cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
             title={t.resetLayout}
             onClick={() =>
               onBoard((b) => {
@@ -1222,6 +1292,7 @@ function Overview({
           >
             {t.resetLayout}
           </button>
+          <GridIOButtons board={board} onImport={(b) => onBoard(() => b)} t={t} />
         </div>
       </div>
       {providers.length === 0 ? (

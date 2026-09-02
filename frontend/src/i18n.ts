@@ -85,6 +85,10 @@ type Strings = {
   cardWxl: string;
   dragCard: string;
   resetLayout: string;
+  exportGrid: string;
+  importGrid: string;
+  gridImported: string;
+  gridImportError: string;
   // Weather
   weather: string;
   weatherCurrent: string;
@@ -195,6 +199,10 @@ export const STR: Record<Lang, Strings> = {
     cardWxl: "Card super largo (2×4)",
     dragCard: "Arrastar",
     resetLayout: "Redefinir grade",
+    exportGrid: "Exportar grade",
+    importGrid: "Importar grade",
+    gridImported: "Grade importada",
+    gridImportError: "Arquivo inválido",
     weather: "Clima",
     weatherCurrent: "Agora",
     weatherToday: "Hoje",
@@ -300,6 +308,10 @@ export const STR: Record<Lang, Strings> = {
     cardWxl: "Super wide card (2×4)",
     dragCard: "Drag",
     resetLayout: "Reset layout",
+    exportGrid: "Export grid",
+    importGrid: "Import grid",
+    gridImported: "Grid imported",
+    gridImportError: "Invalid file",
     weather: "Weather",
     weatherCurrent: "Now",
     weatherToday: "Today",
@@ -405,6 +417,10 @@ export const STR: Record<Lang, Strings> = {
     cardWxl: "Card super ancho (2×4)",
     dragCard: "Arrastrar",
     resetLayout: "Restablecer cuadrícula",
+    exportGrid: "Exportar cuadrícula",
+    importGrid: "Importar cuadrícula",
+    gridImported: "Cuadrícula importada",
+    gridImportError: "Archivo inválido",
     weather: "Clima",
     weatherCurrent: "Ahora",
     weatherToday: "Hoy",
