@@ -88,6 +88,7 @@ type Strings = {
   // Weather
   weather: string;
   weatherCurrent: string;
+  weatherToday: string;
   weatherHourly: string;
   weatherDaily: string;
   weatherNoLocation: string;
@@ -196,6 +197,7 @@ export const STR: Record<Lang, Strings> = {
     resetLayout: "Redefinir grade",
     weather: "Clima",
     weatherCurrent: "Agora",
+    weatherToday: "Hoje",
     weatherHourly: "Próximas horas",
     weatherDaily: "Próximos dias",
     weatherNoLocation: "Configure a cidade nas configurações.",
@@ -300,6 +302,7 @@ export const STR: Record<Lang, Strings> = {
     resetLayout: "Reset layout",
     weather: "Weather",
     weatherCurrent: "Now",
+    weatherToday: "Today",
     weatherHourly: "Next hours",
     weatherDaily: "Next days",
     weatherNoLocation: "Set the city in settings.",
@@ -404,6 +407,7 @@ export const STR: Record<Lang, Strings> = {
     resetLayout: "Restablecer cuadrícula",
     weather: "Clima",
     weatherCurrent: "Ahora",
+    weatherToday: "Hoy",
     weatherHourly: "Próximas horas",
     weatherDaily: "Próximos días",
     weatherNoLocation: "Configura la ciudad en ajustes.",

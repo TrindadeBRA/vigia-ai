@@ -118,4 +118,4 @@ type ProviderMeta = {id, provider, ok, error, title, label, metrics:Metric[], ki
 - [ ] `Detail` com `MetaChips` + `metricsGrid`
 - [ ] `npm run build` passa `tsc --noEmit`
 
-Referências: `Display.tsx:263` `board.ts:54` `ClaudeCard.tsx:1` `WeatherWidget.tsx:36` `CurrenciesCard.tsx:1` `format.ts:1` `tw.ts:1`.
+Referências: `Display.tsx:263` `board.ts:54` `ClaudeCard.tsx:1` `WeatherCard.tsx:1` `CurrenciesCard.tsx:1` `format.ts:1` `tw.ts:1`.

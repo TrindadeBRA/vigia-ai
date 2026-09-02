@@ -8,10 +8,11 @@ import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropTarget, dupl
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
-import { WeatherBoardCard, WeatherDetail } from "../components/WeatherWidget";
 import { BitcoinBoardCard, BitcoinDetail, bitcoinAllowedSizes, bitcoinSizeLabel } from "../components/cards/BitcoinCard";
 import { ClaudeBoardCard, ClaudeDetail, claudeAllowedSizes, claudeSizeLabel } from "../components/cards/ClaudeCard";
+import { CreditsBoardCard, CreditsDetail, creditsAllowedSizes, creditsSizeLabel, getCreditsMetrics, getOpenCodeMetrics } from "../components/cards/CreditsCard";
 import { CurrenciesBoardCard, CurrenciesDetail, currenciesAllowedSizes, currenciesSizeLabel } from "../components/cards/CurrenciesCard";
+import { WeatherBoardCard, WeatherDetail, weatherAllowedSizes, weatherSizeLabel } from "../components/cards/WeatherCard";
 import { CursorBoardCard, CursorDetail, cursorAllowedSizes, cursorSizeLabel } from "../components/cards/CursorCard";
 import { GptBoardCard, GptDetail, gptAllowedSizes, gptSizeLabel } from "../components/cards/GptCard";
 import { BellIcon, CanvasIcon, CheckIcon, ChipIcon, ClockIcon, CloseIcon, CopyIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon } from "../components/icons";
@@ -197,24 +198,6 @@ function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t, value
   );
 }
 
-function creditsMetric(
-  t: T,
-  acc: { percent: number | null; remaining_cents: number | null; used_cents: number | null; limit_cents: number | null },
-): Metric {
-  const bits: string[] = [];
-  if (acc.used_cents != null) bits.push(`${t.used} ${fmtUsd(acc.used_cents)}`);
-  if (acc.limit_cents != null) bits.push(`${t.cap} ${fmtUsd(acc.limit_cents)}`);
-  const hasLimits = bits.length > 0;
-  // Evita duplicar "restam $X" quando value já é "$X" e não há limites
-  const sub = hasLimits ? bits.join(" · ") : acc.percent == null && acc.remaining_cents != null ? null : acc.remaining_cents != null ? t.remainMoney + fmtUsd(acc.remaining_cents) : t.noCredits;
-  return {
-    label: t.credits,
-    pct: acc.percent,
-    value: acc.remaining_cents != null ? fmtUsd(acc.remaining_cents) : null,
-    sub,
-  };
-}
-
 function bitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
   return [
     { label: t.bitcoinBalance, pct: null, value: b.balance_btc != null ? fmtBtc(b.balance_btc) : null, sub: null },
@@ -364,7 +347,7 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       error: o.error,
       title: "OpenRouter",
       label: o.label || "",
-      metrics: [creditsMetric(t, o)],
+      metrics: getCreditsMetrics(o, t),
     });
   }
   for (const d of data.deepseek || []) {
@@ -375,44 +358,10 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       error: d.error,
       title: "DeepSeek",
       label: d.label || "",
-      metrics: [creditsMetric(t, d)],
+      metrics: getCreditsMetrics(d, t),
     });
   }
   for (const o of data.opencode || []) {
-    const metrics: Metric[] = [];
-    if (o.rolling_percent != null) {
-      metrics.push({
-        label: t.rolling,
-        pct: o.rolling_percent,
-        sub: t.remainingPrefix + fmtRemain(o.rolling_percent),
-        countdownAt: o.rolling_resets_at,
-      });
-    }
-    if (o.weekly_percent != null) {
-      metrics.push({
-        label: t.weekLimit,
-        pct: o.weekly_percent,
-        sub: t.remainingPrefix + fmtRemain(o.weekly_percent),
-        countdownAt: o.weekly_resets_at,
-      });
-    }
-    if (o.monthly_percent != null) {
-      metrics.push({
-        label: t.monthLimit,
-        pct: o.monthly_percent,
-        sub: t.remainingPrefix + fmtRemain(o.monthly_percent),
-        countdownAt: o.monthly_resets_at,
-      });
-    }
-    if (o.remaining_cents != null) {
-      metrics.push({
-        label: t.accountCredits,
-        pct: o.percent,
-        value: fmtUsd(o.remaining_cents),
-        sub: o.limit_cents != null ? `${t.cap} ${fmtUsd(o.limit_cents)}` : t.remainMoney + fmtUsd(o.remaining_cents),
-      });
-    }
-    if (!metrics.length) metrics.push({ label: t.rolling, pct: null, sub: t.noData });
     list.push({
       id: `opencode:${o.id}`,
       provider: "opencode",
@@ -420,7 +369,7 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       error: o.error,
       title: "OpenCode",
       label: o.label || "",
-      metrics,
+      metrics: getOpenCodeMetrics(o, t),
     });
   }
   for (const f of data.fal || []) {
@@ -431,7 +380,7 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       error: f.error,
       title: "fal.ai",
       label: f.label || "",
-      metrics: [creditsMetric(t, f)],
+      metrics: getCreditsMetrics(f, t),
     });
   }
   for (const b of data.bitcoin || []) {
@@ -551,7 +500,7 @@ function baseIdForProvider(id: string): string {
   return isCloneId(id) ? baseIdFromClone(id) : id;
 }
 
-const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl", "wl", "wxl"];
+const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl", "wm", "wl", "wxl"];
 
 function sizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
@@ -562,6 +511,7 @@ function sizeLabel(size: CardSize, t: T): string {
   if (s === "scw") return t.cardSmallCryptoWeek;
   if (s === "md") return t.cardNormal;
   if (s === "lg") return t.cardLarge;
+  if (s === "wm") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
   return t.cardXl;
@@ -576,6 +526,7 @@ function SizeIcon({ size, className }: { size: CardSize; className?: string }) {
   if (s === "scw") return <span className={cn("block size-[7px] rounded-full border-[1.5px] border-dashed border-current", className)} />;
   if (s === "md") return <span className={cn("block size-[11px] rounded-[2px] border-[1.5px] border-current", className)} />;
   if (s === "lg") return <span className={cn("flex size-[11px] gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
+  if (s === "wm") return <span className={cn("flex size-[11px] flex-col gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
   if (s === "wl") return <span className={cn("flex size-[11px] flex-col gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
   if (s === "wxl") return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
   return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
@@ -672,7 +623,7 @@ function SizeMenu({ size, t, onChange, allowed, getLabel }: { size: CardSize; t:
 }
 
 function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
-  const sm = normalizeSize(size) === "sm";
+  const allowed = weatherAllowedSizes(p.weather);
   const isClone = isCloneId(p.id);
   return (
     <div
@@ -690,11 +641,11 @@ function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize
         <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
           <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
           {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} />
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => weatherSizeLabel(s, t)} />
           {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
         </div>
       ) : null}
-      <WeatherBoardCard weather={p.weather} config={null} t={t} compact={sm} onOpen={onOpen} />
+      <WeatherBoardCard weather={p.weather} config={p.weatherConfig} t={t} size={size} onOpen={onOpen} />
     </div>
   );
 }
@@ -814,6 +765,35 @@ function GptTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen, o
   );
 }
 
+function CreditsTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
+  const allowed = creditsAllowedSizes(p.metrics);
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
+          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
+          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => creditsSizeLabel(s, t, p.metrics)} />
+          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
+        </div>
+      ) : null}
+      <CreditsBoardCard providerId={p.provider} metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
 function BitcoinTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
   const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
   const allowed = bitcoinAllowedSizes(null, p.metrics);
@@ -882,6 +862,9 @@ function ProviderCard({
   }
   if (p.provider === "bitcoin") {
     return <BitcoinTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "openrouter" || p.provider === "deepseek" || p.provider === "opencode" || p.provider === "fal") {
+    return <CreditsTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
   if (p.provider === "weather" || p.kind === "weather") {
     return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
@@ -1316,16 +1299,6 @@ function Overview({
 }
 
 
-function joinParts(...parts: Array<string | null | undefined>): string | null {
-  const out = parts.filter((p): p is string => Boolean(p && p.trim()));
-  return out.length ? out.join("  ·  ") : null;
-}
-
-function remainLine(t: T, pct: number | null | undefined, resetsAt?: string | null): string | null {
-  if (pct == null) return null;
-  return joinParts(`${t.left} ${fmtRemain(pct)}`, resetsAt ? `${t.resetPrefix}${fmtWhen(resetsAt)}` : null);
-}
-
 function MetaChips({ items }: { items: { k: string; v: ReactNode }[] }) {
   const shown = items.filter((i) => i.v !== null && i.v !== undefined && i.v !== "");
   if (!shown.length) return null;
@@ -1402,66 +1375,6 @@ function CursorBody({ data, account, t, pal, nowMs }: { data: UsagePayload; acco
   return <CursorDetail account={account} updatedAt={data.updated_at} t={t} pal={pal} nowMs={nowMs} />;
 }
 
-function OpenRouterBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
-  const o = account;
-  const sub = joinParts(
-    o.used_cents != null ? `${t.used} ${fmtUsd(o.used_cents)}` : null,
-    o.remaining_cents != null ? `${t.left} ${fmtUsd(o.remaining_cents)}` : null,
-    o.limit_cents != null ? `${t.cap} ${fmtUsd(o.limit_cents)}` : null,
-  ) || (o.remaining_cents != null ? t.remainMoney + fmtUsd(o.remaining_cents) : t.noCredits);
-  return (
-    <>
-      <div className="px-0.5 text-[12.5px] tracking-[.1px] text-ink3">{t.allKeysNote}</div>
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard label={t.credits} pct={o.percent} pal={pal} sub={sub} />
-      </MetricsGrid>
-    </>
-  );
-}
-
-function DeepSeekBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
-  const d = account;
-  const remain = d.remaining_cents != null ? t.remainMoney + fmtUsd(d.remaining_cents) : t.noCredits;
-  return (
-    <>
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard label={t.credits} pct={d.percent} pal={pal} sub={remain} />
-      </MetricsGrid>
-    </>
-  );
-}
-
-function OpenCodeBody({ data, account, t, pal }: { data: UsagePayload; account: OpenCodeAccount; t: T; pal: Pal }) {
-  const o = account;
-  const remain = o.remaining_cents != null ? t.remainMoney + fmtUsd(o.remaining_cents) : null;
-  return (
-    <>
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        {o.rolling_percent != null && <MetricCard label={t.rolling} pct={o.rolling_percent} pal={pal} sub={remainLine(t, o.rolling_percent, o.rolling_resets_at)} />}
-        {o.weekly_percent != null && <MetricCard label={t.weekLimit} pct={o.weekly_percent} pal={pal} sub={remainLine(t, o.weekly_percent, o.weekly_resets_at)} />}
-        {o.monthly_percent != null && <MetricCard label={t.monthLimit} pct={o.monthly_percent} pal={pal} sub={remainLine(t, o.monthly_percent, o.monthly_resets_at)} />}
-        {remain != null && <MetricCard label={t.credits} pct={o.percent} pal={pal} sub={remain} />}
-      </MetricsGrid>
-    </>
-  );
-}
-
-function FalBody({ data, account, t, pal }: { data: UsagePayload; account: CreditsAccount; t: T; pal: Pal }) {
-  const f = account;
-  const remain = f.remaining_cents != null ? t.remainMoney + fmtUsd(f.remaining_cents) : t.noCredits;
-  return (
-    <>
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard label={t.credits} pct={f.percent} pal={pal} sub={remain} />
-      </MetricsGrid>
-    </>
-  );
-}
-
 function BitcoinBody({ data, account, t }: { data: UsagePayload; account: BitcoinAccount; t: T }) {
   return <BitcoinDetail account={account} updatedAt={data.updated_at} t={t} />;
 }
@@ -1525,10 +1438,9 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     if (meta.provider === "claude") body = <ClaudeBody data={data} account={account as ClaudeAccount} t={t} pal={pal} nowMs={nowMs} />;
     else if (meta.provider === "gpt") body = <GptBody data={data} account={account as GptAccount} t={t} pal={pal} nowMs={nowMs} />;
     else if (meta.provider === "cursor") body = <CursorBody data={data} account={account as CursorAccount} t={t} pal={pal} nowMs={nowMs} />;
-    else if (meta.provider === "openrouter") body = <OpenRouterBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
-    else if (meta.provider === "deepseek") body = <DeepSeekBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
-    else if (meta.provider === "opencode") body = <OpenCodeBody data={data} account={account as OpenCodeAccount} t={t} pal={pal} />;
-    else if (meta.provider === "fal") body = <FalBody data={data} account={account as CreditsAccount} t={t} pal={pal} />;
+    else if (meta.provider === "openrouter" || meta.provider === "deepseek" || meta.provider === "opencode" || meta.provider === "fal") {
+      body = <CreditsDetail metrics={meta.metrics} updatedAt={data.updated_at} note={meta.provider === "openrouter" ? t.allKeysNote : null} t={t} pal={pal} nowMs={nowMs} />;
+    }
     else if (meta.provider === "bitcoin") body = <BitcoinBody data={data} account={account as BitcoinAccount} t={t} />;
     else if (meta.provider === "adsense") body = <AdsenseBody data={data} account={account as AdsenseAccount} t={t} pal={pal} />;
   }
