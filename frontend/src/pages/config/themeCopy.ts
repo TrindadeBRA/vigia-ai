@@ -85,14 +85,21 @@ export type ThemeCopy = {
   providerUnsplash: string;
   providerConfigured: string;
   providerNotConfigured: string;
+  providerAvailable: string;
+  providerKeySaved: string;
   providerNeedsKey: string;
   providerOptionalKey: string;
   providerKeyLabel: string;
   providerKeyPlaceholder: string;
+  providerKeyReplacePlaceholder: string;
+  providerKeySavedHint: string;
+  providerRemoveKey: string;
+  providerKeyRemoved: string;
   providerSave: string;
   providerSaving: string;
   providerSaved: string;
   providerError: string;
+  searchNeedsKey: (name: string) => string;
   searchPlaceholder: string;
   searchButton: string;
   searching: string;
@@ -193,14 +200,21 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     providerUnsplash: "Unsplash",
     providerConfigured: "Configurado",
     providerNotConfigured: "Não configurado",
+    providerAvailable: "Disponível",
+    providerKeySaved: "Chave salva",
     providerNeedsKey: "Precisa de API key",
     providerOptionalKey: "Chave opcional (para conteúdo NSFW/sketchy)",
     providerKeyLabel: "API Key",
     providerKeyPlaceholder: "Cole sua API key…",
+    providerKeyReplacePlaceholder: "Cole uma nova API key para substituir…",
+    providerKeySavedHint: "Chave salva no coletor. Cole uma nova para substituir, ou remova.",
+    providerRemoveKey: "Remover chave",
+    providerKeyRemoved: "Chave removida",
     providerSave: "Salvar chaves",
     providerSaving: "Salvando…",
     providerSaved: "Chaves salvas",
     providerError: "Falha ao salvar chaves",
+    searchNeedsKey: (name) => `Configure a API key do ${name} no final da página para buscar.`,
     searchPlaceholder: "Buscar papéis de parede… ex: natureza, cidade, abstrato",
     searchButton: "Buscar",
     searching: "Buscando…",
@@ -299,14 +313,21 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     providerUnsplash: "Unsplash",
     providerConfigured: "Configured",
     providerNotConfigured: "Not configured",
+    providerAvailable: "Available",
+    providerKeySaved: "Key saved",
     providerNeedsKey: "Needs API key",
     providerOptionalKey: "Optional key (for NSFW/sketchy content)",
     providerKeyLabel: "API Key",
     providerKeyPlaceholder: "Paste your API key…",
+    providerKeyReplacePlaceholder: "Paste a new API key to replace…",
+    providerKeySavedHint: "Key saved on the collector. Paste a new one to replace it, or remove it.",
+    providerRemoveKey: "Remove key",
+    providerKeyRemoved: "Key removed",
     providerSave: "Save keys",
     providerSaving: "Saving…",
     providerSaved: "Keys saved",
     providerError: "Failed to save keys",
+    searchNeedsKey: (name) => `Configure the ${name} API key at the bottom of the page to search.`,
     searchPlaceholder: "Search wallpapers… e.g. nature, city, abstract",
     searchButton: "Search",
     searching: "Searching…",
@@ -405,14 +426,21 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     providerUnsplash: "Unsplash",
     providerConfigured: "Configurado",
     providerNotConfigured: "No configurado",
+    providerAvailable: "Disponible",
+    providerKeySaved: "Clave guardada",
     providerNeedsKey: "Necesita API key",
     providerOptionalKey: "Clave opcional (para contenido NSFW/sketchy)",
     providerKeyLabel: "API Key",
     providerKeyPlaceholder: "Pegá tu API key…",
+    providerKeyReplacePlaceholder: "Pegá una nueva API key para reemplazar…",
+    providerKeySavedHint: "Clave guardada en el colector. Pegá una nueva para reemplazarla, o quitala.",
+    providerRemoveKey: "Quitar clave",
+    providerKeyRemoved: "Clave quitada",
     providerSave: "Guardar claves",
     providerSaving: "Guardando…",
     providerSaved: "Claves guardadas",
     providerError: "Error al guardar claves",
+    searchNeedsKey: (name) => `Configurá la API key de ${name} al final de la página para buscar.`,
     searchPlaceholder: "Buscar fondos… ej: naturaleza, ciudad, abstracto",
     searchButton: "Buscar",
     searching: "Buscando…",

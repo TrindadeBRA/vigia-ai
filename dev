@@ -68,8 +68,9 @@ run_pio() {
 ensure_python() {
   if [ ! -d "$ROOT_DIR/backend/.venv" ]; then
     python3 -m venv "$ROOT_DIR/backend/.venv"
-    "$ROOT_DIR/backend/.venv/bin/pip" install -q -e "$ROOT_DIR/backend[dev]"
   fi
+  # Sempre sincroniza deps: venv antigo não ganhava pacotes novos (ex.: Pillow).
+  "$ROOT_DIR/backend/.venv/bin/pip" install -q -e "$ROOT_DIR/backend[dev]"
 }
 
 ensure_node() {

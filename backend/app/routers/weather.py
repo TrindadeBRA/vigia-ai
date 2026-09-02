@@ -74,8 +74,10 @@ def patch_weather_config(body: WeatherPatch) -> WeatherConfig:
 
         if body.enabled is not None:
             w["enabled"] = body.enabled
-        if body.hidden is not None:
+            w["hidden"] = not body.enabled
+        elif body.hidden is not None:
             w["hidden"] = body.hidden
+            w["enabled"] = not body.hidden
         if body.name is not None:
             loc["name"] = body.name.strip()
         if body.latitude is not None:
@@ -196,9 +198,9 @@ def set_location(body: dict[str, Any]) -> WeatherConfig:
                 loc["elevation"] = float(body["elevation"])
             except (TypeError, ValueError):
                 pass
-        # Ao definir localização, habilita automaticamente se ainda não estiver
-        if not w.get("enabled"):
-            w["enabled"] = True
+        # Ao definir localização, liga o clima no painel (busca + card).
+        w["enabled"] = True
+        w["hidden"] = False
 
     update(mut)
     return _weather_config_public()

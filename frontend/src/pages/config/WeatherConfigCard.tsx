@@ -5,7 +5,7 @@ import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, cfgFieldLabel, cfgHint, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
-import { Button, Checkbox, FieldStatus, Fold, Switch, TextField } from "./ui";
+import { ActionRow, Button, Checkbox, FieldStatus, Fold, Switch, TextField } from "./ui";
 
 // Todas as variáveis Open-Meteo disponíveis (para o painel avançado)
 const CURRENT_VARS = [
@@ -67,7 +67,6 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
     const [precipUnit, setPrecipUnit] = useState(weather.units.precipitation_unit);
 
     const toggleEnabled = useRequest();
-    const toggleHidden = useRequest();
     const saveUnits = useRequest();
     const saveDisplay = useRequest();
     const saveVars = useRequest();
@@ -121,59 +120,45 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
 
     const unitsDirty = tempUnit !== weather.units.temperature_unit || windUnit !== weather.units.wind_speed_unit || precipUnit !== weather.units.precipitation_unit || forecastDays !== String(weather.forecast_days);
 
+    const hint = hasLocation
+        ? `${loc.name}${loc.country ? `, ${loc.country}` : ""}${loc.country_code ? ` (${loc.country_code})` : ""}`
+        : c.weatherNotConfigured;
+
+    const cityFoldSummary = hasLocation ? c.weatherChangeCity : c.weatherCityLabel;
+
     return (
-        <section className={cfgCard}>
+        <article className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-1 items-start gap-3">
+                <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>
                         <img className={iconImg} src={PROVIDER_ICON.weather} alt="" draggable={false} />
                     </div>
                     <div className="min-w-0">
-                        <h2 className="m-0 text-[15.5px] font-bold">{c.weatherTitle}</h2>
-                        <p className="mb-0 mt-1 text-[13.5px] leading-[1.55] text-ink2">{c.weatherLead}</p>
+                        <h3 className="m-0 text-[15.5px] font-bold">{c.weatherTitle}</h3>
+                        <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
                     </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                    <Switch
-                        label={c.weatherEnabled}
-                        checked={weather.enabled}
-                        busy={toggleEnabled.busy}
-                        onChange={async (e) => {
-                            const next = e.target.checked;
-                            await toggleEnabled.run(
-                                async () => {
-                                    const res = await patchWeatherConfig({ enabled: next });
-                                    if (res.ok) await onReload();
-                                    return res as { ok: boolean; error?: string };
-                                },
-                                { success: c.saved, error: c.offline },
-                            );
-                        }}
-                    />
-                    {weather.enabled ? (
-                        <Switch
-                            label={c.showOnBoard}
-                            checked={!weather.hidden}
-                            busy={toggleHidden.busy}
-                            onChange={async (e) => {
-                                const nextHidden = !e.target.checked;
-                                await toggleHidden.run(
-                                    async () => {
-                                        const res = await patchWeatherConfig({ hidden: nextHidden });
-                                        if (res.ok) await onReload();
-                                        return res as { ok: boolean; error?: string };
-                                    },
-                                    { success: nextHidden ? c.hiddenOn : c.hiddenOff, error: c.offline },
-                                );
-                            }}
-                        />
-                    ) : null}
-                </div>
+                <Switch
+                    label={c.showOnBoard}
+                    checked={weather.enabled && !weather.hidden}
+                    busy={toggleEnabled.busy}
+                    onChange={async (e) => {
+                        const next = e.target.checked;
+                        await toggleEnabled.run(
+                            async () => {
+                                const res = await patchWeatherConfig({ enabled: next, hidden: !next });
+                                if (res.ok) await onReload();
+                                return res as { ok: boolean; error?: string };
+                            },
+                            { success: c.saved, error: c.offline },
+                        );
+                    }}
+                />
             </div>
 
-            {/* Cidade */}
-            <div className="flex flex-col gap-2">
-                <span className={cfgFieldLabel}>{c.weatherCityLabel}</span>
+            {toggleEnabled.message ? <FieldStatus status={toggleEnabled.status} message={toggleEnabled.message} /> : null}
+
+            <Fold summary={cityFoldSummary}>
                 {hasLocation ? (
                     <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-edge bg-chip px-3 py-2.5">
                         <span className="text-sm font-semibold text-ink">
@@ -185,15 +170,13 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
                         </span>
                         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-good px-2 py-0.5 text-[11px] font-bold text-white">{c.weatherSelected}</span>
                     </div>
-                ) : (
-                    <p className="m-0 text-xs text-warn">{c.weatherNotConfigured}</p>
-                )}
-                <div className="flex gap-2">
-                    <TextField placeholder={c.weatherCityPh} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void doSearch(); } }} />
+                ) : null}
+                <ActionRow>
+                    <TextField placeholder={c.weatherCityPh} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void doSearch(); } }} autoComplete="off" />
                     <Button variant="secondary" loading={searching} onClick={() => void doSearch()} disabled={query.trim().length < 2}>
                         {searching ? c.weatherSearching : "Buscar"}
                     </Button>
-                </div>
+                </ActionRow>
                 {results.length > 0 ? (
                     <div className="flex flex-col gap-1 rounded-[10px] border border-edge bg-canvas p-1">
                         {results.map((r) => (
@@ -213,26 +196,24 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
                             </button>
                         ))}
                     </div>
-                ) : query.trim().length >= 2 && !searching && results.length === 0 ? null : null}
+                ) : query.trim().length >= 2 && !searching ? (
+                    <p className="m-0 text-xs text-ink3">{c.weatherNoResults}</p>
+                ) : null}
                 {selectCity.message ? <FieldStatus status={selectCity.status} message={selectCity.message} /> : null}
-                {toggleEnabled.message ? <FieldStatus status={toggleEnabled.status} message={toggleEnabled.message} /> : null}
-                {toggleHidden.message ? <FieldStatus status={toggleHidden.status} message={toggleHidden.message} /> : null}
-            </div>
+            </Fold>
 
-            {/* Unidades */}
-            <div className="flex flex-col gap-2 border-t border-edge pt-3">
-                <span className={cfgFieldLabel}>{c.weatherUnitsTitle}</span>
+            <Fold summary={c.weatherUnitsTitle}>
                 <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-3">
                     <label className="flex flex-col gap-1.5">
                         <span className="text-xs font-semibold text-ink3">{c.weatherTempUnit}</span>
-                        <select value={tempUnit} onChange={(e) => setTempUnit(e.target.value)} className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
+                        <select value={tempUnit} onChange={(e) => setTempUnit(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
                             <option value="celsius">Celsius (°C)</option>
                             <option value="fahrenheit">Fahrenheit (°F)</option>
                         </select>
                     </label>
                     <label className="flex flex-col gap-1.5">
                         <span className="text-xs font-semibold text-ink3">{c.weatherWindUnit}</span>
-                        <select value={windUnit} onChange={(e) => setWindUnit(e.target.value)} className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
+                        <select value={windUnit} onChange={(e) => setWindUnit(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
                             <option value="kmh">km/h</option>
                             <option value="ms">m/s</option>
                             <option value="mph">mph</option>
@@ -241,13 +222,13 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
                     </label>
                     <label className="flex flex-col gap-1.5">
                         <span className="text-xs font-semibold text-ink3">{c.weatherPrecipUnit}</span>
-                        <select value={precipUnit} onChange={(e) => setPrecipUnit(e.target.value)} className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
+                        <select value={precipUnit} onChange={(e) => setPrecipUnit(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
                             <option value="mm">mm</option>
                             <option value="inch">inch</option>
                         </select>
                     </label>
                 </div>
-                <div className="flex items-end gap-2">
+                <ActionRow>
                     <TextField label={c.weatherForecastDays} type="number" min={1} max={16} value={forecastDays} onChange={(e) => setForecastDays(e.target.value)} />
                     <Button
                         loading={saveUnits.busy}
@@ -270,13 +251,11 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
                     >
                         {saveUnits.busy ? c.saving : c.save}
                     </Button>
-                </div>
+                </ActionRow>
                 {saveUnits.message ? <FieldStatus status={saveUnits.status} message={saveUnits.message} /> : null}
-            </div>
+            </Fold>
 
-            {/* O que mostrar no widget */}
-            <div className="flex flex-col gap-2 border-t border-edge pt-3">
-                <span className={cfgFieldLabel}>{c.weatherDisplayTitle}</span>
+            <Fold summary={c.weatherDisplayTitle}>
                 <div className="flex flex-wrap gap-3">
                     <Checkbox label={c.weatherShowCurrent} checked={display.show_current} onChange={async (e) => {
                         const v = e.target.checked;
@@ -324,7 +303,7 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
                     }} />
                 </div>
 
-                <span className={`${cfgFieldLabel} mt-1`}>{c.weatherFieldsTitle}</span>
+                <span className={cfgFieldLabel}>{c.weatherFieldsTitle}</span>
                 <div className="flex flex-wrap gap-3">
                     {([
                         ["temperature", c.weatherFieldTemperature],
@@ -353,9 +332,8 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
                     ))}
                 </div>
                 {saveDisplay.message ? <FieldStatus status={saveDisplay.status} message={saveDisplay.message} /> : null}
-            </div>
+            </Fold>
 
-            {/* Variáveis avançadas */}
             <Fold summary={c.weatherAdvancedTitle}>
                 <p className={cfgHint}>{c.weatherVarsHint}</p>
 
@@ -412,6 +390,6 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
                     {c.weatherPoweredBy} ↗
                 </a>
             </p>
-        </section>
+        </article>
     );
 }

@@ -448,8 +448,16 @@ void usageClientEnsureWifi()
   }
 }
 
+static void addVigiaDeviceHeaders(HTTPClient &http)
+{
+  http.addHeader("X-Vigia-Device", "esp32");
+  http.addHeader("X-Vigia-Screen", String(tft.width()) + "x" + String(tft.height()));
+}
+
 // GET <coletor>/api/theme/background — stream direto pro storage do tema
 // (LittleFS ou RAM, ver ui/customtheme.h), nunca bufferiza a imagem inteira.
+// Manda a resolução da tela (e ?w=&h= na metade) pra o coletor devolver o RAW
+// certo: 240×160 no hardware, 160×120 no Wokwi.
 static bool themeClientFetchBackground(const String &base)
 {
   HTTPClient http;
@@ -459,18 +467,27 @@ static bool themeClientFetchBackground(const String &base)
   // rajadas na rede simulada do Wokwi).
   http.setTimeout(20000);
   http.setConnectTimeout(5000);
-  if (!http.begin(base + "api/theme/background"))
+  const int w = customThemeCanvasWidth();
+  const int h = customThemeCanvasHeight();
+  const int expected = w * h * 2;
+  String url = base + "api/theme/background?w=" + String(w) + "&h=" + String(h);
+  if (!http.begin(url))
   {
     return false;
   }
+  addVigiaDeviceHeaders(http);
   int code = http.GET();
   bool ok = false;
   if (code == 200)
   {
     int len = http.getSize();
     WiFiClient *stream = http.getStreamPtr();
-    Serial.printf("tema: baixando fundo (%d bytes)\n", len);
-    if (len > 0 && customThemeBeginBackgroundWrite())
+    Serial.printf("tema: baixando fundo (%d bytes, esperado %d)\n", len, expected);
+    if (len != expected)
+    {
+      Serial.printf("tema: tamanho do fundo não bate com a tela (%dx%d)\n", w, h);
+    }
+    else if (len > 0 && customThemeBeginBackgroundWrite())
     {
       uint8_t buf[1024];
       int remaining = len;
@@ -538,6 +555,7 @@ void themeClientReload()
     Serial.println("tema: GET /api/theme http.begin falhou");
     return;
   }
+  addVigiaDeviceHeaders(http);
   int code = http.GET();
   if (code != 200)
   {

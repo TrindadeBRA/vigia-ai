@@ -284,6 +284,10 @@ export default function ThemeEditorPage() {
   const [weatherPreview, setWeatherPreview] = useState<{ temp: number | null; code: number | null; unit: string } | null>(null);
   const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
   const [currentWallpaperId, setCurrentWallpaperId] = useState<string | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const handleWallpaperSelected = useCallback((id: string | null) => {
+    setCurrentWallpaperId(id);
+  }, []);
   const canvasRef = useRef<HTMLDivElement>(null);
   const send = useRequest();
   const remove = useRequest();
@@ -466,7 +470,7 @@ export default function ThemeEditorPage() {
 
       <Card title={c.canvasTitle} lead={c.canvasHint}>
         {!canvasKnown ? <p className={cfgStatus}>{c.canvasNoDevice}</p> : null}
-        {currentWallpaperId ? (
+        {currentWallpaperId || localPreviewUrl ? (
           <p className={cfgStatus}>
             Papel de parede em uso
           </p>
@@ -483,16 +487,16 @@ export default function ThemeEditorPage() {
           onPointerDown={() => setSelected(null)}
         >
           {/* Fundo: exatamente como a placa — se há wallpaper, mostra a imagem com cover (mesmo crop do backend _image_to_raw); senão cor sólida */}
-          {currentWallpaperId ? (
+          {localPreviewUrl || currentWallpaperId ? (
             <img
-              key={currentWallpaperId}
-              src={`/api/wallpapers/${currentWallpaperId}/preview`}
+              key={localPreviewUrl || currentWallpaperId}
+              src={localPreviewUrl || `/api/wallpapers/${currentWallpaperId}/preview`}
               alt=""
               draggable={false}
-              className="absolute inset-0 size-full object-cover"
+              className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
               style={{ imageRendering: "auto" }}
               onError={(e) => {
-                // Se preview falhar, esconde e deixa a cor de fundo aparecer (fallback igual à placa: drawThemeBackground cai pra fillRect)
+                if (localPreviewUrl) return;
                 (e.target as HTMLImageElement).style.display = "none";
               }}
             />
@@ -692,7 +696,11 @@ export default function ThemeEditorPage() {
         </Card>
 
         <div className="col-span-full">
-          <WallpaperManager lang={ctx?.lang || "pt"} />
+          <WallpaperManager
+            lang={ctx?.lang || "pt"}
+            onSelectedChange={handleWallpaperSelected}
+            onLocalPreview={setLocalPreviewUrl}
+          />
         </div>
 
         <Card title={c.debugTitle} lead={c.debugLead}>

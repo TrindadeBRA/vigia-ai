@@ -187,11 +187,7 @@ def _fetch_one(
 def _fetch_weather(cfg: dict) -> dict[str, Any]:
     """Busca clima; respeita hidden/enabled e mock."""
     weather_cfg = cfg.get("weather") or {}
-    if weather_cfg.get("hidden"):
-        return {"ok": True, "error": None, "updated_at": None, "current": None, "hourly": None, "daily": None,
-                "location": weather_cfg.get("location"), "units": weather_cfg.get("units")}
-    if not weather_cfg.get("enabled"):
-        # Quando desabilitado, não mostra widget — retorna None para o frontend esconder
+    if weather_cfg.get("hidden") or not weather_cfg.get("enabled"):
         return None  # type: ignore[return-value]
     if cfg.get("mock"):
         return mock_weather_payload()
@@ -206,9 +202,7 @@ def _fetch_currencies(cfg: dict) -> dict[str, Any] | None:
     """Busca cotações; respeita hidden/enabled e mock, igual ao clima."""
     ccfg = cfg.get("currencies") or {}
     base = ccfg.get("base") or "BRL"
-    if ccfg.get("hidden"):
-        return {"ok": True, "error": None, "updated_at": None, "base": base, "items": []}
-    if not ccfg.get("enabled"):
+    if ccfg.get("hidden") or not ccfg.get("enabled"):
         return None
     if cfg.get("mock"):
         return mock_currencies_payload()

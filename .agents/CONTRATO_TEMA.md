@@ -41,11 +41,14 @@ firmware manda um header `X-Vigia-Device: esp32` nesses dois requests
 usuário com a placa (`backend/app/routers/usage.py`). Não é autenticação.
 
 Junto com esse header, a placa também manda `X-Vigia-Screen: <largura>x<altura>`
-(`tft.width()`/`height()`) — o coletor guarda em `device.width`/`device.height`
-(`GET /api/config`) e o editor usa isso pra acertar a resolução do fundo
-**sozinho**, sem precisar do IP (`ThemeEditorPage.tsx`, efeito que observa
-`cfg.device.width/height`). O IP só é necessário pro card de depuração
-(envio direto pra placa e `GET /theme/screenshot`).
+(`tft.width()`/`height()`) em `/usage`, `/events` **e** no recarregar do tema
+(`GET /api/theme` + `GET /api/theme/background?w=&h=`). Sem isso o coletor
+serve o RAW de 240×160 (hardware); no Wokwi a tela é 320×240 e o fundo
+esperado é 160×120 — tamanho errado é descartado na hora de desenhar.
+O coletor guarda a resolução em `device.width`/`device.height`
+(`GET /api/config`) e o editor usa isso pra acertar o fundo
+**sozinho**, sem precisar do IP (`ThemeEditorPage.tsx`). O IP só é necessário
+pro card de depuração (envio direto pra placa e `GET /theme/screenshot`).
 
 LAN only, igual ao resto do projeto: não exponha essa porta na internet.
 

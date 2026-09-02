@@ -84,7 +84,6 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
     }, [currencies.base]);
 
     const toggleEnabled = useRequest();
-    const toggleHidden = useRequest();
     const saveBase = useRequest();
     const add = useRequest();
 
@@ -145,42 +144,22 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
                         <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
                     </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                    <Switch
-                        label={c.currenciesEnabled}
-                        checked={currencies.enabled}
-                        busy={toggleEnabled.busy}
-                        onChange={async (e) => {
-                            const next = e.target.checked;
-                            await toggleEnabled.run(
-                                async () => {
-                                    const res = await patchCurrenciesConfig({ enabled: next });
-                                    if (res.ok) await onReload();
-                                    return res;
-                                },
-                                { success: c.saved, error: c.offline },
-                            );
-                        }}
-                    />
-                    {currencies.enabled ? (
-                        <Switch
-                            label={c.showOnBoard}
-                            checked={!currencies.hidden}
-                            busy={toggleHidden.busy}
-                            onChange={async (e) => {
-                                const nextHidden = !e.target.checked;
-                                await toggleHidden.run(
-                                    async () => {
-                                        const res = await patchCurrenciesConfig({ hidden: nextHidden });
-                                        if (res.ok) await onReload();
-                                        return res;
-                                    },
-                                    { success: nextHidden ? c.hiddenOn : c.hiddenOff, error: c.offline },
-                                );
-                            }}
-                        />
-                    ) : null}
-                </div>
+                <Switch
+                    label={c.showOnBoard}
+                    checked={currencies.enabled && !currencies.hidden}
+                    busy={toggleEnabled.busy}
+                    onChange={async (e) => {
+                        const next = e.target.checked;
+                        await toggleEnabled.run(
+                            async () => {
+                                const res = await patchCurrenciesConfig({ enabled: next, hidden: !next });
+                                if (res.ok) await onReload();
+                                return res;
+                            },
+                            { success: c.saved, error: c.offline },
+                        );
+                    }}
+                />
             </div>
 
             <ActionRow>
@@ -211,7 +190,6 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
             </ActionRow>
             {saveBase.message ? <FieldStatus status={saveBase.status} message={saveBase.message} /> : null}
             {toggleEnabled.message ? <FieldStatus status={toggleEnabled.status} message={toggleEnabled.message} /> : null}
-            {toggleHidden.message ? <FieldStatus status={toggleHidden.status} message={toggleHidden.message} /> : null}
 
             <Fold summary={listSummary}>
                 {currencies.items.length ? (

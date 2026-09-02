@@ -35,7 +35,24 @@ type SearchResult = {
     resolution?: string;
 };
 
-export function WallpaperManager({ lang }: { lang: Lang }) {
+function apiFail(j: unknown, fallback: string): string {
+    if (j && typeof j === "object") {
+        const o = j as { ok?: boolean; error?: string; detail?: unknown };
+        if (typeof o.error === "string" && o.error) return o.error;
+        if (typeof o.detail === "string" && o.detail) return o.detail;
+    }
+    return fallback;
+}
+
+export function WallpaperManager({
+    lang,
+    onSelectedChange,
+    onLocalPreview,
+}: {
+    lang: Lang;
+    onSelectedChange?: (id: string | null) => void;
+    onLocalPreview?: (url: string | null) => void;
+}) {
     const c = THEME_STR[lang];
     const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,48 +80,64 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
         try {
             const r = await fetch("/api/wallpapers");
             const j = (await r.json()) as { wallpapers: WallpaperItem[]; selected_id?: string | null; providers: ProviderStatus };
-            setWallpapers(j.wallpapers || []);
-            setSelectedId(j.selected_id || j.wallpapers?.[0]?.id || null);
+            const list = j.wallpapers || [];
+            const selected = j.selected_id || list[0]?.id || null;
+            setWallpapers(list);
+            setSelectedId(selected);
             setProviders(j.providers || null);
-            // Notifica o canvas do ThemeEditorPage pra atualizar o fundo
+            onSelectedChange?.(selected);
+            onLocalPreview?.(null);
             window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
         } catch {
             /* ignore */
         }
-    }, []);
+    }, [onSelectedChange, onLocalPreview]);
 
     useEffect(() => {
         void fetchAll();
     }, [fetchAll]);
 
     async function handleUpload(file: File) {
+        const localUrl = URL.createObjectURL(file);
+        onLocalPreview?.(localUrl);
         const fd = new FormData();
         fd.append("file", file);
         const r = await fetch("/api/wallpapers/upload", { method: "POST", body: fd });
-        const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string; id?: string };
-        if (!j.ok) throw new Error(j.error || c.importError);
+        const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; detail?: string; id?: string };
+        if (!r.ok || j.ok === false) {
+            onLocalPreview?.(null);
+            URL.revokeObjectURL(localUrl);
+            throw new Error(apiFail(j, c.importError));
+        }
+        if (j.id) onSelectedChange?.(j.id);
         await fetchAll();
+        URL.revokeObjectURL(localUrl);
         return { ok: true };
     }
 
     async function handleDelete(id: string) {
         const r = await fetch(`/api/wallpapers/${id}`, { method: "DELETE" });
-        const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
-        if (!j.ok) throw new Error(j.error || c.wallpapersRemove);
+        const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; detail?: string };
+        if (!r.ok || j.ok === false) throw new Error(apiFail(j, c.wallpapersRemove));
         await fetchAll();
         return { ok: true };
     }
 
     async function handleSelect(id: string) {
-        if (id === selectedId) return { ok: true };
+        if (id === selectedId) {
+            onSelectedChange?.(id);
+            return { ok: true };
+        }
         const r = await fetch("/api/wallpapers/selected", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id }),
         });
-        const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string; selected_id?: string | null };
-        if (!j.ok) throw new Error(j.error || c.wallpaperSelectError);
-        setSelectedId(j.selected_id || id);
+        const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; detail?: string; selected_id?: string | null };
+        if (!r.ok || j.ok === false) throw new Error(apiFail(j, c.wallpaperSelectError));
+        const next = j.selected_id || id;
+        setSelectedId(next);
+        onSelectedChange?.(next);
         window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
         return { ok: true };
     }
@@ -146,6 +179,8 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
     }
 
     async function handleImport(item: SearchResult) {
+        const previewUrl = item.preview || item.thumb || item.full || item.url;
+        if (previewUrl) onLocalPreview?.(previewUrl);
         const body = {
             provider: item.provider,
             id: item.id,
@@ -158,8 +193,12 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
         });
-        const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
-        if (!j.ok) throw new Error(j.error || c.importError);
+        const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; detail?: string; id?: string };
+        if (!r.ok || j.ok === false) {
+            onLocalPreview?.(null);
+            throw new Error(apiFail(j, c.importError));
+        }
+        if (j.id) onSelectedChange?.(j.id);
         await fetchAll();
         return { ok: true };
     }
@@ -364,9 +403,14 @@ export function WallpaperManager({ lang }: { lang: Lang }) {
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {searchResults.map((r) => (
                                     <div key={`${r.provider}-${r.id}`} className="overflow-hidden rounded-[12px] border border-edge bg-canvas">
-                                        <div className="aspect-[16/10] overflow-hidden bg-black/10">
+                                        <button
+                                            type="button"
+                                            className="aspect-[16/10] w-full overflow-hidden border-0 bg-black/10 p-0"
+                                            onClick={() => void importReq.run(() => handleImport(r), { success: c.imported, error: c.importError })}
+                                            disabled={importReq.busy}
+                                        >
                                             <img src={r.thumb || r.preview || r.full || ""} alt={r.id} className="size-full object-cover" loading="lazy" />
-                                        </div>
+                                        </button>
                                         <div className="p-2">
                                             <p className="truncate text-[11px] font-medium text-ink2">
                                                 {r.provider} · {r.resolution || (r.width && r.height ? `${r.width}×${r.height}` : r.id)}

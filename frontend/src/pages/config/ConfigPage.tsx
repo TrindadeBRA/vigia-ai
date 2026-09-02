@@ -150,12 +150,6 @@ export default function ConfigPage() {
       </div>
 
       <div className="mt-2 w-full">
-        <h2 className="mb-1 mt-0 text-base font-bold">{c.weatherTitle}</h2>
-        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.weatherLead}</p>
-      </div>
-      <WeatherConfigCard weather={cfg.weather} c={c} onReload={reload} />
-
-      <div className="mt-2 w-full">
         <h2 className="mb-1 mt-0 text-base font-bold">{c.financeiroTitle}</h2>
         <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.financeiroLead}</p>
       </div>
@@ -174,6 +168,14 @@ export default function ConfigPage() {
         />
         <AdSenseConfigCard p={cfg.providers.adsense} listenPort={cfg.listen.port} {...common} />
         <CurrenciesConfigCard currencies={cfg.currencies} c={c} onReload={reload} />
+      </div>
+
+      <div className="mt-2 w-full">
+        <h2 className="mb-1 mt-0 text-base font-bold">{c.outrosTitle}</h2>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.outrosLead}</p>
+      </div>
+      <div className={cfgGrid}>
+        <WeatherConfigCard weather={cfg.weather} c={c} onReload={reload} />
       </div>
     </div>
   );

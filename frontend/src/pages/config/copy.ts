@@ -132,7 +132,6 @@ export type ConfigCopy = {
   // Weather
   weatherTitle: string;
   weatherLead: string;
-  weatherEnabled: string;
   weatherCityLabel: string;
   weatherCityPh: string;
   weatherSearching: string;
@@ -170,9 +169,11 @@ export type ConfigCopy = {
   // Financeiro
   financeiroTitle: string;
   financeiroLead: string;
+  // Outros
+  outrosTitle: string;
+  outrosLead: string;
   currenciesTitle: string;
   currenciesLead: string;
-  currenciesEnabled: string;
   currenciesBaseLabel: string;
   currenciesListLabel: string;
   currenciesEmpty: string;
@@ -317,7 +318,6 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cursorTokenPh: "Token da sessão",
     weatherTitle: "Clima",
     weatherLead: "Veja a previsão do tempo no painel. Escolha a cidade e o que mostrar no widget.",
-    weatherEnabled: "Mostrar clima no painel",
     weatherCityLabel: "Cidade",
     weatherCityPh: "ex.: São Paulo",
     weatherSearching: "Buscando…",
@@ -354,9 +354,10 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherPoweredBy: "Dados por Open-Meteo.com",
     financeiroTitle: "Financeiro",
     financeiroLead: "Carteira Bitcoin, AdSense e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
+    outrosTitle: "Outros",
+    outrosLead: "Widgets extras no painel — previsão do tempo e o que mais for surgindo.",
     currenciesTitle: "Cotação de moedas",
     currenciesLead: "Adicione quantas moedas quiser — fiat (dólar, euro...) ou cripto — e veja a cotação convertida para a moeda base.",
-    currenciesEnabled: "Mostrar no painel",
     currenciesBaseLabel: "Moeda base (cotações convertidas para)",
     currenciesListLabel: "Moedas acompanhadas",
     currenciesEmpty: "Nenhuma moeda adicionada ainda.",
@@ -499,7 +500,6 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cursorTokenPh: "Session token",
     weatherTitle: "Weather",
     weatherLead: "See the forecast on the desk display. Pick the city and what to show.",
-    weatherEnabled: "Show weather on display",
     weatherCityLabel: "City",
     weatherCityPh: "e.g. São Paulo",
     weatherSearching: "Searching…",
@@ -536,9 +536,10 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherPoweredBy: "Data by Open-Meteo.com",
     financeiroTitle: "Finance",
     financeiroLead: "Bitcoin wallet, AdSense and currency quotes — dollar, euro, crypto, whatever you want to track.",
+    outrosTitle: "Other",
+    outrosLead: "Extra widgets on the display — weather forecast and more to come.",
     currenciesTitle: "Currency quotes",
     currenciesLead: "Add as many currencies as you want — fiat (dollar, euro...) or crypto — and see the rate converted to your base currency.",
-    currenciesEnabled: "Show on display",
     currenciesBaseLabel: "Base currency (quotes converted to)",
     currenciesListLabel: "Tracked currencies",
     currenciesEmpty: "No currency added yet.",
@@ -681,7 +682,6 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cursorTokenPh: "Token de sesión",
     weatherTitle: "Clima",
     weatherLead: "Ve la previsión en el panel de mesa. Elige la ciudad y qué mostrar.",
-    weatherEnabled: "Mostrar clima en el panel",
     weatherCityLabel: "Ciudad",
     weatherCityPh: "ej.: São Paulo",
     weatherSearching: "Buscando…",
@@ -718,9 +718,10 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherPoweredBy: "Datos por Open-Meteo.com",
     financeiroTitle: "Finanzas",
     financeiroLead: "Billetera Bitcoin, AdSense y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
+    outrosTitle: "Otros",
+    outrosLead: "Widgets extra en el panel — pronóstico del tiempo y más por venir.",
     currenciesTitle: "Cotización de monedas",
     currenciesLead: "Agrega las monedas que quieras — fiat (dólar, euro...) o cripto — y mira la cotización convertida a tu moneda base.",
-    currenciesEnabled: "Mostrar en el panel",
     currenciesBaseLabel: "Moneda base (cotizaciones convertidas a)",
     currenciesListLabel: "Monedas seguidas",
     currenciesEmpty: "Ninguna moneda añadida todavía.",

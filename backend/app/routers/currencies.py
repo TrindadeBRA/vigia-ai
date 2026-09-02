@@ -49,8 +49,10 @@ def patch_config(body: CurrenciesPatch) -> CurrenciesConfig:
         cur = cfg.setdefault("currencies", {})
         if body.enabled is not None:
             cur["enabled"] = body.enabled
-        if body.hidden is not None:
+            cur["hidden"] = not body.enabled
+        elif body.hidden is not None:
             cur["hidden"] = body.hidden
+            cur["enabled"] = not body.hidden
         if base_clean is not None:
             cur["base"] = base_clean
 
@@ -74,8 +76,8 @@ def add_item(body: CurrencyItemBody) -> CurrenciesConfig:
         cur = cfg.setdefault("currencies", {})
         items = cur.setdefault("items", [])
         items.append({"id": item_id, "kind": body.kind, "code": code, "label": body.label.strip()})
-        if not cur.get("enabled"):
-            cur["enabled"] = True
+        cur["enabled"] = True
+        cur["hidden"] = False
 
     update(mut)
     return _config_public()
