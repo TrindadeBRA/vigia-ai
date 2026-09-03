@@ -8,6 +8,7 @@ import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropPreviewCell,
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
+import { AdsenseBoardCard, AdsenseDetail, adsenseAllowedSizes, adsenseSizeLabel, getAdsenseMetrics } from "../components/cards/AdsenseCard";
 import { BitcoinBoardCard, BitcoinDetail, bitcoinAllowedSizes, bitcoinSizeLabel } from "../components/cards/BitcoinCard";
 import { ClaudeBoardCard, ClaudeDetail, claudeAllowedSizes, claudeSizeLabel } from "../components/cards/ClaudeCard";
 import { CreditsBoardCard, CreditsDetail, creditsAllowedSizes, creditsSizeLabel, getCreditsMetrics, getOpenCodeMetrics } from "../components/cards/CreditsCard";
@@ -16,10 +17,10 @@ import { WeatherBoardCard, WeatherDetail, weatherAllowedSizes, weatherSizeLabel 
 import { CursorBoardCard, CursorDetail, cursorAllowedSizes, cursorSizeLabel } from "../components/cards/CursorCard";
 import { GptBoardCard, GptDetail, gptAllowedSizes, gptSizeLabel } from "../components/cards/GptCard";
 import { BellIcon, CheckIcon, ChipIcon, CloseIcon, CopyIcon, DownloadIcon, GitHubIcon, GridIcon, GripIcon, MaximizeIcon, MenuIcon, MinimizeIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
-import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
+import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
-import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
+import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import NowPage from "./NowPage";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
@@ -215,13 +216,6 @@ function bitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
   ];
 }
 
-function adsenseMetrics(a: AdsenseAccount, t: T): Metric[] {
-  return [
-    { label: t.adsenseToday, pct: null, value: a.today_cents != null ? fmtMoney(a.today_cents, a.currency) : null, sub: null },
-    { label: t.adsenseWallet, pct: null, value: a.unpaid_cents != null ? fmtMoney(a.unpaid_cents, a.currency) : null, sub: null },
-  ];
-}
-
 function Icon({ id, large, compact }: { id: string; large?: boolean; compact?: boolean }) {
   if (compact) {
     return (
@@ -411,7 +405,7 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       error: a.error,
       title: "AdSense",
       label: a.label || a.account_name || "",
-      metrics: adsenseMetrics(a, t),
+      metrics: getAdsenseMetrics(a, t),
     });
   }
   // Weather widget — só aparece se habilitado e não oculto
@@ -660,6 +654,46 @@ function SizeMenu({ size, t, onChange, allowed, getLabel }: { size: CardSize; t:
   );
 }
 
+const TILE_CHROME_CHIP = "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100 max-[860px]:pointer-events-auto max-[860px]:opacity-100";
+
+/** Chrome flutuante do tile: alça de arrastar isolada à esquerda (evita clique acidental nos outros botões) + duplicar/tamanho/remover à direita. */
+function TileChrome({
+  id,
+  t,
+  grip,
+  size,
+  onSetSize,
+  allowed,
+  getLabel,
+  isClone,
+  onDuplicate,
+  onRemove,
+}: {
+  id: string;
+  t: T;
+  grip?: object;
+  size: CardSize;
+  onSetSize: (next: CardSize) => void;
+  allowed?: CardSize[];
+  getLabel?: (s: CardSize) => string;
+  isClone: boolean;
+  onDuplicate?: (id: string) => void;
+  onRemove?: (id: string) => void;
+}) {
+  return (
+    <>
+      <div className={cn("absolute left-1 top-1/2 z-[3] flex -translate-y-1/2 items-center rounded-lg border border-edge bg-chip", TILE_CHROME_CHIP)}>
+        <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
+      </div>
+      <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", TILE_CHROME_CHIP)}>
+        {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(id); }}><CopyIcon size={12} /></button> : null}
+        <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={getLabel} />
+        {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(id); }}><TrashIcon size={12} /></button> : null}
+      </div>
+    </>
+  );
+}
+
 function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
   const allowed = weatherAllowedSizes(p.weather);
   const isClone = isCloneId(p.id);
@@ -676,12 +710,7 @@ function WeatherTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize
       )}
     >
       {!lifted ? (
-        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
-          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => weatherSizeLabel(s, t)} />
-          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => weatherSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <WeatherBoardCard weather={p.weather} config={p.weatherConfig} t={t} size={size} onOpen={onOpen} />
     </div>
@@ -704,12 +733,7 @@ function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetS
       )}
     >
       {!lifted ? (
-        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
-          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => currenciesSizeLabel(s, t, p.currencies?.items)} />
-          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => currenciesSizeLabel(s, t, p.currencies?.items)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <CurrenciesBoardCard currencies={p.currencies} t={t} size={size} onOpen={onOpen} />
     </div>
@@ -733,12 +757,7 @@ function ClaudeTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen
       )}
     >
       {!lifted ? (
-        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
-          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => claudeSizeLabel(s, t)} />
-          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => claudeSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <ClaudeBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
     </div>
@@ -762,12 +781,7 @@ function CursorTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen
       )}
     >
       {!lifted ? (
-        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
-          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => cursorSizeLabel(s, t)} />
-          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => cursorSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <CursorBoardCard metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
     </div>
@@ -791,12 +805,7 @@ function GptTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpen, o
       )}
     >
       {!lifted ? (
-        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
-          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => gptSizeLabel(s, t)} />
-          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => gptSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <GptBoardCard metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
     </div>
@@ -820,12 +829,7 @@ function CreditsTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, onOpe
       )}
     >
       {!lifted ? (
-        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
-          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => creditsSizeLabel(s, t, p.metrics)} />
-          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => creditsSizeLabel(s, t, p.metrics)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <CreditsBoardCard providerId={p.provider} metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
     </div>
@@ -849,14 +853,33 @@ function BitcoinTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize
       )}
     >
       {!lifted ? (
-        <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100", "max-[860px]:pointer-events-auto max-[860px]:opacity-100")}>
-          <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={(s) => bitcoinSizeLabel(s, t)} />
-          {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => bitcoinSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <BitcoinBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function AdsenseTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
+  const allowed = adsenseAllowedSizes(null, p.metrics);
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => adsenseSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
+      ) : null}
+      <AdsenseBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} size={size} onOpen={onOpen} />
     </div>
   );
 }
@@ -901,6 +924,9 @@ function ProviderCard({
   if (p.provider === "bitcoin") {
     return <BitcoinTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
+  if (p.provider === "adsense") {
+    return <AdsenseTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
   if (p.provider === "openrouter" || p.provider === "deepseek" || p.provider === "opencode" || p.provider === "fal") {
     return <CreditsTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
@@ -924,26 +950,7 @@ function ProviderCard({
       )}
     >
       {!lifted ? (
-        <div
-          className={cn(
-            "absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip",
-            "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100",
-            "max-[860px]:pointer-events-auto max-[860px]:opacity-100",
-          )}
-        >
-          <button
-            type="button"
-            className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing"
-            aria-label={t.dragCard}
-            title={t.dragCard}
-            {...grip}
-          >
-            <GripIcon size={14} />
-          </button>
-          {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><CopyIcon size={12} /></button> : null}
-          <SizeMenu size={size} t={t} onChange={onSetSize} />
-          {isCloneId(p.id) && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><TrashIcon size={12} /></button> : null}
-        </div>
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} isClone={isCloneId(p.id)} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
         <div className="relative shrink-0">
@@ -1481,60 +1488,6 @@ function Overview({
 }
 
 
-function MetaChips({ items }: { items: { k: string; v: ReactNode }[] }) {
-  const shown = items.filter((i) => i.v !== null && i.v !== undefined && i.v !== "");
-  if (!shown.length) return null;
-  return (
-    <div className="grid w-full overflow-hidden rounded-2xl border border-edge bg-edge [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))] gap-px">
-      {shown.map((i) => (
-        <div className="flex min-w-0 flex-col gap-1 bg-panel px-4 py-3" key={i.k}>
-          <span className="text-[11px] font-[650] uppercase tracking-[.45px] text-ink3">{i.k}</span>
-          <span className={`${num} overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-[650]`}>{i.v}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MetricCard({
-  label,
-  pct,
-  value,
-  sub,
-  pal,
-  children,
-}: {
-  label: string;
-  pct: number | null | undefined;
-  value?: string | null;
-  sub?: string | null;
-  pal: Pal;
-  children?: ReactNode;
-}) {
-  const display = value ?? (pct != null ? fmtPct(pct) : null);
-  return (
-    <div className={metricCard}>
-      <div className="mb-2.5 flex items-baseline justify-between gap-3 text-[13.5px]">
-        <span className="text-ink2">{label}</span>
-        {display ? <span className={`${num} text-[22px] font-[750]`}>{display}</span> : null}
-      </div>
-      {pct != null ? (
-        <div className={`${barTrack} h-[9px]`}>
-          <div className={barFill} style={barFillStyle(pct, pal)} />
-        </div>
-      ) : !display && sub ? (
-        <div className={`${num} mt-0.5 text-[22px] font-[750]`}>{sub}</div>
-      ) : null}
-      {sub && (pct != null || display) ? <div className="mt-2.5 text-[12.5px] text-ink3">{sub}</div> : null}
-      {children}
-    </div>
-  );
-}
-
-function MetricsGrid({ children }: { children: ReactNode }) {
-  return <div className={metricsGrid}>{children}</div>;
-}
-
 function Kv({ k, v }: { k: string; v: ReactNode }) {
   if (v === null || v === undefined || v === "") return null;
   return (
@@ -1561,18 +1514,8 @@ function BitcoinBody({ data, account, t }: { data: UsagePayload; account: Bitcoi
   return <BitcoinDetail account={account} updatedAt={data.updated_at} t={t} />;
 }
 
-function AdsenseBody({ data, account, t, pal }: { data: UsagePayload; account: AdsenseAccount; t: T; pal: Pal }) {
-  const a = account;
-  return (
-    <>
-      {a.account_name ? <div className="px-0.5 text-[12.5px] tracking-[.1px] text-ink3">{a.account_name}</div> : null}
-      <MetaChips items={[{ k: t.updated, v: fmtWhen(data.updated_at) }]} />
-      <MetricsGrid>
-        <MetricCard label={t.adsenseToday} pct={null} pal={pal} value={a.today_cents != null ? fmtMoney(a.today_cents, a.currency) : t.noData} />
-        <MetricCard label={t.adsenseWallet} pct={null} pal={pal} value={a.unpaid_cents != null ? fmtMoney(a.unpaid_cents, a.currency) : t.noData} />
-      </MetricsGrid>
-    </>
-  );
+function AdsenseBody({ data, account, t }: { data: UsagePayload; account: AdsenseAccount; t: T }) {
+  return <AdsenseDetail account={account} updatedAt={data.updated_at} t={t} />;
 }
 
 function WeatherAccountPage({ data, t }: { data: UsagePayload; t: T }) {
@@ -1624,7 +1567,7 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
       body = <CreditsDetail metrics={meta.metrics} updatedAt={data.updated_at} note={meta.provider === "openrouter" ? t.allKeysNote : null} t={t} pal={pal} nowMs={nowMs} />;
     }
     else if (meta.provider === "bitcoin") body = <BitcoinBody data={data} account={account as BitcoinAccount} t={t} />;
-    else if (meta.provider === "adsense") body = <AdsenseBody data={data} account={account as AdsenseAccount} t={t} pal={pal} />;
+    else if (meta.provider === "adsense") body = <AdsenseBody data={data} account={account as AdsenseAccount} t={t} />;
   }
   return (
     <div className={`w-full ${viewFade}`}>
