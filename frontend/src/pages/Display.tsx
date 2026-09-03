@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
-import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropPreviewCell, dropTarget, duplicateBoard, emptyBoard, emptyCells, isCloneId, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, removeCloneBoard, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize, type Cell } from "../board";
+import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropPreviewCell, dropTarget, duplicateBoard, emptyBoard, emptyCells, isCloneId, normalizeSize, packBoard, padRowsForHeight, placeCard, rectCells, rectFor, removeCloneBoard, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize, type Cell } from "../board";
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
@@ -970,9 +970,18 @@ function ProviderCard({
   );
 }
 
-function EmptySlot({ id }: { id: string }) {
+function EmptySlot({ id, active, preview }: { id: string; active: boolean; preview?: boolean }) {
   const { setNodeRef } = useDroppable({ id });
-  return <div ref={setNodeRef} className="h-full min-h-0" aria-hidden />;
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "h-full min-h-0 rounded-2xl border border-dashed transition-colors duration-150",
+        preview ? "border-accent bg-chip" : active ? "border-edge bg-chip/30" : "border-transparent",
+      )}
+      aria-hidden
+    />
+  );
 }
 
 function BoardTile({
@@ -1194,6 +1203,9 @@ function Overview({
   const active = activeId ? byId.get(activeId) : null;
   const activeSize: CardSize = activeId ? normalizeSize(layout.size[activeId]) : "md";
   const activeRect = rectFor(activeSize, cols);
+  const holeKeys = new Set(holes.map((h) => `${h.r}:${h.c}`));
+  const previewCells = dropPreview && activeId ? rectCells(dropPreview, activeRect) : [];
+  const previewKeys = new Set(previewCells.map((c) => `${c.r}:${c.c}`));
 
   useEffect(() => {
     const el = gridRef.current;
@@ -1338,7 +1350,11 @@ function Overview({
                 style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
                 className="min-h-0 min-w-0 h-full"
               >
-                <EmptySlot id={slotKey(cell.r, cell.c)} />
+                <EmptySlot
+                  id={slotKey(cell.r, cell.c)}
+                  active={Boolean(activeId)}
+                  preview={previewKeys.has(`${cell.r}:${cell.c}`)}
+                />
               </div>
             ))}
             {ids.map((id) => {
@@ -1364,16 +1380,16 @@ function Overview({
                 />
               );
             })}
-            {dropPreview && activeId ? (
-              <div
-                aria-hidden
-                className="pointer-events-none z-[3] min-h-0 min-w-0 rounded-2xl border-2 border-dashed border-accent bg-accent/12 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_55%,transparent)] transition-[grid-column,grid-row] duration-75"
-                style={{
-                  gridColumn: `${dropPreview.c + 1} / span ${activeRect.w}`,
-                  gridRow: `${dropPreview.r + 1} / span ${activeRect.h}`,
-                }}
-              />
-            ) : null}
+            {previewCells
+              .filter((cell) => !holeKeys.has(`${cell.r}:${cell.c}`))
+              .map((cell) => (
+                <div
+                  key={`drop-preview-${cell.r}:${cell.c}`}
+                  aria-hidden
+                  className="pointer-events-none z-[3] min-h-0 min-w-0 rounded-2xl border border-dashed border-accent bg-chip transition-colors duration-150"
+                  style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
+                />
+              ))}
           </div>
           <DragOverlay zIndex={80} dropAnimation={null}>
             {active ? (

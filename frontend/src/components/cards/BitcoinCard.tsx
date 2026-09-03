@@ -81,7 +81,6 @@ function ValueRow({ m, compact }: { m: Metric; compact?: boolean }) {
       <div className="mt-1.5 flex min-w-0 flex-col gap-1 first:mt-0">
         <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] leading-none text-ink3">{m.label}</span>
         <span className={cn(num, "min-w-0 text-[13px] font-bold leading-tight [overflow-wrap:anywhere]")}>{m.value || "--"}</span>
-        {m.sub && m.sub !== m.value ? <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{m.sub}</span> : null}
       </div>
     );
   }

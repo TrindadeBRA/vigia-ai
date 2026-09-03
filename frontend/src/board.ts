@@ -93,6 +93,17 @@ export function dropPreviewCell(target: Cell, size: CardSize | undefined, cols: 
   return clampCell(target, rectFor(size, cols), cols);
 }
 
+/** Todas as células cobertas por um retângulo a partir da origem. */
+export function rectCells(origin: Cell, rect: Rect): Cell[] {
+  const cells: Cell[] = [];
+  for (let r = origin.r; r < origin.r + rect.h; r++) {
+    for (let c = origin.c; c < origin.c + rect.w; c++) {
+      cells.push({ r, c });
+    }
+  }
+  return cells;
+}
+
 export function occupancy(ids: string[], board: BoardLayout, cols: number): Map<string, string> {
   const occ = new Map<string, string>();
   for (const id of ids) {
