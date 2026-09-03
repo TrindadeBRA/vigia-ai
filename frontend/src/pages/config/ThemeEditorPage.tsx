@@ -482,7 +482,7 @@ function IconChip({
 
 const ToolButton = forwardRef<HTMLButtonElement, { icon: ReactNode; label: string; active?: boolean; disabled?: boolean; onClick: () => void }>(
   ({ icon, label, active, disabled, onClick }, ref) => (
-    <div className="group/tool relative flex shrink-0">
+    <div className="group/tool relative flex size-11 shrink-0 items-center justify-center">
       <button
         ref={ref}
         type="button"
@@ -491,7 +491,7 @@ const ToolButton = forwardRef<HTMLButtonElement, { icon: ReactNode; label: strin
         disabled={disabled}
         onClick={onClick}
         className={cn(
-          "flex size-11 shrink-0 items-center justify-center rounded-[12px] border text-ink2 transition-colors duration-150",
+          "flex size-full items-center justify-center rounded-[12px] border text-ink2 transition-colors duration-150",
           active ? "border-accent bg-chip text-accent" : "border-transparent hover:border-edge hover:bg-chip hover:text-ink",
           disabled && "cursor-not-allowed opacity-40 hover:border-transparent hover:bg-transparent hover:text-ink2",
         )}
@@ -825,9 +825,9 @@ export default function ThemeEditorPage() {
       <FieldStatus status={send.status} message={send.message} />
       <FieldStatus status={remove.status} message={remove.message} />
 
-      <div className="grid w-full items-start gap-[14px] lg:grid-cols-[56px_minmax(0,1fr)_336px]">
+      <div className="grid w-full items-start gap-[14px] lg:grid-cols-[max-content_minmax(0,1fr)_336px]">
         {/* Barra de ferramentas — cada ícone é uma ação, como numa paleta de ferramentas de editor de imagem. */}
-        <div className="flex flex-row flex-wrap items-center gap-1 rounded-2xl border border-edge bg-panel p-1.5 shadow-card [.flat_&]:shadow-none lg:flex-col lg:p-2">
+        <div className="flex w-max flex-row flex-nowrap items-center justify-center gap-1 self-start rounded-2xl border border-edge bg-panel p-1.5 shadow-card [.flat_&]:shadow-none lg:flex-col lg:p-1.5">
           <ToolButton icon={<TextIcon size={19} />} label={c.addText} disabled={theme.texts.length >= MAX_TEXTS} onClick={addText} />
           <ToolButton
             icon={<ClockIcon size={19} />}
