@@ -24,29 +24,20 @@ import type { DisplayOutlet } from "./config/usePublicConfig";
 import NowPage from "./NowPage";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
 import { gridWallpaperUrl, useGridWallpaper } from "../hooks/useGridWallpaper";
+import { useGridBoards, type BoardsMap } from "../hooks/useGridBoards";
 
 const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
   const hits = pointerWithin(args);
   return hits.length ? hits : closestCorners(args);
 };
 
-type Breakpoint = "desktop" | "tablet" | "mobile";
-type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout; boards?: Partial<Record<Breakpoint, BoardLayout>>; focus?: boolean };
+type Prefs = { theme: ThemeName; accent: number; lang: Lang; focus?: boolean };
 
-function breakpointOf(cols: number): Breakpoint {
-  if (cols <= 4) return "mobile";
-  if (cols <= 8) return "tablet";
-  return "desktop";
+/** Layout salvo para a quantidade exata de colunas visíveis (o "breakpoint" é o número de colunas, não um bucket fixo). */
+function boardForCols(boards: BoardsMap, cols: number): BoardLayout {
+  return boards[cols] || emptyBoard();
 }
 
-function boardForBreakpoint(prefs: Prefs, bp: Breakpoint): BoardLayout {
-  return prefs.boards?.[bp] || prefs.board || emptyBoard();
-}
-
-function setBoardForBreakpoint(prefs: Prefs, bp: Breakpoint, board: BoardLayout): Prefs {
-  const boards = { ...prefs.boards, [bp]: board };
-  return { ...prefs, boards, board };
-}
 type Pal = (typeof PALETTES)[ThemeName];
 export type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null; value?: string | null };
 export type ProviderMeta = {
@@ -1189,6 +1180,7 @@ function Overview({
   pal,
   board,
   onBoard,
+  onColsChange,
   onOpen,
   focus,
   onToggleFocus,
@@ -1202,6 +1194,7 @@ function Overview({
   pal: Pal;
   board: BoardLayout;
   onBoard: (fn: (b: BoardLayout) => BoardLayout) => void;
+  onColsChange?: (cols: number) => void;
   onOpen: (id: string) => void;
   focus: boolean;
   onToggleFocus: () => void;
@@ -1250,6 +1243,7 @@ function Overview({
       if (el.clientWidth < 1) return;
       const nextCols = focusColsRef.current ?? colsForWidth(el.clientWidth);
       setCols(nextCols);
+      onColsChange?.(nextCols);
       const cell = Math.max(80, Math.floor((el.clientWidth - CELL_GAP * Math.max(0, nextCols - 1)) / Math.max(1, nextCols)));
       setCellPx(cell);
       const main = el.closest("main");
@@ -1738,7 +1732,8 @@ export default function Display() {
   const [driftMs, setDriftMs] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchFailed, setFetchFailed] = useState(false);
-  const [currentBp, setCurrentBp] = useState<Breakpoint>(() => breakpointOf(colsForWidth(window.innerWidth)));
+  const [currentCols, setCurrentCols] = useState<number>(() => colsForWidth(window.innerWidth));
+  const [boards, setBoards] = useGridBoards();
   const [gridWallpaperOpen, setGridWallpaperOpen] = useState(false);
   const { gridId: gridWallpaperId } = useGridWallpaper();
   const pollMsRef = useRef(POLL_MS);
@@ -1761,7 +1756,10 @@ export default function Display() {
   }, [pal, accent, flat]);
 
   useEffect(() => {
-    const update = () => setCurrentBp(breakpointOf(colsForWidth(window.innerWidth)));
+    // Estimativa pela largura da janela — usada fora do grid (ex.: página de
+    // conta) ou até o Overview medir a largura real do grid e corrigir via
+    // onColsChange (a barra lateral reduz a área útil em telas largas).
+    const update = () => setCurrentCols(colsForWidth(window.innerWidth));
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
@@ -1830,10 +1828,10 @@ export default function Display() {
   useEffect(() => {
     if (!data || section !== "account") return;
     const base = buildProviders(data, t);
-    const bpBoard = boardForBreakpoint({ ...prefs }, currentBp);
+    const bpBoard = boardForCols(boards, currentCols);
     const expanded = expandProvidersWithClones(base, bpBoard);
     if (!expanded.some((p) => p.id === selectedId) && !base.some((p) => p.id === baseIdForProvider(selectedId || ""))) setSection("overview");
-  }, [data, section, selectedId, t, prefs.boards, prefs.board, currentBp]);
+  }, [data, section, selectedId, t, boards, currentCols]);
 
   function goOverview() {
     navigate("/display");
@@ -1841,7 +1839,7 @@ export default function Display() {
   }
 
   const providers = data ? buildProviders(data, t, now) : [];
-  const bpBoard = boardForBreakpoint(prefs, currentBp);
+  const bpBoard = boardForCols(boards, currentCols);
   const displayProviders = expandProvidersWithClones(providers, bpBoard);
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null = null;
@@ -1984,16 +1982,17 @@ export default function Display() {
                   now={now}
                   t={t}
                   pal={pal}
-                  board={boardForBreakpoint(prefs, currentBp)}
+                  board={boardForCols(boards, currentCols)}
                   onBoard={(fn) =>
-                    setPrefs((p) => {
+                    setBoards((b) => {
                       const ids = displayProviders.map((x) => x.id);
-                      const cur = boardForBreakpoint(p, currentBp);
+                      const cur = boardForCols(b, currentCols);
                       const next = fn(cur);
-                      if (sameBoard(cur, next, ids)) return p;
-                      return setBoardForBreakpoint(p, currentBp, next);
+                      if (sameBoard(cur, next, ids)) return b;
+                      return { ...b, [currentCols]: next };
                     })
                   }
+                  onColsChange={setCurrentCols}
                   onOpen={(id) => { setSection("account"); setSelectedId(id); }}
                   focus={focusMode}
                   onToggleFocus={toggleFocus}

@@ -19,6 +19,7 @@ from app.hub import UsageHub
 from app.netutil import lan_ipv4
 from app.routers.adsense import router as adsense_router
 from app.routers.alarms import router as alarms_router
+from app.routers.board import router as board_router
 from app.routers.config import router as config_router
 from app.routers.currencies import router as currencies_router
 from app.routers.telegram import router as telegram_router
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
     app.include_router(config_router)
     app.include_router(adsense_router)
     app.include_router(theme_router)
+    app.include_router(board_router)
     app.include_router(alarms_router)
     app.include_router(telegram_router)
     app.include_router(wallpapers_router)
