@@ -190,3 +190,35 @@ export function UploadIcon(props: { size?: number; className?: string }) {
     </Svg>
   );
 }
+
+export function TextIcon(props: { size?: number; className?: string }) {
+  return <Svg {...props} d="M5 6h14M12 6v13" />;
+}
+
+export function ImageIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <rect x={3.5} y={5} width={17} height={14} rx={2.2} stroke="currentColor" strokeWidth={2} />
+      <circle cx={9} cy={10} r={1.6} fill="currentColor" />
+      <path d="M5 16.5l4.5-4.5 3 3 2.5-2.5L20 17" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function KeyIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <circle cx={7.5} cy={16.5} r={3.2} stroke="currentColor" strokeWidth={2} />
+      <path d="M9.8 14.2L17 7m0 0h3m-3 0v3M14 10l2 2" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function PlusCircleIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <circle cx={12} cy={12} r={8.5} stroke="currentColor" strokeWidth={2} />
+      <path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}

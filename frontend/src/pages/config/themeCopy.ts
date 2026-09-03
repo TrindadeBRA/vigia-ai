@@ -53,6 +53,9 @@ export type ThemeCopy = {
   removedOk: string;
   removeError: string;
   resolutionMismatch: string;
+  deleteHint: string;
+  apiKeysTool: string;
+  debugTool: string;
   debugTitle: string;
   debugLead: string;
   deviceIpLabel: string;
@@ -180,6 +183,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     removedOk: "Tema removido do coletor",
     removeError: "Falha ao remover",
     resolutionMismatch: "A resolução mudou desde a última imagem enviada — suba a imagem de novo.",
+    deleteHint: "Dica: a tecla Delete também remove o elemento selecionado.",
+    apiKeysTool: "Chaves de API",
+    debugTool: "Depuração da placa",
     debugTitle: "Depuração da placa (opcional)",
     debugLead: "Só pra ajustar a proporção do canvas e conferir visualmente — não afeta o salvar/aplicar tema.",
     deviceIpLabel: "IP da placa",
@@ -306,6 +312,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     removedOk: "Theme removed from the collector",
     removeError: "Failed to remove",
     resolutionMismatch: "Resolution changed since the last upload — upload the image again.",
+    deleteHint: "Tip: the Delete key also removes the selected element.",
+    apiKeysTool: "API keys",
+    debugTool: "Board debugging",
     debugTitle: "Board debugging (optional)",
     debugLead: "Only for matching the canvas proportions and checking visually — doesn't affect saving/applying the theme.",
     deviceIpLabel: "Board IP",
@@ -432,6 +441,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     removedOk: "Tema quitado del colector",
     removeError: "Falló al quitar",
     resolutionMismatch: "La resolución cambió desde la última imagen enviada — subila de nuevo.",
+    deleteHint: "Consejo: la tecla Supr también quita el elemento seleccionado.",
+    apiKeysTool: "Claves de API",
+    debugTool: "Depuración de la placa",
     debugTitle: "Depuración de la placa (opcional)",
     debugLead: "Solo para ajustar la proporción del lienzo y revisar visualmente — no afecta guardar/aplicar el tema.",
     deviceIpLabel: "IP de la placa",

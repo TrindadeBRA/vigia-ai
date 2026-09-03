@@ -1,8 +1,9 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "../../cn";
+import { CloseIcon } from "../../components/icons";
 import { useRequest, type RequestStatus } from "../../hooks/useRequest";
-import { cfgCard, cfgFieldLabel, cfgStatus } from "../../tw";
+import { cfgCard, cfgFieldLabel, cfgStatus, iconBtn } from "../../tw";
 
 export function Card({
   title,
@@ -211,4 +212,49 @@ export function FieldStatus({ status, message }: { status: RequestStatus; messag
 
 export function ActionRow({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-end gap-2">{children}</div>;
+}
+
+export function Modal({
+  title,
+  onClose,
+  wide,
+  closeLabel = "Fechar",
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  wide?: boolean;
+  closeLabel?: string;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={cn(
+          "flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-card-hover",
+          wide ? "max-w-[720px]" : "max-w-[480px]",
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-edge px-5 py-3.5">
+          <h2 className="m-0 text-[15.5px] font-bold">{title}</h2>
+          <button type="button" className={iconBtn} onClick={onClose} title={closeLabel} aria-label={closeLabel}>
+            <CloseIcon size={18} />
+          </button>
+        </div>
+        <div className="flex flex-col gap-4 overflow-y-auto px-5 py-4">{children}</div>
+      </div>
+    </div>
+  );
 }

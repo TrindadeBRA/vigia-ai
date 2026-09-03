@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
+import { ChipIcon, ClockIcon, ImageIcon, KeyIcon, PlusCircleIcon, TextIcon } from "../../components/icons";
 import { Logo } from "../../components/Logo";
 import { Skeleton } from "../../components/Skeleton";
 import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import { useRequest } from "../../hooks/useRequest";
+import { STR } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
@@ -21,7 +24,7 @@ import {
   weatherEmoji,
   type ThemeProvider,
 } from "./themeMetrics";
-import { Button, Card, Checkbox, FieldStatus, Fold, TextField } from "./ui";
+import { Button, Card, Checkbox, FieldStatus, Modal, TextField } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./WallpaperManager";
 
@@ -374,6 +377,114 @@ function IconChip({
   );
 }
 
+const ToolButton = forwardRef<HTMLButtonElement, { icon: ReactNode; label: string; active?: boolean; disabled?: boolean; onClick: () => void }>(
+  ({ icon, label, active, disabled, onClick }, ref) => (
+    <div className="group/tool relative flex shrink-0">
+      <button
+        ref={ref}
+        type="button"
+        aria-label={label}
+        aria-pressed={active}
+        disabled={disabled}
+        onClick={onClick}
+        className={cn(
+          "flex size-11 shrink-0 items-center justify-center rounded-[12px] border text-ink2 transition-colors duration-150",
+          active ? "border-accent bg-chip text-accent" : "border-transparent hover:border-edge hover:bg-chip hover:text-ink",
+          disabled && "cursor-not-allowed opacity-40 hover:border-transparent hover:bg-transparent hover:text-ink2",
+        )}
+      >
+        {icon}
+      </button>
+      <span
+        role="tooltip"
+        className={cn(
+          "pointer-events-none absolute left-1/2 top-full z-[110] mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-md border border-edge bg-panel px-2 py-1 text-[11.5px] font-[650] text-ink opacity-0 shadow-card-hover transition-opacity delay-150 duration-150",
+          "group-hover/tool:opacity-100 group-focus-within/tool:opacity-100",
+          "lg:left-full lg:top-1/2 lg:mt-0 lg:translate-x-0 lg:-translate-y-1/2 lg:ml-2",
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  ),
+);
+ToolButton.displayName = "ToolButton";
+
+function ToolbarDivider() {
+  return <div aria-hidden className="my-0.5 h-7 w-px shrink-0 bg-edge lg:my-0.5 lg:h-px lg:w-7" />;
+}
+
+function ToolPopover({
+  anchorRef,
+  open,
+  onClose,
+  width = 280,
+  children,
+}: {
+  anchorRef: RefObject<HTMLElement | null>;
+  open: boolean;
+  onClose: () => void;
+  width?: number;
+  children: ReactNode;
+}) {
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const r = anchorRef.current?.getBoundingClientRect();
+      if (!r) return;
+      let left = r.right + 10;
+      let top = r.top;
+      if (left + width > window.innerWidth - 8) left = Math.max(8, r.left - width - 10);
+      if (left + width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - width - 8);
+      const maxTop = window.innerHeight - 8;
+      if (top > maxTop - 120) top = Math.max(8, maxTop - 360);
+      setPos({ top, left });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, anchorRef, width]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (anchorRef.current?.contains(target)) return;
+      if (popRef.current?.contains(target)) return;
+      onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose, anchorRef]);
+
+  if (!open || !pos) return null;
+  return createPortal(
+    <div
+      ref={popRef}
+      role="dialog"
+      className="fixed z-[100] max-h-[70vh] overflow-y-auto rounded-2xl border border-edge bg-panel p-3 shadow-card-hover"
+      style={{ top: pos.top, left: pos.left, width }}
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 export default function ThemeEditorPage() {
   const { cfg, phase, reload, setPhase, lang } = usePublicConfig();
   const c = THEME_STR[lang];
@@ -393,13 +504,19 @@ export default function ThemeEditorPage() {
   const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
   const [currentWallpaperId, setCurrentWallpaperId] = useState<string | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+  const [wallpaperModalOpen, setWallpaperModalOpen] = useState(false);
+  const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
+  const [debugModalOpen, setDebugModalOpen] = useState(false);
   const handleWallpaperSelected = useCallback((id: string | null) => {
     setCurrentWallpaperId(id);
   }, []);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const addProviderBtnRef = useRef<HTMLButtonElement>(null);
   const send = useRequest();
   const remove = useRequest();
   const screenshot = useRequest();
+  const closeLabel = STR[lang].closeSettings;
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);
@@ -520,6 +637,26 @@ export default function ThemeEditorPage() {
     setSelected(null);
   }
 
+  // Delete/Backspace remove o elemento selecionado — como num editor de imagem —,
+  // exceto quando o foco está num campo de texto (ex: editando o texto do próprio
+  // elemento ou o IP da placa), onde a tecla deve só apagar caracteres.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const active = document.activeElement as HTMLElement | null;
+      if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT" || active.isContentEditable)) return;
+      if (selected?.startsWith("icon:")) {
+        e.preventDefault();
+        removeIcon(selected.slice(5));
+      } else if (selected?.startsWith("text:")) {
+        e.preventDefault();
+        removeText(selected.slice(5));
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selected]);
+
   async function saveTheme() {
     const hasWallpaper = Boolean(currentWallpaperId);
     const r2 = await fetch("/api/theme/meta", {
@@ -584,107 +721,139 @@ export default function ThemeEditorPage() {
       <FieldStatus status={send.status} message={send.message} />
       <FieldStatus status={remove.status} message={remove.message} />
 
-      <div className="grid w-full items-start gap-[14px] lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)]">
-        <Card title={c.canvasTitle} lead={c.canvasHint}>
-          {!canvasKnown ? <p className={cfgStatus}>{c.canvasNoDevice}</p> : null}
-          {currentWallpaperId || localPreviewUrl ? (
-            <p className={cfgStatus}>{c.wallpaperInUse}</p>
-          ) : wallpapers.length > 0 ? (
-            <p className={`${cfgStatus} text-warn`}>{c.wallpaperNoneSelected}</p>
-          ) : null}
-          <div
-            ref={canvasRef}
-            className="relative mx-auto w-full max-w-[560px] touch-none select-none overflow-hidden rounded-[14px] border border-edge"
-            style={{
-              aspectRatio: `${canvasSize.width} / ${canvasSize.height}`,
-              background: theme.background.color,
+      <div className="grid w-full items-start gap-[14px] lg:grid-cols-[56px_minmax(0,1fr)_336px]">
+        {/* Barra de ferramentas — cada ícone é uma ação, como numa paleta de ferramentas de editor de imagem. */}
+        <div className="flex flex-row flex-wrap items-center gap-1 rounded-2xl border border-edge bg-panel p-1.5 shadow-card [.flat_&]:shadow-none lg:flex-col lg:p-2">
+          <ToolButton icon={<TextIcon size={19} />} label={c.addText} disabled={theme.texts.length >= MAX_TEXTS} onClick={addText} />
+          <ToolButton
+            icon={<ClockIcon size={19} />}
+            label={c.clock}
+            active={selected === "clock"}
+            onClick={() => {
+              if (!theme.clock.enabled) setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: true } }));
+              setSelected("clock");
             }}
-            onPointerDown={() => setSelected(null)}
-          >
-            {localPreviewUrl || currentWallpaperId ? (
-              <img
-                key={localPreviewUrl || currentWallpaperId}
-                src={localPreviewUrl || `/api/wallpapers/${currentWallpaperId}/preview`}
-                alt=""
-                draggable={false}
-                className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
-                style={{ imageRendering: "auto" }}
-                onError={(e) => {
-                  if (localPreviewUrl) return;
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : null}
-            {theme.clock.enabled ? (
-              <CanvasDot
-                x={theme.clock.x}
-                y={theme.clock.y}
-                canvasRef={canvasRef}
-                containerSize={containerSize}
-                selected={selected === "clock"}
-                title={c.clock}
-                onSelect={() => setSelected("clock")}
-                onDrag={(x, y) => setTheme((t) => ({ ...t, clock: { ...t.clock, x, y } }))}
-              >
-                {(() => {
-                  const autoPair = theme.clock.autoColor ? ntcGenerateReadableColor(theme.background.color) : null;
-                  const autoTextColor = autoPair ? autoPair[0] : null;
-                  const effectiveColor = theme.clock.autoColor ? autoTextColor || theme.clock.color : theme.clock.color;
-                  const bgClass = theme.clock.showBackground ? "bg-black/35" : "bg-transparent";
-                  return (
-                    <span
-                      className={`whitespace-nowrap rounded-md px-2 py-1 font-mono font-bold text-white ${bgClass}`}
-                      style={{ color: effectiveColor || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
-                    >
-                      {formatClock(now, theme.clock.format24h)}
-                    </span>
-                  );
-                })()}
-              </CanvasDot>
-            ) : null}
-            {theme.icons.map((icon) => (
-              <CanvasDot
-                key={icon.id}
-                x={icon.x}
-                y={icon.y}
-                canvasRef={canvasRef}
-                containerSize={containerSize}
-                selected={selected === `icon:${icon.id}`}
-                title={`${providerLabel(icon.provider)} ${formatThemeMetric(usage, icon.provider, icon.metric)}`}
-                onSelect={() => setSelected(`icon:${icon.id}`)}
-                onDrag={(x, y) => updateIcon(icon.id, { x, y })}
-                onRemove={() => removeIcon(icon.id)}
-                removeLabel={c.removeIcon}
-              >
-                {icon.style === "card" && providerSupportsCard(icon.provider) ? (
-                  <IconCard provider={icon.provider} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} lang={lang} />
-                ) : (
-                  <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
-                )}
-              </CanvasDot>
-            ))}
-            {theme.texts.map((txt) => (
-              <CanvasDot
-                key={txt.id}
-                x={txt.x}
-                y={txt.y}
-                canvasRef={canvasRef}
-                containerSize={containerSize}
-                selected={selected === `text:${txt.id}`}
-                title={txt.text}
-                onSelect={() => setSelected(`text:${txt.id}`)}
-                onDrag={(x, y) => updateText(txt.id, { x, y })}
-                onRemove={() => removeText(txt.id)}
-                removeLabel={c.removeText}
-              >
-                <span className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white" style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}>
-                  {txt.text || "…"}
-                </span>
-              </CanvasDot>
-            ))}
-          </div>
-        </Card>
+          />
+          <ToolButton
+            ref={addProviderBtnRef}
+            icon={<PlusCircleIcon size={19} />}
+            label={c.addProvider}
+            active={addPopoverOpen}
+            disabled={theme.icons.length >= MAX_ICONS}
+            onClick={() => setAddPopoverOpen((v) => !v)}
+          />
+          <ToolbarDivider />
+          <ToolButton icon={<ImageIcon size={19} />} label={c.wallpapers} onClick={() => setWallpaperModalOpen(true)} />
+          <ToolButton icon={<KeyIcon size={19} />} label={c.apiKeysTool} onClick={() => setApiKeysModalOpen(true)} />
+          <ToolButton icon={<ChipIcon size={19} />} label={c.debugTool} onClick={() => setDebugModalOpen(true)} />
+        </div>
 
+        {/* Área de trabalho — o canvas fica centralizado, como o palco de um editor de imagem. */}
+        <div className="flex min-h-[380px] flex-col gap-3 rounded-2xl border border-edge bg-surface p-4 shadow-[inset_0_1px_2px_rgba(0,0,0,.28)] [.flat_&]:shadow-none sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[12px] text-ink3">
+            <span>{!canvasKnown ? c.canvasNoDevice : c.canvasHint}</span>
+            {currentWallpaperId || localPreviewUrl ? (
+              <span className="text-ink2">{c.wallpaperInUse}</span>
+            ) : wallpapers.length > 0 ? (
+              <span className="text-warn">{c.wallpaperNoneSelected}</span>
+            ) : null}
+          </div>
+          <div className="flex flex-1 items-center justify-center">
+            <div
+              ref={canvasRef}
+              className="relative mx-auto w-full max-w-[720px] touch-none select-none overflow-hidden rounded-[14px] border border-edge shadow-card-hover"
+              style={{
+                aspectRatio: `${canvasSize.width} / ${canvasSize.height}`,
+                background: theme.background.color,
+              }}
+              onPointerDown={() => setSelected(null)}
+            >
+              {localPreviewUrl || currentWallpaperId ? (
+                <img
+                  key={localPreviewUrl || currentWallpaperId}
+                  src={localPreviewUrl || `/api/wallpapers/${currentWallpaperId}/preview`}
+                  alt=""
+                  draggable={false}
+                  className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
+                  style={{ imageRendering: "auto" }}
+                  onError={(e) => {
+                    if (localPreviewUrl) return;
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : null}
+              {theme.clock.enabled ? (
+                <CanvasDot
+                  x={theme.clock.x}
+                  y={theme.clock.y}
+                  canvasRef={canvasRef}
+                  containerSize={containerSize}
+                  selected={selected === "clock"}
+                  title={c.clock}
+                  onSelect={() => setSelected("clock")}
+                  onDrag={(x, y) => setTheme((t) => ({ ...t, clock: { ...t.clock, x, y } }))}
+                >
+                  {(() => {
+                    const autoPair = theme.clock.autoColor ? ntcGenerateReadableColor(theme.background.color) : null;
+                    const autoTextColor = autoPair ? autoPair[0] : null;
+                    const effectiveColor = theme.clock.autoColor ? autoTextColor || theme.clock.color : theme.clock.color;
+                    const bgClass = theme.clock.showBackground ? "bg-black/35" : "bg-transparent";
+                    return (
+                      <span
+                        className={`whitespace-nowrap rounded-md px-2 py-1 font-mono font-bold text-white ${bgClass}`}
+                        style={{ color: effectiveColor || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
+                      >
+                        {formatClock(now, theme.clock.format24h)}
+                      </span>
+                    );
+                  })()}
+                </CanvasDot>
+              ) : null}
+              {theme.icons.map((icon) => (
+                <CanvasDot
+                  key={icon.id}
+                  x={icon.x}
+                  y={icon.y}
+                  canvasRef={canvasRef}
+                  containerSize={containerSize}
+                  selected={selected === `icon:${icon.id}`}
+                  title={`${providerLabel(icon.provider)} ${formatThemeMetric(usage, icon.provider, icon.metric)}`}
+                  onSelect={() => setSelected(`icon:${icon.id}`)}
+                  onDrag={(x, y) => updateIcon(icon.id, { x, y })}
+                  onRemove={() => removeIcon(icon.id)}
+                  removeLabel={c.removeIcon}
+                >
+                  {icon.style === "card" && providerSupportsCard(icon.provider) ? (
+                    <IconCard provider={icon.provider} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} lang={lang} />
+                  ) : (
+                    <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+                  )}
+                </CanvasDot>
+              ))}
+              {theme.texts.map((txt) => (
+                <CanvasDot
+                  key={txt.id}
+                  x={txt.x}
+                  y={txt.y}
+                  canvasRef={canvasRef}
+                  containerSize={containerSize}
+                  selected={selected === `text:${txt.id}`}
+                  title={txt.text}
+                  onSelect={() => setSelected(`text:${txt.id}`)}
+                  onDrag={(x, y) => updateText(txt.id, { x, y })}
+                  onRemove={() => removeText(txt.id)}
+                  removeLabel={c.removeText}
+                >
+                  <span className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white" style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}>
+                    {txt.text || "…"}
+                  </span>
+                </CanvasDot>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Painel de propriedades — camadas do tema + edição do item selecionado. */}
         <div className="flex flex-col gap-[14px]">
           <Card title={c.elements}>
             <div className="flex flex-col gap-1">
@@ -739,6 +908,18 @@ export default function ThemeEditorPage() {
                 </button>
               ))}
               {!theme.clock.enabled && theme.icons.length === 0 && theme.texts.length === 0 ? <p className={cfgStatus}>{c.noIcons}</p> : null}
+              <button
+                type="button"
+                onClick={() => setSelected("background")}
+                className={cn(
+                  "mt-1 flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
+                  selected === "background" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                )}
+              >
+                <span className="size-[18px] shrink-0 rounded-full shadow-[inset_0_0_0_1.5px_var(--card-border)]" style={{ background: theme.background.color }} />
+                <span className="min-w-0 flex-1 truncate font-[650]">{c.background}</span>
+                <span className="shrink-0 font-mono text-[11px] text-ink3">{theme.background.color.toUpperCase()}</span>
+              </button>
             </div>
           </Card>
 
@@ -813,6 +994,7 @@ export default function ThemeEditorPage() {
                 <Button variant="ghost" onClick={() => removeIcon(selectedIcon.id)}>
                   {c.removeIcon}
                 </Button>
+                <span className="text-xs text-ink3">{c.deleteHint}</span>
               </div>
             </Card>
           ) : selected === "clock" ? (
@@ -836,6 +1018,17 @@ export default function ThemeEditorPage() {
                 <Button variant="ghost" onClick={() => removeText(selectedText.id)}>
                   {c.removeText}
                 </Button>
+                <span className="text-xs text-ink3">{c.deleteHint}</span>
+              </div>
+            </Card>
+          ) : selected === "background" ? (
+            <Card title={c.background}>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <ColorSwatch value={theme.background.color} onChange={(v) => setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} size={40} />
+                  <span className="font-mono text-[13px] text-ink">{theme.background.color.toUpperCase()}</span>
+                </div>
+                <NameToColorPicker value={theme.background.color} onChange={(v) => v && setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} lang={lang} allowClear={false} />
               </div>
             </Card>
           ) : (
@@ -846,8 +1039,9 @@ export default function ThemeEditorPage() {
         </div>
       </div>
 
-      <Card title={c.addProvider} lead={theme.icons.length ? undefined : c.noIcons}>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+      <ToolPopover anchorRef={addProviderBtnRef} open={addPopoverOpen} onClose={() => setAddPopoverOpen(false)} width={300}>
+        <div className="mb-2 px-0.5 text-[11.5px] font-[650] uppercase tracking-[.4px] text-ink3">{c.addProvider}</div>
+        <div className="grid grid-cols-2 gap-2">
           {ICON_PROVIDERS.map((p) => {
             const value = formatThemeMetric(usage, p.id, defaultMetric(p.id));
             const onTheme = theme.icons.some((i) => i.provider === p.id);
@@ -857,115 +1051,95 @@ export default function ThemeEditorPage() {
                 type="button"
                 key={p.id}
                 disabled={disabled}
-                onClick={() => addIcon(p.id)}
-                className="flex items-center gap-2 rounded-[12px] border border-edge bg-canvas px-3 py-2.5 text-left hover:border-accent/50 hover:bg-chip disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={() => {
+                  addIcon(p.id);
+                  setAddPopoverOpen(false);
+                }}
+                className="flex items-center gap-2 rounded-[12px] border border-edge bg-canvas px-2.5 py-2 text-left hover:border-accent/50 hover:bg-chip disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {p.id === "brand" ? (
-                  <Logo size={22} />
+                  <Logo size={20} />
                 ) : p.id === "weather" ? (
-                  <span className="text-[18px]">{weatherEmoji(usage)}</span>
+                  <span className="text-[16px]">{weatherEmoji(usage)}</span>
                 ) : (
-                  <img src={PROVIDER_ICON[p.id]} alt="" className="size-[22px] object-contain" />
+                  <img src={PROVIDER_ICON[p.id]} alt="" className="size-5 object-contain" />
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-[650]">{p.label}</span>
-                  <span className="block truncate font-mono text-[11px] text-ink3">{value || (onTheme ? c.placed : c.metricNone)}</span>
+                  <span className="block truncate text-[12.5px] font-[650]">{p.label}</span>
+                  <span className="block truncate font-mono text-[10.5px] text-ink3">{value || (onTheme ? c.placed : c.metricNone)}</span>
                 </span>
               </button>
             );
           })}
         </div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={addText} disabled={theme.texts.length >= MAX_TEXTS}>
-            {c.addText}
-          </Button>
-          {!theme.clock.enabled ? (
-            <Button variant="secondary" onClick={() => { setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: true } })); setSelected("clock"); }}>
-              {c.clockEnabled}
-            </Button>
-          ) : null}
-        </div>
-      </Card>
-
-      <div className="grid w-full gap-[14px] [grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))]">
-        <Card title={c.background}>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <ColorSwatch value={theme.background.color} onChange={(v) => setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} size={40} />
-              <span className="font-mono text-[13px] text-ink">{theme.background.color.toUpperCase()}</span>
-            </div>
-            <NameToColorPicker value={theme.background.color} onChange={(v) => v && setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} lang={lang} allowClear={false} />
-          </div>
-        </Card>
-
-        {selected !== "clock" ? (
-          <Card title={c.clock}>
-            <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: e.target.checked } }))} />
-            <p className={cfgStatus}>{c.position}</p>
-          </Card>
-        ) : null}
-      </div>
+      </ToolPopover>
 
       <WallpaperManager lang={lang} onSelectedChange={handleWallpaperSelected} onLocalPreview={setLocalPreviewUrl}>
-        <div className="col-span-full">
-          <WallpaperLibrary />
-        </div>
-        <div className="col-span-full">
-          <WallpaperProviders />
-        </div>
+        {wallpaperModalOpen ? (
+          <Modal title={c.wallpapers} onClose={() => setWallpaperModalOpen(false)} closeLabel={closeLabel} wide>
+            <WallpaperLibrary />
+          </Modal>
+        ) : null}
+        {apiKeysModalOpen ? (
+          <Modal title={c.apiKeysTool} onClose={() => setApiKeysModalOpen(false)} closeLabel={closeLabel}>
+            <WallpaperProviders />
+          </Modal>
+        ) : null}
       </WallpaperManager>
 
-      <Fold summary={c.debugTitle} defaultOpen={false}>
-        <p className={cfgStatus}>{c.debugLead}</p>
-        <TextField
-          label={c.deviceIpLabel}
-          value={deviceIp}
-          placeholder="192.168.0.42"
-          hint={c.deviceIpHint}
-          onChange={(e) => {
-            setIpTouched(true);
-            setDeviceIp(e.target.value);
-          }}
-        />
-        {!deviceIp ? (
-          <p className={cfgStatus}>{c.deviceUnknown}</p>
-        ) : (
-          <>
-            {cfg?.device.last_seen_s != null ? <p className={cfgStatus}>{c.deviceSeen(cfg.device.last_seen_s)}</p> : null}
-            {isBareLoopback(deviceIp) ? <p className={`${cfgStatus} text-warn`}>{c.deviceLoopback}</p> : null}
-          </>
-        )}
-        <div className="flex flex-col gap-2">
-          <Button
-            variant="secondary"
-            disabled={!deviceIp.trim()}
-            loading={screenshotLoading}
-            onClick={() => {
-              setScreenshotLoading(true);
-              setScreenshotUrl(`http://${deviceIp.trim()}/theme/screenshot?t=${Date.now()}`);
+      {debugModalOpen ? (
+        <Modal title={c.debugTool} onClose={() => setDebugModalOpen(false)} closeLabel={closeLabel} wide>
+          <p className={cfgStatus}>{c.debugLead}</p>
+          <TextField
+            label={c.deviceIpLabel}
+            value={deviceIp}
+            placeholder="192.168.0.42"
+            hint={c.deviceIpHint}
+            onChange={(e) => {
+              setIpTouched(true);
+              setDeviceIp(e.target.value);
             }}
-          >
-            {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
-          </Button>
-          <p className={cfgStatus}>{c.screenshotHint}</p>
-          {screenshotUrl ? (
-            <button type="button" className="w-fit cursor-zoom-in border-0 bg-transparent p-0" onClick={() => setScreenshotFullscreen(true)}>
-              <img
-                src={screenshotUrl}
-                alt={c.screenshotButton}
-                className="w-full max-w-[320px] rounded-[10px] border border-edge"
-                onLoad={() => setScreenshotLoading(false)}
-                onError={() => {
-                  setScreenshotLoading(false);
-                  setScreenshotUrl(null);
-                  screenshot.fail(c.screenshotError);
-                }}
-              />
-            </button>
-          ) : null}
-          <FieldStatus status={screenshot.status} message={screenshot.message} />
-        </div>
-      </Fold>
+          />
+          {!deviceIp ? (
+            <p className={cfgStatus}>{c.deviceUnknown}</p>
+          ) : (
+            <>
+              {cfg?.device.last_seen_s != null ? <p className={cfgStatus}>{c.deviceSeen(cfg.device.last_seen_s)}</p> : null}
+              {isBareLoopback(deviceIp) ? <p className={`${cfgStatus} text-warn`}>{c.deviceLoopback}</p> : null}
+            </>
+          )}
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="secondary"
+              disabled={!deviceIp.trim()}
+              loading={screenshotLoading}
+              onClick={() => {
+                setScreenshotLoading(true);
+                setScreenshotUrl(`http://${deviceIp.trim()}/theme/screenshot?t=${Date.now()}`);
+              }}
+            >
+              {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
+            </Button>
+            <p className={cfgStatus}>{c.screenshotHint}</p>
+            {screenshotUrl ? (
+              <button type="button" className="w-fit cursor-zoom-in border-0 bg-transparent p-0" onClick={() => setScreenshotFullscreen(true)}>
+                <img
+                  src={screenshotUrl}
+                  alt={c.screenshotButton}
+                  className="w-full max-w-[320px] rounded-[10px] border border-edge"
+                  onLoad={() => setScreenshotLoading(false)}
+                  onError={() => {
+                    setScreenshotLoading(false);
+                    setScreenshotUrl(null);
+                    screenshot.fail(c.screenshotError);
+                  }}
+                />
+              </button>
+            ) : null}
+            <FieldStatus status={screenshot.status} message={screenshot.message} />
+          </div>
+        </Modal>
+      ) : null}
 
       {screenshotFullscreen && screenshotUrl ? (
         <div className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/90 p-6" onClick={() => setScreenshotFullscreen(false)}>

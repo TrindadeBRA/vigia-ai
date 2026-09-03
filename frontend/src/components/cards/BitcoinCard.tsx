@@ -159,7 +159,7 @@ export function BitcoinBoardCard({
         <BitcoinHeader label={label} ok={ok} onOpen={onOpen} />
         <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-0 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
           <div className="flex min-h-0 flex-1 flex-col justify-center gap-1 overflow-hidden">
-            {metrics.slice(0, 2).map((m, i) => (
+            {metrics.slice(0, 3).map((m, i) => (
               <ValueRow key={i} m={m} compact />
             ))}
           </div>
