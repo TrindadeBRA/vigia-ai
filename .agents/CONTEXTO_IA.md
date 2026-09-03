@@ -7,7 +7,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [SETUP.md](SETUP.md)                         | Instalar e rodar: quick start, comandos, placa, Wokwi, provedores |
 | [ARQUITETURA.md](ARQUITETURA.md)             | Coletor ↔ ESP32 ↔ APIs                                            |
 | [CONTRATO_JSON.md](CONTRATO_JSON.md)         | Formato de `/usage` (não quebrar o firmware)                      |
-| [CONTRATO_TEMA.md](CONTRATO_TEMA.md)         | Protótipo: tema custom (`porta 80` da placa, `/display/theme`)    |
+| [CONTRATO_TEMA.md](CONTRATO_TEMA.md)         | Protótipo: tema custom + papéis de parede (`porta 80` da placa, `/display/theme`) |
 | [NOTIFICACOES.md](NOTIFICACOES.md)           | Protótipo: alarmes + Telegram (`/display/alarms`)                     |
 | [APIS_CLAUDE.md](APIS_CLAUDE.md)             | OAuth usage da Anthropic                                          |
 | [APIS_GPT.md](APIS_GPT.md)                   | OAuth usage do Codex / ChatGPT                                    |
@@ -65,9 +65,14 @@ backend/app/telegram_bot.py        token Telegram + envio + polling unitário (p
 backend/app/telegram_poller.py     long-polling do Telegram (protótipo)
 backend/app/routers/alarms.py      rotas /api/alarms/*
 backend/app/routers/telegram.py    rotas /api/telegram/*
-frontend/src/pages/config/AlarmsPage.tsx  painel de alarmes + notificações (/display/alarms)
+frontend/src/pages/config/AlarmsPage.tsx  painel de alarmes + notificações (/display/alarms), com exportar/importar
 frontend/src/pages/config/useTelegram.ts  hook do Telegram
 firmware/src/ui/customtheme.cpp    persistência (LittleFS/RAM) + render do tema (VIEW_THEME)
+backend/app/routers/wallpapers.py  rotas /api/wallpapers/* — papéis de parede + busca/import Pexels/Wallhaven/Unsplash (SSRF-guarded)
+frontend/src/pages/config/WallpaperManager.tsx  biblioteca/busca/import de papel de parede (usado em /display/theme)
+frontend/src/pages/config/WallpaperProvidersConfigCard.tsx  chaves de API dos provedores de papel de parede (/display/config)
+backend/app/routers/board.py       rotas /api/board — layout do board (posição/tamanho dos cards) espelhado do localStorage
+frontend/src/hooks/useGridBoards.ts  hook do layout do board (localStorage + backend)
 firmware/platformio.ini
 ./dev                          único script
 ```

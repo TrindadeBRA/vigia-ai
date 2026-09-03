@@ -56,8 +56,9 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 - **Tempo real** — um único ciclo de consulta no coletor, distribuído por SSE; placa e abas de `/display` não multiplicam chamadas
 - **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
 - **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela
-- **Board arrastável no `/display` web** — 5 tamanhos de card (Pequeno, Largo, Médio, Wide, Grande), arraste e redimensione, packing sem sobreposição; o firmware espelha os mesmos tamanhos
-- **Alarmes + Telegram** — avise quando uma cota passar de um limiar ou o saldo de créditos ficar baixo, por mensagem no Telegram; ver [`.agents/NOTIFICACOES.md`](.agents/NOTIFICACOES.md)
+- **Board arrastável no `/display` web** — vários tamanhos de card (do compacto ao super largo), arraste e redimensione, packing sem sobreposição; layout sincroniza entre dispositivos na mesma LAN
+- **Papéis de parede** — fundo do editor de tema e do board web com imagem própria (upload) ou buscada em Pexels/Wallhaven/Unsplash
+- **Alarmes + Telegram** — avise quando uma cota passar de um limiar ou o saldo de créditos ficar baixo, por mensagem no Telegram, com exportar/importar regras em JSON; ver [`.agents/NOTIFICACOES.md`](.agents/NOTIFICACOES.md)
 - **Cotação de moedas e clima** — lista livre de moedas fiat/cripto convertidas numa moeda base, e previsão do tempo (Open-Meteo); cards opcionais na Início, Agora e detalhe
 - **3 temas × 7 cores de destaque**, **PT / EN / ES**
 - **QR code na tela** — abre o painel de configuração de qualquer aparelho na mesma Wi-Fi

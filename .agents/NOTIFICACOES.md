@@ -30,6 +30,13 @@ métricas em `cents`), atualizando ao vivo enquanto o campo "Nome" não é edita
 à mão. Regras já criadas têm um botão **Editar** (limiar e nome — provedor e
 métrica não mudam depois de criada; pra isso, remove e cria de novo).
 
+**Exportar/Importar** (`AlarmsPage.tsx:AlarmsIOButtons`, ícones no cabeçalho do
+card "Regras"): exportar baixa um JSON (`{version, exported_at, alarms: [...]}`)
+com `provider/metric/threshold/enabled/label` de cada regra; importar lê o
+arquivo e chama `POST /api/alarms` uma vez por regra válida (o backend já
+rejeita provider/metric desconhecidos). É só client-side — não existe rota de
+export/import no backend.
+
 O engine roda dentro do ciclo do `UsageHub` (`backend/app/hub.py`, hook
 `on_payload`) — mesma cadência do `USAGE_INTERVAL_S`, e também dispara numa
 chamada manual de `GET /usage`. O envio pro Telegram roda em thread separada

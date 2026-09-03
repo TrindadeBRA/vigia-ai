@@ -197,6 +197,10 @@ placa ao aplicar, e o painel ao montar).
 
 Chaves ficam em `config.json` → `wallpapers.providers.{pexels_key,unsplash_key,wallhaven_key}` (gitignored, nunca expostas no `GET /api/config`).
 
+No painel, as chaves têm um card próprio por provedor em **Configurações → Papéis de parede** (`frontend/src/pages/config/WallpaperProvidersConfigCard.tsx`) — o editor de tema (`/display/theme`) só cuida da biblioteca, busca e import (`WallpaperManager.tsx`).
+
+`_download_image`/`_http_json` (`backend/app/routers/wallpapers.py`) validam a URL antes de baixar: só `http`/`https`, host precisa resolver pra um IP público (bloqueia loopback/privado/link-local e `file://`), redirects são revalidados a cada hop.
+
 ## Rotas da placa (`firmware/src/net/theme_server.cpp`, porta 80)
 
 | Rota                     | O que faz                                                                                                                                                                                                                                                                                                                                                                                                                                |
