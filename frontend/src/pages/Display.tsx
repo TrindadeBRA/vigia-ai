@@ -22,6 +22,8 @@ import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type Theme
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, metricsGrid, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import NowPage from "./NowPage";
+import { GridWallpaperModal } from "../components/GridWallpaperModal";
+import { gridWallpaperUrl, useGridWallpaper } from "../hooks/useGridWallpaper";
 
 const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
   const hits = pointerWithin(args);
@@ -1190,6 +1192,8 @@ function Overview({
   onOpen,
   focus,
   onToggleFocus,
+  gridWallpaperId,
+  onOpenWallpaper,
 }: {
   providers: ProviderMeta[];
   updatedAt: string;
@@ -1201,6 +1205,8 @@ function Overview({
   onOpen: (id: string) => void;
   focus: boolean;
   onToggleFocus: () => void;
+  gridWallpaperId: string | null;
+  onOpenWallpaper: () => void;
 }) {
   const failing = providers.filter((p) => !p.ok).length;
   const age = payloadAgeMs(updatedAt, now);
@@ -1317,8 +1323,28 @@ function Overview({
     onBoard((b) => removeCloneBoard(b, id));
   }
 
+  const gridBgUrl = gridWallpaperUrl(gridWallpaperId);
   return (
-    <div className="flex min-h-full flex-col">
+    <div className={cn("flex min-h-full flex-col", gridBgUrl && "relative", gridBgUrl && !focus && "overflow-hidden rounded-xl")}>
+      {/* Grid wallpaper: apenas na área do grid; em fullscreen cobre a tela toda */}
+      {gridBgUrl ? (
+        <>
+          <img
+            key={gridWallpaperId}
+            src={gridBgUrl}
+            alt=""
+            draggable={false}
+            className={cn(
+              "pointer-events-none object-cover",
+              focus ? "fixed inset-0 z-0 size-full" : "absolute inset-0 z-0 size-full",
+            )}
+            style={{ imageRendering: "auto" }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <div className={cn("pointer-events-none", focus ? "fixed inset-0 z-0 bg-black/25" : "absolute inset-0 z-0 bg-black/25")} aria-hidden />
+        </>
+      ) : null}
+      <div className={cn("relative z-10 flex flex-col", gridBgUrl && !focus && "p-3", focus && gridBgUrl && "p-4")}>
       <div className="mb-[18px] flex w-full flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink2">
           <span className={cn("size-[7px] shrink-0 rounded-full", failing ? "bg-bad shadow-[0_0_5px_var(--bad)]" : "bg-good shadow-[0_0_5px_var(--good)]", "[.flat_&]:shadow-none")} />
@@ -1343,6 +1369,16 @@ function Overview({
             }
           >
             {t.resetLayout}
+          </button>
+          <button
+            type="button"
+            className={cn("flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink", focus && "border-accent text-accent")}
+            title="Wallpaper do grid"
+            aria-label="Wallpaper do grid"
+            onClick={onOpenWallpaper}
+          >
+            {/* ícone simples de imagem */}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
           </button>
           <button
             type="button"
@@ -1444,6 +1480,7 @@ function Overview({
           </DragOverlay>
         </DndContext>
       )}
+      </div>
     </div>
   );
 }
@@ -1701,6 +1738,8 @@ export default function Display() {
   const [refreshing, setRefreshing] = useState(false);
   const [fetchFailed, setFetchFailed] = useState(false);
   const [currentBp, setCurrentBp] = useState<Breakpoint>(() => breakpointOf(colsForWidth(window.innerWidth)));
+  const [gridWallpaperOpen, setGridWallpaperOpen] = useState(false);
+  const { gridId: gridWallpaperId } = useGridWallpaper();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
@@ -1902,7 +1941,7 @@ export default function Display() {
         </div>
         <main
           className={cn(
-            "min-w-0 flex-1",
+            "min-w-0 flex-1 relative",
             isCanvas ? "h-full overflow-hidden p-0" : "overflow-y-auto px-5 pb-12 pt-5 max-[860px]:px-4 max-[860px]:pb-16 max-[860px]:pt-[18px]",
           )}
         >
@@ -1938,6 +1977,8 @@ export default function Display() {
                   onOpen={(id) => { setSection("account"); setSelectedId(id); }}
                   focus={focusMode}
                   onToggleFocus={() => setPrefs((p) => ({ ...p, focus: !p.focus }))}
+                  gridWallpaperId={gridWallpaperId}
+                  onOpenWallpaper={() => setGridWallpaperOpen(true)}
                 />
               ) : null}
               {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
@@ -1946,6 +1987,7 @@ export default function Display() {
         </main>
       </div>
       {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
+      <GridWallpaperModal open={gridWallpaperOpen} onClose={() => setGridWallpaperOpen(false)} lang={prefs.lang} />
     </div>
   );
 }

@@ -122,6 +122,7 @@ def default_config() -> dict[str, Any]:
     cfg["providers"]["adsense"].update(
         {"client_id": "", "client_secret": "", "refresh_token": "", "account_name": ""}
     )
+    cfg["wallpapers"]["grid_selected_id"] = ""
     return cfg
 
 
@@ -418,6 +419,8 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
         first = next((str(x).strip() for x in order if isinstance(x, str) and str(x).strip()), "")
         if first:
             wp["selected_id"] = first
+    if isinstance(raw_wp.get("grid_selected_id"), str):
+        wp["grid_selected_id"] = raw_wp["grid_selected_id"].strip()
     return cfg
 
 

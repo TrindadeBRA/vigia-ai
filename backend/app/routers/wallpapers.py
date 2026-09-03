@@ -127,6 +127,23 @@ def _set_selected_id(wid: str | None) -> None:
     _patch_theme_background_type("image" if wid else "color")
 
 
+def _get_grid_selected_id() -> str | None:
+    cfg = load()
+    wp = cfg.get("wallpapers") or {}
+    grid_id = str(wp.get("grid_selected_id") or "").strip()
+    if grid_id:
+        return grid_id
+    return None
+
+
+def _set_grid_selected_id(wid: str | None) -> None:
+    def mut(cfg: dict[str, Any]) -> None:
+        wp = cfg.setdefault("wallpapers", {})
+        wp["grid_selected_id"] = str(wid or "")
+
+    update(mut)
+
+
 def _get_provider_keys() -> dict[str, str]:
     cfg = load()
     wp = cfg.get("wallpapers") or {}
@@ -249,6 +266,7 @@ def list_wallpapers() -> dict[str, Any]:
     return {
         "wallpapers": wallpapers,
         "selected_id": _get_selected_id(),
+        "grid_selected_id": _get_grid_selected_id(),
         "providers": providers,
         "count": len(wallpapers),
     }
@@ -553,7 +571,50 @@ def delete_wallpaper(wid: str) -> dict[str, Any]:
     selected = load().get("wallpapers", {}).get("selected_id") or ""
     if selected == wid or selected not in remaining:
         _set_selected_id(remaining[0] if remaining else None)
+    grid_selected = load().get("wallpapers", {}).get("grid_selected_id") or ""
+    if grid_selected == wid:
+        _set_grid_selected_id(None)
     return {"ok": True}
+
+@router.get("/{wid}/original", summary="Imagem original em alta qualidade")
+def get_original(wid: str) -> Response:
+    if not wid or "/" in wid or "\\" in wid:
+        raise HTTPException(400, "id inválido")
+    # 1) Tenta arquivo original salvo (pode ser .orig, .orig.jpg, .orig.png)
+    orig = _wallpaper_orig_path(wid)
+    if orig.is_file():
+        data = orig.read_bytes()
+        if data[:2] == b"\xff\xd8":
+            return Response(content=data, media_type="image/jpeg")
+        if data[:8] == b"\x89PNG\r\n\x1a\n":
+            return Response(content=data, media_type="image/png")
+        if data[:6] in (b"GIF87a", b"GIF89a"):
+            return Response(content=data, media_type="image/gif")
+        # tenta detectar via header, fallback jpeg
+        return Response(content=data, media_type="image/jpeg")
+    # 1b) Tenta variações com extensão
+    for ext, mime in [(".jpg", "image/jpeg"), (".jpeg", "image/jpeg"), (".png", "image/png"), (".gif", "image/gif"), (".webp", "image/webp")]:
+        p = _wallpapers_dir() / f"{wid}.orig{ext}"
+        if p.is_file():
+            return Response(content=p.read_bytes(), media_type=mime)
+    # 2) Fallback: usa preview se original não existe (ex: RAW antigo sem orig)
+    p = _wallpaper_preview_path(wid)
+    if p.is_file():
+        return Response(content=p.read_bytes(), media_type="image/jpeg")
+    # 3) Tenta gerar preview a partir do RAW como último recurso
+    raw_p = _wallpaper_raw_path(wid)
+    if raw_p.is_file():
+        raw = raw_p.read_bytes()
+        if len(raw) == 240*160*2:
+            jpg = _raw_to_preview(raw, 240, 160)
+            if jpg:
+                return Response(content=jpg, media_type="image/jpeg")
+        elif len(raw) == 160*120*2:
+            jpg = _raw_to_preview(raw, 160, 120)
+            if jpg:
+                return Response(content=jpg, media_type="image/jpeg")
+    raise HTTPException(404, "original não encontrado")
+
 
 @router.get("/{wid}/preview", summary="Preview JPEG do wallpaper")
 def get_preview(wid: str) -> Response:
@@ -888,6 +949,35 @@ async def import_wallpaper(request: Request) -> dict[str, Any]:
     _set_selected_id(wid)
 
     return {"ok": True, "id": wid, "provider": provider}
+
+@router.get("/grid/selected", summary="Papel de parede do grid (alta qualidade)")
+def get_grid_selected() -> dict[str, Any]:
+    wid = _get_grid_selected_id()
+    # valida se ainda existe
+    if wid and wid not in {w["id"] for w in _list_wallpapers()}:
+        wid = None
+        _set_grid_selected_id(None)
+    return {"grid_selected_id": wid}
+
+
+@router.put("/grid/selected", summary="Define papel de parede do grid")
+async def put_grid_selected(request: Request) -> dict[str, Any]:
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "JSON inválido")
+    wid = body.get("id")
+    if wid is not None and not isinstance(wid, str):
+        raise HTTPException(400, "id deve ser string")
+    if wid:
+        existing = {w["id"] for w in _list_wallpapers()}
+        if wid not in existing:
+            raise HTTPException(400, "wallpaper id inválido")
+        _set_grid_selected_id(wid)
+    else:
+        _set_grid_selected_id(None)
+    return {"ok": True, "grid_selected_id": _get_grid_selected_id()}
+
 
 @router.get("/providers/status", summary="Status detalhado dos provedores (alias)")
 def providers_status_alias() -> dict[str, Any]:
