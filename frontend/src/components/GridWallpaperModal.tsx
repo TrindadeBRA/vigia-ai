@@ -28,6 +28,7 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
   const uploadReq = useRequest();
   const importReq = useRequest();
   const searchReq = useRequest();
+  const deleteReq = useRequest();
   const [providers, setProviders] = useState<ProviderStatus | null>(null);
   const [searchProvider, setSearchProvider] = useState<"pexels" | "wallhaven" | "unsplash">("wallhaven");
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,7 +48,8 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
   async function handleUpload(file: File) {
     const fd = new FormData();
     fd.append("file", file);
-    const r = await fetch("/api/wallpapers/upload", { method: "POST", body: fd });
+    fd.append("scope", "grid");
+    const r = await fetch("/api/wallpapers/upload?scope=grid", { method: "POST", body: fd });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.ok === false) throw new Error(j.error || c.importError);
     // define como grid
@@ -77,8 +79,9 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
       image_url: item.full || item.preview || item.thumb,
       thumb: item.thumb || item.preview,
       preview: item.preview || item.thumb,
+      scope: "grid",
     };
-    const r = await fetch("/api/wallpapers/import", {
+    const r = await fetch("/api/wallpapers/import?scope=grid", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -86,6 +89,14 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j.ok === false) throw new Error(j.error || c.importError);
     if (j.id) await setGridWallpaper(j.id);
+    await fetchAll();
+    return { ok: true };
+  }
+
+  async function handleDelete(id: string) {
+    const r = await fetch(`/api/wallpapers/${id}`, { method: "DELETE" });
+    const j = await r.json().catch(() => ({})) as { ok?: boolean; error?: string };
+    if (!r.ok || j.ok === false) throw new Error(j.error || "falha ao remover");
     await fetchAll();
     return { ok: true };
   }
@@ -112,18 +123,37 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
         <Button variant="secondary" onClick={() => fileRef.current?.click()} loading={uploadReq.busy}>
           {uploadReq.busy ? c.wallpapersUploading : c.wallpapersUpload}
         </Button>
-        <Button variant="ghost" disabled={!gridId} onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); return { ok: true }; }, { success: "Removido do grid", error: "falha" })}>
-          Remover do grid
+        <Button
+          variant={gridId ? "secondary" : "ghost"}
+          disabled={!gridId}
+          onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Removido do grid", error: "falha ao remover" })}
+        >
+          Remover background
         </Button>
         <span className="self-center text-xs text-ink3">{gridId ? `Ativo: ${gridId.slice(0, 8)}` : "Nenhum wallpaper no grid"}</span>
       </div>
       <FieldStatus status={uploadReq.status} message={uploadReq.message} />
       <FieldStatus status={selectReq.status} message={selectReq.message} />
+      <FieldStatus status={deleteReq.status} message={deleteReq.message} />
 
       {wallpapers.length === 0 ? (
         <p className="text-sm text-ink3">{c.wallpapersEmpty}</p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {/* Tile para remover / sem background - sempre visível como primeira opção */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" })}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" }); } }}
+            className={cn("group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border bg-canvas p-4 text-center aspect-[16/10]", !gridId ? "border-accent ring-2 ring-accent/40 bg-chip" : "border-dashed border-edge hover:border-accent/50 hover:bg-chip/50")}
+          >
+            <div className={cn("flex size-10 items-center justify-center rounded-full border", !gridId ? "bg-accent text-accent-ink border-accent" : "bg-chip text-ink3 border-edge")}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+            </div>
+            <span className="text-xs font-bold leading-tight">{!gridId ? "Sem background ✓" : "Remover background"}</span>
+            <span className="text-[11px] leading-tight text-ink3">Nenhum wallpaper no grid</span>
+          </div>
           {wallpapers.map((w) => {
             const active = w.id === gridId;
             return (
@@ -140,6 +170,17 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
                 </div>
                 <div className="flex items-center justify-between gap-2 px-2 py-1.5">
                   <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0,6)}` : w.id.slice(0,8)}</span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full bg-bad px-1.5 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Remover wallpaper ${w.id.slice(0, 8)} da biblioteca?`)) void deleteReq.run(() => handleDelete(w.id), { success: "Removido", error: "falha ao remover" });
+                    }}
+                    title="Remover da biblioteca"
+                  >
+                    ×
+                  </button>
                 </div>
                 {active ? <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">No grid</span> : null}
               </div>

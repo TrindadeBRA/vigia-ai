@@ -135,7 +135,7 @@ export function WallpaperManager({
 
     const fetchAll = useCallback(async () => {
         try {
-            const r = await fetch("/api/wallpapers");
+            const r = await fetch("/api/wallpapers?scope=theme");
             const j = (await r.json()) as { wallpapers: WallpaperItem[]; selected_id?: string | null; providers: ProviderStatus };
             const list = j.wallpapers || [];
             const selected = j.selected_id || list[0]?.id || null;
@@ -165,7 +165,8 @@ export function WallpaperManager({
         onLocalPreview?.(localUrl);
         const fd = new FormData();
         fd.append("file", file);
-        const r = await fetch("/api/wallpapers/upload", { method: "POST", body: fd });
+        fd.append("scope", "theme");
+        const r = await fetch("/api/wallpapers/upload?scope=theme", { method: "POST", body: fd });
         const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; detail?: string; id?: string };
         if (!r.ok || j.ok === false) {
             onLocalPreview?.(null);
@@ -266,8 +267,9 @@ export function WallpaperManager({
             image_url: item.full || item.preview || item.thumb || item.url,
             thumb: item.thumb || item.preview,
             preview: item.preview || item.thumb,
+            scope: "theme",
         };
-        const r = await fetch("/api/wallpapers/import", {
+        const r = await fetch("/api/wallpapers/import?scope=theme", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),

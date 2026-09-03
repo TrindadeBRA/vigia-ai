@@ -18,7 +18,7 @@ export function useGridWallpaper() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch("/api/wallpapers", { cache: "no-store" });
+      const r = await fetch("/api/wallpapers?scope=grid", { cache: "no-store" });
       if (!r.ok) return;
       const j = (await r.json()) as { wallpapers: WallpaperItem[]; grid_selected_id?: string | null; selected_id?: string | null };
       setWallpapers(j.wallpapers || []);

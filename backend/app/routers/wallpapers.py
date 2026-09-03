@@ -62,13 +62,21 @@ def _save_meta(meta: dict[str, Any]) -> None:
     tmp.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     tmp.replace(p)
 
-def _list_wallpapers() -> list[dict[str, Any]]:
+def _list_wallpapers(scope: str | None = None) -> list[dict[str, Any]]:
     meta = _load_meta()
     out: list[dict[str, Any]] = []
     for w in meta.get("wallpapers") or []:
         if not isinstance(w, dict) or not w.get("id"):
             continue
         wid = str(w["id"])
+        # Filtra por scope se solicitado: "theme" ou "grid"
+        # Sem scope => retorna todos (compat). Com scope, só os desse scope.
+        # Wallpapers antigos sem scope são considerados "theme" para não quebrar.
+        w_scope = str(w.get("scope") or "theme").strip() or "theme"
+        if scope and w_scope != scope:
+            # permite que wallpapers sem scope apareçam em theme, mas não em grid
+            # para grid, só mostra scope == "grid"
+            continue
         # Verifica se arquivo existe (pelo menos um dos raws)
         if not _wallpaper_raw_path(wid).is_file() and not _wallpaper_raw_path(wid, "_wokwi").is_file() and not _wallpaper_preview_path(wid).is_file():
             # Também verifica se tem orig
@@ -82,13 +90,23 @@ def _list_wallpapers() -> list[dict[str, Any]]:
             "preview_url": w.get("preview_url"),
             "created_at": w.get("created_at"),
             "has_preview": _wallpaper_preview_path(wid).is_file(),
+            "scope": w_scope,
         })
     return out
 
 def _get_selected_id() -> str | None:
-    ids = [w["id"] for w in _list_wallpapers()]
+    ids = [w["id"] for w in _list_wallpapers(scope="theme")]
     if not ids:
-        return None
+        # fallback: se não há theme wallpapers, tenta qualquer
+        ids_all = [w["id"] for w in _list_wallpapers()]
+        if not ids_all:
+            return None
+        cfg = load()
+        wp = cfg.get("wallpapers") or {}
+        selected = str(wp.get("selected_id") or "").strip()
+        if selected in ids_all:
+            return selected
+        return ids_all[0] if ids_all else None
     cfg = load()
     wp = cfg.get("wallpapers") or {}
     selected = str(wp.get("selected_id") or "").strip()
@@ -132,7 +150,10 @@ def _get_grid_selected_id() -> str | None:
     wp = cfg.get("wallpapers") or {}
     grid_id = str(wp.get("grid_selected_id") or "").strip()
     if grid_id:
-        return grid_id
+        # valida que existe (qualquer scope) para compat com wallpapers antigos sem scope
+        if grid_id in {w["id"] for w in _list_wallpapers()}:
+            return grid_id
+        return None
     return None
 
 
@@ -260,15 +281,21 @@ def _http_json(url: str, headers: dict[str, str] | None = None, timeout: float =
         raise HTTPException(502, f"API JSON inválido: {e}")
 
 @router.get("", summary="Lista wallpapers")
-def list_wallpapers() -> dict[str, Any]:
-    wallpapers = _list_wallpapers()
+def list_wallpapers(request: Request) -> dict[str, Any]:
+    scope = request.query_params.get("scope")
+    # normaliza scope: só aceita "theme" ou "grid", senão ignora (lista tudo)
+    if scope not in ("theme", "grid"):
+        scope = None
+    wallpapers = _list_wallpapers(scope=scope)
     providers = _provider_status()
+    # Para compat, sempre retorna ambos selected; mas filtra lista por scope
     return {
         "wallpapers": wallpapers,
         "selected_id": _get_selected_id(),
         "grid_selected_id": _get_grid_selected_id(),
         "providers": providers,
         "count": len(wallpapers),
+        "scope": scope,
     }
 
 @router.get("/selected", summary="Papel de parede ativo")
@@ -284,10 +311,12 @@ async def put_selected(request: Request) -> dict[str, Any]:
     wid = body.get("id")
     if wid is not None and not isinstance(wid, str):
         raise HTTPException(400, "id deve ser string")
-    existing = {w["id"] for w in _list_wallpapers()}
-    if wid:
-        if wid not in existing:
+    existing = {w["id"] for w in _list_wallpapers(scope="theme")}
+    # fallback: se não há theme wallpapers mas id existe em geral, permite (compat)
+    if wid and wid not in existing:
+        if wid not in {w["id"] for w in _list_wallpapers()}:
             raise HTTPException(400, "wallpaper id inválido")
+    if wid:
         _set_selected_id(wid)
     else:
         _set_selected_id(None)
@@ -333,6 +362,10 @@ async def put_providers(request: Request) -> dict[str, Any]:
 @router.post("/upload", summary="Upload de wallpaper (RAW ou imagem)")
 async def upload_wallpaper(request: Request) -> dict[str, Any]:
     # Suporta multipart com campo "file" ou "bg" (compat com theme), ou raw bytes
+    # Scope separa bibliotecas: "theme" (/display/theme) vs "grid" (/display)
+    scope_param = request.query_params.get("scope")
+    if scope_param not in ("theme", "grid"):
+        scope_param = None
     content_type = request.headers.get("content-type", "")
     wid = secrets.token_hex(4)
     target_w, target_h = 240, 160  # default hardware half
@@ -344,6 +377,11 @@ async def upload_wallpaper(request: Request) -> dict[str, Any]:
     # Se for multipart, tenta ler arquivo
     if "multipart/form-data" in content_type:
         form = await request.form()
+        # scope pode vir no form (ex: grid)
+        if not scope_param:
+            form_scope = str(form.get("scope") or "").strip()
+            if form_scope in ("theme", "grid"):
+                scope_param = form_scope
         file = form.get("file") or form.get("bg") or form.get("image")
         if file is None:
             raise HTTPException(400, "campo file/bg/image obrigatório")
@@ -526,6 +564,7 @@ async def upload_wallpaper(request: Request) -> dict[str, Any]:
         _wallpaper_preview_path(wid).write_bytes(preview_bytes)
 
     # Atualiza meta
+    effective_scope = scope_param if scope_param in ("theme", "grid") else "theme"
     meta = _load_meta()
     meta.setdefault("wallpapers", []).append({
         "id": wid,
@@ -534,13 +573,17 @@ async def upload_wallpaper(request: Request) -> dict[str, Any]:
         "external_id": None,
         "preview_url": None,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "scope": effective_scope,
     })
     _save_meta(meta)
 
-    # Novo upload passa a ser o papel ativo do tema.
-    _set_selected_id(wid)
+    # Novo upload passa a ser o papel ativo do tema/grid conforme scope.
+    if effective_scope == "grid":
+        _set_grid_selected_id(wid)
+    else:
+        _set_selected_id(wid)
 
-    return {"ok": True, "id": wid}
+    return {"ok": True, "id": wid, "scope": effective_scope}
 
 @router.delete("/{wid}", summary="Remove wallpaper")
 def delete_wallpaper(wid: str) -> dict[str, Any]:
@@ -566,13 +609,21 @@ def delete_wallpaper(wid: str) -> dict[str, Any]:
             p.unlink(missing_ok=True)
         except OSError:
             pass
-    # Se o removido era o ativo, escolhe outro (ou nenhum).
-    remaining = [w["id"] for w in _list_wallpapers()]
+    # Se o removido era o ativo, escolhe outro (ou nenhum) dentro do mesmo scope.
+    remaining_theme = [w["id"] for w in _list_wallpapers(scope="theme")]
+    remaining_grid = [w["id"] for w in _list_wallpapers(scope="grid")]
+    remaining_all = [w["id"] for w in _list_wallpapers()]
     selected = load().get("wallpapers", {}).get("selected_id") or ""
-    if selected == wid or selected not in remaining:
-        _set_selected_id(remaining[0] if remaining else None)
+    if selected == wid or (selected and selected not in {w["id"] for w in _list_wallpapers(scope="theme")} and selected not in remaining_all):
+        # tenta manter dentro do theme, senão limpa
+        if remaining_theme:
+            _set_selected_id(remaining_theme[0])
+        elif selected == wid:
+            _set_selected_id(None)
     grid_selected = load().get("wallpapers", {}).get("grid_selected_id") or ""
     if grid_selected == wid:
+        _set_grid_selected_id(None)
+    elif grid_selected and grid_selected not in remaining_grid and grid_selected not in remaining_all:
         _set_grid_selected_id(None)
     return {"ok": True}
 
@@ -844,6 +895,13 @@ async def import_wallpaper(request: Request) -> dict[str, Any]:
         body = await request.json()
     except Exception:
         raise HTTPException(400, "JSON inválido")
+    # scope separa bibliotecas: query ?scope=grid ou body.scope
+    scope_param = request.query_params.get("scope")
+    if scope_param not in ("theme", "grid"):
+        scope_param = str(body.get("scope") or "").strip()
+        if scope_param not in ("theme", "grid"):
+            scope_param = None
+    effective_scope = scope_param if scope_param in ("theme", "grid") else "theme"
     provider = str(body.get("provider") or "").lower().strip()
     external_id = str(body.get("id") or body.get("external_id") or "").strip()
     image_url = str(body.get("image_url") or body.get("full") or body.get("url") or "").strip()
@@ -942,18 +1000,22 @@ async def import_wallpaper(request: Request) -> dict[str, Any]:
         "preview_url": thumb_url or image_url,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "original_url": image_url,
+        "scope": effective_scope,
     })
     _save_meta(meta)
 
-    # Importado passa a ser o papel ativo do tema.
-    _set_selected_id(wid)
+    # Importado passa a ser o papel ativo do tema/grid conforme scope.
+    if effective_scope == "grid":
+        _set_grid_selected_id(wid)
+    else:
+        _set_selected_id(wid)
 
     return {"ok": True, "id": wid, "provider": provider}
 
 @router.get("/grid/selected", summary="Papel de parede do grid (alta qualidade)")
 def get_grid_selected() -> dict[str, Any]:
     wid = _get_grid_selected_id()
-    # valida se ainda existe
+    # valida se ainda existe (qualquer scope) para compat
     if wid and wid not in {w["id"] for w in _list_wallpapers()}:
         wid = None
         _set_grid_selected_id(None)
@@ -970,8 +1032,10 @@ async def put_grid_selected(request: Request) -> dict[str, Any]:
     if wid is not None and not isinstance(wid, str):
         raise HTTPException(400, "id deve ser string")
     if wid:
-        existing = {w["id"] for w in _list_wallpapers()}
-        if wid not in existing:
+        existing_grid = {w["id"] for w in _list_wallpapers(scope="grid")}
+        existing_all = {w["id"] for w in _list_wallpapers()}
+        # permite id de grid ou, por compat, qualquer id existente (mas ideal grid)
+        if wid not in existing_grid and wid not in existing_all:
             raise HTTPException(400, "wallpaper id inválido")
         _set_grid_selected_id(wid)
     else:
