@@ -1228,7 +1228,8 @@ function Overview({
 
   useEffect(() => {
     if (focus) {
-      focusColsRef.current = cols;
+      const el = gridRef.current;
+      focusColsRef.current = el && el.clientWidth > 0 ? colsForWidth(el.clientWidth) : cols;
     } else {
       focusColsRef.current = null;
     }
