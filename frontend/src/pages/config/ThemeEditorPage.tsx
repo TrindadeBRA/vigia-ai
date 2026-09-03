@@ -36,6 +36,8 @@ type ThemeIcon = {
   y: number;
   scale: number;
   color: string | null;
+  showBackground: boolean;
+  bgColor: string | null;
   metric: string;
 };
 type ThemeText = { id: string; x: number; y: number; scale: number; color: string | null; text: string };
@@ -105,6 +107,8 @@ function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<ThemeIc
     y: icon.y ?? 0.5,
     scale: icon.scale ?? 1,
     color: icon.color ?? null,
+    showBackground: typeof icon.showBackground === "boolean" ? icon.showBackground : true,
+    bgColor: icon.bgColor ?? null,
     metric: icon.metric || defaultMetric((icon.provider as ThemeProvider) || "claude"),
   }));
   merged.texts = (merged.texts || []).map((txt, idx) => ({
@@ -159,7 +163,9 @@ function themeToJson(t: ThemeState, hasWallpaper: boolean) {
       y: i.y,
       scale: i.scale,
       metric: i.metric || defaultMetric(i.provider),
+      showBackground: i.showBackground,
       ...(i.color ? { color: i.color } : {}),
+      ...(i.bgColor ? { bgColor: i.bgColor } : {}),
     })),
     texts: t.texts.map((x) => ({ text: x.text, x: x.x, y: x.y, scale: x.scale, ...(x.color ? { color: x.color } : {}) })),
   };
@@ -328,6 +334,8 @@ function IconChip({
   provider,
   metric,
   color,
+  showBackground,
+  bgColor,
   scale,
   zoom,
   usage,
@@ -335,6 +343,8 @@ function IconChip({
   provider: ThemeProvider;
   metric: string;
   color: string | null;
+  showBackground: boolean;
+  bgColor: string | null;
   scale: number;
   zoom: number;
   usage: UsagePayload | null;
@@ -343,7 +353,10 @@ function IconChip({
   const iconPx = 20 * scale * zoom;
   if (provider === "weather") {
     return (
-      <div className="flex items-center gap-1 rounded-md bg-black/35 px-2 py-1" style={{ border: color ? `1.5px solid ${color}` : undefined }}>
+      <div
+        className={cn("flex items-center gap-1 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
+        style={{ background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
+      >
         <span style={{ fontSize: `${14 * scale * zoom}px`, lineHeight: 1 }}>{weatherEmoji(usage)}</span>
         <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
           {value || "--"}
@@ -366,8 +379,8 @@ function IconChip({
   }
   return (
     <div
-      className="flex items-center gap-1.5 rounded-md bg-black/35 px-2 py-1"
-      style={{ border: color ? `1.5px solid ${color}` : undefined }}
+      className={cn("flex items-center gap-1.5 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
+      style={{ background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
     >
       {glyph}
       <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
@@ -619,7 +632,7 @@ export default function ThemeEditorPage() {
     setTheme((t) =>
       t.icons.length >= MAX_ICONS
         ? t
-        : { ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, metric: defaultMetric(provider) }] },
+        : { ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, showBackground: true, bgColor: null, metric: defaultMetric(provider) }] },
     );
     setSelected(`icon:${id}`);
   }
@@ -824,9 +837,27 @@ export default function ThemeEditorPage() {
                   removeLabel={c.removeIcon}
                 >
                   {icon.style === "card" && providerSupportsCard(icon.provider) ? (
-                    <IconCard provider={icon.provider} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} lang={lang} />
+                    <IconCard
+                      provider={icon.provider}
+                      color={icon.color}
+                      showBackground={icon.showBackground}
+                      bgColor={icon.bgColor}
+                      scale={icon.scale}
+                      zoom={zoom}
+                      usage={usage}
+                      lang={lang}
+                    />
                   ) : (
-                    <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+                    <IconChip
+                      provider={icon.provider}
+                      metric={icon.metric}
+                      color={icon.color}
+                      showBackground={icon.showBackground}
+                      bgColor={icon.bgColor}
+                      scale={icon.scale}
+                      zoom={zoom}
+                      usage={usage}
+                    />
                   )}
                 </CanvasDot>
               ))}
@@ -991,6 +1022,20 @@ export default function ThemeEditorPage() {
                 ) : null}
                 <ScaleField label={c.size} value={selectedIcon.scale} onChange={(v) => updateIcon(selectedIcon.id, { scale: v })} />
                 <ColorField label={c.color} value={selectedIcon.color} onChange={(v) => updateIcon(selectedIcon.id, { color: v })} noneLabel={c.colorNone} lang={lang} />
+                <Checkbox
+                  label={c.iconShowBackground}
+                  checked={selectedIcon.showBackground}
+                  onChange={(e) => updateIcon(selectedIcon.id, { showBackground: e.target.checked })}
+                />
+                <div className={selectedIcon.showBackground ? "" : "pointer-events-none opacity-50"}>
+                  <ColorField
+                    label={c.iconBgColor}
+                    value={selectedIcon.bgColor}
+                    onChange={(v) => updateIcon(selectedIcon.id, { bgColor: v })}
+                    noneLabel={c.colorNone}
+                    lang={lang}
+                  />
+                </div>
                 <Button variant="ghost" onClick={() => removeIcon(selectedIcon.id)}>
                   {c.removeIcon}
                 </Button>

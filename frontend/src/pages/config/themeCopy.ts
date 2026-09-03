@@ -29,6 +29,8 @@ export type ThemeCopy = {
   iconStyleChip: string;
   iconStyleCard: string;
   iconStyleHint: string;
+  iconShowBackground: string;
+  iconBgColor: string;
   elements: string;
   noIcons: string;
   wallpaperInUse: string;
@@ -159,6 +161,8 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     iconStyleChip: "Ícone simples",
     iconStyleCard: "Cartão completo",
     iconStyleHint: "O cartão mostra nome, conta e até 2 barras de uso — o mesmo mini-cartão da Início/Agora da placa.",
+    iconShowBackground: "Mostrar fundo do elemento",
+    iconBgColor: "Cor do fundo",
     elements: "No canvas",
     noIcons: "Nenhum provedor no tema ainda. Clique num card abaixo pra adicionar ícone + cota.",
     wallpaperInUse: "Papel de parede em uso",
@@ -288,6 +292,8 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     iconStyleChip: "Simple icon",
     iconStyleCard: "Full card",
     iconStyleHint: "The card shows name, account and up to 2 usage bars — the same mini-card from the board's Home/Now screens.",
+    iconShowBackground: "Show element background",
+    iconBgColor: "Background color",
     elements: "On canvas",
     noIcons: "No providers on the theme yet. Click a card below to add icon + quota.",
     wallpaperInUse: "Wallpaper in use",
@@ -417,6 +423,8 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     iconStyleChip: "Ícono simple",
     iconStyleCard: "Tarjeta completa",
     iconStyleHint: "La tarjeta muestra nombre, cuenta y hasta 2 barras de uso — la misma mini-tarjeta de Inicio/Ahora de la placa.",
+    iconShowBackground: "Mostrar fondo del elemento",
+    iconBgColor: "Color de fondo",
     elements: "En el lienzo",
     noIcons: "Todavía sin proveedores en el tema. Hacé clic en una tarjeta abajo para agregar ícono + cuota.",
     wallpaperInUse: "Fondo en uso",

@@ -20,6 +20,8 @@ export type ThemeIcon = {
   y: number;
   scale: number;
   color: string | null;
+  showBackground: boolean;
+  bgColor: string | null;
   metric: string;
 };
 
@@ -90,6 +92,8 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
     y: icon.y ?? 0.5,
     scale: icon.scale ?? 1,
     color: icon.color ?? null,
+    showBackground: typeof icon.showBackground === "boolean" ? icon.showBackground : true,
+    bgColor: icon.bgColor ?? null,
     metric: icon.metric || defaultMetric((icon.provider as ThemeProvider) || "claude"),
   }));
   merged.texts = (merged.texts || []).map((txt, idx) => ({
@@ -118,7 +122,7 @@ export function parseSavedThemeJson(json: string): ThemeState | null {
     const raw = JSON.parse(json) as {
       background?: { color?: string };
       clock?: Partial<ThemeClock>;
-      icons?: Array<{ provider: ThemeProvider; style?: string; x: number; y: number; scale: number; color?: string; metric?: string }>;
+      icons?: Array<{ provider: ThemeProvider; style?: string; x: number; y: number; scale: number; color?: string; showBackground?: boolean; bgColor?: string; metric?: string }>;
       texts?: Array<{ text: string; x: number; y: number; scale: number; color?: string }>;
     };
     return migrateTheme({
@@ -132,6 +136,8 @@ export function parseSavedThemeJson(json: string): ThemeState | null {
         y: icon.y,
         scale: icon.scale,
         color: icon.color ?? null,
+        showBackground: typeof icon.showBackground === "boolean" ? icon.showBackground : true,
+        bgColor: icon.bgColor ?? null,
         metric: icon.metric || defaultMetric(icon.provider),
       })),
       texts: (raw.texts || []).map((txt, idx) => ({
@@ -152,6 +158,8 @@ function IconChip({
   provider,
   metric,
   color,
+  showBackground,
+  bgColor,
   scale,
   zoom,
   usage,
@@ -159,6 +167,8 @@ function IconChip({
   provider: ThemeProvider;
   metric: string;
   color: string | null;
+  showBackground: boolean;
+  bgColor: string | null;
   scale: number;
   zoom: number;
   usage: UsagePayload | null;
@@ -167,7 +177,10 @@ function IconChip({
   const iconPx = 20 * scale * zoom;
   if (provider === "weather") {
     return (
-      <div className="flex items-center gap-1 rounded-md bg-black/35 px-2 py-1" style={{ border: color ? `1.5px solid ${color}` : undefined }}>
+      <div
+        className={cn("flex items-center gap-1 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
+        style={{ background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
+      >
         <span style={{ fontSize: `${14 * scale * zoom}px`, lineHeight: 1 }}>{weatherEmoji(usage)}</span>
         <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
           {value || "--"}
@@ -189,7 +202,10 @@ function IconChip({
     );
   }
   return (
-    <div className="flex items-center gap-1.5 rounded-md bg-black/35 px-2 py-1" style={{ border: color ? `1.5px solid ${color}` : undefined }}>
+    <div
+      className={cn("flex items-center gap-1.5 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
+      style={{ background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
+    >
       {glyph}
       <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
         {value}
@@ -205,6 +221,8 @@ function IconChip({
 export function IconCard({
   provider,
   color,
+  showBackground,
+  bgColor,
   scale,
   zoom,
   usage,
@@ -212,6 +230,8 @@ export function IconCard({
 }: {
   provider: ThemeProvider;
   color: string | null;
+  showBackground: boolean;
+  bgColor: string | null;
   scale: number;
   zoom: number;
   usage: UsagePayload | null;
@@ -225,8 +245,13 @@ export function IconCard({
   const title = meta?.title || ICON_PROVIDERS.find((p) => p.id === provider)?.label || provider;
   return (
     <div
-      className="flex flex-col rounded-lg bg-black/60"
-      style={{ padding: 8 * s, minWidth: 128 * s, border: color ? `1.5px solid ${color}` : undefined }}
+      className={cn("flex flex-col rounded-lg", showBackground && !bgColor && "bg-black/60")}
+      style={{
+        padding: 8 * s,
+        minWidth: 128 * s,
+        background: showBackground ? bgColor || undefined : "transparent",
+        border: showBackground && color ? `1.5px solid ${color}` : undefined,
+      }}
     >
       <div className="flex items-center gap-1.5" style={{ marginBottom: 6 * s }}>
         {provider === "brand" ? (
@@ -391,9 +416,27 @@ export function ThemeCanvasView({
       {theme.icons.map((icon) => (
         <ThemeLayer key={icon.id} x={icon.x} y={icon.y} containerSize={containerSize}>
           {icon.style === "card" && providerSupportsCard(icon.provider) ? (
-            <IconCard provider={icon.provider} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} lang={lang} />
+            <IconCard
+              provider={icon.provider}
+              color={icon.color}
+              showBackground={icon.showBackground}
+              bgColor={icon.bgColor}
+              scale={icon.scale}
+              zoom={zoom}
+              usage={usage}
+              lang={lang}
+            />
           ) : (
-            <IconChip provider={icon.provider} metric={icon.metric} color={icon.color} scale={icon.scale} zoom={zoom} usage={usage} />
+            <IconChip
+              provider={icon.provider}
+              metric={icon.metric}
+              color={icon.color}
+              showBackground={icon.showBackground}
+              bgColor={icon.bgColor}
+              scale={icon.scale}
+              zoom={zoom}
+              usage={usage}
+            />
           )}
         </ThemeLayer>
       ))}

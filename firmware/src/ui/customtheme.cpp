@@ -63,6 +63,12 @@ struct ThemeIcon
   float scale = 1.0f;
   bool hasColor = false;
   uint16_t color = 0;
+  // Caixa de fundo do widget (chip/card/clima): default true = mesmo
+  // retângulo escuro semi-opaco de sempre; false = desenha ícone/texto direto
+  // sobre o fundo do tema (cor ou wallpaper), sem caixa nem borda.
+  bool showBackground = true;
+  bool hasBgColor = false;
+  uint16_t bgColor = 0;
   // Chave da métrica do /usage (session_percent, remaining_cents, …).
   // Vazio = padrão do provedor; "none" = só o ícone. Ignorado no estilo
   // "card", que sempre mostra as métricas fixas do provedor (ver
@@ -257,6 +263,20 @@ static bool parseTheme(const String &json, CustomTheme &out)
     {
       icon.hasColor = true;
       icon.color = col;
+    }
+    // showBackground: default true para compatibilidade com temas antigos
+    if (it["showBackground"].is<bool>())
+    {
+      icon.showBackground = it["showBackground"] | true;
+    }
+    else
+    {
+      icon.showBackground = true;
+    }
+    if (hexColorToRgb565(jsonText(it["bgColor"]), col))
+    {
+      icon.hasBgColor = true;
+      icon.bgColor = col;
     }
     String metric = jsonText(it["metric"]);
     if (metric.length())
@@ -1036,15 +1056,15 @@ static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
 // (home.cpp/now.cpp), redesenhada aqui pro card solto do tema (largura e
 // posição livres, não presas a uma grade).
 static int drawThemeCardMetric(int x, int y, int w, const char *label, float pct, const String &sub,
-                                uint16_t bgCol, int barH)
+                                uint16_t bgCol, int barH, bool transparent = false)
 {
   const uint8_t font = 1;
   const int labelH = tft.fontHeight(font);
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(0xAD75, bgCol);
+  transparent ? tft.setTextColor(0xAD75) : tft.setTextColor(0xAD75, bgCol);
   tft.drawString(label, x, y, font);
   tft.setTextDatum(TR_DATUM);
-  tft.setTextColor(COL_TEXT, bgCol);
+  transparent ? tft.setTextColor(COL_TEXT) : tft.setTextColor(COL_TEXT, bgCol);
   if (pct < 0)
   {
     tft.drawString(sub, x + w, y, font);
@@ -1058,7 +1078,7 @@ static int drawThemeCardMetric(int x, int y, int w, const char *label, float pct
     return h;
   }
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(0x8410, bgCol);
+  transparent ? tft.setTextColor(0x8410) : tft.setTextColor(0x8410, bgCol);
   tft.drawString(sub, x, y + h + 1, font);
   return h + 1 + tft.fontHeight(font);
 }
@@ -1069,10 +1089,10 @@ static int drawThemeCardMetric(int x, int y, int w, const char *label, float pct
 // card do tema (o tema ignora o tema claro/escuro do sistema de propósito,
 // já que o fundo aqui é arbitrário — cor ou wallpaper do usuário).
 static void drawThemeCardTitle(int x, int y, int maxW, const String &name, const String &suffix, uint16_t fg,
-                                uint16_t bgCol)
+                                uint16_t bgCol, bool transparent = false)
 {
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(fg, bgCol);
+  transparent ? tft.setTextColor(fg) : tft.setTextColor(fg, bgCol);
   String n = name;
   while (n.length() && tft.textWidth(n, 2) > maxW)
   {
@@ -1092,7 +1112,7 @@ static void drawThemeCardTitle(int x, int y, int maxW, const String &name, const
   {
     return;
   }
-  tft.setTextColor(0xAD75, bgCol);
+  transparent ? tft.setTextColor(0xAD75) : tft.setTextColor(0xAD75, bgCol);
   tft.drawString(s, x, y + tft.fontHeight(2) + 1, 1);
 }
 
@@ -1116,7 +1136,11 @@ static void drawThemeCard(const ThemeIcon &icon)
 
   int cx = (int)(icon.x * tft.width());
   int cy = (int)(icon.y * tft.height());
-  uint16_t bgCol = 0x1082;
+  // showBackground=false: nem caixa nem borda — ícone/texto direto sobre o
+  // fundo do tema (cor ou wallpaper), com texto em modo transparente (1 arg
+  // pro setTextColor) pra não deixar retângulos opacos atrás de cada glifo.
+  const bool box = icon.showBackground;
+  uint16_t bgCol = icon.hasBgColor ? icon.bgColor : 0x1082;
 
   if (!c.ok)
   {
@@ -1124,14 +1148,17 @@ static void drawThemeCard(const ThemeIcon &icon)
     clampBoxCenter(cx, cy, cardW, cardH, tft.width(), tft.height());
     const int x0 = cx - cardW / 2;
     const int y0 = cy - cardH / 2;
-    if (icon.hasColor)
+    if (box)
     {
-      tft.drawRoundRect(x0, y0, cardW, cardH, 8, icon.color);
-      tft.fillRoundRect(x0 + 1, y0 + 1, cardW - 2, cardH - 2, 7, bgCol);
-    }
-    else
-    {
-      tft.fillRoundRect(x0, y0, cardW, cardH, 8, bgCol);
+      if (icon.hasColor)
+      {
+        tft.drawRoundRect(x0, y0, cardW, cardH, 8, icon.color);
+        tft.fillRoundRect(x0 + 1, y0 + 1, cardW - 2, cardH - 2, 7, bgCol);
+      }
+      else
+      {
+        tft.fillRoundRect(x0, y0, cardW, cardH, 8, bgCol);
+      }
     }
     if (hasIcon)
     {
@@ -1140,7 +1167,7 @@ static void drawThemeCard(const ThemeIcon &icon)
       tft.setSwapBytes(false);
     }
     drawErrorWrapped(x0 + textX, y0 + pad, cardW - textX - pad, c.error.length() ? c.error : c.title, bgCol, 1,
-                      cardH - pad * 2);
+                      cardH - pad * 2, !box);
     return;
   }
 
@@ -1177,14 +1204,17 @@ static void drawThemeCard(const ThemeIcon &icon)
   const int x0 = cx - cardW / 2;
   const int y0 = cy - cardH / 2;
 
-  if (icon.hasColor)
+  if (box)
   {
-    tft.drawRoundRect(x0, y0, cardW, cardH, 8, icon.color);
-    tft.fillRoundRect(x0 + 1, y0 + 1, cardW - 2, cardH - 2, 7, bgCol);
-  }
-  else
-  {
-    tft.fillRoundRect(x0, y0, cardW, cardH, 8, bgCol);
+    if (icon.hasColor)
+    {
+      tft.drawRoundRect(x0, y0, cardW, cardH, 8, icon.color);
+      tft.fillRoundRect(x0 + 1, y0 + 1, cardW - 2, cardH - 2, 7, bgCol);
+    }
+    else
+    {
+      tft.fillRoundRect(x0, y0, cardW, cardH, 8, bgCol);
+    }
   }
 
   if (hasIcon)
@@ -1194,7 +1224,7 @@ static void drawThemeCard(const ThemeIcon &icon)
     tft.setSwapBytes(false);
   }
   drawThemeCardTitle(x0 + textX, y0 + pad + (topRowH - stackH) / 2, cardW - textX - pad, c.title, c.suffix,
-                      icon.hasColor ? icon.color : COL_TEXT, bgCol);
+                      icon.hasColor ? icon.color : COL_TEXT, bgCol, !box);
 
   int y = y0 + pad + topRowH;
   const int mx = x0 + pad;
@@ -1202,13 +1232,13 @@ static void drawThemeCard(const ThemeIcon &icon)
   if (hasRow1)
   {
     y += titleToMetric;
-    drawThemeCardMetric(mx, y, mw, c.l1, c.p1, c.s1, bgCol, barH);
+    drawThemeCardMetric(mx, y, mw, c.l1, c.p1, c.s1, bgCol, barH, !box);
     y += row1H;
   }
   if (hasRow2)
   {
     y += rowGap;
-    drawThemeCardMetric(mx, y, mw, c.l2, c.p2, c.s2, bgCol, barH);
+    drawThemeCardMetric(mx, y, mw, c.l2, c.p2, c.s2, bgCol, barH, !box);
   }
 }
 
@@ -1248,22 +1278,26 @@ static void drawThemeWeather(const ThemeIcon &icon)
   clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
   int y0 = cy - boxH / 2;
-  uint16_t bgCol = 0x1082;
+  const bool box = icon.showBackground;
+  uint16_t bgCol = icon.hasBgColor ? icon.bgColor : 0x1082;
   uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
-  if (icon.hasColor)
+  if (box)
   {
-    tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
-    tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
-  }
-  else
-  {
-    tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    if (icon.hasColor)
+    {
+      tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
+      tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+    }
+    else
+    {
+      tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    }
   }
   int totalW = iconW + gap + tempW;
   int startX = cx - totalW / 2;
   int textY = cy;
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(fg, bgCol);
+  box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
   int iconCx = startX + iconW / 2;
   int tempCx = startX + iconW + gap + tempW / 2;
   tft.drawString(iconLabel, iconCx, textY, font);
@@ -1318,16 +1352,20 @@ static void drawThemeIcon(const ThemeIcon &icon)
   clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
   int y0 = cy - boxH / 2;
-  uint16_t bgCol = 0x1082;
+  const bool box = icon.showBackground;
+  uint16_t bgCol = icon.hasBgColor ? icon.bgColor : 0x1082;
   uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
-  if (icon.hasColor)
+  if (box)
   {
-    tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
-    tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
-  }
-  else
-  {
-    tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    if (icon.hasColor)
+    {
+      tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
+      tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+    }
+    else
+    {
+      tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    }
   }
   int iconX = x0 + padX;
   int iconY = cy - targetH / 2;
@@ -1335,7 +1373,7 @@ static void drawThemeIcon(const ThemeIcon &icon)
   tft.pushImage(iconX, iconY, targetW, targetH, g_iconScaleBuf, kBakedCard);
   tft.setSwapBytes(false);
   tft.setTextDatum(ML_DATUM);
-  tft.setTextColor(fg, bgCol);
+  box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
   tft.drawString(val, iconX + targetW + gap, cy, font);
 }
 

@@ -69,8 +69,8 @@ sempre converte fração → pixel na hora de desenhar, contra
   "background": { "type": "color", "color": "#10151A" },
   "clock": { "enabled": true, "x": 0.5, "y": 0.16, "scale": 2, "format24h": true, "color": "#F7F7F7", "showBackground": true, "autoColor": false },
   "icons": [
-    { "provider": "claude", "x": 0.25, "y": 0.55, "scale": 1.5, "color": "#E1C6A0", "metric": "session_percent" },
-    { "provider": "brand", "x": 0.75, "y": 0.55, "scale": 1.0 }
+    { "provider": "claude", "x": 0.25, "y": 0.55, "scale": 1.5, "color": "#E1C6A0", "metric": "session_percent", "showBackground": true, "bgColor": "#2A1533" },
+    { "provider": "brand", "x": 0.75, "y": 0.55, "scale": 1.0, "showBackground": false }
   ],
   "texts": [
     { "text": "VIGIA AI", "x": 0.5, "y": 0.85, "scale": 1, "color": "#AD76FF" }
@@ -81,10 +81,19 @@ sempre converte fração → pixel na hora de desenhar, contra
 - `background.type`: `"color"` ou `"image"` (a imagem é o que foi mandado em
   `.../theme/background` — se não existir ou o tamanho não bater com a
   resolução atual da placa, cai pra `background.color`).
-- `background.color`, `clock.color`, `icons[].color`, `texts[].color`: hex
-  `#RRGGBB` opcional (omitido ou inválido = cor padrão do tema/tela).
+- `background.color`, `clock.color`, `icons[].color`, `icons[].bgColor`,
+  `texts[].color`: hex `#RRGGBB` opcional (omitido ou inválido = cor padrão
+  do tema/tela).
 - `clock.showBackground`: `boolean` (default `true`) — quando `false`, o relógio é desenhado sem o retângulo de fundo (transparente).
 - `clock.autoColor`: `boolean` (default `false`) — quando `true`, a cor do texto do relógio é calculada automaticamente via `generateReadableColor` sobre `background.color` (WCAG AA 4.5:1), ignorando `clock.color`.
+- `icons[].showBackground`: `boolean` (default `true`) — quando `false`, o
+  widget (chip/card/clima) é desenhado sem a caixa de fundo nem a borda:
+  ícone e texto ficam soltos direto sobre o fundo do tema (cor ou
+  wallpaper), com o texto em modo transparente pra não deixar retângulos
+  atrás dos glifos.
+- `icons[].bgColor`: cor do preenchimento da caixa quando `showBackground`
+  é `true` (omitido = o cinza escuro semi-opaco padrão de sempre). Ignorado
+  quando `showBackground` é `false`.
 - `scale`: multiplicador de tamanho, clamp **0.5–4.0**.
 - `icons[].provider`: `claude` | `gpt` | `cursor` | `openrouter` | `deepseek`
   | `opencode` | `fal` | `bitcoin` | `adsense` | `weather` | `brand` (o olho da marca).

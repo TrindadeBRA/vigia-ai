@@ -348,9 +348,13 @@ void drawError(int x, int y, const String& err, uint16_t bg) {
 }
 
 int drawErrorWrapped(int x, int y, int maxW, const String& err, uint16_t bg, uint8_t font,
-                     int maxH) {
+                     int maxH, bool transparent) {
   tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(COL_BAD, bg);
+  if (transparent) {
+    tft.setTextColor(COL_BAD);
+  } else {
+    tft.setTextColor(COL_BAD, bg);
+  }
   const String e = err.length() ? err : String(uiTr().noData);
   const int lineH = tft.fontHeight(font) + (font == 1 ? 2 : 4);
   if (maxW < 8) {
