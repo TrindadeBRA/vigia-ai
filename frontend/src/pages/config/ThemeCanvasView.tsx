@@ -60,7 +60,7 @@ export type ThemeState = {
 };
 
 export const DEFAULT_THEME: ThemeState = {
-  background: { color: "#10151a" },
+  background: { color: "#0f0f0f" },
   clock: { enabled: true, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
   icons: [],
   texts: [],

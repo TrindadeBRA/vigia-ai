@@ -88,7 +88,7 @@ export default function CanvasPage() {
   }, []);
 
   if (!data || loading || !theme) {
-    return <div className="fixed inset-0 z-50 bg-[#10151a]" />;
+    return <div className="fixed inset-0 z-50 bg-[#0f0f0f]" />;
   }
 
   return (

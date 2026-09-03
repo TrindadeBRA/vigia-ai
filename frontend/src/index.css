@@ -4,20 +4,20 @@
 
 /* Variáveis de tema — o JS (applyThemeVars) atualiza estes valores. */
 :root {
-  --bg: #101419;
-  --card: #192021;
-  --card-border: #3a3d42;
-  --track: #292d31;
-  --chip: #212a2c;
-  --text: #f7f3ef;
-  --text-dim: #adaeb5;
-  --text-muted: #6b6d73;
+  --bg: #0f0f0f;
+  --card: #1c1c1c;
+  --card-border: #2e2e2e;
+  --track: #2a2a2a;
+  --chip: #232323;
+  --text: #f5f5f5;
+  --text-dim: #a1a1a1;
+  --text-muted: #737373;
   --good: #8cbe94;
   --warn: #e6a65a;
   --bad: #de6d6b;
   --accent: #e63931;
   --accent-ink: #ffffff;
-  --shadow: rgba(0, 0, 0, .5);
+  --shadow: rgba(0, 0, 0, .55);
   --glow: rgba(230, 57, 49, .14);
-  --bg-translucent: rgba(16, 20, 25, .82);
+  --bg-translucent: rgba(15, 15, 15, .82);
 }

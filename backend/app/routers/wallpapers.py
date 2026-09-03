@@ -109,7 +109,7 @@ def _patch_theme_background_type(kind: str) -> None:
         return
     bg = raw.get("background")
     if not isinstance(bg, dict):
-        raw["background"] = {"type": kind, "color": "#10151A"}
+        raw["background"] = {"type": kind, "color": "#0f0f0f"}
     else:
         bg["type"] = kind
         raw["background"] = bg

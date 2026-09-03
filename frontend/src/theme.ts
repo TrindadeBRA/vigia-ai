@@ -18,18 +18,18 @@ export const PALETTES: Record<
   }
 > = {
   dark: {
-    bg: "#101419",
-    card: "#192021",
-    cardBorder: "#3a3d42",
-    track: "#292d31",
-    chip: "#212a2c",
-    text: "#f7f3ef",
-    textDim: "#adaeb5",
-    textMuted: "#6b6d73",
+    bg: "#0f0f0f",
+    card: "#1c1c1c",
+    cardBorder: "#2e2e2e",
+    track: "#2a2a2a",
+    chip: "#232323",
+    text: "#f5f5f5",
+    textDim: "#a1a1a1",
+    textMuted: "#737373",
     good: "#8cbe94",
     warn: "#e6a65a",
     bad: "#de6d6b",
-    shadow: "rgba(0, 0, 0, .5)",
+    shadow: "rgba(0, 0, 0, .55)",
   },
   light: {
     bg: "#efebd6",
