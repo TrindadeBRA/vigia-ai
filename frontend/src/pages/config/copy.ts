@@ -166,6 +166,27 @@ export type ConfigCopy = {
   weatherVarsHint: string;
   weatherNotConfigured: string;
   weatherPoweredBy: string;
+  // Papéis de parede (provedores externos)
+  wallpaperProvidersTitle: string;
+  wallpaperProvidersLead: string;
+  providerPexels: string;
+  providerWallhaven: string;
+  providerUnsplash: string;
+  providerNotConfigured: string;
+  providerAvailable: string;
+  providerKeySaved: string;
+  providerNeedsKey: string;
+  providerOptionalKey: string;
+  providerKeyLabel: string;
+  providerKeyPlaceholder: string;
+  providerKeyReplacePlaceholder: string;
+  providerKeySavedHint: string;
+  providerRemoveKey: string;
+  providerKeyRemoved: string;
+  providerSave: string;
+  providerSaving: string;
+  providerSaved: string;
+  providerError: string;
   // Financeiro
   financeiroTitle: string;
   financeiroLead: string;
@@ -352,6 +373,26 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherVarsHint: "Escolha quais dados o coletor busca no Open-Meteo. Todas as opções da API estão disponíveis.",
     weatherNotConfigured: "Configure a cidade para ver o clima.",
     weatherPoweredBy: "Dados por Open-Meteo.com",
+    wallpaperProvidersTitle: "Papéis de parede",
+    wallpaperProvidersLead: "Chaves para buscar e importar papéis de parede de serviços externos. Wallhaven funciona sem chave; Pexels e Unsplash precisam da sua própria API key.",
+    providerPexels: "Pexels",
+    providerWallhaven: "Wallhaven",
+    providerUnsplash: "Unsplash",
+    providerNotConfigured: "Não configurado",
+    providerAvailable: "Disponível",
+    providerKeySaved: "Chave salva",
+    providerNeedsKey: "Precisa de API key",
+    providerOptionalKey: "Chave opcional (para conteúdo NSFW/sketchy)",
+    providerKeyLabel: "API Key",
+    providerKeyPlaceholder: "Cole sua API key…",
+    providerKeyReplacePlaceholder: "Cole uma nova API key para substituir…",
+    providerKeySavedHint: "Chave salva no coletor. Cole uma nova para substituir, ou remova.",
+    providerRemoveKey: "Remover chave",
+    providerKeyRemoved: "Chave removida.",
+    providerSave: "Salvar chaves",
+    providerSaving: "Salvando…",
+    providerSaved: "Chaves salvas.",
+    providerError: "Falha ao salvar chaves.",
     financeiroTitle: "Financeiro",
     financeiroLead: "Carteira Bitcoin, AdSense e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
     outrosTitle: "Outros",
@@ -534,6 +575,26 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherVarsHint: "Choose which data the collector fetches from Open-Meteo. All API options are available.",
     weatherNotConfigured: "Set the city to see the weather.",
     weatherPoweredBy: "Data by Open-Meteo.com",
+    wallpaperProvidersTitle: "Wallpapers",
+    wallpaperProvidersLead: "Keys to search and import wallpapers from external services. Wallhaven works without a key; Pexels and Unsplash need your own API key.",
+    providerPexels: "Pexels",
+    providerWallhaven: "Wallhaven",
+    providerUnsplash: "Unsplash",
+    providerNotConfigured: "Not configured",
+    providerAvailable: "Available",
+    providerKeySaved: "Key saved",
+    providerNeedsKey: "Needs API key",
+    providerOptionalKey: "Optional key (for NSFW/sketchy content)",
+    providerKeyLabel: "API Key",
+    providerKeyPlaceholder: "Paste your API key…",
+    providerKeyReplacePlaceholder: "Paste a new API key to replace…",
+    providerKeySavedHint: "Key saved on the collector. Paste a new one to replace it, or remove it.",
+    providerRemoveKey: "Remove key",
+    providerKeyRemoved: "Key removed.",
+    providerSave: "Save keys",
+    providerSaving: "Saving…",
+    providerSaved: "Keys saved.",
+    providerError: "Failed to save keys.",
     financeiroTitle: "Finance",
     financeiroLead: "Bitcoin wallet, AdSense and currency quotes — dollar, euro, crypto, whatever you want to track.",
     outrosTitle: "Other",
@@ -716,6 +777,26 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     weatherVarsHint: "Elige qué datos busca el colector en Open-Meteo. Todas las opciones de la API están disponibles.",
     weatherNotConfigured: "Configura la ciudad para ver el clima.",
     weatherPoweredBy: "Datos por Open-Meteo.com",
+    wallpaperProvidersTitle: "Fondos de pantalla",
+    wallpaperProvidersLead: "Claves para buscar e importar fondos de servicios externos. Wallhaven funciona sin clave; Pexels y Unsplash necesitan tu propia API key.",
+    providerPexels: "Pexels",
+    providerWallhaven: "Wallhaven",
+    providerUnsplash: "Unsplash",
+    providerNotConfigured: "No configurado",
+    providerAvailable: "Disponible",
+    providerKeySaved: "Clave guardada",
+    providerNeedsKey: "Necesita API key",
+    providerOptionalKey: "Clave opcional (para contenido NSFW/sketchy)",
+    providerKeyLabel: "API Key",
+    providerKeyPlaceholder: "Pegá tu API key…",
+    providerKeyReplacePlaceholder: "Pegá una nueva API key para reemplazar…",
+    providerKeySavedHint: "Clave guardada en el colector. Pegá una nueva para reemplazarla, o quitala.",
+    providerRemoveKey: "Quitar clave",
+    providerKeyRemoved: "Clave quitada.",
+    providerSave: "Guardar claves",
+    providerSaving: "Guardando…",
+    providerSaved: "Claves guardadas.",
+    providerError: "Error al guardar claves.",
     financeiroTitle: "Finanzas",
     financeiroLead: "Billetera Bitcoin, AdSense y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
     outrosTitle: "Otros",

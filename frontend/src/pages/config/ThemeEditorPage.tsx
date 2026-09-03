@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
-import { ChipIcon, ClockIcon, DownloadIcon, ImageIcon, KeyIcon, PlusCircleIcon, TextIcon, UploadIcon } from "../../components/icons";
+import { ChipIcon, ClockIcon, DownloadIcon, ImageIcon, PlusCircleIcon, TextIcon, UploadIcon } from "../../components/icons";
 import { Logo } from "../../components/Logo";
 import { Skeleton } from "../../components/Skeleton";
 import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
@@ -26,7 +26,7 @@ import {
 } from "./themeMetrics";
 import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, TextField } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
-import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./WallpaperManager";
+import { WallpaperLibrary, WallpaperManager } from "./WallpaperManager";
 
 type ThemeIcon = {
   id: string;
@@ -609,7 +609,6 @@ export default function ThemeEditorPage() {
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
   const [wallpaperModalOpen, setWallpaperModalOpen] = useState(false);
-  const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
   const [debugModalOpen, setDebugModalOpen] = useState(false);
   const handleWallpaperSelected = useCallback((id: string | null) => {
     setCurrentWallpaperId(id);
@@ -848,7 +847,6 @@ export default function ThemeEditorPage() {
           />
           <ToolbarDivider />
           <ToolButton icon={<ImageIcon size={19} />} label={c.wallpapers} onClick={() => setWallpaperModalOpen(true)} />
-          <ToolButton icon={<KeyIcon size={19} />} label={c.apiKeysTool} onClick={() => setApiKeysModalOpen(true)} />
           <ToolButton icon={<ChipIcon size={19} />} label={c.debugTool} onClick={() => setDebugModalOpen(true)} />
         </div>
 
@@ -1203,11 +1201,6 @@ export default function ThemeEditorPage() {
         {wallpaperModalOpen ? (
           <Modal title={c.wallpapers} onClose={() => setWallpaperModalOpen(false)} closeLabel={closeLabel} wide>
             <WallpaperLibrary />
-          </Modal>
-        ) : null}
-        {apiKeysModalOpen ? (
-          <Modal title={c.apiKeysTool} onClose={() => setApiKeysModalOpen(false)} closeLabel={closeLabel}>
-            <WallpaperProviders />
           </Modal>
         ) : null}
       </WallpaperManager>

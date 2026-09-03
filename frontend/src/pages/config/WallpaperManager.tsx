@@ -2,9 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { cn } from "../../cn";
 import { useRequest } from "../../hooks/useRequest";
 import type { Lang } from "../../i18n";
-import { cfgHint, cfgStatus } from "../../tw";
+import { cfgStatus } from "../../tw";
 import { THEME_STR, type ThemeCopy } from "./themeCopy";
-import { ActionRow, Button, Card, FieldStatus, SelectField, StatusPill, TextField } from "./ui";
+import { Button, Card, FieldStatus, SelectField } from "./ui";
 
 type WallpaperItem = {
     id: string;
@@ -35,14 +35,6 @@ type SearchResult = {
     resolution?: string;
 };
 
-const MASK = "•".repeat(24);
-
-function typedKey(v: string): string | null {
-    const t = v.trim();
-    if (!t || t === MASK) return null;
-    return t;
-}
-
 function apiFail(j: unknown, fallback: string): string {
     if (j && typeof j === "object") {
         const o = j as { ok?: boolean; error?: string; detail?: unknown };
@@ -57,12 +49,6 @@ type WallpaperApi = {
     wallpapers: WallpaperItem[];
     selectedId: string | null;
     providers: ProviderStatus | null;
-    pexelsKey: string;
-    setPexelsKey: (v: string) => void;
-    unsplashKey: string;
-    setUnsplashKey: (v: string) => void;
-    wallhavenKey: string;
-    setWallhavenKey: (v: string) => void;
     searchProvider: "pexels" | "wallhaven" | "unsplash";
     setSearchProvider: (v: "pexels" | "wallhaven" | "unsplash") => void;
     searchQuery: string;
@@ -73,19 +59,13 @@ type WallpaperApi = {
     listReq: ReturnType<typeof useRequest>;
     uploadReq: ReturnType<typeof useRequest>;
     selectReq: ReturnType<typeof useRequest>;
-    providerReq: ReturnType<typeof useRequest>;
-    clearReq: ReturnType<typeof useRequest>;
     searchReq: ReturnType<typeof useRequest>;
     importReq: ReturnType<typeof useRequest>;
-    clearingField: string | null;
     canSearch: boolean;
-    keysDirty: boolean;
     fetchAll: () => Promise<void>;
     handleUpload: (file: File) => Promise<{ ok: boolean }>;
     handleDelete: (id: string) => Promise<{ ok: boolean }>;
     handleSelect: (id: string) => Promise<{ ok: boolean }>;
-    handleProviderSave: () => Promise<{ ok: boolean }>;
-    handleClearKey: (field: "pexels_key" | "unsplash_key" | "wallhaven_key") => Promise<{ ok: boolean }>;
     handleSearch: (page?: number) => Promise<{ ok: boolean; error?: string }>;
     handleImport: (item: SearchResult) => Promise<{ ok: boolean }>;
 };
@@ -114,22 +94,15 @@ export function WallpaperManager({
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [providers, setProviders] = useState<ProviderStatus | null>(null);
 
-    const [pexelsKey, setPexelsKey] = useState("");
-    const [unsplashKey, setUnsplashKey] = useState("");
-    const [wallhavenKey, setWallhavenKey] = useState("");
-
     const [searchProvider, setSearchProvider] = useState<"pexels" | "wallhaven" | "unsplash">("wallhaven");
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchTotal, setSearchTotal] = useState<number | null>(null);
     const [searchPage, setSearchPage] = useState(1);
-    const [clearingField, setClearingField] = useState<string | null>(null);
 
     const listReq = useRequest();
     const uploadReq = useRequest();
     const selectReq = useRequest();
-    const providerReq = useRequest();
-    const clearReq = useRequest();
     const searchReq = useRequest();
     const importReq = useRequest();
 
@@ -153,12 +126,6 @@ export function WallpaperManager({
     useEffect(() => {
         void fetchAll();
     }, [fetchAll]);
-
-    useEffect(() => {
-        setPexelsKey(providers?.pexels.configured ? MASK : "");
-        setUnsplashKey(providers?.unsplash.configured ? MASK : "");
-        setWallhavenKey(providers?.wallhaven.has_key ? MASK : "");
-    }, [providers?.pexels.configured, providers?.unsplash.configured, providers?.wallhaven.has_key]);
 
     async function handleUpload(file: File) {
         const localUrl = URL.createObjectURL(file);
@@ -204,43 +171,6 @@ export function WallpaperManager({
         onSelectedChange?.(next);
         window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
         return { ok: true };
-    }
-
-    async function handleProviderSave() {
-        const body: Record<string, string> = {};
-        const pexels = typedKey(pexelsKey);
-        const unsplash = typedKey(unsplashKey);
-        const wallhaven = typedKey(wallhavenKey);
-        if (pexels) body.pexels_key = pexels;
-        if (unsplash) body.unsplash_key = unsplash;
-        if (wallhaven) body.wallhaven_key = wallhaven;
-        if (Object.keys(body).length === 0) return { ok: true };
-        const r = await fetch("/api/wallpapers/providers", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-        });
-        const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
-        if (!j.ok) throw new Error(j.error || c.providerError);
-        await fetchAll();
-        return { ok: true };
-    }
-
-    async function handleClearKey(field: "pexels_key" | "unsplash_key" | "wallhaven_key") {
-        setClearingField(field);
-        try {
-            const r = await fetch("/api/wallpapers/providers", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ [field]: "" }),
-            });
-            const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
-            if (!j.ok) throw new Error(j.error || c.providerError);
-            await fetchAll();
-            return { ok: true };
-        } finally {
-            setClearingField(null);
-        }
     }
 
     async function handleSearch(page = 1) {
@@ -291,19 +221,11 @@ export function WallpaperManager({
         return false;
     })();
 
-    const keysDirty = Boolean(typedKey(pexelsKey) || typedKey(unsplashKey) || typedKey(wallhavenKey));
-
     const api: WallpaperApi = {
         c,
         wallpapers,
         selectedId,
         providers,
-        pexelsKey,
-        setPexelsKey,
-        unsplashKey,
-        setUnsplashKey,
-        wallhavenKey,
-        setWallhavenKey,
         searchProvider,
         setSearchProvider,
         searchQuery,
@@ -314,19 +236,13 @@ export function WallpaperManager({
         listReq,
         uploadReq,
         selectReq,
-        providerReq,
-        clearReq,
         searchReq,
         importReq,
-        clearingField,
         canSearch: Boolean(canSearch),
-        keysDirty,
         fetchAll,
         handleUpload,
         handleDelete,
         handleSelect,
-        handleProviderSave,
-        handleClearKey,
         handleSearch,
         handleImport,
     };
@@ -536,125 +452,3 @@ export function WallpaperLibrary() {
     );
 }
 
-function ProviderKeyRow({
-    name,
-    hint,
-    hasKey,
-    optional,
-    value,
-    onChange,
-    onClear,
-    clearing,
-}: {
-    name: string;
-    hint: string;
-    hasKey: boolean;
-    optional?: boolean;
-    value: string;
-    onChange: (v: string) => void;
-    onClear?: () => void;
-    clearing?: boolean;
-}) {
-    const { c } = useWp();
-    const pill = hasKey
-        ? { state: "ok" as const, label: c.providerKeySaved }
-        : optional
-          ? { state: "ok" as const, label: c.providerAvailable }
-          : { state: "missing" as const, label: c.providerNotConfigured };
-
-    return (
-        <div className="rounded-[12px] border border-edge bg-canvas p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-sm font-bold text-ink">{name}</span>
-                <StatusPill state={pill.state} label={pill.label} />
-            </div>
-            <p className={cfgStatus}>{hint}</p>
-            <ActionRow>
-                <TextField
-                    type="password"
-                    autoComplete="off"
-                    spellCheck={false}
-                    label={c.providerKeyLabel}
-                    value={value}
-                    placeholder={hasKey ? c.providerKeyReplacePlaceholder : c.providerKeyPlaceholder}
-                    onFocus={() => {
-                        if (value === MASK) onChange("");
-                    }}
-                    onBlur={() => {
-                        if (!value.trim() && hasKey) onChange(MASK);
-                    }}
-                    onChange={(e) => onChange(e.target.value)}
-                />
-                {hasKey && onClear ? (
-                    <Button variant="ghost" loading={clearing} onClick={onClear}>
-                        {clearing ? c.removing : c.providerRemoveKey}
-                    </Button>
-                ) : null}
-            </ActionRow>
-            {hasKey && (value === MASK || !value.trim()) ? <p className={cfgHint}>{c.providerKeySavedHint}</p> : null}
-        </div>
-    );
-}
-
-export function WallpaperProviders() {
-    const {
-        c,
-        providers,
-        pexelsKey,
-        setPexelsKey,
-        unsplashKey,
-        setUnsplashKey,
-        wallhavenKey,
-        setWallhavenKey,
-        providerReq,
-        clearReq,
-        clearingField,
-        keysDirty,
-        handleProviderSave,
-        handleClearKey,
-    } = useWp();
-
-    return (
-        <Card title={c.providers} lead={c.providersLead}>
-            <div className="grid gap-4">
-                <ProviderKeyRow
-                    name={c.providerPexels}
-                    hint={c.providerNeedsKey}
-                    hasKey={Boolean(providers?.pexels.configured)}
-                    value={pexelsKey}
-                    onChange={setPexelsKey}
-                    onClear={() => void clearReq.run(() => handleClearKey("pexels_key"), { success: c.providerKeyRemoved, error: c.providerError })}
-                    clearing={clearReq.busy && clearingField === "pexels_key"}
-                />
-                <ProviderKeyRow
-                    name={c.providerWallhaven}
-                    hint={c.providerOptionalKey}
-                    hasKey={Boolean(providers?.wallhaven.has_key)}
-                    optional
-                    value={wallhavenKey}
-                    onChange={setWallhavenKey}
-                    onClear={() => void clearReq.run(() => handleClearKey("wallhaven_key"), { success: c.providerKeyRemoved, error: c.providerError })}
-                    clearing={clearReq.busy && clearingField === "wallhaven_key"}
-                />
-                <ProviderKeyRow
-                    name={c.providerUnsplash}
-                    hint={c.providerNeedsKey}
-                    hasKey={Boolean(providers?.unsplash.configured)}
-                    value={unsplashKey}
-                    onChange={setUnsplashKey}
-                    onClear={() => void clearReq.run(() => handleClearKey("unsplash_key"), { success: c.providerKeyRemoved, error: c.providerError })}
-                    clearing={clearReq.busy && clearingField === "unsplash_key"}
-                />
-            </div>
-            <Button
-                disabled={!keysDirty}
-                onClick={() => void providerReq.run(handleProviderSave, { success: c.providerSaved, error: c.providerError })}
-                loading={providerReq.busy}
-            >
-                {providerReq.busy ? c.providerSaving : c.providerSave}
-            </Button>
-            <FieldStatus status={providerReq.status} message={providerReq.message} />
-            <FieldStatus status={clearReq.status} message={clearReq.message} />
-        </Card>
-    );
-}

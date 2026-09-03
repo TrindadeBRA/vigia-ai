@@ -131,6 +131,12 @@ export type WeatherDisplay = {
   fields: WeatherDisplayFields;
 };
 
+export type WallpaperProviderStatus = {
+  pexels: { configured: boolean; needs_key: boolean };
+  wallhaven: { configured: boolean; has_key?: boolean; needs_key: boolean };
+  unsplash: { configured: boolean; needs_key: boolean };
+};
+
 export type WeatherConfig = {
   enabled: boolean;
   hidden: boolean;

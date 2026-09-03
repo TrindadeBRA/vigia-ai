@@ -189,6 +189,23 @@ export async function fetchWeather(): Promise<import("./types").WeatherPayload> 
   return res.json() as Promise<import("./types").WeatherPayload>;
 }
 
+// ── Papéis de parede (provedores externos) ──────────────────────────
+
+export async function fetchWallpaperProviders(): Promise<import("./types").WallpaperProviderStatus> {
+  const res = await fetch("/api/wallpapers/providers", { cache: "no-store" });
+  if (!res.ok) throw new Error(`wallpaper providers HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").WallpaperProviderStatus>;
+}
+
+export async function patchWallpaperProviders(body: { pexels_key?: string; unsplash_key?: string; wallhaven_key?: string }): Promise<MutateResult> {
+  const res = await fetch("/api/wallpapers/providers", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res);
+}
+
 // ── Cotação de moedas ───────────────────────────────────────────────
 
 export async function fetchCurrenciesConfig(): Promise<import("./types").CurrenciesConfig> {
