@@ -28,6 +28,11 @@ export type AlarmsCopy = {
   telegramTestFailed: string;
   rulesTitle: string;
   rulesLead: string;
+  exportAlarms: string;
+  importAlarms: string;
+  alarmsImported: (n: number) => string;
+  alarmsImportError: string;
+  alarmsImportEmpty: string;
   provider: string;
   metric: string;
   threshold: string;
@@ -87,6 +92,11 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     telegramTestFailed: "Falha ao enviar — conecte o bot primeiro",
     rulesTitle: "Regras",
     rulesLead: "Provedor + métrica + limiar. Dispara uma vez ao cruzar o limiar, não repete enquanto continuar do mesmo lado.",
+    exportAlarms: "Exportar alarmes",
+    importAlarms: "Importar alarmes",
+    alarmsImported: (n) => (n === 1 ? "1 alarme importado" : `${n} alarmes importados`),
+    alarmsImportError: "Não foi possível importar o arquivo.",
+    alarmsImportEmpty: "Nenhum alarme válido encontrado no arquivo.",
     provider: "Provedor",
     metric: "Métrica",
     threshold: "Limiar",
@@ -144,6 +154,11 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     telegramTestFailed: "Failed to send — connect the bot first",
     rulesTitle: "Rules",
     rulesLead: "Provider + metric + threshold. Fires once when crossing the threshold, won't repeat while staying on the same side.",
+    exportAlarms: "Export alarms",
+    importAlarms: "Import alarms",
+    alarmsImported: (n) => (n === 1 ? "1 alarm imported" : `${n} alarms imported`),
+    alarmsImportError: "Could not import the file.",
+    alarmsImportEmpty: "No valid alarms found in the file.",
     provider: "Provider",
     metric: "Metric",
     threshold: "Threshold",
@@ -201,6 +216,11 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     telegramTestFailed: "Error al enviar — conectá el bot primero",
     rulesTitle: "Reglas",
     rulesLead: "Proveedor + métrica + límite. Dispara una vez al cruzar el límite, no repite mientras siga del mismo lado.",
+    exportAlarms: "Exportar alarmas",
+    importAlarms: "Importar alarmas",
+    alarmsImported: (n) => (n === 1 ? "1 alarma importada" : `${n} alarmas importadas`),
+    alarmsImportError: "No se pudo importar el archivo.",
+    alarmsImportEmpty: "No se encontró ninguna alarma válida en el archivo.",
     provider: "Proveedor",
     metric: "Métrica",
     threshold: "Límite",

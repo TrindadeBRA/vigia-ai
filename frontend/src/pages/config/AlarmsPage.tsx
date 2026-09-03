@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useOutletContext } from "react-router-dom";
 import { createAlarm, deleteAlarm, fetchAlarms, patchAlarm } from "../../api/client";
 import type { AlarmMetric, AlarmsPublic, TelegramChat } from "../../api/types";
 import { Skeleton } from "../../components/Skeleton";
 import { cn } from "../../cn";
 import { useRequest } from "../../hooks/useRequest";
-import { SlidersIcon, TrashIcon } from "../../components/icons";
+import { DownloadIcon, SlidersIcon, TrashIcon, UploadIcon } from "../../components/icons";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgHint, cfgStatus, iconBtn, iconChip, iconImg, pageCol, viewFade } from "../../tw";
 import { ALARMS_STR } from "./alarmsCopy";
@@ -81,6 +81,116 @@ function ProviderIcon({
         draggable={false}
       />
     </span>
+  );
+}
+
+// ── Exportar/importar regras de alarme como JSON ──────────────────────
+
+type ExportedAlarmRule = { provider: string; metric: string; threshold: number; enabled: boolean; label: string };
+
+function downloadAlarmsJson(rules: AlarmsPublic["rules"]) {
+  const alarms: ExportedAlarmRule[] = rules.map((r) => ({
+    provider: r.provider,
+    metric: r.metric,
+    threshold: r.threshold,
+    enabled: r.enabled,
+    label: r.label,
+  }));
+  const payload = { version: 1, exported_at: new Date().toISOString(), alarms };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `vigia-alarmes-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseAlarmsJson(text: string): ExportedAlarmRule[] | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const candidate = data && typeof data === "object" && "alarms" in (data as Record<string, unknown>) ? (data as Record<string, unknown>).alarms : data;
+  if (!Array.isArray(candidate)) return null;
+  const rules: ExportedAlarmRule[] = [];
+  for (const item of candidate) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    if (typeof r.provider !== "string" || typeof r.metric !== "string" || typeof r.threshold !== "number") continue;
+    rules.push({
+      provider: r.provider,
+      metric: r.metric,
+      threshold: r.threshold,
+      enabled: typeof r.enabled === "boolean" ? r.enabled : true,
+      label: typeof r.label === "string" ? r.label : "",
+    });
+  }
+  return rules;
+}
+
+function AlarmsIOButtons({ data, c, onReload }: { data: AlarmsPublic; c: typeof ALARMS_STR.pt; onReload: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function flash(text: string) {
+    setMsg(text);
+    window.setTimeout(() => setMsg((m) => (m === text ? null : m)), 3000);
+  }
+
+  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const parsed = parseAlarmsJson(await file.text());
+    if (!parsed || parsed.length === 0) {
+      flash(c.alarmsImportEmpty);
+      return;
+    }
+    setBusy(true);
+    let count = 0;
+    for (const rule of parsed) {
+      const res = await createAlarm(rule);
+      if (res.ok) count++;
+    }
+    setBusy(false);
+    if (count === 0) {
+      flash(c.alarmsImportError);
+      return;
+    }
+    await onReload();
+    flash(c.alarmsImported(count));
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
+        title={c.exportAlarms}
+        aria-label={c.exportAlarms}
+        onClick={() => downloadAlarmsJson(data.rules)}
+      >
+        <DownloadIcon size={14} />
+      </button>
+      <button
+        type="button"
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+        title={c.importAlarms}
+        aria-label={c.importAlarms}
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        <UploadIcon size={14} />
+      </button>
+      <input ref={inputRef} type="file" accept="application/json" className="hidden" onChange={(e) => void handleFile(e)} />
+      {msg ? <span className="text-[11.5px] text-ink3">{msg}</span> : null}
+    </div>
   );
 }
 
@@ -233,7 +343,7 @@ export default function AlarmsPage() {
         )}
       </Card>
 
-      <Card title={c.rulesTitle} lead={c.rulesLead}>
+      <Card title={c.rulesTitle} lead={c.rulesLead} action={<AlarmsIOButtons data={data} c={c} onReload={reload} />}>
         <div className="flex flex-col gap-5">
           <ActionRow>
             <div className="flex min-w-[140px] flex-1 items-end gap-2.5">

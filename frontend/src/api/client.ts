@@ -89,7 +89,7 @@ export async function fetchAlarms(): Promise<AlarmsPublic> {
   return res.json() as Promise<AlarmsPublic>;
 }
 
-export async function createAlarm(body: { provider: string; metric: string; threshold: number; label?: string }) {
+export async function createAlarm(body: { provider: string; metric: string; threshold: number; enabled?: boolean; label?: string }) {
   const res = await fetch("/api/alarms", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
