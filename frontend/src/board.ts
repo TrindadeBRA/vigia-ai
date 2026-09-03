@@ -41,7 +41,9 @@ export function colsForWidth(width: number): number {
   if (width <= 0) return 8;
   // grid 1/4: largura da célula = metade do normal, então dobra colunas visuais mas mantém mesmo tamanho de card
   const quarterMin = Math.max(84, Math.round(CELL_MIN / 2));
-  return Math.max(2, Math.floor((width + CELL_GAP) / (quarterMin + CELL_GAP)));
+  const base = Math.max(2, Math.floor((width + CELL_GAP) / (quarterMin + CELL_GAP)));
+  // celulares comuns (320–375px) caem em 3 colunas por pouco; força 4 para não desperdiçar espaço no mobile
+  return base === 3 ? 4 : base;
 }
 
 export function normalizeSize(s: string | undefined): CardSize {
