@@ -1,8 +1,9 @@
-# Alarmes e notificações push (protótipo)
+# Alarmes e notificações (protótipo)
 
 Painel `/display/alarms`: regras de **provedor + métrica + limiar** que
-disparam uma notificação **Web Push** quando cruzadas. Fora do contrato JSON
-principal (`CONTRATO_JSON.md`) — não mexe em `/usage` nem no firmware.
+disparam notificações quando cruzadas. Canais disponíveis: **Web Push** e
+**Telegram**. Fora do contrato JSON principal (`CONTRATO_JSON.md`) — não mexe
+em `/usage` nem no firmware.
 
 ## Modelo da regra
 
@@ -98,17 +99,81 @@ no próprio botão) — dá tempo de minimizar/trocar de janela antes da
 notificação chegar, já que o Chrome pode não mostrar o banner do sistema
 enquanto a aba está em primeiro plano.
 
+## Telegram
+
+Segundo canal de notificação — funciona em qualquer dispositivo com o app do
+Telegram, sem depender de contexto seguro do navegador (diferente do push).
+
+### Fluxo de conexão
+
+1. Usuário cria um bot com o **@BotFather** no Telegram (fora do projeto) e
+   recebe um token.
+2. Cola o token no card "Telegram" em `/display/alarms`. O backend valida na
+   hora (`GET getMe`), salva em `config.json` e mostra o link do bot.
+3. Usuário abre o link e manda qualquer mensagem (ex. `/start`). O backend
+   está em long-polling (`getUpdates`) e captura o `chat_id` automaticamente,
+   respondendo no chat com confirmação.
+4. Dali em diante, todo alarme dispara mensagem nos chats registrados.
+
+### Chaves e storage
+
+`backend/data/config.json` (gitignored, chmod 600):
+
+```json
+"telegram": {
+  "bot_token": "...",
+  "bot_username": "meu_bot",
+  "chats": [{"id": "123", "label": "João", "added_at": "..."}]
+}
+```
+
+O token do bot é tratado como segredo — mesmo arquivo dos tokens dos
+provedores e chaves VAPID. Nunca comitar.
+
+### Limitações
+
+- Long-polling (não webhook) — funciona em LAN/Mac local sem HTTPS público.
+- Um único bot/token por instalação (single-user, igual ao resto do config).
+- Chats que bloqueiam o bot (403) ou não existem mais (400) são removidos
+  automaticamente no próximo envio — mesmo padrão do pruning de endpoints
+  mortos do push.
+
+### Arquivos (Telegram)
+
+| Peça | Arquivo |
+| --- | --- |
+| Token + envio + polling unitário | `backend/app/telegram_bot.py` |
+| Long-polling (lifecycle) | `backend/app/telegram_poller.py` |
+| Rotas `/api/telegram/*` | `backend/app/routers/telegram.py` |
+| Hook no ciclo do hub | `backend/app/alarms.py` (`handle_payload`) |
+| Hook no painel | `frontend/src/pages/config/useTelegram.ts` |
+| Card no painel | `frontend/src/pages/config/AlarmsPage.tsx` |
+
+### Como testar (Telegram)
+
+1. `./dev up`, abrir `/display/alarms`.
+2. Criar bot de teste via @BotFather, colar o token → deve validar e mostrar
+   o link do bot.
+3. Mandar `/start` pro bot → painel deve mostrar o chat conectado.
+4. Clicar "Enviar teste" → mensagem chega no Telegram.
+5. Criar regra de alarme com mock ativo → forçar `GET /usage` → mensagem
+   chega no Telegram (e no push, se em contexto seguro).
+
 ## Arquivos
 
 | Peça | Arquivo |
 | --- | --- |
 | Catálogo de métricas + motor de disparo | `backend/app/alarms.py` |
-| Chaves VAPID + envio | `backend/app/push.py` |
+| Chaves VAPID + envio push | `backend/app/push.py` |
+| Token Telegram + envio | `backend/app/telegram_bot.py` |
+| Long-polling Telegram | `backend/app/telegram_poller.py` |
 | Rotas `/api/alarms/*` | `backend/app/routers/alarms.py` |
 | Rotas `/api/push/*` | `backend/app/routers/push.py` |
+| Rotas `/api/telegram/*` | `backend/app/routers/telegram.py` |
 | Hook no ciclo do hub | `backend/app/hub.py` (`on_payload`) |
 | Service worker | `frontend/public/sw.js` |
 | Hook de assinatura do navegador | `frontend/src/pages/config/usePush.ts` |
+| Hook do Telegram | `frontend/src/pages/config/useTelegram.ts` |
 | Painel | `frontend/src/pages/config/AlarmsPage.tsx` |
 
 ## Como testar

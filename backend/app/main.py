@@ -22,6 +22,8 @@ from app.routers.alarms import router as alarms_router
 from app.routers.config import router as config_router
 from app.routers.currencies import router as currencies_router
 from app.routers.push import router as push_router
+from app.routers.telegram import router as telegram_router
+from app.telegram_poller import TelegramPoller
 from app.routers.theme import router as theme_router
 from app.routers.usage import router as usage_router
 from app.routers.wallpapers import router as wallpapers_router
@@ -49,11 +51,15 @@ class CloseConnectionMiddleware(BaseHTTPMiddleware):
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     alarm_engine = AlarmEngine()
     hub = UsageHub(on_payload=alarm_engine.handle_payload)
+    telegram_poller = TelegramPoller()
     app.state.hub = hub
+    app.state.telegram_poller = telegram_poller
     await hub.start()
+    await telegram_poller.start()
     try:
         yield
     finally:
+        await telegram_poller.stop()
         await hub.stop()
 
 
@@ -106,6 +112,7 @@ def create_app() -> FastAPI:
     app.include_router(theme_router)
     app.include_router(alarms_router)
     app.include_router(push_router)
+    app.include_router(telegram_router)
     app.include_router(wallpapers_router)
     app.include_router(weather_router)
     app.include_router(currencies_router)

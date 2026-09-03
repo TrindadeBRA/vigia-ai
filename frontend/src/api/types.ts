@@ -350,6 +350,18 @@ export type AlarmsPublic = {
   metrics: Record<string, AlarmMetric[]>;
 };
 
+export type TelegramChat = {
+  id: string;
+  label: string;
+  added_at: string;
+};
+
+export type TelegramStatus = {
+  configured: boolean;
+  bot_username: string;
+  chats: TelegramChat[];
+};
+
 export type ConfigPublic = {
   ok: boolean;
   in_docker: boolean;

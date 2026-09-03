@@ -163,7 +163,7 @@ class AlarmEngine:
         events = evaluate(payload, rules, self._armed)
         if not events:
             return
-        from app import push  # import tardio: evita ciclo hub -> alarms -> push -> store
+        from app import push, telegram_bot  # import tardio: evita ciclo hub -> alarms -> store
 
         for event in events:
             title, body = _event_message(event)
@@ -171,3 +171,7 @@ class AlarmEngine:
                 push.broadcast(title, body, tag=f"alarm-{event['rule']['id']}")
             except Exception as exc:  # noqa: BLE001
                 print(f"[alarms] falha ao enviar push: {exc}")
+            try:
+                telegram_bot.broadcast(title, body)
+            except Exception as exc:  # noqa: BLE001
+                print(f"[alarms] falha ao enviar telegram: {exc}")

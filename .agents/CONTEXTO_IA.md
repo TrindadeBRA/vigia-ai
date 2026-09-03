@@ -62,9 +62,14 @@ firmware/src/net/theme_server.cpp  servidor HTTP :80 do tema, direto/debug (prot
 firmware/src/net/client.cpp        themeClientReload(): placa busca o tema do coletor
 backend/app/alarms.py              catálogo de métricas + motor de disparo dos alarmes (protótipo)
 backend/app/push.py                chaves VAPID + envio de Web Push (protótipo)
+backend/app/telegram_bot.py        token Telegram + envio + polling unitário (protótipo)
+backend/app/telegram_poller.py     long-polling do Telegram (protótipo)
 backend/app/routers/alarms.py      rotas /api/alarms/*
 backend/app/routers/push.py        rotas /api/push/*
+backend/app/routers/telegram.py    rotas /api/telegram/*
 frontend/src/pages/config/AlarmsPage.tsx  painel de alarmes + notificações (/display/alarms)
+frontend/src/pages/config/usePush.ts      hook de assinatura Web Push
+frontend/src/pages/config/useTelegram.ts  hook do Telegram
 frontend/public/sw.js              service worker (push, notificationclick)
 firmware/src/ui/customtheme.cpp    persistência (LittleFS/RAM) + render do tema (VIEW_THEME)
 firmware/platformio.ini

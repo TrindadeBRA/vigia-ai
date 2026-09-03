@@ -143,6 +143,40 @@ export async function testPush() {
   return readMutate(res);
 }
 
+export async function fetchTelegramStatus(): Promise<import("./types").TelegramStatus> {
+  const res = await fetch("/api/telegram/status", { cache: "no-store" });
+  if (!res.ok) throw new Error(`telegram status HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").TelegramStatus>;
+}
+
+export async function saveTelegramToken(bot_token: string) {
+  const res = await fetch("/api/telegram/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bot_token }),
+  });
+  return readMutate(res);
+}
+
+export async function clearTelegramToken() {
+  const res = await fetch("/api/telegram/token/clear", { method: "POST" });
+  return readMutate(res);
+}
+
+export async function removeTelegramChat(chat_id: string) {
+  const res = await fetch("/api/telegram/chats/remove", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id }),
+  });
+  return readMutate(res);
+}
+
+export async function testTelegram() {
+  const res = await fetch("/api/telegram/test", { method: "POST" });
+  return readMutate(res);
+}
+
 // ── Weather ──────────────────────────────────────────────────────────
 
 export async function fetchWeatherConfig(): Promise<import("./types").WeatherConfig> {

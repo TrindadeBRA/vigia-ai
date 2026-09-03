@@ -8,6 +8,7 @@ import { cfgFieldLabel, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from ".
 import { ALARMS_STR } from "./alarmsCopy";
 import type { ConfigOutlet } from "./usePublicConfig";
 import { usePush, type PushSupport } from "./usePush";
+import { useTelegram } from "./useTelegram";
 import { ActionRow, Button, Card, FieldStatus, StatusPill, Switch, TextField } from "./ui";
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -75,6 +76,8 @@ export default function AlarmsPage() {
   const ctx = useOutletContext<ConfigOutlet | null>();
   const c = ALARMS_STR[ctx?.lang || "pt"];
   const push = usePush();
+  const telegram = useTelegram();
+  const [tokenInput, setTokenInput] = useState("");
 
   const [data, setData] = useState<AlarmsPublic | null>(null);
   const [phase, setPhase] = useState<"loading" | "ready" | "error">("loading");
@@ -111,6 +114,10 @@ export default function AlarmsPage() {
 
   const pushAction = useRequest();
   const testAction = useRequest();
+  const telegramTokenAction = useRequest();
+  const telegramTestAction = useRequest();
+  const telegramRemoveAction = useRequest();
+  const telegramClearAction = useRequest();
   const addAction = useRequest();
 
   const TEST_DELAY_S = 15;
@@ -131,6 +138,12 @@ export default function AlarmsPage() {
 
   const currentMetric = data?.metrics[provider]?.find((m) => m.key === metric);
   const badge = pushBadge(push.state, c);
+  const tg = telegram.status;
+  const tgBadge = tg?.chats.length
+    ? { state: "ok" as const, label: c.telegramConnected }
+    : tg?.configured
+      ? { state: "warn" as const, label: c.telegramNotConnected }
+      : { state: "missing" as const, label: c.telegramNotConnected };
 
   const suggestedLabel = useMemo(
     () => suggestLabel(c, provider, currentMetric, threshold),
@@ -200,6 +213,116 @@ export default function AlarmsPage() {
         {pushAction.message ? <FieldStatus status={pushAction.status} message={pushAction.message} /> : null}
         {testAction.message ? <FieldStatus status={testAction.status} message={testAction.message} /> : null}
         <p className={cfgHint}>{c.secureContextNote}</p>
+      </Card>
+
+      <Card title={c.telegramTitle} lead={c.telegramLead} action={<StatusPill state={tgBadge.state} label={tgBadge.label} />}>
+        {!tg?.configured ? (
+          <>
+            <p className={cfgHint}>{c.telegramBotFatherHint}</p>
+            <ActionRow>
+              <TextField
+                label={c.telegramTitle}
+                placeholder={c.telegramTokenPh}
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+              />
+              <Button
+                loading={telegramTokenAction.busy || telegram.busy}
+                disabled={!tokenInput.trim()}
+                onClick={() =>
+                  telegramTokenAction.run(
+                    async () => {
+                      const res = await telegram.saveToken(tokenInput.trim());
+                      if (res.ok) setTokenInput("");
+                      return res;
+                    },
+                    { success: c.telegramSaveToken, error: c.offline },
+                  )
+                }
+              >
+                {telegramTokenAction.busy ? c.telegramSavingToken : c.telegramSaveToken}
+              </Button>
+            </ActionRow>
+            {telegramTokenAction.message ? (
+              <FieldStatus status={telegramTokenAction.status} message={telegramTokenAction.message} />
+            ) : null}
+          </>
+        ) : (
+          <>
+            {tg.chats.length === 0 ? (
+              <>
+                <ActionRow>
+                  <Button
+                    variant="secondary"
+                    onClick={() => window.open(`https://t.me/${tg.bot_username}`, "_blank", "noopener,noreferrer")}
+                  >
+                    {c.telegramOpenBot}
+                  </Button>
+                </ActionRow>
+                <p className={cfgHint}>{c.telegramConnectHint}</p>
+              </>
+            ) : (
+              <>
+                <div className={cfgGrid}>
+                  {tg.chats.map((chat) => (
+                    <article
+                      key={chat.id}
+                      className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-edge bg-panel px-[18px] py-3 shadow-card [.flat_&]:shadow-none"
+                    >
+                      <span className="min-w-0 truncate text-sm font-medium text-ink">{chat.label || chat.id}</span>
+                      <Button
+                        variant="ghost"
+                        loading={telegramRemoveAction.busy}
+                        onClick={() =>
+                          telegramRemoveAction.run(() => telegram.removeChat(chat.id), {
+                            success: c.removed,
+                            error: c.offline,
+                          })
+                        }
+                      >
+                        {telegramRemoveAction.busy ? c.removing : c.remove}
+                      </Button>
+                    </article>
+                  ))}
+                </div>
+                <ActionRow>
+                  <Button
+                    variant="ghost"
+                    loading={telegramTestAction.busy}
+                    onClick={() =>
+                      telegramTestAction.run(() => telegram.sendTest(), {
+                        success: c.telegramTestSent,
+                        error: c.telegramTestFailed,
+                      })
+                    }
+                  >
+                    {telegramTestAction.busy ? c.sendingTest : c.sendTest}
+                  </Button>
+                </ActionRow>
+                {telegramTestAction.message ? (
+                  <FieldStatus status={telegramTestAction.status} message={telegramTestAction.message} />
+                ) : null}
+              </>
+            )}
+            <ActionRow>
+              <Button
+                variant="secondary"
+                loading={telegramClearAction.busy || telegram.busy}
+                onClick={() =>
+                  telegramClearAction.run(() => telegram.clearToken(), {
+                    success: c.telegramDisconnect,
+                    error: c.offline,
+                  })
+                }
+              >
+                {telegramClearAction.busy ? c.telegramDisconnecting : tg.chats.length ? c.telegramDisconnect : c.telegramChangeToken}
+              </Button>
+            </ActionRow>
+            {telegramClearAction.message ? (
+              <FieldStatus status={telegramClearAction.status} message={telegramClearAction.message} />
+            ) : null}
+          </>
+        )}
       </Card>
 
       <Card title={c.rulesTitle} lead={c.rulesLead}>

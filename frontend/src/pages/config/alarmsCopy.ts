@@ -22,6 +22,21 @@ export type AlarmsCopy = {
   testSent: string;
   testFailed: string;
   secureContextNote: string;
+  telegramTitle: string;
+  telegramLead: string;
+  telegramTokenPh: string;
+  telegramSaveToken: string;
+  telegramSavingToken: string;
+  telegramBotFatherHint: string;
+  telegramOpenBot: string;
+  telegramConnectHint: string;
+  telegramConnected: string;
+  telegramNotConnected: string;
+  telegramDisconnect: string;
+  telegramDisconnecting: string;
+  telegramChangeToken: string;
+  telegramTestSent: string;
+  telegramTestFailed: string;
   rulesTitle: string;
   rulesLead: string;
   provider: string;
@@ -74,6 +89,21 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     testFailed: "Falha ao enviar — ative as notificações primeiro",
     secureContextNote:
       "Push só funciona em contexto seguro: abrindo o painel em http://127.0.0.1:<porta> neste computador. Pelo IP da rede (ex. no celular) o navegador bloqueia a assinatura — dá pra configurar os alarmes normalmente, mas o push só chega aqui neste Mac.",
+    telegramTitle: "Telegram",
+    telegramLead: "Receba os alarmes no app do Telegram — funciona em qualquer dispositivo, sem depender do navegador.",
+    telegramTokenPh: "Cole o token do @BotFather",
+    telegramSaveToken: "Salvar token",
+    telegramSavingToken: "Salvando…",
+    telegramBotFatherHint: "Crie um bot com o @BotFather no Telegram, copie o token e cole aqui.",
+    telegramOpenBot: "Abrir bot no Telegram",
+    telegramConnectHint: "Abra o bot e mande qualquer mensagem (ex. /start) para conectar.",
+    telegramConnected: "Conectado",
+    telegramNotConnected: "Aguardando conexão",
+    telegramDisconnect: "Desconectar",
+    telegramDisconnecting: "Desconectando…",
+    telegramChangeToken: "Trocar token",
+    telegramTestSent: "Mensagem de teste enviada no Telegram",
+    telegramTestFailed: "Falha ao enviar — conecte o bot primeiro",
     rulesTitle: "Regras",
     rulesLead: "Provedor + métrica + limiar. Dispara uma vez ao cruzar o limiar, não repete enquanto continuar do mesmo lado.",
     provider: "Provedor",
@@ -124,6 +154,21 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     testFailed: "Failed to send — enable notifications first",
     secureContextNote:
       "Push only works in a secure context: opening the panel at http://127.0.0.1:<port> on this machine. From the LAN IP (e.g. a phone) the browser blocks the subscription — you can still set up alarms there, but push only arrives on this Mac.",
+    telegramTitle: "Telegram",
+    telegramLead: "Receive alarms in the Telegram app — works on any device, no browser restrictions.",
+    telegramTokenPh: "Paste the @BotFather token",
+    telegramSaveToken: "Save token",
+    telegramSavingToken: "Saving…",
+    telegramBotFatherHint: "Create a bot with @BotFather on Telegram, copy the token and paste it here.",
+    telegramOpenBot: "Open bot in Telegram",
+    telegramConnectHint: "Open the bot and send any message (e.g. /start) to connect.",
+    telegramConnected: "Connected",
+    telegramNotConnected: "Waiting for connection",
+    telegramDisconnect: "Disconnect",
+    telegramDisconnecting: "Disconnecting…",
+    telegramChangeToken: "Change token",
+    telegramTestSent: "Test message sent on Telegram",
+    telegramTestFailed: "Failed to send — connect the bot first",
     rulesTitle: "Rules",
     rulesLead: "Provider + metric + threshold. Fires once when crossing the threshold, won't repeat while staying on the same side.",
     provider: "Provider",
@@ -174,6 +219,21 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     testFailed: "Error al enviar — activá las notificaciones primero",
     secureContextNote:
       "Push solo funciona en contexto seguro: abriendo el panel en http://127.0.0.1:<puerto> en esta máquina. Por la IP de la red (ej. el celular) el navegador bloquea la suscripción — podés configurar las alarmas igual, pero el push solo llega en esta Mac.",
+    telegramTitle: "Telegram",
+    telegramLead: "Recibí las alarmas en la app de Telegram — funciona en cualquier dispositivo, sin depender del navegador.",
+    telegramTokenPh: "Pegá el token de @BotFather",
+    telegramSaveToken: "Guardar token",
+    telegramSavingToken: "Guardando…",
+    telegramBotFatherHint: "Creá un bot con @BotFather en Telegram, copiá el token y pegalo acá.",
+    telegramOpenBot: "Abrir bot en Telegram",
+    telegramConnectHint: "Abrí el bot y mandá cualquier mensaje (ej. /start) para conectar.",
+    telegramConnected: "Conectado",
+    telegramNotConnected: "Esperando conexión",
+    telegramDisconnect: "Desconectar",
+    telegramDisconnecting: "Desconectando…",
+    telegramChangeToken: "Cambiar token",
+    telegramTestSent: "Mensaje de prueba enviado en Telegram",
+    telegramTestFailed: "Error al enviar — conectá el bot primero",
     rulesTitle: "Reglas",
     rulesLead: "Proveedor + métrica + límite. Dispara una vez al cruzar el límite, no repite mientras siga del mismo lado.",
     provider: "Proveedor",

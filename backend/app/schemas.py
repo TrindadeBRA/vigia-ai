@@ -663,6 +663,26 @@ class VapidPublicKey(BaseModel):
     public_key: str
 
 
+class TelegramChat(BaseModel):
+    id: str
+    label: str
+    added_at: str
+
+
+class TelegramStatus(BaseModel):
+    configured: bool
+    bot_username: str = ""
+    chats: list[TelegramChat]
+
+
+class TelegramTokenBody(BaseModel):
+    bot_token: str
+
+
+class TelegramChatBody(BaseModel):
+    chat_id: str
+
+
 class AddAccountBody(BaseModel):
     provider: ProviderId
     label: str = ""
