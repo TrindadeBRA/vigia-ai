@@ -827,7 +827,7 @@ export default function ThemeEditorPage() {
 
       <div className="grid w-full items-start gap-[14px] lg:grid-cols-[max-content_minmax(0,1fr)_336px]">
         {/* Barra de ferramentas — cada ícone é uma ação, como numa paleta de ferramentas de editor de imagem. */}
-        <div className="flex w-max flex-row flex-nowrap items-center justify-center gap-1 self-start rounded-2xl border border-edge bg-panel p-1.5 shadow-card [.flat_&]:shadow-none lg:flex-col lg:p-1.5">
+        <div className="flex w-full flex-row flex-wrap items-center justify-center gap-1 self-start rounded-2xl border border-edge bg-panel p-1.5 shadow-card [.flat_&]:shadow-none lg:w-max lg:flex-col lg:flex-nowrap">
           <ToolButton icon={<TextIcon size={19} />} label={c.addText} disabled={theme.texts.length >= MAX_TEXTS} onClick={addText} />
           <ToolButton
             icon={<ClockIcon size={19} />}
