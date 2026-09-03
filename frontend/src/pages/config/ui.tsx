@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../cn";
 import { CloseIcon } from "../../components/icons";
 import { useRequest, type RequestStatus } from "../../hooks/useRequest";
@@ -235,7 +236,13 @@ export function Modal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
+  // Portal pro <body>: renderizado inline, um "fixed inset-0" fica preso ao
+  // viewport SÓ se nenhum ancestral tiver transform/filter/perspective (isso
+  // vira containing block pro fixed) — páginas com uma animação de entrada
+  // (ex.: animate-fade, que deixa um `transform` residual mesmo parado, ver
+  // tailwind.config.js:fadeIn) quebram esse pressuposto e o overlay cobre só
+  // aquele container, não a tela inteira. Portal evita depender disso.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" onClick={onClose}>
       <div
         role="dialog"
@@ -255,6 +262,7 @@ export function Modal({
         </div>
         <div className="flex flex-col gap-4 overflow-y-auto px-5 py-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
