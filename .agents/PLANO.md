@@ -15,7 +15,7 @@ Mostrar na TFT 3,5" (ESP32) o **uso restante do ciclo** das assinaturas Claude e
 - Outros provedores (GPT, Gemini, Copilot)
 - Tokens na placa
 - App mobile, nuvem pública, conta compartilhada na internet
-- Gráficos históricos, alertas push
+- Gráficos históricos, alertas (fora do escopo v1; hoje via Telegram — ver [NOTIFICACOES.md](NOTIFICACOES.md))
 
 ## Fases
 

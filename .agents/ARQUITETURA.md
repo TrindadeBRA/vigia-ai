@@ -31,10 +31,10 @@ flowchart TB
         Credenciais --> Providers
 
         subgraph Endpoints["Endpoints JSON sem Bearer — CONTRATO_JSON.md / schemas.py"]
-            E1["GET /events<br/>SSE — push a cada 60s<br/>last-good"]
+            E1["GET /events<br/>SSE — stream a cada 60s<br/>last-good"]
             E2["GET /usage<br/>força ciclo cotas"]
             E3["GET /docs<br/>Swagger"]
-            E4["/api/config /api/alarms /api/push"]
+            E4["/api/config /api/alarms /api/telegram"]
         end
         Hub --> E1 & E2
         Coletor --- E4

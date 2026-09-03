@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vigia AI — Nunca mais seja pego sem cota no meio do flow</title>
   <meta name="description"
-    content="Vigia AI: o painel de mesa que vigia suas cotas de IA 24/7. Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai e AdSense num único mostrador — ESP32 + TFT touch ou navegador. Sem expor um token sequer. Open source, MIT." />
+    content="Vigia AI: o painel de mesa que vigia suas cotas de IA 24/7. Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai e AdSense num único mostrador — ESP32 + TFT touch ou navegador. Alarmes via Telegram. Sem expor um token sequer. Open source, MIT." />
   <meta name="keywords"
-    content="Vigia AI, cotas IA, Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai, Bitcoin, AdSense, ESP32, TFT, dashboard, monitoramento, uso IA" />
+    content="Vigia AI, cotas IA, Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai, Bitcoin, AdSense, ESP32, TFT, dashboard, monitoramento, uso IA, alarmes, Telegram, notificações" />
   <meta name="author" content="Vigia AI" />
   <meta name="theme-color" content="#101419" />
   <link rel="canonical" href="https://trindadebra.github.io/vigia-ai/" />
@@ -18,7 +18,7 @@
   <meta property="og:url" content="https://trindadebra.github.io/vigia-ai/" />
   <meta property="og:title" content="Vigia AI — Nunca mais seja pego sem cota no meio do flow" />
   <meta property="og:description"
-    content="9 provedores, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT 3,5&quot; touch ou navegador. Zero tokens expostos. Alarmes, temas, wallpapers e muito mais." />
+    content="9 provedores, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT 3,5&quot; touch ou navegador. Zero tokens expostos. Alarmes via Telegram, temas, wallpapers e muito mais." />
   <meta property="og:image" content="https://trindadebra.github.io/vigia-ai/assets/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -28,7 +28,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Vigia AI — Nunca mais seja pego sem cota no meio do flow" />
   <meta name="twitter:description"
-    content="9 provedores, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT touch ou navegador. Zero tokens expostos." />
+    content="9 provedores, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT touch ou navegador. Alarmes via Telegram. Zero tokens expostos." />
   <meta name="twitter:image" content="https://trindadebra.github.io/vigia-ai/assets/og-image.png" />
 
   <!-- Icons -->
@@ -219,8 +219,9 @@
             <p class="mt-5 max-w-[56ch] text-[17px] leading-relaxed text-neutral-300">
               <strong class="font-semibold text-white">9 provedores. Múltiplas contas cada. Um único mostrador.</strong>
               O <span class="font-semibold text-white">Vigia AI</span> vigia suas cotas de IA 24/7 — na sua mesa com
-              <strong class="text-white">ESP32 + TFT 3,5" touch</strong> ou direto no navegador. Sem expor um token
-              sequer.
+              <strong class="text-white">ESP32 + TFT 3,5" touch</strong> ou direto no navegador. Configure alarmes e
+              receba aviso no <strong class="text-white">Telegram</strong> antes de travar no meio da entrega — sem expor
+              um token sequer.
             </p>
 
             <!-- Provider pills -->
@@ -479,7 +480,8 @@
                 class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">✓</span>
               <div>
                 <div class="text-sm font-semibold text-white">Com Vigia</div>
-                <div class="text-sm text-neutral-300">Um mostrador sempre ligado. Você olha e já sabe. Sem <code
+                <div class="text-sm text-neutral-300">Um mostrador sempre ligado — e alarmes no <strong
+                    class="text-white">Telegram</strong> quando a cota cruzar o limiar. Você olha e já sabe. Sem <code
                     class="rounded bg-white/10 px-1 py-0.5 font-mono text-xs text-accent-soft">curl</code>, sem susto.
                 </div>
               </div>
@@ -605,10 +607,15 @@
             <div
               class="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/20 text-amber-300">
               🔔</div>
-            <h3 class="mt-4 font-bold text-white">Alarmes + push que salvam o dia</h3>
+            <h3 class="mt-4 font-bold text-white">Alarmes no Telegram</h3>
             <p class="mt-2 text-sm leading-relaxed text-neutral-400">Regras por provedor + métrica + limiar,
-              edge-triggered. Quando cruzar, dispara <strong class="text-neutral-200">Web Push (VAPID)</strong> no
-              navegador. Nome sugerido automaticamente.</p>
+              edge-triggered. Quando cruzar, dispara mensagem no <strong class="text-neutral-200">Telegram</strong> —
+              no celular, sem HTTPS nem service worker. Crie um bot com o @BotFather, cole o token em <code
+                class="font-mono text-xs text-accent-soft">/display/alarms</code>, mande <code
+                class="font-mono text-xs text-accent-soft">/start</code> e pronto.</p>
+            <div
+              class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
+              Long-polling · funciona em LAN</div>
           </div>
           <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
             <div
@@ -797,6 +804,9 @@
             class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">+
             Cotação de moedas fiat/cripto numa moeda base</span>
           <span
+            class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">+
+            Alarmes via Telegram (<code class="font-mono text-accent-soft">/display/alarms</code>)</span>
+          <span
             class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">Múltiplas
             contas por provedor · apelido opcional</span>
           <span
@@ -860,7 +870,7 @@
           <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
             <img src="assets/web/web-config.png" alt="Painel de configuração" class="w-full" loading="lazy" />
             <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Painel — contas,
-              rede, wallpapers, clima e alarmes</figcaption>
+              rede, wallpapers, clima e alarmes via Telegram</figcaption>
           </figure>
           <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
             <img src="assets/web/web-settings.png" alt="Aparência" class="w-full" loading="lazy" />
@@ -885,8 +895,8 @@
               <div class="font-mono text-[11px] tracking-widest text-neutral-500">↓ TOKENS SÓ NO HOST</div>
               <div class="w-full rounded-xl border border-white/10 bg-ink px-4 py-3 text-center">
                 <div class="text-sm font-bold text-white">Backend FastAPI · :8787</div>
-                <div class="font-mono text-xs text-neutral-400">GET /events (SSE) · GET /usage · GET /docs (Swagger)
-                </div>
+                <div class="font-mono text-xs text-neutral-400">GET /events (SSE) · GET /usage · GET /docs (Swagger)</div>
+                <div class="mt-1 font-mono text-[11px] text-neutral-500">/api/alarms · /api/telegram</div>
               </div>
               <div class="font-mono text-[11px] tracking-widest text-neutral-500">↓ JSON SEM TOKEN</div>
               <div class="grid w-full grid-cols-2 gap-3">
@@ -899,6 +909,11 @@
                       class="font-mono text-accent-soft">/display</span></div>
                   <div class="text-xs text-neutral-400">réplica da placa</div>
                 </div>
+              </div>
+              <div class="w-full rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-center">
+                <div class="text-xs font-bold text-amber-100">Alarme cruzou o limiar</div>
+                <div class="text-[11px] text-amber-100/80">→ mensagem no <strong>Telegram</strong> (long-polling, sem
+                  webhook público)</div>
               </div>
             </div>
             <div
@@ -934,6 +949,13 @@
                   e datas, nunca o Bearer.</strong> Falha numa conta (<code
                   class="font-mono text-xs text-accent-soft">ok: false</code>) não derruba as outras. HTTP 200
                 sempre.</span></li>
+            <li class="flex gap-3"><span
+                class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">4</span><span
+                class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">Alarmes avisam no
+                  Telegram</strong> — regras em <code
+                  class="font-mono text-xs text-accent-soft">/display/alarms</code>, bot via @BotFather, chats com <code
+                  class="font-mono text-xs text-accent-soft">/start</code>. Funciona no celular, sem expor o coletor na
+                internet.</span></li>
           </ol>
           <div class="mt-6 flex flex-wrap gap-2">
             <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition"
@@ -945,6 +967,9 @@
             <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition"
               href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/ARQUITETURA.md" target="_blank"
               rel="noopener">Arquitetura →</a>
+            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition"
+              href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/NOTIFICACOES.md" target="_blank"
+              rel="noopener">Alarmes & Telegram →</a>
           </div>
         </div>
       </div>
@@ -1165,7 +1190,7 @@ cd vigia-ai
             rel="noopener">Firmware</a>
           <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition"
             href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/NOTIFICACOES.md" target="_blank"
-            rel="noopener">Alarmes & Push</a>
+            rel="noopener">Alarmes & Telegram</a>
           <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition"
             href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/CONTRATO_TEMA.md" target="_blank"
             rel="noopener">Temas</a>
@@ -1201,6 +1226,8 @@ cd vigia-ai
           rel="noopener">Código de Conduta</a>
         <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/LICENSE"
           target="_blank" rel="noopener">Licença</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/NOTIFICACOES.md"
+          target="_blank" rel="noopener">Alarmes & Telegram</a>
         <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CHANGELOG.md"
           target="_blank" rel="noopener">Changelog</a>
       </div>

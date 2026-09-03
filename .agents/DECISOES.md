@@ -61,3 +61,7 @@ Rede doméstica. Quem pedir rede hostil pode acrescentar um token estático no h
 ## SSE a 60 s, cada API no próprio ritmo
 
 Firmware e `/display` continuam recebendo o JSON a cada `USAGE_INTERVAL_S`. O coletor é quem diferencia o intervalo real: `RefreshCache` por provedor + cliente CoinGecko compartilhado (Bitcoin e `currencies` no mesmo bucket IP). A API *keyless* da CoinGecko (~10–30/min, dado já cacheado 1–5 min do lado deles) 429a se pollada a cada 60 s — por isso a cotação vive num TTL de 5 min, com last-good. `GET /usage` só força as cotas de assinatura; martelar o endpoint não aumenta a cota da CoinGecko.
+
+## Telegram em vez de Web Push nos alarmes
+
+Web Push exigia HTTPS, service worker e chaves VAPID — frágil em LAN (`127.0.0.1`) e em iOS. **Telegram** funciona em qualquer aparelho com o app, token do bot configurado no painel (`/display/alarms`), long-polling sem webhook público. Um bot por instalação; chats registrados via `/start`. Detalhes: [`NOTIFICACOES.md`](NOTIFICACOES.md).

@@ -1,4 +1,4 @@
-"""Regras de alarme (provedor + métrica + limiar) e disparo edge-triggered de push."""
+"""Regras de alarme (provedor + métrica + limiar) e disparo edge-triggered via Telegram."""
 
 from __future__ import annotations
 
@@ -133,8 +133,8 @@ def _event_message(event: dict[str, Any]) -> tuple[str, str]:
     """Título curto = provedor + métrica; corpo = só o limite cruzado.
 
     O nome (auto-sugerido ou digitado pela regra) é ótimo pra lista na UI, mas
-    é longo demais pra caber numa notificação do sistema sem cortar — por
-    isso o título do push é sempre reconstruído a partir do catálogo.
+    é longo demais pra caber numa mensagem do Telegram sem cortar — por isso o
+    título é sempre reconstruído a partir do catálogo.
     """
     rule = event["rule"]
     provider = event["provider"]
@@ -163,14 +163,10 @@ class AlarmEngine:
         events = evaluate(payload, rules, self._armed)
         if not events:
             return
-        from app import push, telegram_bot  # import tardio: evita ciclo hub -> alarms -> store
+        from app import telegram_bot  # import tardio: evita ciclo hub -> alarms -> store
 
         for event in events:
             title, body = _event_message(event)
-            try:
-                push.broadcast(title, body, tag=f"alarm-{event['rule']['id']}")
-            except Exception as exc:  # noqa: BLE001
-                print(f"[alarms] falha ao enviar push: {exc}")
             try:
                 telegram_bot.broadcast(title, body)
             except Exception as exc:  # noqa: BLE001

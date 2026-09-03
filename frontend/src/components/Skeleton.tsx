@@ -284,22 +284,23 @@ function AlarmsBody() {
           </div>
           <Bone className="h-[42px] w-[4.5rem] rounded-[10px]" delay={120} />
         </div>
-        <div className={cfgGrid}>
-          {Array.from({ length: 2 }, (_, i) => (
-            <article key={i} className="flex min-w-0 flex-col gap-2 rounded-2xl border border-edge bg-panel px-[18px] py-4 shadow-card [.flat_&]:shadow-none">
-              <div className="flex items-start justify-between gap-3">
+        <div className="mt-6 w-full overflow-hidden rounded-xl border border-edge bg-canvas/25 p-2">
+          <div className="flex items-center justify-between gap-3 border-b border-edge px-2 pb-2 pt-1">
+            <Bone className="h-3.5 w-28" />
+            <Bone className="h-[42px] w-36 rounded-[10px]" delay={40} />
+          </div>
+          <div className="divide-y divide-edge">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+                <Bone className="size-[34px] shrink-0 rounded-[10px]" delay={i * 20} />
                 <div className="min-w-0 flex-1">
-                  <Bone className="h-4 w-40" />
-                  <Bone className="mt-1 h-3 w-32" delay={40} />
+                  <Bone className="h-3.5 w-32" delay={10 + i * 20} />
+                  <Bone className="mt-1 h-2.5 w-40" delay={30 + i * 20} />
                 </div>
-                <Bone className="h-5 w-9 shrink-0 rounded-full" delay={60} />
+                <Bone className="h-5 w-20 shrink-0 rounded-full" delay={50 + i * 20} />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Bone className="h-9 w-16 rounded-[10px]" delay={80} />
-                <Bone className="h-9 w-16 rounded-[10px]" delay={100} />
-              </div>
-            </article>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
     </>

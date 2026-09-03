@@ -107,7 +107,7 @@ class UsageHub:
             _log_failures(payload)
             self._broadcast(payload)
             if self._on_payload is not None:
-                # dispara em background (pode fazer request de push síncrona) sem
+                # dispara em background (pode fazer request síncrona) sem
                 # atrasar a resposta de GET /usage nem o fan-out do SSE.
                 asyncio.create_task(self._run_on_payload(payload))
             return payload

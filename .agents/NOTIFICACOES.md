@@ -1,9 +1,8 @@
-# Alarmes e notificações (protótipo)
+# Alarmes e notificações Telegram (protótipo)
 
 Painel `/display/alarms`: regras de **provedor + métrica + limiar** que
-disparam notificações quando cruzadas. Canais disponíveis: **Web Push** e
-**Telegram**. Fora do contrato JSON principal (`CONTRATO_JSON.md`) — não mexe
-em `/usage` nem no firmware.
+disparam mensagem no **Telegram** quando cruzadas. Fora do contrato JSON
+principal (`CONTRATO_JSON.md`) — não mexe em `/usage` nem no firmware.
 
 ## Modelo da regra
 
@@ -33,76 +32,14 @@ métrica não mudam depois de criada; pra isso, remove e cria de novo).
 
 O engine roda dentro do ciclo do `UsageHub` (`backend/app/hub.py`, hook
 `on_payload`) — mesma cadência do `USAGE_INTERVAL_S`, e também dispara numa
-chamada manual de `GET /usage`. O envio do push em si roda em thread separada
+chamada manual de `GET /usage`. O envio pro Telegram roda em thread separada
 (`asyncio.to_thread`) pra não atrasar a resposta de `/usage` nem o fan-out do
 SSE.
 
-## Web Push: chaves e assinaturas
-
-`backend/app/push.py` gera um par de chaves VAPID (EC P-256) na primeira vez
-que alguém chama `GET /api/push/vapid-public-key` ou dispara um alarme, e
-guarda em `backend/data/config.json` (`push.vapid_private_key` /
-`push.vapid_public_key`) — **mesmo arquivo gitignored dos tokens dos
-provedores, nunca comitar**. A chave privada nunca é devolvida por nenhum
-endpoint público; só a pública (é o `applicationServerKey` que o navegador
-usa em `pushManager.subscribe()`).
-
-Cada assinatura do navegador (`endpoint` + `keys.p256dh` + `keys.auth`) fica
-em `push.subscriptions`. Uma assinatura que responde 404/410 (usuário
-revogou, ou expirou) é removida automaticamente no próximo envio.
-
-## Limitação de contexto seguro (importante)
-
-A Push API só funciona em **contexto seguro**: HTTPS, ou
-`http://localhost`/`http://127.0.0.1`. O coletor serve HTTP puro na LAN
-(`http://192.168.x.x:8787`, o endereço que normalmente se usa do celular) —
-esse endereço **não** é contexto seguro, então `pushManager.subscribe()` é
-rejeitado nele.
-
-Isso significa, na prática:
-
-- Configurar as regras de alarme funciona de qualquer endereço (é só
-  `fetch`/JSON, sem restrição).
-- **Só recebe o push de verdade quem abrir o painel em
-  `http://127.0.0.1:<porta>` no mesmo Mac onde o coletor roda.** Pelo IP da
-  LAN (celular, outro computador), o botão "Ativar notificações" mostra
-  "não suportado" em vez de travar silenciosamente — ver `usePush.ts`
-  (`isSecureContext`).
-- Fazer isso funcionar também no celular exigiria HTTPS local na LAN (ex.
-  `mkcert`, confiar a CA no aparelho) — decidido, por ora, fora de escopo.
-
-## "Enviei o teste e não chegou nada"
-
-Antes de suspeitar do backend/`pywebpush`, isola o problema direto no
-DevTools (aba `/display/alarms`, `F12` → Console):
-
-```js
-const reg = await navigator.serviceWorker.getRegistration();
-await reg.showNotification("Teste direto", { body: "sem passar pelo push do servidor" });
-```
-
-- **Não lança erro mas não aparece nada na tela**: não é bug de código — é
-  bloqueio do **macOS**, fora do controle do navegador. Confira **Ajustes do
-  Sistema → Notificações → Google Chrome** (permitir notificações ligado,
-  estilo de alerta diferente de "Nenhum") e se não tem Foco/Não Perturbe
-  ativo. Isso costuma travar porque, na primeira vez que qualquer site tenta
-  notificar, o macOS (não o Chrome) pede permissão num diálogo próprio do
-  sistema — clicar "Não permitir" aí bloqueia **todo** o Chrome, mesmo com
-  `Notification.permission === "granted"` no JS.
-- **Aparece esse teste direto, mas não o do botão "Enviar teste"**: aí sim é
-  específico da entrega via push (`webpush()` aceita a mensagem no FCM, mas o
-  payload pode não estar sendo descriptografado no navegador) — vale
-  investigar `backend/app/push.py`.
-
-O botão "Enviar teste" espera **15 s** antes de disparar (contagem regressiva
-no próprio botão) — dá tempo de minimizar/trocar de janela antes da
-notificação chegar, já que o Chrome pode não mostrar o banner do sistema
-enquanto a aba está em primeiro plano.
-
 ## Telegram
 
-Segundo canal de notificação — funciona em qualquer dispositivo com o app do
-Telegram, sem depender de contexto seguro do navegador (diferente do push).
+Funciona em qualquer dispositivo com o app do Telegram, sem depender de
+contexto seguro do navegador.
 
 ### Fluxo de conexão
 
@@ -120,6 +57,17 @@ Telegram, sem depender de contexto seguro do navegador (diferente do push).
 `backend/data/config.json` (gitignored, chmod 600):
 
 ```json
+"alarms": [
+  {
+    "id": "uuid",
+    "label": "Cursor - Uso do plano 80%",
+    "provider": "cursor",
+    "metric": "percent",
+    "threshold": 80,
+    "account_id": "*",
+    "enabled": true
+  }
+],
 "telegram": {
   "bot_token": "...",
   "bot_username": "meu_bot",
@@ -127,59 +75,40 @@ Telegram, sem depender de contexto seguro do navegador (diferente do push).
 }
 ```
 
+Regras persistem via `POST/PATCH/DELETE /api/alarms`. O estado
+edge-triggered (`_armed`) fica só em memória — reiniciar o coletor pode
+disparar de novo se o valor já estiver do lado “perigoso” do limiar.
+
 O token do bot é tratado como segredo — mesmo arquivo dos tokens dos
-provedores e chaves VAPID. Nunca comitar.
+provedores. Nunca comitar.
 
 ### Limitações
 
 - Long-polling (não webhook) — funciona em LAN/Mac local sem HTTPS público.
 - Um único bot/token por instalação (single-user, igual ao resto do config).
 - Chats que bloqueiam o bot (403) ou não existem mais (400) são removidos
-  automaticamente no próximo envio — mesmo padrão do pruning de endpoints
-  mortos do push.
-
-### Arquivos (Telegram)
-
-| Peça | Arquivo |
-| --- | --- |
-| Token + envio + polling unitário | `backend/app/telegram_bot.py` |
-| Long-polling (lifecycle) | `backend/app/telegram_poller.py` |
-| Rotas `/api/telegram/*` | `backend/app/routers/telegram.py` |
-| Hook no ciclo do hub | `backend/app/alarms.py` (`handle_payload`) |
-| Hook no painel | `frontend/src/pages/config/useTelegram.ts` |
-| Card no painel | `frontend/src/pages/config/AlarmsPage.tsx` |
-
-### Como testar (Telegram)
-
-1. `./dev up`, abrir `/display/alarms`.
-2. Criar bot de teste via @BotFather, colar o token → deve validar e mostrar
-   o link do bot.
-3. Mandar `/start` pro bot → painel deve mostrar o chat conectado.
-4. Clicar "Enviar teste" → mensagem chega no Telegram.
-5. Criar regra de alarme com mock ativo → forçar `GET /usage` → mensagem
-   chega no Telegram (e no push, se em contexto seguro).
+  automaticamente no próximo envio.
 
 ## Arquivos
 
 | Peça | Arquivo |
 | --- | --- |
 | Catálogo de métricas + motor de disparo | `backend/app/alarms.py` |
-| Chaves VAPID + envio push | `backend/app/push.py` |
-| Token Telegram + envio | `backend/app/telegram_bot.py` |
-| Long-polling Telegram | `backend/app/telegram_poller.py` |
+| Token Telegram + envio + polling unitário | `backend/app/telegram_bot.py` |
+| Long-polling (lifecycle) | `backend/app/telegram_poller.py` |
 | Rotas `/api/alarms/*` | `backend/app/routers/alarms.py` |
-| Rotas `/api/push/*` | `backend/app/routers/push.py` |
 | Rotas `/api/telegram/*` | `backend/app/routers/telegram.py` |
 | Hook no ciclo do hub | `backend/app/hub.py` (`on_payload`) |
-| Service worker | `frontend/public/sw.js` |
-| Hook de assinatura do navegador | `frontend/src/pages/config/usePush.ts` |
-| Hook do Telegram | `frontend/src/pages/config/useTelegram.ts` |
+| Hook no painel | `frontend/src/pages/config/useTelegram.ts` |
 | Painel | `frontend/src/pages/config/AlarmsPage.tsx` |
 
 ## Como testar
 
-`./dev up`, abrir `http://127.0.0.1:5173/display/alarms` (ou `:8787` no
-build). Ativar mock (`/display/config`) pra ter valores previsíveis, criar
-uma regra com limiar abaixo do valor mockado, clicar "Ativar notificações" e
-depois "Enviar teste". Pra ver o disparo automático, force um ciclo com
-`GET /usage` (ou espere os 60s do hub).
+1. `./dev up`, abrir `http://127.0.0.1:5173/display/alarms` (ou `:8787` no build).
+2. Criar bot de teste via @BotFather, colar o token → deve validar e mostrar
+   o link do bot.
+3. Mandar `/start` pro bot → painel deve mostrar o chat conectado.
+4. Clicar "Enviar teste" → mensagem chega no Telegram.
+5. Ativar mock (`/display/config`), criar regra com limiar abaixo do valor
+   mockado → forçar `GET /usage` (ou esperar os 60s do hub) → mensagem chega
+   no Telegram.

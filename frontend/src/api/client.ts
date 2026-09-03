@@ -114,35 +114,6 @@ export async function deleteAlarm(id: string) {
   return readMutate(res);
 }
 
-export async function fetchVapidPublicKey(): Promise<{ public_key: string }> {
-  const res = await fetch("/api/push/vapid-public-key", { cache: "no-store" });
-  if (!res.ok) throw new Error(`vapid HTTP ${res.status}`);
-  return res.json() as Promise<{ public_key: string }>;
-}
-
-export async function subscribePush(body: { endpoint: string; p256dh: string; auth: string; ua: string }) {
-  const res = await fetch("/api/push/subscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return readMutate(res);
-}
-
-export async function unsubscribePush(endpoint: string) {
-  const res = await fetch("/api/push/unsubscribe", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ endpoint }),
-  });
-  return readMutate(res);
-}
-
-export async function testPush() {
-  const res = await fetch("/api/push/test", { method: "POST" });
-  return readMutate(res);
-}
-
 export async function fetchTelegramStatus(): Promise<import("./types").TelegramStatus> {
   const res = await fetch("/api/telegram/status", { cache: "no-store" });
   if (!res.ok) throw new Error(`telegram status HTTP ${res.status}`);

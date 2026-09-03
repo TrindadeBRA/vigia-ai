@@ -29,15 +29,23 @@ _client = httpx.Client(timeout=20.0, headers={"User-Agent": DEFAULT_USER_AGENT})
 # só que com o provider no lugar do rótulo de nível e outra cor — dá pra ver
 # no mesmo terminal qual fonte está sendo atualizada nesse instante.
 _MAGENTA = "\033[35m"
+_RED = "\033[31m"
 _RESET = "\033[0m"
 _USE_COLOR = sys.stdout.isatty()
 # "UPDATE - OPENROUTER:" / "UPDATE - CURRENCIES:" são os rótulos mais longos.
 _PREFIX_WIDTH = 21
+# "NOTIFICATION - TELEGRAM:"
+_NOTIFICATION_PREFIX_WIDTH = 25
 
 
 def _level_prefix(label: str) -> str:
     prefix = f"UPDATE - {label}:".ljust(_PREFIX_WIDTH)
     return f"{_MAGENTA}{prefix}{_RESET}" if _USE_COLOR else prefix
+
+
+def _notification_prefix(label: str) -> str:
+    prefix = f"NOTIFICATION - {label}:".ljust(_NOTIFICATION_PREFIX_WIDTH)
+    return f"{_RED}{prefix}{_RESET}" if _USE_COLOR else prefix
 
 
 def _label_from_host(netloc: str) -> str:
@@ -46,6 +54,27 @@ def _label_from_host(netloc: str) -> str:
     parts = host.split(".")
     core = parts[-2] if len(parts) >= 2 else host
     return core.upper()
+
+
+def _log_request(
+    prefix: str,
+    method: str,
+    url: str,
+    *,
+    status: int | None,
+    elapsed_ms: float,
+    error: str | None = None,
+) -> None:
+    parsed = urllib.parse.urlsplit(url)
+    path = parsed.path or "/"
+    if parsed.query:
+        path += f"?{parsed.query}"
+    request_line = f'"{method} {path} HTTP/1.1"'
+    if error is not None:
+        print(f"{prefix}{parsed.netloc} - {request_line} falhou ({elapsed_ms:.0f}ms): {error}")
+        return
+    reason = http.client.responses.get(status or 0, "")
+    print(f"{prefix}{parsed.netloc} - {request_line} {status} {reason} ({elapsed_ms:.0f}ms)")
 
 
 def _log_outbound(
@@ -57,17 +86,47 @@ def _log_outbound(
     elapsed_ms: float,
     error: str | None = None,
 ) -> None:
-    parsed = urllib.parse.urlsplit(url)
-    path = parsed.path or "/"
-    if parsed.query:
-        path += f"?{parsed.query}"
-    request_line = f'"{method} {path} HTTP/1.1"'
-    prefix = _level_prefix(label)
-    if error is not None:
-        print(f"{prefix}{parsed.netloc} - {request_line} falhou ({elapsed_ms:.0f}ms): {error}")
-        return
-    reason = http.client.responses.get(status or 0, "")
-    print(f"{prefix}{parsed.netloc} - {request_line} {status} {reason} ({elapsed_ms:.0f}ms)")
+    _log_request(
+        _level_prefix(label),
+        method,
+        url,
+        status=status,
+        elapsed_ms=elapsed_ms,
+        error=error,
+    )
+
+
+def log_outbound(
+    method: str,
+    url: str,
+    *,
+    label: str,
+    status: int | None,
+    elapsed_ms: float,
+    error: str | None = None,
+) -> None:
+    """Log de saída no terminal (magenta), mesmo formato do coletor de cotas."""
+    _log_outbound(method, url, label=label, status=status, elapsed_ms=elapsed_ms, error=error)
+
+
+def log_notification(
+    method: str,
+    url: str,
+    *,
+    label: str,
+    status: int | None,
+    elapsed_ms: float,
+    error: str | None = None,
+) -> None:
+    """Log de notificação (vermelho) — ex.: envio de alarme no Telegram."""
+    _log_request(
+        _notification_prefix(label.upper()),
+        method,
+        url,
+        status=status,
+        elapsed_ms=elapsed_ms,
+        error=error,
+    )
 
 
 class HttpError(RuntimeError):

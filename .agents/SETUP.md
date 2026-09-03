@@ -8,6 +8,7 @@ Guia técnico completo: subir o coletor, configurar provedores, gravar a placa f
 - [Comandos](#comandos)
 - [Como o Vigia lê as cotas](#como-o-vigia-lê-as-cotas)
 - [Provedores](#provedores)
+- [Alarmes e Telegram](#alarmes-e-telegram)
 - [Placa (hardware)](#placa-hardware)
 - [Simulador (Wokwi)](#simulador-wokwi)
 - [Layout do repositório](#layout-do-repositório)
@@ -24,7 +25,7 @@ Precisa de **Python ≥ 3.11**, **Node 20+** e, para firmware, [PlatformIO Core]
 | --- | --- |
 | Painel (contas, mock, `secrets.h`) | http://127.0.0.1:5173/display/config |
 | Tema da placa | http://127.0.0.1:5173/display/theme |
-| Alarmes e notificações push | http://127.0.0.1:5173/display/alarms |
+| Alarmes e Telegram | http://127.0.0.1:5173/display/alarms |
 | Mostrador web | http://127.0.0.1:5173/display |
 | Swagger | http://127.0.0.1:8787/docs |
 | Contrato JSON | `GET http://127.0.0.1:8787/usage` |
@@ -157,6 +158,17 @@ Várias contas por serviço. O coletor monta o snapshot a cada 60 s (`USAGE_INTE
 | AdSense | — | OAuth Google (Client ID tipo Web + login) |
 
 Detalhes: [`APIS_CLAUDE.md`](APIS_CLAUDE.md), [`APIS_GPT.md`](APIS_GPT.md), [`APIS_CURSOR.md`](APIS_CURSOR.md), [`APIS_OPENROUTER.md`](APIS_OPENROUTER.md), [`APIS_DEEPSEEK.md`](APIS_DEEPSEEK.md), [`APIS_FAL.md`](APIS_FAL.md), [`APIS_BITCOIN.md`](APIS_BITCOIN.md), [`APIS_ADSENSE.md`](APIS_ADSENSE.md).
+
+## Alarmes e Telegram
+
+Painel em `/display/alarms`: regras de **provedor + métrica + limiar** que disparam mensagem no **Telegram** quando cruzadas (edge-triggered, no ciclo do `UsageHub`).
+
+1. Crie um bot com o **@BotFather** e copie o token.
+2. Cole o token no card Telegram do painel — o backend valida (`getMe`) e mostra o link do bot.
+3. Abra o bot no Telegram e mande `/start` — o `chat_id` é registrado automaticamente.
+4. Crie regras de alarme e use **Enviar teste** para conferir.
+
+Regras ficam em `backend/data/config.json` (`alarms[]`); token e chats em `telegram{}` — mesmo arquivo gitignored dos tokens dos provedores. Guia completo: [`NOTIFICACOES.md`](NOTIFICACOES.md).
 
 ## Placa (hardware)
 

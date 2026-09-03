@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { createAlarm, deleteAlarm, fetchAlarms, patchAlarm } from "../../api/client";
-import type { AlarmMetric, AlarmsPublic } from "../../api/types";
+import type { AlarmMetric, AlarmsPublic, TelegramChat } from "../../api/types";
 import { Skeleton } from "../../components/Skeleton";
+import { cn } from "../../cn";
 import { useRequest } from "../../hooks/useRequest";
-import { cfgFieldLabel, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
+import { SlidersIcon, TrashIcon } from "../../components/icons";
+import { PROVIDER_ICON } from "../../theme";
+import { cfgFieldLabel, cfgHint, cfgStatus, iconBtn, iconChip, iconImg, pageCol, viewFade } from "../../tw";
 import { ALARMS_STR } from "./alarmsCopy";
 import type { ConfigOutlet } from "./usePublicConfig";
-import { usePush, type PushSupport } from "./usePush";
 import { useTelegram } from "./useTelegram";
-import { ActionRow, Button, Card, FieldStatus, StatusPill, Switch, TextField } from "./ui";
+import { ActionRow, Button, Card, FieldStatus, SelectField, StatusPill, Switch, TextField } from "./ui";
 
 const PROVIDER_LABEL: Record<string, string> = {
   claude: "Claude",
@@ -23,45 +25,25 @@ const PROVIDER_LABEL: Record<string, string> = {
   adsense: "AdSense",
 };
 
-function pushBadge(state: PushSupport, c: typeof ALARMS_STR.pt): { state: "ok" | "warn" | "missing"; label: string } {
-  if (state === "unsupported") return { state: "missing", label: c.pushUnsupported };
-  if (state === "denied") return { state: "missing", label: c.pushDenied };
-  if (state === "on") return { state: "ok", label: c.pushOn };
-  return { state: "warn", label: c.pushOff };
-}
-
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
-      <span className={cfgFieldLabel}>{label}</span>
-      <select
-        className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink focus:border-transparent focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-accent"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
 function ruleHint(c: typeof ALARMS_STR.pt, metric: AlarmMetric | undefined, threshold: number): string {
   if (!metric) return "";
   return metric.kind === "percent" ? c.triggerHintPercent(threshold) : c.triggerHintCents(threshold);
+}
+
+function formatThreshold(metric: AlarmMetric | undefined, threshold: number): string {
+  if (metric?.kind === "cents") return `$${(threshold / 100).toFixed(2)}`;
+  return `${threshold}%`;
+}
+
+function ruleSearchText(
+  c: typeof ALARMS_STR.pt,
+  rule: AlarmsPublic["rules"][number],
+  metric: AlarmMetric | undefined,
+): string {
+  const providerName = PROVIDER_LABEL[rule.provider] || rule.provider;
+  const metricName = metric?.label || rule.metric;
+  const title = rule.label || suggestLabel(c, rule.provider, metric, rule.threshold);
+  return `${providerName} ${metricName} ${title} ${formatThreshold(metric, rule.threshold)}`.toLowerCase();
 }
 
 function suggestLabel(c: typeof ALARMS_STR.pt, provider: string, metric: AlarmMetric | undefined, threshold: number): string {
@@ -72,10 +54,19 @@ function suggestLabel(c: typeof ALARMS_STR.pt, provider: string, metric: AlarmMe
     : c.suggestBalance(providerName, `$${(threshold / 100).toFixed(2)}`, metric.label);
 }
 
+function ProviderIcon({ provider, className }: { provider: string; className?: string }) {
+  const src = PROVIDER_ICON[provider];
+  if (!src) return null;
+  return (
+    <span className={cn(iconChip, className)} aria-hidden>
+      <img className={iconImg} src={src} alt="" draggable={false} />
+    </span>
+  );
+}
+
 export default function AlarmsPage() {
   const ctx = useOutletContext<ConfigOutlet | null>();
   const c = ALARMS_STR[ctx?.lang || "pt"];
-  const push = usePush();
   const telegram = useTelegram();
   const [tokenInput, setTokenInput] = useState("");
 
@@ -112,32 +103,13 @@ export default function AlarmsPage() {
     if (!opts.some((m) => m.key === metric)) setMetric(opts[0]?.key || "");
   }, [data, provider, metric]);
 
-  const pushAction = useRequest();
-  const testAction = useRequest();
   const telegramTokenAction = useRequest();
   const telegramTestAction = useRequest();
   const telegramRemoveAction = useRequest();
   const telegramClearAction = useRequest();
   const addAction = useRequest();
 
-  const TEST_DELAY_S = 15;
-  const [testCountdown, setTestCountdown] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (testCountdown === null || testCountdown <= 0) return;
-    const id = window.setTimeout(() => setTestCountdown((s) => (s === null ? null : s - 1)), 1000);
-    return () => window.clearTimeout(id);
-  }, [testCountdown]);
-
-  useEffect(() => {
-    if (testCountdown !== 0) return;
-    setTestCountdown(null);
-    void testAction.run(() => push.sendTest(), { success: c.testSent, error: c.testFailed });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [testCountdown]);
-
   const currentMetric = data?.metrics[provider]?.find((m) => m.key === metric);
-  const badge = pushBadge(push.state, c);
   const tg = telegram.status;
   const tgBadge = tg?.chats.length
     ? { state: "ok" as const, label: c.telegramConnected }
@@ -178,46 +150,9 @@ export default function AlarmsPage() {
         <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
       </header>
 
-      <Card title={c.pushTitle} lead={c.pushLead} action={<StatusPill state={badge.state} label={badge.label} />}>
-        <ActionRow>
-          {push.state === "on" ? (
-            <Button
-              variant="secondary"
-              loading={pushAction.busy}
-              onClick={() =>
-                pushAction.run(() => push.unsubscribe(), { success: c.pushOff, error: c.offline })
-              }
-            >
-              {pushAction.busy ? c.disabling : c.disable}
-            </Button>
-          ) : (
-            <Button
-              loading={pushAction.busy}
-              disabled={push.state === "unsupported" || push.state === "denied"}
-              onClick={() =>
-                pushAction.run(() => push.subscribe(), { success: c.pushOn, error: c.offline })
-              }
-            >
-              {pushAction.busy ? c.enabling : c.enable}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            loading={testAction.busy}
-            disabled={push.state !== "on" || testCountdown !== null}
-            onClick={() => setTestCountdown(TEST_DELAY_S)}
-          >
-            {testCountdown !== null ? c.sendingTestIn(testCountdown) : testAction.busy ? c.sendingTest : c.sendTest}
-          </Button>
-        </ActionRow>
-        {pushAction.message ? <FieldStatus status={pushAction.status} message={pushAction.message} /> : null}
-        {testAction.message ? <FieldStatus status={testAction.status} message={testAction.message} /> : null}
-        <p className={cfgHint}>{c.secureContextNote}</p>
-      </Card>
-
       <Card title={c.telegramTitle} lead={c.telegramLead} action={<StatusPill state={tgBadge.state} label={tgBadge.label} />}>
         {!tg?.configured ? (
-          <>
+          <div className="flex flex-col gap-3">
             <p className={cfgHint}>{c.telegramBotFatherHint}</p>
             <ActionRow>
               <TextField
@@ -246,97 +181,54 @@ export default function AlarmsPage() {
             {telegramTokenAction.message ? (
               <FieldStatus status={telegramTokenAction.status} message={telegramTokenAction.message} />
             ) : null}
-          </>
+          </div>
         ) : (
-          <>
-            {tg.chats.length === 0 ? (
-              <>
-                <ActionRow>
-                  <Button
-                    variant="secondary"
-                    onClick={() => window.open(`https://t.me/${tg.bot_username}`, "_blank", "noopener,noreferrer")}
-                  >
-                    {c.telegramOpenBot}
-                  </Button>
-                </ActionRow>
-                <p className={cfgHint}>{c.telegramConnectHint}</p>
-              </>
-            ) : (
-              <>
-                <div className={cfgGrid}>
-                  {tg.chats.map((chat) => (
-                    <article
-                      key={chat.id}
-                      className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-edge bg-panel px-[18px] py-3 shadow-card [.flat_&]:shadow-none"
-                    >
-                      <span className="min-w-0 truncate text-sm font-medium text-ink">{chat.label || chat.id}</span>
-                      <Button
-                        variant="ghost"
-                        loading={telegramRemoveAction.busy}
-                        onClick={() =>
-                          telegramRemoveAction.run(() => telegram.removeChat(chat.id), {
-                            success: c.removed,
-                            error: c.offline,
-                          })
-                        }
-                      >
-                        {telegramRemoveAction.busy ? c.removing : c.remove}
-                      </Button>
-                    </article>
-                  ))}
-                </div>
-                <ActionRow>
-                  <Button
-                    variant="ghost"
-                    loading={telegramTestAction.busy}
-                    onClick={() =>
-                      telegramTestAction.run(() => telegram.sendTest(), {
-                        success: c.telegramTestSent,
-                        error: c.telegramTestFailed,
-                      })
-                    }
-                  >
-                    {telegramTestAction.busy ? c.sendingTest : c.sendTest}
-                  </Button>
-                </ActionRow>
-                {telegramTestAction.message ? (
-                  <FieldStatus status={telegramTestAction.status} message={telegramTestAction.message} />
-                ) : null}
-              </>
-            )}
-            <ActionRow>
-              <Button
-                variant="secondary"
-                loading={telegramClearAction.busy || telegram.busy}
-                onClick={() =>
-                  telegramClearAction.run(() => telegram.clearToken(), {
-                    success: c.telegramDisconnect,
-                    error: c.offline,
-                  })
-                }
-              >
-                {telegramClearAction.busy ? c.telegramDisconnecting : tg.chats.length ? c.telegramDisconnect : c.telegramChangeToken}
-              </Button>
-            </ActionRow>
-            {telegramClearAction.message ? (
-              <FieldStatus status={telegramClearAction.status} message={telegramClearAction.message} />
-            ) : null}
-          </>
+          <TelegramConnectedPanel
+            c={c}
+            botUsername={tg.bot_username}
+            chats={tg.chats}
+            telegramBusy={telegram.busy}
+            testAction={telegramTestAction}
+            removeAction={telegramRemoveAction}
+            clearAction={telegramClearAction}
+            onRemoveChat={(chatId) =>
+              telegramRemoveAction.run(() => telegram.removeChat(chatId), {
+                success: c.removed,
+                error: c.offline,
+              })
+            }
+            onSendTest={() =>
+              telegramTestAction.run(() => telegram.sendTest(), {
+                success: c.telegramTestSent,
+                error: c.telegramTestFailed,
+              })
+            }
+            onClear={() =>
+              telegramClearAction.run(() => telegram.clearToken(), {
+                success: c.telegramDisconnect,
+                error: c.offline,
+              })
+            }
+          />
         )}
       </Card>
 
       <Card title={c.rulesTitle} lead={c.rulesLead}>
         <ActionRow>
-          <Select
-            label={c.provider}
-            value={provider}
-            onChange={setProvider}
-            options={providers.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p }))}
-          />
-          <Select
+          <div className="flex min-w-[140px] flex-1 items-end gap-2">
+            {provider ? <ProviderIcon provider={provider} /> : null}
+            <SelectField
+              label={c.provider}
+              value={provider}
+              onChange={(e) => setProvider(e.target.value)}
+              wrapperClassName="min-w-0 flex-1"
+              options={providers.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p }))}
+            />
+          </div>
+          <SelectField
             label={c.metric}
             value={metric}
-            onChange={setMetric}
+            onChange={(e) => setMetric(e.target.value)}
             options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.label }))}
           />
           <TextField
@@ -380,13 +272,223 @@ export default function AlarmsPage() {
         {currentMetric ? <p className={cfgHint}>{ruleHint(c, currentMetric, threshold)}</p> : null}
         {addAction.message ? <FieldStatus status={addAction.status} message={addAction.message} /> : null}
 
-        <div className={cfgGrid}>
-          {data.rules.length === 0 ? <p className={cfgHint}>{c.empty}</p> : null}
-          {data.rules.map((rule) => (
-            <RuleRow key={rule.id} rule={rule} metric={data.metrics[rule.provider]?.find((m) => m.key === rule.metric)} c={c} onReload={reload} />
-          ))}
-        </div>
+        <RulesList data={data} c={c} onReload={reload} className="mt-6" />
       </Card>
+    </div>
+  );
+}
+
+function TelegramConnectedPanel({
+  c,
+  botUsername,
+  chats,
+  telegramBusy,
+  testAction,
+  removeAction,
+  clearAction,
+  onRemoveChat,
+  onSendTest,
+  onClear,
+}: {
+  c: typeof ALARMS_STR.pt;
+  botUsername: string;
+  chats: TelegramChat[];
+  telegramBusy: boolean;
+  testAction: ReturnType<typeof useRequest>;
+  removeAction: ReturnType<typeof useRequest>;
+  clearAction: ReturnType<typeof useRequest>;
+  onRemoveChat: (chatId: string) => void;
+  onSendTest: () => void;
+  onClear: () => void;
+}) {
+  const hasChats = chats.length > 0;
+  const openBot = () => {
+    if (botUsername) window.open(`https://t.me/${botUsername}`, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <div className="w-full overflow-hidden rounded-xl border border-edge bg-canvas/25">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 border-b border-edge px-4 py-3.5">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#229ED9]/15 text-lg font-bold text-[#229ED9]"
+              aria-hidden
+            >
+              @
+            </span>
+            <div className="min-w-0">
+              <p className="m-0 text-[11.5px] font-[650] uppercase tracking-[.4px] text-ink3">{c.telegramBotLabel}</p>
+              <p className="m-0 mt-0.5 truncate text-sm font-semibold text-ink">
+                {botUsername ? `@${botUsername}` : c.telegramConnected}
+              </p>
+            </div>
+          </div>
+          {botUsername ? (
+            <Button variant="secondary" className="shrink-0" onClick={openBot}>
+              {c.telegramOpenBotShort}
+            </Button>
+          ) : null}
+        </div>
+
+        {hasChats ? (
+          <div className="w-full border-b border-edge">
+            <div className="px-4 pt-3">
+              <span className={cfgFieldLabel}>{c.telegramRecipients}</span>
+            </div>
+            <ul className="m-0 flex list-none flex-col gap-0 p-0">
+              {chats.map((chat, index) => {
+                const label = chat.label || chat.id;
+                const initial = (label.trim()[0] || "?").toUpperCase();
+                return (
+                  <li
+                    key={chat.id}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-4 py-3",
+                      index < chats.length - 1 && "border-b border-edge/70",
+                    )}
+                  >
+                    <span
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#229ED9]/15 text-sm font-bold text-[#229ED9]"
+                      aria-hidden
+                    >
+                      {initial}
+                    </span>
+                    <p className="m-0 min-w-0 flex-1 truncate text-sm font-semibold text-ink">{label}</p>
+                    <Button
+                      variant="ghost"
+                      className="shrink-0 px-2.5"
+                      loading={removeAction.busy}
+                      onClick={() => onRemoveChat(chat.id)}
+                    >
+                      {removeAction.busy ? c.removing : c.remove}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <div className="flex w-full flex-col items-center gap-3 border-b border-edge px-4 py-6 text-center">
+            <p className="m-0 max-w-[40ch] text-sm leading-relaxed text-ink2">{c.telegramConnectHint}</p>
+            {botUsername ? (
+              <Button variant="secondary" onClick={openBot}>
+                {c.telegramOpenBot}
+              </Button>
+            ) : null}
+          </div>
+        )}
+
+        <div className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <div className="flex flex-wrap gap-2">
+            {hasChats ? (
+              <Button variant="secondary" loading={testAction.busy} onClick={onSendTest}>
+                {testAction.busy ? c.sendingTest : c.sendTest}
+              </Button>
+            ) : null}
+          </div>
+          <Button variant="ghost" loading={clearAction.busy || telegramBusy} onClick={onClear}>
+            {clearAction.busy ? c.telegramDisconnecting : hasChats ? c.telegramDisconnect : c.telegramChangeToken}
+          </Button>
+        </div>
+      </div>
+
+      {testAction.message ? <FieldStatus status={testAction.status} message={testAction.message} /> : null}
+      {clearAction.message ? <FieldStatus status={clearAction.status} message={clearAction.message} /> : null}
+    </div>
+  );
+}
+
+function RulesList({
+  data,
+  c,
+  onReload,
+  className,
+}: {
+  data: AlarmsPublic;
+  c: typeof ALARMS_STR.pt;
+  onReload: () => Promise<void>;
+  className?: string;
+}) {
+  const [filterProvider, setFilterProvider] = useState("");
+  const [search, setSearch] = useState("");
+
+  const providerOrder = useMemo(() => Object.keys(data.metrics || {}), [data.metrics]);
+  const activeCount = useMemo(() => data.rules.filter((r) => r.enabled).length, [data.rules]);
+
+  const sortedRules = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let rules = data.rules;
+    if (filterProvider) rules = rules.filter((r) => r.provider === filterProvider);
+    if (q) {
+      rules = rules.filter((rule) => {
+        const metric = data.metrics[rule.provider]?.find((m) => m.key === rule.metric);
+        return ruleSearchText(c, rule, metric).includes(q);
+      });
+    }
+
+    return [...rules].sort((a, b) => {
+      const pa = providerOrder.indexOf(a.provider);
+      const pb = providerOrder.indexOf(b.provider);
+      const providerCmp = (pa === -1 ? 999 : pa) - (pb === -1 ? 999 : pb);
+      if (providerCmp !== 0) return providerCmp;
+      const ma = data.metrics[a.provider]?.find((m) => m.key === a.metric)?.label || a.metric;
+      const mb = data.metrics[b.provider]?.find((m) => m.key === b.metric)?.label || b.metric;
+      return ma.localeCompare(mb) || a.threshold - b.threshold;
+    });
+  }, [c, data.metrics, data.rules, filterProvider, providerOrder, search]);
+
+  const showToolbar = data.rules.length > 0;
+
+  if (data.rules.length === 0) {
+    return <p className={cn(cfgHint, className)}>{c.empty}</p>;
+  }
+
+  return (
+    <div className={cn("w-full overflow-hidden rounded-xl border border-edge bg-canvas/25 p-2", className)}>
+      {showToolbar ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge px-2 pb-2 pt-1">
+          <p className="m-0 text-sm font-semibold text-ink">{c.rulesSummary(data.rules.length, activeCount)}</p>
+          <div className="flex min-w-0 flex-1 flex-wrap items-end justify-end gap-2 sm:max-w-[420px]">
+            {data.rules.length >= 4 ? (
+              <div className="min-w-[140px] flex-[1.4]">
+                <TextField
+                  placeholder={c.searchRules}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            ) : null}
+            {providerOrder.length > 1 ? (
+              <SelectField
+                value={filterProvider}
+                onChange={(e) => setFilterProvider(e.target.value)}
+                wrapperClassName="min-w-[148px] flex-1"
+                options={[
+                  { value: "", label: c.filterAll },
+                  ...providerOrder.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p })),
+                ]}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {sortedRules.length === 0 ? (
+        <p className={cn(cfgHint, "px-2 py-4")}>{c.rulesFilteredEmpty}</p>
+      ) : (
+        <ul className="m-0 flex list-none flex-col divide-y divide-edge p-0">
+          {sortedRules.map((rule) => (
+            <RuleRow
+              key={rule.id}
+              rule={rule}
+              metric={data.metrics[rule.provider]?.find((m) => m.key === rule.metric)}
+              c={c}
+              onReload={onReload}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -415,48 +517,32 @@ function RuleRow({
     setEditing(true);
   };
 
-  const title = rule.label || suggestLabel(c, rule.provider, metric, rule.threshold) || `${PROVIDER_LABEL[rule.provider] || rule.provider} · ${metric?.label || rule.metric}`;
+  const suggested = suggestLabel(c, rule.provider, metric, rule.threshold);
+  const customName = rule.label.trim() && rule.label.trim() !== suggested.trim() ? rule.label.trim() : "";
+  const metricLabel = metric?.label || rule.metric;
+  const thresholdLabel = formatThreshold(metric, rule.threshold);
 
-  return (
-    <article className="flex min-w-0 flex-col gap-2 rounded-2xl border border-edge bg-panel px-[18px] py-4 shadow-card [.flat_&]:shadow-none">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          {editing ? (
-            <div className="flex flex-col gap-2">
-              <TextField label={c.label} placeholder={c.labelPh} value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
-              <TextField
-                label={c.threshold}
-                type="number"
-                value={editThreshold}
-                onChange={(e) => setEditThreshold(Number(e.target.value))}
-              />
-              <p className="m-0 text-[12.5px] leading-[1.45] text-ink3">{ruleHint(c, metric, editThreshold)}</p>
-            </div>
-          ) : (
-            <>
-              <h3 className="m-0 text-[14.5px] font-bold">{title}</h3>
-              <p className="mb-0 mt-1 text-[12.5px] leading-[1.45] text-ink3">{ruleHint(c, metric, rule.threshold)}</p>
-            </>
-          )}
-        </div>
-        {!editing ? (
-          <Switch
-            label={c.enabledLabel}
-            busy={toggle.busy}
-            checked={rule.enabled}
-            onChange={(e) =>
-              toggle.run(async () => {
-                const res = await patchAlarm(rule.id, { enabled: e.target.checked });
-                if (res.ok) await onReload();
-                return res;
-              })
-            }
-          />
-        ) : null}
-      </div>
-      <ActionRow>
-        {editing ? (
-          <>
+  if (editing) {
+    return (
+      <li className="bg-panel/30 px-3 py-3 transition-colors hover:bg-chip/45">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <ProviderIcon provider={rule.provider} />
+            <span className="text-sm font-bold text-ink">{PROVIDER_LABEL[rule.provider] || rule.provider}</span>
+            <span className="rounded-full bg-chip px-2.5 py-1 text-xs font-bold text-ink">{metricLabel}</span>
+            <span className="font-mono text-xs font-semibold text-accent">{thresholdLabel}</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label={c.label} placeholder={c.labelPh} value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
+            <TextField
+              label={c.threshold}
+              type="number"
+              value={editThreshold}
+              onChange={(e) => setEditThreshold(Number(e.target.value))}
+            />
+          </div>
+          <p className="m-0 text-[12.5px] leading-[1.45] text-ink3">{ruleHint(c, metric, editThreshold)}</p>
+          <ActionRow>
             <Button
               loading={save.busy}
               onClick={() =>
@@ -478,37 +564,82 @@ function RuleRow({
             <Button variant="ghost" disabled={save.busy} onClick={() => setEditing(false)}>
               {c.cancel}
             </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="secondary" onClick={startEdit}>
-              {c.edit}
-            </Button>
-            <Button
-              variant="ghost"
-              loading={remove.busy}
-              onClick={() =>
-                remove.run(
-                  async () => {
-                    const res = await deleteAlarm(rule.id);
-                    if (res.ok) await onReload();
-                    return res;
-                  },
-                  { success: c.removed },
-                )
-              }
-            >
-              {remove.busy ? c.removing : c.remove}
-            </Button>
-          </>
-        )}
-      </ActionRow>
-      {toggle.message || remove.message || save.message ? (
-        <FieldStatus
-          status={save.message ? save.status : remove.message ? remove.status : toggle.status}
-          message={save.message || remove.message || toggle.message}
-        />
+          </ActionRow>
+          {save.message ? <FieldStatus status={save.status} message={save.message} /> : null}
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li
+      className={cn(
+        "transition-colors hover:bg-chip/45",
+        !rule.enabled && "opacity-55",
+      )}
+    >
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <ProviderIcon provider={rule.provider} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="truncate text-sm font-semibold text-ink">
+              {PROVIDER_LABEL[rule.provider] || rule.provider} · {metricLabel}
+            </span>
+            <span className="shrink-0 rounded-full border border-edge bg-chip px-2 py-0.5 font-mono text-[11px] font-bold text-accent">
+              {thresholdLabel}
+            </span>
+          </div>
+          <p className="m-0 mt-0.5 truncate text-[12px] leading-snug text-ink3">
+            {customName || ruleHint(c, metric, rule.threshold)}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Switch
+            compact
+            label={c.enabledLabel}
+            busy={toggle.busy}
+            checked={rule.enabled}
+            onChange={(e) =>
+              toggle.run(async () => {
+                const res = await patchAlarm(rule.id, { enabled: e.target.checked });
+                if (res.ok) await onReload();
+                return res;
+              })
+            }
+          />
+          <button type="button" className={iconBtn} aria-label={c.edit} onClick={startEdit}>
+            <SlidersIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className={cn(iconBtn, "text-bad hover:text-bad")}
+            aria-label={c.remove}
+            disabled={remove.busy}
+            onClick={() =>
+              remove.run(
+                async () => {
+                  const res = await deleteAlarm(rule.id);
+                  if (res.ok) await onReload();
+                  return res;
+                },
+                { success: c.removed },
+              )
+            }
+          >
+            <TrashIcon size={16} />
+          </button>
+        </div>
+      </div>
+
+      {toggle.message || remove.message ? (
+        <div className="px-3 pb-2.5">
+          <FieldStatus
+            status={remove.message ? remove.status : toggle.status}
+            message={remove.message || toggle.message}
+          />
+        </div>
       ) : null}
-    </article>
+    </li>
   );
 }

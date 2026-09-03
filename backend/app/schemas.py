@@ -648,21 +648,6 @@ class AlarmsPublic(BaseModel):
     metrics: dict[str, list[AlarmMetric]]
 
 
-class PushSubscriptionBody(BaseModel):
-    endpoint: str
-    p256dh: str
-    auth: str
-    ua: str = ""
-
-
-class PushUnsubscribeBody(BaseModel):
-    endpoint: str
-
-
-class VapidPublicKey(BaseModel):
-    public_key: str
-
-
 class TelegramChat(BaseModel):
     id: str
     label: str

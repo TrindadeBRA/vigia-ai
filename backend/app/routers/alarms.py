@@ -28,7 +28,7 @@ def list_alarms() -> AlarmsPublic:
     "",
     response_model=AlarmRule,
     summary="Cria uma regra de alarme",
-    description="Dispara push quando a métrica cruza o limiar (>= para percentuais, <= para saldo em centavos).",
+    description="Dispara notificação no Telegram quando a métrica cruza o limiar (>= para percentuais, <= para saldo em centavos).",
 )
 def create_alarm(body: AlarmRuleBody) -> AlarmRule:
     if metric_kind(body.provider, body.metric) is None:

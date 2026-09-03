@@ -24,7 +24,7 @@ import {
   weatherEmoji,
   type ThemeProvider,
 } from "./themeMetrics";
-import { Button, Card, Checkbox, FieldStatus, Modal, TextField } from "./ui";
+import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, TextField } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperLibrary, WallpaperManager, WallpaperProviders } from "./WallpaperManager";
 
@@ -1048,23 +1048,15 @@ export default function ThemeEditorPage() {
           {selectedIcon ? (
             <Card title={providerLabel(selectedIcon.provider)}>
               <div className="flex flex-col gap-3">
-                <label className="flex flex-col gap-1.5">
-                  <span className={cfgFieldLabel}>{c.icons}</span>
-                  <select
-                    className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink"
-                    value={selectedIcon.provider}
-                    onChange={(e) => {
-                      const provider = e.target.value as ThemeProvider;
-                      updateIcon(selectedIcon.id, { provider, metric: defaultMetric(provider) });
-                    }}
-                  >
-                    {ICON_PROVIDERS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <SelectField
+                  label={c.icons}
+                  value={selectedIcon.provider}
+                  onChange={(e) => {
+                    const provider = e.target.value as ThemeProvider;
+                    updateIcon(selectedIcon.id, { provider, metric: defaultMetric(provider) });
+                  }}
+                  options={ICON_PROVIDERS.map((p) => ({ value: p.id, label: p.label }))}
+                />
                 {providerSupportsCard(selectedIcon.provider) ? (
                   <label className="flex flex-col gap-1.5">
                     <span className={cfgFieldLabel}>{c.iconStyle}</span>
@@ -1094,22 +1086,19 @@ export default function ThemeEditorPage() {
                   </label>
                 ) : null}
                 {selectedIcon.style !== "card" && providerHasData(selectedIcon.provider) ? (
-                  <label className="flex flex-col gap-1.5">
-                    <span className={cfgFieldLabel}>{c.metric}</span>
-                    <select
-                      className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink"
-                      value={selectedIcon.metric}
-                      onChange={(e) => updateIcon(selectedIcon.id, { metric: e.target.value })}
-                    >
-                      {PROVIDER_METRICS[selectedIcon.provider].map((m) => (
-                        <option key={m.key} value={m.key}>
-                          {metricLabel(m.key, lang)} — {formatThemeMetric(usage, selectedIcon.provider, m.key)}
-                        </option>
-                      ))}
-                      <option value="none">{c.metricNone}</option>
-                    </select>
-                    <span className="text-xs text-ink3">{c.metricHint}</span>
-                  </label>
+                  <SelectField
+                    label={c.metric}
+                    hint={c.metricHint}
+                    value={selectedIcon.metric}
+                    onChange={(e) => updateIcon(selectedIcon.id, { metric: e.target.value })}
+                  >
+                    {PROVIDER_METRICS[selectedIcon.provider].map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {metricLabel(m.key, lang)} — {formatThemeMetric(usage, selectedIcon.provider, m.key)}
+                      </option>
+                    ))}
+                    <option value="none">{c.metricNone}</option>
+                  </SelectField>
                 ) : null}
                 <ScaleField label={c.size} value={selectedIcon.scale} onChange={(v) => updateIcon(selectedIcon.id, { scale: v })} />
                 <ColorField label={c.color} value={selectedIcon.color} onChange={(v) => updateIcon(selectedIcon.id, { color: v })} noneLabel={c.colorNone} lang={lang} />

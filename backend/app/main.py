@@ -21,7 +21,6 @@ from app.routers.adsense import router as adsense_router
 from app.routers.alarms import router as alarms_router
 from app.routers.config import router as config_router
 from app.routers.currencies import router as currencies_router
-from app.routers.push import router as push_router
 from app.routers.telegram import router as telegram_router
 from app.telegram_poller import TelegramPoller
 from app.routers.theme import router as theme_router
@@ -111,7 +110,6 @@ def create_app() -> FastAPI:
     app.include_router(adsense_router)
     app.include_router(theme_router)
     app.include_router(alarms_router)
-    app.include_router(push_router)
     app.include_router(telegram_router)
     app.include_router(wallpapers_router)
     app.include_router(weather_router)

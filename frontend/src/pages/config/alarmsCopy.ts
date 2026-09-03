@@ -6,22 +6,8 @@ export type AlarmsCopy = {
   loadError: string;
   offline: string;
   retry: string;
-  pushTitle: string;
-  pushLead: string;
-  pushUnsupported: string;
-  pushDenied: string;
-  pushOff: string;
-  pushOn: string;
-  enable: string;
-  enabling: string;
-  disable: string;
-  disabling: string;
   sendTest: string;
   sendingTest: string;
-  sendingTestIn: (s: number) => string;
-  testSent: string;
-  testFailed: string;
-  secureContextNote: string;
   telegramTitle: string;
   telegramLead: string;
   telegramTokenPh: string;
@@ -29,7 +15,10 @@ export type AlarmsCopy = {
   telegramSavingToken: string;
   telegramBotFatherHint: string;
   telegramOpenBot: string;
+  telegramOpenBotShort: string;
   telegramConnectHint: string;
+  telegramBotLabel: string;
+  telegramRecipients: string;
   telegramConnected: string;
   telegramNotConnected: string;
   telegramDisconnect: string;
@@ -63,40 +52,32 @@ export type AlarmsCopy = {
   saved: string;
   saveFailed: string;
   cancel: string;
+  rulesSummary: (total: number, active: number) => string;
+  filterAll: string;
+  searchRules: string;
+  rulesFilteredEmpty: string;
 };
 
 export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
   pt: {
     title: "Alarmes",
-    lead: "Avise quando uma cota passar de um limiar, ou o saldo de créditos ficar baixo — por notificação push.",
+    lead: "Avise quando uma cota passar de um limiar, ou o saldo de créditos ficar baixo — por mensagem no Telegram.",
     loadError: "Não deu pra carregar os alarmes.",
     offline: "Não foi possível falar com o coletor.",
     retry: "Tentar de novo",
-    pushTitle: "Notificações push",
-    pushLead: "Ative neste navegador pra receber os alarmes mesmo com a aba fechada.",
-    pushUnsupported: "Não suportado neste navegador/endereço",
-    pushDenied: "Bloqueado nas permissões do navegador",
-    pushOff: "Desativado",
-    pushOn: "Ativo",
-    enable: "Ativar notificações",
-    enabling: "Ativando…",
-    disable: "Desativar",
-    disabling: "Desativando…",
     sendTest: "Enviar teste",
     sendingTest: "Enviando…",
-    sendingTestIn: (s) => `Enviando em ${s}s…`,
-    testSent: "Notificação de teste enviada",
-    testFailed: "Falha ao enviar — ative as notificações primeiro",
-    secureContextNote:
-      "Push só funciona em contexto seguro: abrindo o painel em http://127.0.0.1:<porta> neste computador. Pelo IP da rede (ex. no celular) o navegador bloqueia a assinatura — dá pra configurar os alarmes normalmente, mas o push só chega aqui neste Mac.",
     telegramTitle: "Telegram",
-    telegramLead: "Receba os alarmes no app do Telegram — funciona em qualquer dispositivo, sem depender do navegador.",
+    telegramLead: "Receba os alarmes no app do Telegram — funciona em qualquer dispositivo.",
     telegramTokenPh: "Cole o token do @BotFather",
     telegramSaveToken: "Salvar token",
     telegramSavingToken: "Salvando…",
     telegramBotFatherHint: "Crie um bot com o @BotFather no Telegram, copie o token e cole aqui.",
     telegramOpenBot: "Abrir bot no Telegram",
+    telegramOpenBotShort: "Abrir no Telegram",
     telegramConnectHint: "Abra o bot e mande qualquer mensagem (ex. /start) para conectar.",
+    telegramBotLabel: "Bot",
+    telegramRecipients: "Destinatários",
     telegramConnected: "Conectado",
     telegramNotConnected: "Aguardando conexão",
     telegramDisconnect: "Desconectar",
@@ -130,38 +111,30 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     saved: "Alterações salvas",
     saveFailed: "Não foi possível salvar",
     cancel: "Cancelar",
+    rulesSummary: (total, active) => `${total} regra${total === 1 ? "" : "s"} · ${active} ativa${active === 1 ? "" : "s"}`,
+    filterAll: "Todos os provedores",
+    searchRules: "Buscar regra…",
+    rulesFilteredEmpty: "Nenhuma regra corresponde ao filtro.",
   },
   en: {
     title: "Alarms",
-    lead: "Get notified when a quota crosses a threshold, or a credit balance runs low — via push notification.",
+    lead: "Get notified when a quota crosses a threshold, or a credit balance runs low — via Telegram message.",
     loadError: "Could not load alarms.",
     offline: "Could not reach the collector.",
     retry: "Retry",
-    pushTitle: "Push notifications",
-    pushLead: "Enable in this browser to receive alarms even with the tab closed.",
-    pushUnsupported: "Not supported on this browser/address",
-    pushDenied: "Blocked in browser permissions",
-    pushOff: "Off",
-    pushOn: "On",
-    enable: "Enable notifications",
-    enabling: "Enabling…",
-    disable: "Disable",
-    disabling: "Disabling…",
     sendTest: "Send test",
     sendingTest: "Sending…",
-    sendingTestIn: (s) => `Sending in ${s}s…`,
-    testSent: "Test notification sent",
-    testFailed: "Failed to send — enable notifications first",
-    secureContextNote:
-      "Push only works in a secure context: opening the panel at http://127.0.0.1:<port> on this machine. From the LAN IP (e.g. a phone) the browser blocks the subscription — you can still set up alarms there, but push only arrives on this Mac.",
     telegramTitle: "Telegram",
-    telegramLead: "Receive alarms in the Telegram app — works on any device, no browser restrictions.",
+    telegramLead: "Receive alarms in the Telegram app — works on any device.",
     telegramTokenPh: "Paste the @BotFather token",
     telegramSaveToken: "Save token",
     telegramSavingToken: "Saving…",
     telegramBotFatherHint: "Create a bot with @BotFather on Telegram, copy the token and paste it here.",
     telegramOpenBot: "Open bot in Telegram",
+    telegramOpenBotShort: "Open in Telegram",
     telegramConnectHint: "Open the bot and send any message (e.g. /start) to connect.",
+    telegramBotLabel: "Bot",
+    telegramRecipients: "Recipients",
     telegramConnected: "Connected",
     telegramNotConnected: "Waiting for connection",
     telegramDisconnect: "Disconnect",
@@ -195,38 +168,30 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     saved: "Changes saved",
     saveFailed: "Could not save",
     cancel: "Cancel",
+    rulesSummary: (total, active) => `${total} rule${total === 1 ? "" : "s"} · ${active} enabled`,
+    filterAll: "All providers",
+    searchRules: "Search rules…",
+    rulesFilteredEmpty: "No rules match the filter.",
   },
   es: {
     title: "Alarmas",
-    lead: "Recibí un aviso cuando una cuota cruce un límite, o el saldo de créditos quede bajo — por notificación push.",
+    lead: "Recibí un aviso cuando una cuota cruce un límite, o el saldo de créditos quede bajo — por mensaje en Telegram.",
     loadError: "No se pudieron cargar las alarmas.",
     offline: "No se pudo contactar al colector.",
     retry: "Reintentar",
-    pushTitle: "Notificaciones push",
-    pushLead: "Activá en este navegador para recibir las alarmas aunque la pestaña esté cerrada.",
-    pushUnsupported: "No soportado en este navegador/dirección",
-    pushDenied: "Bloqueado en los permisos del navegador",
-    pushOff: "Desactivado",
-    pushOn: "Activo",
-    enable: "Activar notificaciones",
-    enabling: "Activando…",
-    disable: "Desactivar",
-    disabling: "Desactivando…",
     sendTest: "Enviar prueba",
     sendingTest: "Enviando…",
-    sendingTestIn: (s) => `Enviando en ${s}s…`,
-    testSent: "Notificación de prueba enviada",
-    testFailed: "Error al enviar — activá las notificaciones primero",
-    secureContextNote:
-      "Push solo funciona en contexto seguro: abriendo el panel en http://127.0.0.1:<puerto> en esta máquina. Por la IP de la red (ej. el celular) el navegador bloquea la suscripción — podés configurar las alarmas igual, pero el push solo llega en esta Mac.",
     telegramTitle: "Telegram",
-    telegramLead: "Recibí las alarmas en la app de Telegram — funciona en cualquier dispositivo, sin depender del navegador.",
+    telegramLead: "Recibí las alarmas en la app de Telegram — funciona en cualquier dispositivo.",
     telegramTokenPh: "Pegá el token de @BotFather",
     telegramSaveToken: "Guardar token",
     telegramSavingToken: "Guardando…",
     telegramBotFatherHint: "Creá un bot con @BotFather en Telegram, copiá el token y pegalo acá.",
     telegramOpenBot: "Abrir bot en Telegram",
+    telegramOpenBotShort: "Abrir en Telegram",
     telegramConnectHint: "Abrí el bot y mandá cualquier mensaje (ej. /start) para conectar.",
+    telegramBotLabel: "Bot",
+    telegramRecipients: "Destinatarios",
     telegramConnected: "Conectado",
     telegramNotConnected: "Esperando conexión",
     telegramDisconnect: "Desconectar",
@@ -260,5 +225,9 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     saved: "Cambios guardados",
     saveFailed: "No se pudo guardar",
     cancel: "Cancelar",
+    rulesSummary: (total, active) => `${total} regla${total === 1 ? "" : "s"} · ${active} activa${active === 1 ? "" : "s"}`,
+    filterAll: "Todos los proveedores",
+    searchRules: "Buscar regla…",
+    rulesFilteredEmpty: "Ninguna regla coincide con el filtro.",
   },
 };

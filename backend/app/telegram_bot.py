@@ -7,9 +7,11 @@ from typing import Any
 
 import httpx
 
+from app.http_util import log_notification
 from app.store import load, update
 
 TELEGRAM_API = "https://api.telegram.org"
+TELEGRAM_LOG_URL = f"{TELEGRAM_API}/bot/sendMessage"
 CONFIRMATION_MSG = "✅ Vigia AI conectado — você vai receber os alarmes aqui."
 
 
@@ -77,10 +79,12 @@ def remove_chat(chat_id: str) -> None:
     update(mut)
 
 
-def _send_message_sync(token: str, chat_id: str, text: str) -> httpx.Response:
+def _send_message_sync(token: str, chat_id: str, text: str) -> tuple[httpx.Response, float]:
     url = f"{TELEGRAM_API}/bot{token}/sendMessage"
+    start = time.perf_counter()
     with httpx.Client(timeout=15) as client:
-        return client.post(url, json={"chat_id": chat_id, "text": text})
+        resp = client.post(url, json={"chat_id": chat_id, "text": text})
+    return resp, (time.perf_counter() - start) * 1000
 
 
 def broadcast(title: str, body: str) -> int:
@@ -93,17 +97,46 @@ def broadcast(title: str, body: str) -> int:
     sent = 0
     dead: list[str] = []
     for chat in chats:
+        start = time.perf_counter()
         try:
-            resp = _send_message_sync(token, chat["id"], text)
+            resp, elapsed_ms = _send_message_sync(token, chat["id"], text)
             data = resp.json()
             if resp.status_code == 200 and data.get("ok"):
                 sent += 1
+                log_notification(
+                    "POST",
+                    TELEGRAM_LOG_URL,
+                    label="TELEGRAM",
+                    status=resp.status_code,
+                    elapsed_ms=elapsed_ms,
+                )
             elif resp.status_code in (400, 403):
                 dead.append(chat["id"])
+                log_notification(
+                    "POST",
+                    TELEGRAM_LOG_URL,
+                    label="TELEGRAM",
+                    status=resp.status_code,
+                    elapsed_ms=elapsed_ms,
+                )
             else:
-                print(f"[telegram] falha ao enviar ({resp.status_code}): {resp.text}")
+                log_notification(
+                    "POST",
+                    TELEGRAM_LOG_URL,
+                    label="TELEGRAM",
+                    status=resp.status_code,
+                    elapsed_ms=elapsed_ms,
+                    error=resp.text[:300],
+                )
         except Exception as exc:
-            print(f"[telegram] falha ao enviar: {exc}")
+            log_notification(
+                "POST",
+                TELEGRAM_LOG_URL,
+                label="TELEGRAM",
+                status=None,
+                elapsed_ms=(time.perf_counter() - start) * 1000,
+                error=str(exc),
+            )
     if dead:
         def mut(c: dict[str, Any]) -> None:
             c["telegram"]["chats"] = [ch for ch in c["telegram"]["chats"] if ch["id"] not in dead]

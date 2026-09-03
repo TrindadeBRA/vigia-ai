@@ -22,12 +22,11 @@ Nenhuma rota do backend exige autenticação própria — isso é uma decisão d
 | 4 | Ausência de rate-limiting / DoS por IP (cotas externas + CPU Pillow) | **MEDIUM** | 8/10 | `backend/app/routers/usage.py:80-85`, `backend/app/hub.py:20-25`, `backend/app/routers/wallpapers.py:315-432` |
 | 5 | Storage exhaustion ilimitado via wallpapers (enchimento de disco) | **MEDIUM-LOW** | 8/10 | `backend/app/routers/wallpapers.py:59-64,315-520` |
 | 6 | Ausência total de autenticação em rotas mutantes do backend (multiplicador) | **MEDIUM** | 9/10 | `backend/app/main.py:103-112`, todos `routers/*.py` |
-| 7 | SSRF cego via endpoint de inscrição de Web Push | **LOW-MEDIUM** | 7/10 | `backend/app/push.py:52-115`, `backend/app/routers/push.py:32` |
-| 8 | Vazamento de informação em mensagens de erro (corpo de API terceira ecoado) | **LOW** | 7/10 | `backend/app/http_util.py:169`, `backend/app/routers/wallpapers.py:237-239` |
-| 9 | Comunicação firmware↔backend em HTTP puro, sem segredo compartilhado | **LOW** | 7/10 | `firmware/src/net/client.cpp` |
-| 10 | Supply-chain `dev` baixa `wokwigw` sem checksum/assinatura | **LOW** | 7/10 | `dev:38,118-136`, `Dockerfile:13` |
-| 11 | Headers de segurança ausentes (CSP, X-Frame-Options, nosniff) | **INFO** | 9/10 | `backend/app/main.py:32-45`, `frontend/vite.config.ts:1-23` |
-| 12 | Container Docker roda como root sem hardening | **INFO** | 7/10 | `Dockerfile:10-22`, `compose.yaml:5-11` |
+| 7 | Vazamento de informação em mensagens de erro (corpo de API terceira ecoado) | **LOW** | 7/10 | `backend/app/http_util.py:169`, `backend/app/routers/wallpapers.py:237-239` |
+| 8 | Comunicação firmware↔backend em HTTP puro, sem segredo compartilhado | **LOW** | 7/10 | `firmware/src/net/client.cpp` |
+| 9 | Supply-chain `dev` baixa `wokwigw` sem checksum/assinatura | **LOW** | 7/10 | `dev:38,118-136`, `Dockerfile:13` |
+| 10 | Headers de segurança ausentes (CSP, X-Frame-Options, nosniff) | **INFO** | 9/10 | `backend/app/main.py:32-45`, `frontend/vite.config.ts:1-23` |
+| 11 | Container Docker roda como root sem hardening | **INFO** | 7/10 | `Dockerfile:10-22`, `compose.yaml:5-11` |
 
 ---
 
@@ -91,15 +90,15 @@ const CDN_PTBR = "https://cdn.jsdelivr.net/gh/zonaro/NameToColor@main/NameToColo
 ## Finding 4 — Ausência de rate-limiting / DoS por IP
 
 **Severidade:** MEDIUM · **Confiança:** 8/10
-**Local:** `backend/app/routers/usage.py:80-85` (`GET /usage` → `hub.refresh(force_quota=True)`), `backend/app/hub.py:20-25` (`USAGE_INTERVAL_S`), `backend/app/routers/wallpapers.py:315-432` (Pillow), `backend/app/routers/push.py:50-58` (`POST /api/push/test`)
+**Local:** `backend/app/routers/usage.py:80-85` (`GET /usage` → `hub.refresh(force_quota=True)`), `backend/app/hub.py:20-25` (`USAGE_INTERVAL_S`), `backend/app/routers/wallpapers.py:315-432` (Pillow)
 
-**Descrição:** nenhuma rota mutante ou de leitura cara tem limite por IP. `GET /usage` dispara um ciclo extra de cotas de assinatura (`force_quota=True`) que paraleliza chamadas via `ThreadPoolExecutor` (10 workers, `timeout=20s`) para todos os provedores externos. `GET /events` (SSE) também não limita número de conexões simultâneas. `POST /api/wallpapers/upload` e `POST /api/wallpapers/import` executam `Pillow` `Image.resize(LANCZOS)` + loops pixel-a-pixel RGB565 (`wallpapers.py:169-176, 437-504`) de forma síncrona na thread do request, sem throttle. `POST /api/push/test` dispara `broadcast()` para todas as subscriptions sem debounce.
+**Descrição:** nenhuma rota mutante ou de leitura cara tem limite por IP. `GET /usage` dispara um ciclo extra de cotas de assinatura (`force_quota=True`) que paraleliza chamadas via `ThreadPoolExecutor` (10 workers, `timeout=20s`) para todos os provedores externos. `GET /events` (SSE) também não limita número de conexões simultâneas. `POST /api/wallpapers/upload` e `POST /api/wallpapers/import` executam `Pillow` `Image.resize(LANCZOS)` + loops pixel-a-pixel RGB565 (`wallpapers.py:169-176, 437-504`) de forma síncrona na thread do request, sem throttle.
 
 **Cenário de exploração:** atacante na LAN executa `while true; do curl http://coletor:8787/usage & done` — queima cota 429 das APIs não-oficiais (Claude OAuth usage rate-limits se martelado, CoinGecko/Blockstream) e consome CPU do coletor com conversões de imagem. `USAGE_INTERVAL_S` mínimo de 15s não impede o abuso, pois `GET /usage` ignora o cache de cotas.
 
 **Justificativa da severidade:** MEDIUM — não há RCE, mas é DoS prático e degradação de serviço de baixo custo para atacante LAN, com impacto financeiro indireto (cotas bloqueadas) e travamento do coletor.
 
-**Recomendação:** aplicar `slowapi`/`RateLimiter` por IP: `GET /usage` 1 req/15s por IP, `GET /events` limite global de conexões (ex.: 10), `POST /api/wallpapers/upload|import` 5/h por IP, `POST /api/push/test` 1/min. Manter o TTL já existente em `app/refresh_cache.py:19-31` e garantir que `force_quota=True` respeite um janela mínima por IP.
+**Recomendação:** aplicar `slowapi`/`RateLimiter` por IP: `GET /usage` 1 req/15s por IP, `GET /events` limite global de conexões (ex.: 10), `POST /api/wallpapers/upload|import` 5/h por IP. Manter o TTL já existente em `app/refresh_cache.py:19-31` e garantir que `force_quota=True` respeite um janela mínima por IP.
 
 ---
 
@@ -121,7 +120,7 @@ const CDN_PTBR = "https://cdn.jsdelivr.net/gh/zonaro/NameToColor@main/NameToColo
 ## Finding 6 — Ausência total de autenticação em rotas mutantes do backend
 
 **Severidade:** MEDIUM · **Confiança:** 9/10
-**Local:** `backend/app/main.py:103-112` (todos `include_router` sem `Depends`), `backend/app/routers/config.py:454,531,577,597`, `backend/app/routers/wallpapers.py:282,315,780`, `backend/app/routers/theme.py:81,97,130`, `backend/app/routers/push.py:32`, `backend/app/routers/alarms.py`, `backend/app/routers/currencies.py`, `backend/app/routers/weather.py`
+**Local:** `backend/app/main.py:103-112` (todos `include_router` sem `Depends`), `backend/app/routers/config.py:454,531,577,597`, `backend/app/routers/wallpapers.py:282,315,780`, `backend/app/routers/theme.py:81,97,130`, `backend/app/routers/telegram.py`, `backend/app/routers/alarms.py`, `backend/app/routers/currencies.py`, `backend/app/routers/weather.py`
 
 **Descrição:** nenhuma rota do backend exige autenticação — leitura e escrita são abertas a qualquer host na LAN. Isso é documentado como decisão "LAN only", mas na prática funciona como multiplicador de todos os demais achados: um atacante de rede não precisa de navegador nem de bypass de CORS, basta `curl`.
 
@@ -130,28 +129,14 @@ const CDN_PTBR = "https://cdn.jsdelivr.net/gh/zonaro/NameToColor@main/NameToColo
 - `POST /api/config` / `POST /api/config/account` → injeta chave/API key falsa;
 - `DELETE /api/config/secret/claude` → apaga token e causa DoS de provedor;
 - `POST /api/theme/meta` / `DELETE /api/theme` / `POST /api/wallpapers/upload` → desfigura tema ou enche disco;
-- `POST /api/push/subscribe` + `POST /api/push/test` → SSRF cego (Finding 7).
 
-**Justificativa da severidade:** MEDIUM (e não LOW) porque, embora "LAN only" reduza exposição à internet, a rede Wi-Fi é tipicamente compartilhada e o custo de exploração é zero. Sem este controle, os Findings 1, 4, 5 e 7 são maximizados.
+**Justificativa da severidade:** MEDIUM (e não LOW) porque, embora "LAN only" reduza exposição à internet, a rede Wi-Fi é tipicamente compartilhada e o custo de exploração é zero. Sem este controle, os Findings 1, 4 e 5 são maximizados.
 
 **Recomendação:** sem quebrar UX local, gerar um token compartilhado aleatório em `backend/data/config.json` na primeira inicialização (`store.py:429-435` já faz `chmod 0o600`) e exigi-lo em rotas mutantes via header `X-Vigia-Token` (ou `Authorization: Bearer`). O frontend lê o token do próprio coletor (mesma origem) e o firmware o recebe via `secrets.h` junto com `USAGE_URL`.
 
 ---
 
-## Finding 7 — SSRF cego via endpoint de inscrição de Web Push
-
-**Severidade:** LOW-MEDIUM · **Confiança:** 7/10
-**Local:** `backend/app/push.py:52-115`, `backend/app/routers/push.py:32`
-
-**Descrição:** o campo `endpoint` da inscrição de push é armazenado sem validar que aponta para um serviço de push real (ex. `fcm.googleapis.com`). `broadcast()`/`webpush()` faz `POST` para essa URL com um JWT VAPID assinado. Como não há autenticação em nenhuma rota, um atacante na LAN pode registrar uma URL interna como "endpoint" e disparar via `POST /api/push/test` (imediato).
-
-**Justificativa da severidade:** LOW-MEDIUM — é SSRF cego (atacante só aprende sucesso/falha, não o corpo da resposta), e o único dado potencialmente exposto é um JWT VAPID (não é um segredo de alto valor por si só), mas ainda é um primitivo real de scanning/disparo de webhook interno.
-
-**Recomendação:** validar que `endpoint` pertence a um host de serviço de push conhecido (allowlist de domínios: `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `api.push.apple.com`) antes de aceitar a inscrição. Bloquear também faixas privadas e `file://`.
-
----
-
-## Finding 8 — Vazamento de informação em mensagens de erro
+## Finding 7 — Vazamento de informação em mensagens de erro
 
 **Severidade:** LOW · **Confiança:** 7/10
 **Local:** `backend/app/http_util.py:169-176`, `backend/app/routers/wallpapers.py:237-239`
@@ -227,8 +212,8 @@ const CDN_PTBR = "https://cdn.jsdelivr.net/gh/zonaro/NameToColor@main/NameToColo
 
 ## Recomendações priorizadas
 
-1. **Adicionar allowlist de host** para downloads de imagem em `wallpapers.py` (`_download_image`/`_http_json`) e para `endpoint` de push (Findings 1 e 7) — maior ROI, bloqueia `file://` e varredura interna.
-2. **Rate-limit por IP** (`slowapi`) em `/usage`, `/events`, `/upload`, `/import`, `/push/test` (Finding 4) — 2h.
+1. **Adicionar allowlist de host** para downloads de imagem em `wallpapers.py` (`_download_image`/`_http_json`) (Finding 1) — maior ROI, bloqueia `file://` e varredura interna.
+2. **Rate-limit por IP** (`slowapi`) em `/usage`, `/events`, `/upload`, `/import` (Finding 4) — 2h.
 3. **Token simples para rotas mutantes** do backend + para `theme_server.cpp` do firmware (Finding 6 e 2) — `X-Vigia-Token` em `data/config.json`/`secrets.h`, troca `Access-Control-Allow-Origin: *` por origem do coletor — 3h.
 4. **Fixar versão + SRI** do script `NameToColor` (Finding 3) — `@v1.2.3` + `integrity` ou vendorizar — 30 min.
 5. **Headers CSP/frame/no-sniff** no backend (Finding 11) e `Dockerfile` `USER vigia` + `read_only` + `cap_drop` (Finding 12) — 1h.

@@ -3,9 +3,9 @@ import { addCurrencyItem, deleteCurrencyItem, patchCurrenciesConfig, searchCurre
 import type { CurrenciesConfig, CurrencySearchResult } from "../../api/types";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
-import { cfgCard, cfgFieldLabel, iconChip, iconImg } from "../../tw";
+import { cfgCard, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
-import { ActionRow, Button, FieldStatus, Fold, Switch, TextField } from "./ui";
+import { ActionRow, Button, FieldStatus, Fold, SelectField, Switch, TextField } from "./ui";
 
 // Códigos ISO 4217 mais comuns — cobre a maioria dos casos sem precisar de
 // busca (ao contrário de cripto, que tem milhares de ativos no CoinGecko).
@@ -163,14 +163,12 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
             </div>
 
             <ActionRow>
-                <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
-                    <span className={cfgFieldLabel}>{c.currenciesBaseLabel}</span>
-                    <select value={base} onChange={(e) => setBase(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
-                        {FIAT_CODES.map((f) => (
-                            <option key={f.code} value={f.code}>{f.code} — {f.label}</option>
-                        ))}
-                    </select>
-                </label>
+                <SelectField
+                    label={c.currenciesBaseLabel}
+                    value={base}
+                    onChange={(e) => setBase(e.target.value)}
+                    options={FIAT_CODES.map((f) => ({ value: f.code, label: `${f.code} — ${f.label}` }))}
+                />
                 <Button
                     loading={saveBase.busy}
                     disabled={base === currencies.base}
@@ -223,13 +221,11 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
 
                 {kind === "fiat" ? (
                     <ActionRow>
-                        <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
-                            <select value={fiatCode} onChange={(e) => setFiatCode(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
-                                {FIAT_CODES.map((f) => (
-                                    <option key={f.code} value={f.code}>{f.code} — {f.label}</option>
-                                ))}
-                            </select>
-                        </label>
+                        <SelectField
+                            value={fiatCode}
+                            onChange={(e) => setFiatCode(e.target.value)}
+                            options={FIAT_CODES.map((f) => ({ value: f.code, label: `${f.code} — ${f.label}` }))}
+                        />
                         <Button loading={add.busy} onClick={() => void addFiat()}>
                             {add.busy ? c.adding : c.currenciesAdd}
                         </Button>

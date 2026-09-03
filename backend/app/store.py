@@ -110,7 +110,6 @@ def default_config() -> dict[str, Any]:
         "mock": False,
         "paths": {"claude_credentials": "", "cursor_state_db": "", "codex_auth": ""},
         "providers": {name: deepcopy(_EMPTY_PROVIDER) for name in PROVIDERS},
-        "push": {"vapid_public_key": "", "vapid_private_key": "", "subscriptions": []},
         "telegram": {"bot_token": "", "bot_username": "", "chats": []},
         "alarms": [],
         "weather": deepcopy(_WEATHER_DEFAULT),
@@ -178,31 +177,6 @@ def _parse_telegram_chats(raw: Any) -> list[dict[str, str]]:
                 "id": chat_id,
                 "label": str(item.get("label") or ""),
                 "added_at": str(item.get("added_at") or ""),
-            }
-        )
-    return out
-
-
-def _parse_subscriptions(raw: Any) -> list[dict[str, str]]:
-    if not isinstance(raw, list):
-        return []
-    out: list[dict[str, str]] = []
-    for item in raw:
-        if not isinstance(item, dict):
-            continue
-        endpoint = str(item.get("endpoint") or "")
-        p256dh = str(item.get("p256dh") or "")
-        auth = str(item.get("auth") or "")
-        if not endpoint or not p256dh or not auth:
-            continue
-        out.append(
-            {
-                "id": str(item.get("id") or ""),
-                "endpoint": endpoint,
-                "p256dh": p256dh,
-                "auth": auth,
-                "ua": str(item.get("ua") or ""),
-                "created_at": str(item.get("created_at") or ""),
             }
         )
     return out
@@ -323,10 +297,6 @@ def _normalize(raw: dict[str, Any]) -> dict[str, Any]:
                 dest["local_label"] = str(src.get("local_label") or "")
             dest["hidden"] = dest["hidden"] or bool(src.get("hidden"))
             dest["accounts"] = _parse_accounts_blob(src.get("accounts") or [], "secret")
-    push_raw = raw.get("push") if isinstance(raw.get("push"), dict) else {}
-    cfg["push"]["vapid_public_key"] = str(push_raw.get("vapid_public_key") or "")
-    cfg["push"]["vapid_private_key"] = str(push_raw.get("vapid_private_key") or "")
-    cfg["push"]["subscriptions"] = _parse_subscriptions(push_raw.get("subscriptions") or [])
     telegram_raw = raw.get("telegram") if isinstance(raw.get("telegram"), dict) else {}
     cfg["telegram"]["bot_token"] = str(telegram_raw.get("bot_token") or "")
     cfg["telegram"]["bot_username"] = str(telegram_raw.get("bot_username") or "")

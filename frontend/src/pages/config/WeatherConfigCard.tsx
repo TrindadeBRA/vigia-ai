@@ -5,7 +5,7 @@ import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, cfgFieldLabel, cfgHint, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
-import { ActionRow, Button, Checkbox, FieldStatus, Fold, Switch, TextField } from "./ui";
+import { ActionRow, Button, Checkbox, FieldStatus, Fold, SelectField, Switch, TextField } from "./ui";
 
 // Todas as variáveis Open-Meteo disponíveis (para o painel avançado)
 const CURRENT_VARS = [
@@ -204,29 +204,35 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
 
             <Fold summary={c.weatherUnitsTitle}>
                 <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-3">
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-xs font-semibold text-ink3">{c.weatherTempUnit}</span>
-                        <select value={tempUnit} onChange={(e) => setTempUnit(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
-                            <option value="celsius">Celsius (°C)</option>
-                            <option value="fahrenheit">Fahrenheit (°F)</option>
-                        </select>
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-xs font-semibold text-ink3">{c.weatherWindUnit}</span>
-                        <select value={windUnit} onChange={(e) => setWindUnit(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
-                            <option value="kmh">km/h</option>
-                            <option value="ms">m/s</option>
-                            <option value="mph">mph</option>
-                            <option value="kn">kn</option>
-                        </select>
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                        <span className="text-xs font-semibold text-ink3">{c.weatherPrecipUnit}</span>
-                        <select value={precipUnit} onChange={(e) => setPrecipUnit(e.target.value)} className="w-full rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink">
-                            <option value="mm">mm</option>
-                            <option value="inch">inch</option>
-                        </select>
-                    </label>
+                    <SelectField
+                        label={c.weatherTempUnit}
+                        value={tempUnit}
+                        onChange={(e) => setTempUnit(e.target.value)}
+                        options={[
+                            { value: "celsius", label: "Celsius (°C)" },
+                            { value: "fahrenheit", label: "Fahrenheit (°F)" },
+                        ]}
+                    />
+                    <SelectField
+                        label={c.weatherWindUnit}
+                        value={windUnit}
+                        onChange={(e) => setWindUnit(e.target.value)}
+                        options={[
+                            { value: "kmh", label: "km/h" },
+                            { value: "ms", label: "m/s" },
+                            { value: "mph", label: "mph" },
+                            { value: "kn", label: "kn" },
+                        ]}
+                    />
+                    <SelectField
+                        label={c.weatherPrecipUnit}
+                        value={precipUnit}
+                        onChange={(e) => setPrecipUnit(e.target.value)}
+                        options={[
+                            { value: "mm", label: "mm" },
+                            { value: "inch", label: "inch" },
+                        ]}
+                    />
                 </div>
                 <ActionRow>
                     <TextField label={c.weatherForecastDays} type="number" min={1} max={16} value={forecastDays} onChange={(e) => setForecastDays(e.target.value)} />

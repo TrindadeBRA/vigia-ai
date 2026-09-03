@@ -4,7 +4,7 @@ import { useRequest } from "../../hooks/useRequest";
 import type { Lang } from "../../i18n";
 import { cfgHint, cfgStatus } from "../../tw";
 import { THEME_STR, type ThemeCopy } from "./themeCopy";
-import { ActionRow, Button, Card, FieldStatus, StatusPill, TextField } from "./ui";
+import { ActionRow, Button, Card, FieldStatus, SelectField, StatusPill, TextField } from "./ui";
 
 type WallpaperItem = {
     id: string;
@@ -451,15 +451,17 @@ export function WallpaperLibrary() {
             <Card title={c.searchResults} lead={c.searchPlaceholder}>
                 <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap gap-2">
-                        <select
+                        <SelectField
+                            wrapperClassName="flex shrink-0 flex-col gap-1.5"
+                            className="w-auto min-w-[11rem]"
                             value={searchProvider}
                             onChange={(e) => setSearchProvider(e.target.value as typeof searchProvider)}
-                            className="rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink"
-                        >
-                            <option value="wallhaven">Wallhaven {providers?.wallhaven.configured ? "✓" : ""}</option>
-                            <option value="pexels">Pexels {providers?.pexels.configured ? "✓" : " — precisa de key"}</option>
-                            <option value="unsplash">Unsplash {providers?.unsplash.configured ? "✓" : " — precisa de key"}</option>
-                        </select>
+                            options={[
+                                { value: "wallhaven", label: `Wallhaven ${providers?.wallhaven.configured ? "✓" : ""}` },
+                                { value: "pexels", label: `Pexels ${providers?.pexels.configured ? "✓" : " — precisa de key"}` },
+                                { value: "unsplash", label: `Unsplash ${providers?.unsplash.configured ? "✓" : " — precisa de key"}` },
+                            ]}
+                        />
                         <div className="flex flex-1 gap-2">
                             <input
                                 value={searchQuery}

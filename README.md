@@ -57,7 +57,7 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 - **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
 - **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela
 - **Board arrastável no `/display` web** — 5 tamanhos de card (Pequeno, Largo, Médio, Wide, Grande), arraste e redimensione, packing sem sobreposição; o firmware espelha os mesmos tamanhos
-- **Alarmes + notificações push** — avise quando uma cota passar de um limiar ou o saldo de créditos ficar baixo, direto no navegador (Web Push/VAPID); ver [`.agents/NOTIFICACOES.md`](.agents/NOTIFICACOES.md)
+- **Alarmes + Telegram** — avise quando uma cota passar de um limiar ou o saldo de créditos ficar baixo, por mensagem no Telegram; ver [`.agents/NOTIFICACOES.md`](.agents/NOTIFICACOES.md)
 - **Cotação de moedas e clima** — lista livre de moedas fiat/cripto convertidas numa moeda base, e previsão do tempo (Open-Meteo); cards opcionais na Início, Agora e detalhe
 - **3 temas × 7 cores de destaque**, **PT / EN / ES**
 - **QR code na tela** — abre o painel de configuração de qualquer aparelho na mesma Wi-Fi
@@ -150,9 +150,11 @@ Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go / OpenC
   backend FastAPI  :8787     GET /events  (SSE, JSON sem Bearer)
         │                    GET /usage   (consulta na hora)
         │                    GET /docs    (Swagger)
+        │                    /api/alarms + /api/telegram  (alarmes → Telegram)
         ├──────────────────► ESP32 / Wokwi   (escuta o stream)
         └──────────────────► React            /display          réplica da placa
                                               /display/config   contas e placa
+                                              /display/alarms   alarmes + Telegram
 ```
 
 <div align="center">
