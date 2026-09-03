@@ -9,48 +9,56 @@ import { ActionRow, Button, FieldStatus, StatusPill, TextField } from "./ui";
 
 const MASK = "•".repeat(24);
 
-function typedKey(v: string): string | null {
-  const t = v.trim();
-  if (!t || t === MASK) return null;
-  return t;
-}
-
 type Field = "pexels_key" | "unsplash_key" | "wallhaven_key";
 
-function ProviderRow({
+function WallpaperProviderCard({
   name,
   hint,
   hasKey,
   optional,
-  value,
-  onChange,
-  onClear,
-  clearing,
   c,
+  onSave,
+  onClear,
 }: {
   name: string;
   hint: string;
   hasKey: boolean;
   optional?: boolean;
-  value: string;
-  onChange: (v: string) => void;
-  onClear: () => void;
-  clearing: boolean;
   c: ConfigCopy;
+  onSave: (v: string) => Promise<{ ok: boolean; error?: string }>;
+  onClear: () => Promise<{ ok: boolean; error?: string }>;
 }) {
+  const [value, setValue] = useState(hasKey ? MASK : "");
+  const save = useRequest();
+  const clear = useRequest();
+
+  useEffect(() => {
+    setValue(hasKey ? MASK : "");
+  }, [hasKey]);
+
+  const ready = Boolean(value.trim()) && value !== MASK;
   const pill = hasKey
     ? { state: "ok" as const, label: c.providerKeySaved }
     : optional
       ? { state: "ok" as const, label: c.providerAvailable }
       : { state: "missing" as const, label: c.providerNotConfigured };
+  const lastMsg = save.message ? save : clear.message ? clear : null;
 
   return (
-    <div className="rounded-[12px] border border-edge bg-canvas p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-sm font-bold text-ink">{name}</span>
+    <article className={`${cfgCard} gap-3`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className={iconChip}>
+            <ImageIcon size={18} className="text-ink2" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="m-0 text-[15.5px] font-bold">{name}</h3>
+            <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
+          </div>
+        </div>
         <StatusPill state={pill.state} label={pill.label} />
       </div>
-      <p className={cfgHint}>{hint}</p>
+
       <ActionRow>
         <TextField
           type="password"
@@ -60,132 +68,88 @@ function ProviderRow({
           value={value}
           placeholder={hasKey ? c.providerKeyReplacePlaceholder : c.providerKeyPlaceholder}
           onFocus={() => {
-            if (value === MASK) onChange("");
+            if (value === MASK) setValue("");
           }}
-          onBlur={() => {
-            if (!value.trim() && hasKey) onChange(MASK);
-          }}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => setValue(e.target.value)}
         />
+        <Button
+          loading={save.busy}
+          disabled={!ready}
+          onClick={async () => {
+            const v = value.trim();
+            if (!v || v === MASK) return;
+            const out = await save.run(() => onSave(v), { success: c.providerSaved, error: c.providerError });
+            if (out?.ok) setValue(MASK);
+          }}
+        >
+          {save.busy ? c.providerSaving : c.providerSave}
+        </Button>
         {hasKey ? (
-          <Button variant="ghost" loading={clearing} onClick={onClear}>
-            {clearing ? c.removing : c.providerRemoveKey}
+          <Button variant="ghost" loading={clear.busy} onClick={() => void clear.run(onClear, { success: c.providerKeyRemoved, error: c.providerError })}>
+            {clear.busy ? c.removing : c.providerRemoveKey}
           </Button>
         ) : null}
       </ActionRow>
       {hasKey && (value === MASK || !value.trim()) ? <p className={cfgHint}>{c.providerKeySavedHint}</p> : null}
-    </div>
+
+      {lastMsg ? <FieldStatus status={lastMsg.status} message={lastMsg.message} /> : null}
+    </article>
   );
 }
 
-export function WallpaperProvidersConfigCard({ c }: { c: ConfigCopy }) {
+export function WallpaperProviderCards({ c }: { c: ConfigCopy }) {
   const [providers, setProviders] = useState<WallpaperProviderStatus | null>(null);
-  const [pexelsKey, setPexelsKey] = useState("");
-  const [unsplashKey, setUnsplashKey] = useState("");
-  const [wallhavenKey, setWallhavenKey] = useState("");
-  const [clearingField, setClearingField] = useState<Field | null>(null);
 
-  const load = useRequest();
-  const save = useRequest();
-  const clear = useRequest();
-
-  async function fetchStatus() {
+  async function reload() {
     setProviders(await fetchWallpaperProviders());
   }
 
   useEffect(() => {
-    void load.run(fetchStatus, {});
+    void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    setPexelsKey(providers?.pexels.configured ? MASK : "");
-    setUnsplashKey(providers?.unsplash.configured ? MASK : "");
-    setWallhavenKey(providers?.wallhaven.has_key ? MASK : "");
-  }, [providers?.pexels.configured, providers?.unsplash.configured, providers?.wallhaven.has_key]);
-
-  const keysDirty = Boolean(typedKey(pexelsKey) || typedKey(unsplashKey) || typedKey(wallhavenKey));
-
-  async function handleSave() {
-    const body: Record<string, string> = {};
-    const pexels = typedKey(pexelsKey);
-    const unsplash = typedKey(unsplashKey);
-    const wallhaven = typedKey(wallhavenKey);
-    if (pexels) body.pexels_key = pexels;
-    if (unsplash) body.unsplash_key = unsplash;
-    if (wallhaven) body.wallhaven_key = wallhaven;
-    if (Object.keys(body).length === 0) return { ok: true };
-    const res = await patchWallpaperProviders(body);
-    if (res.ok) await fetchStatus();
+  async function saveField(field: Field, value: string) {
+    const res = await patchWallpaperProviders({ [field]: value });
+    if (res.ok) await reload();
     return res;
   }
 
-  async function handleClear(field: Field) {
-    setClearingField(field);
-    try {
-      const res = await patchWallpaperProviders({ [field]: "" });
-      if (res.ok) await fetchStatus();
-      return res;
-    } finally {
-      setClearingField(null);
-    }
+  async function clearField(field: Field) {
+    const res = await patchWallpaperProviders({ [field]: "" });
+    if (res.ok) await reload();
+    return res;
   }
 
   if (!providers) return null;
 
   return (
-    <article className={`${cfgCard} gap-3`}>
-      <div className="flex items-start gap-3">
-        <div className={iconChip}>
-          <ImageIcon size={18} className="text-ink2" />
-        </div>
-        <div className="min-w-0">
-          <h3 className="m-0 text-[15.5px] font-bold">{c.wallpaperProvidersTitle}</h3>
-          <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{c.wallpaperProvidersLead}</p>
-        </div>
-      </div>
-
-      <div className="grid gap-3">
-        <ProviderRow
-          c={c}
-          name={c.providerPexels}
-          hint={c.providerNeedsKey}
-          hasKey={Boolean(providers.pexels.configured)}
-          value={pexelsKey}
-          onChange={setPexelsKey}
-          onClear={() => void clear.run(() => handleClear("pexels_key"), { success: c.providerKeyRemoved, error: c.providerError })}
-          clearing={clear.busy && clearingField === "pexels_key"}
-        />
-        <ProviderRow
-          c={c}
-          name={c.providerWallhaven}
-          hint={c.providerOptionalKey}
-          hasKey={Boolean(providers.wallhaven.has_key)}
-          optional
-          value={wallhavenKey}
-          onChange={setWallhavenKey}
-          onClear={() => void clear.run(() => handleClear("wallhaven_key"), { success: c.providerKeyRemoved, error: c.providerError })}
-          clearing={clear.busy && clearingField === "wallhaven_key"}
-        />
-        <ProviderRow
-          c={c}
-          name={c.providerUnsplash}
-          hint={c.providerNeedsKey}
-          hasKey={Boolean(providers.unsplash.configured)}
-          value={unsplashKey}
-          onChange={setUnsplashKey}
-          onClear={() => void clear.run(() => handleClear("unsplash_key"), { success: c.providerKeyRemoved, error: c.providerError })}
-          clearing={clear.busy && clearingField === "unsplash_key"}
-        />
-      </div>
-
-      <ActionRow>
-        <Button disabled={!keysDirty} loading={save.busy} onClick={() => void save.run(handleSave, { success: c.providerSaved, error: c.providerError })}>
-          {save.busy ? c.providerSaving : c.providerSave}
-        </Button>
-      </ActionRow>
-      {save.message ? <FieldStatus status={save.status} message={save.message} /> : null}
-      {clear.message ? <FieldStatus status={clear.status} message={clear.message} /> : null}
-    </article>
+    <>
+      <WallpaperProviderCard
+        c={c}
+        name={c.providerPexels}
+        hint={c.providerNeedsKey}
+        hasKey={Boolean(providers.pexels.configured)}
+        onSave={(v) => saveField("pexels_key", v)}
+        onClear={() => clearField("pexels_key")}
+      />
+      <WallpaperProviderCard
+        c={c}
+        name={c.providerWallhaven}
+        hint={c.providerOptionalKey}
+        hasKey={Boolean(providers.wallhaven.has_key)}
+        optional
+        onSave={(v) => saveField("wallhaven_key", v)}
+        onClear={() => clearField("wallhaven_key")}
+      />
+      <WallpaperProviderCard
+        c={c}
+        name={c.providerUnsplash}
+        hint={c.providerNeedsKey}
+        hasKey={Boolean(providers.unsplash.configured)}
+        onSave={(v) => saveField("unsplash_key", v)}
+        onClear={() => clearField("unsplash_key")}
+      />
+    </>
   );
 }

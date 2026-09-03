@@ -6,7 +6,7 @@ import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { Button, Fold } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
-import { WallpaperProvidersConfigCard } from "./WallpaperProvidersConfigCard";
+import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
 import { WeatherConfigCard } from "./WeatherConfigCard";
 
 export type { ConfigOutlet } from "./usePublicConfig";
@@ -177,7 +177,14 @@ export default function ConfigPage() {
       </div>
       <div className={cfgGrid}>
         <WeatherConfigCard weather={cfg.weather} c={c} onReload={reload} />
-        <WallpaperProvidersConfigCard c={c} />
+      </div>
+
+      <div className="mt-2 w-full">
+        <h2 className="mb-1 mt-0 text-base font-bold">{c.wallpaperProvidersTitle}</h2>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.wallpaperProvidersLead}</p>
+      </div>
+      <div className={cfgGrid}>
+        <WallpaperProviderCards c={c} />
       </div>
     </div>
   );
