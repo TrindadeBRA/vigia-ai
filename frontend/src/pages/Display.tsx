@@ -1,10 +1,10 @@
-import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, PointerSensor, closestCorners, pointerWithin, useDraggable, useDroppable, useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragOverEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CurrenciesPayload, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig, WeatherPayload } from "../api/types";
-import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropTarget, duplicateBoard, emptyBoard, emptyCells, isCloneId, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, removeCloneBoard, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize } from "../board";
+import { CELL_GAP, baseIdFromClone, colsForWidth, displayBoard, dropPreviewCell, dropTarget, duplicateBoard, emptyBoard, emptyCells, isCloneId, normalizeSize, packBoard, padRowsForHeight, placeCard, rectFor, removeCloneBoard, rowPxFor, sameBoard, setCardSize, slotKey, syncBoard, type BoardLayout, type CardSize, type Cell } from "../board";
 import { cn } from "../cn";
 import { Logo } from "../components/Logo";
 import { Skeleton } from "../components/Skeleton";
@@ -970,18 +970,9 @@ function ProviderCard({
   );
 }
 
-function EmptySlot({ id, active }: { id: string; active: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "h-full min-h-0 rounded-2xl border border-dashed transition-colors duration-150",
-        active ? "border-edge bg-chip/30" : "border-transparent",
-        isOver && "border-accent bg-chip",
-      )}
-    />
-  );
+function EmptySlot({ id }: { id: string }) {
+  const { setNodeRef } = useDroppable({ id });
+  return <div ref={setNodeRef} className="h-full min-h-0" aria-hidden />;
 }
 
 function BoardTile({
@@ -1195,12 +1186,14 @@ function Overview({
   const [cellPx, setCellPx] = useState(104);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
+  const [dropPreview, setDropPreview] = useState<Cell | null>(null);
   const unitPx = rowPxFor(cellPx);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
   const active = activeId ? byId.get(activeId) : null;
   const activeSize: CardSize = activeId ? normalizeSize(layout.size[activeId]) : "md";
+  const activeRect = rectFor(activeSize, cols);
 
   useEffect(() => {
     const el = gridRef.current;
@@ -1237,8 +1230,24 @@ function Overview({
 
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
+    setDropPreview(null);
     const box = e.active.rect.current.initial;
     setLiftSize(box ? { w: box.width, h: box.height } : null);
+  }
+
+  function onDragOver(e: DragOverEvent) {
+    const from = String(e.active.id);
+    const over = e.over ? String(e.over.id) : null;
+    if (!over || over === from) {
+      setDropPreview(null);
+      return;
+    }
+    const dest = dropTarget(over, layout);
+    if (!dest) {
+      setDropPreview(null);
+      return;
+    }
+    setDropPreview(dropPreviewCell(dest, layout.size[from], cols));
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -1246,6 +1255,7 @@ function Overview({
     const over = e.over ? String(e.over.id) : null;
     setActiveId(null);
     setLiftSize(null);
+    setDropPreview(null);
     if (!over || over === from) return;
     const dest = dropTarget(over, layout);
     if (!dest) return;
@@ -1309,8 +1319,9 @@ function Overview({
           collisionDetection={boardCollision}
           autoScroll={{ threshold: { x: 0.08, y: 0.12 }, acceleration: 12 }}
           onDragStart={onDragStart}
+          onDragOver={onDragOver}
           onDragEnd={onDragEnd}
-          onDragCancel={() => { setActiveId(null); setLiftSize(null); }}
+          onDragCancel={() => { setActiveId(null); setLiftSize(null); setDropPreview(null); }}
         >
           <div
             ref={gridRef}
@@ -1327,7 +1338,7 @@ function Overview({
                 style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
                 className="min-h-0 min-w-0 h-full"
               >
-                <EmptySlot id={slotKey(cell.r, cell.c)} active={Boolean(activeId)} />
+                <EmptySlot id={slotKey(cell.r, cell.c)} />
               </div>
             ))}
             {ids.map((id) => {
@@ -1353,6 +1364,16 @@ function Overview({
                 />
               );
             })}
+            {dropPreview && activeId ? (
+              <div
+                aria-hidden
+                className="pointer-events-none z-[3] min-h-0 min-w-0 rounded-2xl border-2 border-dashed border-accent bg-accent/12 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_55%,transparent)] transition-[grid-column,grid-row] duration-75"
+                style={{
+                  gridColumn: `${dropPreview.c + 1} / span ${activeRect.w}`,
+                  gridRow: `${dropPreview.r + 1} / span ${activeRect.h}`,
+                }}
+              />
+            ) : null}
           </div>
           <DragOverlay zIndex={80} dropAnimation={null}>
             {active ? (

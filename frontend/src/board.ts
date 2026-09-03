@@ -88,6 +88,11 @@ function clampCell(cell: Cell, rect: Rect, cols: number): Cell {
   return { r: Math.max(0, cell.r), c };
 }
 
+/** Célula de origem (top-left) após clamp — igual ao que placeCard usa ao soltar. */
+export function dropPreviewCell(target: Cell, size: CardSize | undefined, cols: number): Cell {
+  return clampCell(target, rectFor(size, cols), cols);
+}
+
 export function occupancy(ids: string[], board: BoardLayout, cols: number): Map<string, string> {
   const occ = new Map<string, string>();
   for (const id of ids) {
