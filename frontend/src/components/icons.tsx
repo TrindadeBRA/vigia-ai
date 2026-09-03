@@ -214,6 +214,22 @@ export function KeyIcon(props: { size?: number; className?: string }) {
   );
 }
 
+export function MaximizeIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path d="M4 14v4a2 2 0 0 0 2 2h4M20 10V6a2 2 0 0 0-2-2h-4M14 4h4a2 2 0 0 1 2 2v4M10 20H6a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function MinimizeIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path d="M4 14h4a2 2 0 0 1 2 2v4M20 10h-4a2 2 0 0 1-2-2V4M14 10h4a2 2 0 0 0 2-2V4M10 14H6a2 2 0 0 0-2 2v4" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export function PlusCircleIcon(props: { size?: number; className?: string }) {
   return (
     <Svg {...props}>

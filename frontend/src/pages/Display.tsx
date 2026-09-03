@@ -15,7 +15,7 @@ import { CurrenciesBoardCard, CurrenciesDetail, currenciesAllowedSizes, currenci
 import { WeatherBoardCard, WeatherDetail, weatherAllowedSizes, weatherSizeLabel } from "../components/cards/WeatherCard";
 import { CursorBoardCard, CursorDetail, cursorAllowedSizes, cursorSizeLabel } from "../components/cards/CursorCard";
 import { GptBoardCard, GptDetail, gptAllowedSizes, gptSizeLabel } from "../components/cards/GptCard";
-import { BellIcon, CheckIcon, ChipIcon, CloseIcon, CopyIcon, DownloadIcon, GitHubIcon, GridIcon, GripIcon, MenuIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
+import { BellIcon, CheckIcon, ChipIcon, CloseIcon, CopyIcon, DownloadIcon, GitHubIcon, GridIcon, GripIcon, MaximizeIcon, MenuIcon, MinimizeIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtMoney, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
 import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
@@ -28,7 +28,23 @@ const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>
   return hits.length ? hits : closestCorners(args);
 };
 
-type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout };
+type Breakpoint = "desktop" | "tablet" | "mobile";
+type Prefs = { theme: ThemeName; accent: number; lang: Lang; board?: BoardLayout; boards?: Partial<Record<Breakpoint, BoardLayout>>; focus?: boolean };
+
+function breakpointOf(cols: number): Breakpoint {
+  if (cols <= 4) return "mobile";
+  if (cols <= 8) return "tablet";
+  return "desktop";
+}
+
+function boardForBreakpoint(prefs: Prefs, bp: Breakpoint): BoardLayout {
+  return prefs.boards?.[bp] || prefs.board || emptyBoard();
+}
+
+function setBoardForBreakpoint(prefs: Prefs, bp: Breakpoint, board: BoardLayout): Prefs {
+  const boards = { ...prefs.boards, [bp]: board };
+  return { ...prefs, boards, board };
+}
 type Pal = (typeof PALETTES)[ThemeName];
 export type Metric = { label: string; pct: number | null; sub: string | null; countdownAt?: string | null; value?: string | null };
 export type ProviderMeta = {
@@ -1172,6 +1188,8 @@ function Overview({
   board,
   onBoard,
   onOpen,
+  focus,
+  onToggleFocus,
 }: {
   providers: ProviderMeta[];
   updatedAt: string;
@@ -1181,6 +1199,8 @@ function Overview({
   board: BoardLayout;
   onBoard: (fn: (b: BoardLayout) => BoardLayout) => void;
   onOpen: (id: string) => void;
+  focus: boolean;
+  onToggleFocus: () => void;
 }) {
   const failing = providers.filter((p) => !p.ok).length;
   const age = payloadAgeMs(updatedAt, now);
@@ -1190,6 +1210,7 @@ function Overview({
   const idsKey = ids.join("|");
   const gridRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(8);
+  const focusColsRef = useRef<number | null>(null);
   const [pad, setPad] = useState(12);
   const [fillPx, setFillPx] = useState(0);
   const [cellPx, setCellPx] = useState(104);
@@ -1198,6 +1219,14 @@ function Overview({
   const [dropPreview, setDropPreview] = useState<Cell | null>(null);
   const unitPx = rowPxFor(cellPx);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  useEffect(() => {
+    if (focus) {
+      focusColsRef.current = cols;
+    } else {
+      focusColsRef.current = null;
+    }
+  }, [focus]);
   const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
   const active = activeId ? byId.get(activeId) : null;
@@ -1212,7 +1241,7 @@ function Overview({
     if (!el) return;
     const measure = () => {
       if (el.clientWidth < 1) return;
-      const nextCols = colsForWidth(el.clientWidth);
+      const nextCols = focusColsRef.current ?? colsForWidth(el.clientWidth);
       setCols(nextCols);
       const cell = Math.max(80, Math.floor((el.clientWidth - CELL_GAP * Math.max(0, nextCols - 1)) / Math.max(1, nextCols)));
       setCellPx(cell);
@@ -1234,7 +1263,7 @@ function Overview({
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [idsKey]);
+  }, [idsKey, focus]);
 
   useEffect(() => {
     onBoard((b) => syncBoard(ids, b, b.layoutCols || cols));
@@ -1314,6 +1343,18 @@ function Overview({
             }
           >
             {t.resetLayout}
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink",
+              focus && "border-accent text-accent",
+            )}
+            title={t.focusMode}
+            aria-label={t.focusMode}
+            onClick={onToggleFocus}
+          >
+            {focus ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
           </button>
           <GridIOButtons board={board} onImport={(b) => onBoard(() => b)} t={t} />
         </div>
@@ -1659,6 +1700,7 @@ export default function Display() {
   const [driftMs, setDriftMs] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchFailed, setFetchFailed] = useState(false);
+  const [currentBp, setCurrentBp] = useState<Breakpoint>(() => breakpointOf(colsForWidth(window.innerWidth)));
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
@@ -1677,6 +1719,12 @@ export default function Display() {
   useEffect(() => {
     applyThemeVars(pal, accent, flat);
   }, [pal, accent, flat]);
+
+  useEffect(() => {
+    const update = () => setCurrentBp(breakpointOf(colsForWidth(window.innerWidth)));
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 250);
@@ -1742,9 +1790,10 @@ export default function Display() {
   useEffect(() => {
     if (!data || section !== "account") return;
     const base = buildProviders(data, t);
-    const expanded = expandProvidersWithClones(base, prefs.board);
+    const bpBoard = boardForBreakpoint({ ...prefs }, currentBp);
+    const expanded = expandProvidersWithClones(base, bpBoard);
     if (!expanded.some((p) => p.id === selectedId) && !base.some((p) => p.id === baseIdForProvider(selectedId || ""))) setSection("overview");
-  }, [data, section, selectedId, t, prefs.board]);
+  }, [data, section, selectedId, t, prefs.boards, prefs.board, currentBp]);
 
   function goOverview() {
     navigate("/display");
@@ -1752,7 +1801,8 @@ export default function Display() {
   }
 
   const providers = data ? buildProviders(data, t, now) : [];
-  const displayProviders = expandProvidersWithClones(providers, prefs.board);
+  const bpBoard = boardForBreakpoint(prefs, currentBp);
+  const displayProviders = expandProvidersWithClones(providers, bpBoard);
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null = null;
   if (data && section === "account") {
@@ -1768,12 +1818,29 @@ export default function Display() {
     }
   }
 
+  useEffect(() => {
+    if (!prefs.focus) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPrefs((p) => ({ ...p, focus: false }));
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [prefs.focus, setPrefs]);
+
   const showOutlet = isCanvas || (isNested && !isNow);
+  const focusMode = Boolean(prefs.focus) && !isNested;
+  const hideChrome = focusMode || isCanvas;
 
   return (
     <div className={cn(shellClass, isCanvas && "fixed inset-0 z-50 overflow-hidden bg-black")}>
-      {!isCanvas ? (
-      <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none">
+      {/* ── Header ── */}
+      <div
+        className={cn(
+          "sticky top-0 z-30 flex shrink-0 items-center gap-2 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none",
+          "overflow-hidden transition-[height,opacity] duration-300 ease-in-out",
+          hideChrome ? "h-0 opacity-0 pointer-events-none shadow-none" : "h-14",
+        )}
+      >
         <div className="flex min-w-0 flex-1 items-center gap-0.5">
           <button className={`${iconBtn} hidden shrink-0 max-[860px]:flex`} onClick={() => setSidebarOpen(true)} title={t.overview} aria-label={t.overview}><MenuIcon size={19} /></button>
           <button className="group/brand flex shrink-0 cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
@@ -1806,26 +1873,33 @@ export default function Display() {
         <div className="mx-0.5 h-6 w-px shrink-0 bg-edge" aria-hidden />
         <Badge secs={secsLeft} total={pollS} showCheck={showCheck} pal={pal} onClick={() => void loadUsage()} />
       </div>
-      ) : null}
+      {/* ── Body ── */}
       <div className={cn("flex min-h-0 flex-1", isCanvas && "h-full w-full")}>
-        {!isCanvas && sidebarOpen ? <div className="fixed inset-x-0 bottom-0 top-14 z-[25] bg-black/45 min-[861px]:hidden" onClick={() => setSidebarOpen(false)} /> : null}
-        {!isCanvas ? (
-        <Sidebar
-          providers={providers}
-          section={section}
-          selectedId={selectedId}
-          open={sidebarOpen}
-          t={t}
-          nowActive={isNow}
-          configActive={isConfig}
-          setupActive={isSetup}
-          themeActive={isTheme}
-          alarmsActive={isAlarms}
-          onOverview={goOverview}
-          onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
-          onClose={() => setSidebarOpen(false)}
-        />
-        ) : null}
+        {!hideChrome && sidebarOpen ? <div className="fixed inset-x-0 bottom-0 top-14 z-[25] bg-black/45 min-[861px]:hidden" onClick={() => setSidebarOpen(false)} /> : null}
+        <div
+          className={cn(
+            "shrink-0 transition-[width,opacity] duration-300 ease-in-out overflow-hidden",
+            hideChrome ? "w-0 opacity-0 pointer-events-none" : "w-auto opacity-100",
+          )}
+        >
+          {!isCanvas ? (
+          <Sidebar
+            providers={providers}
+            section={section}
+            selectedId={selectedId}
+            open={sidebarOpen}
+            t={t}
+            nowActive={isNow}
+            configActive={isConfig}
+            setupActive={isSetup}
+            themeActive={isTheme}
+            alarmsActive={isAlarms}
+            onOverview={goOverview}
+            onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
+            onClose={() => setSidebarOpen(false)}
+          />
+          ) : null}
+        </div>
         <main
           className={cn(
             "min-w-0 flex-1",
@@ -1851,16 +1925,19 @@ export default function Display() {
                   now={now}
                   t={t}
                   pal={pal}
-                  board={prefs.board || emptyBoard()}
+                  board={boardForBreakpoint(prefs, currentBp)}
                   onBoard={(fn) =>
                     setPrefs((p) => {
                       const ids = displayProviders.map((x) => x.id);
-                      const next = fn(p.board || emptyBoard());
-                      if (sameBoard(p.board, next, ids)) return p;
-                      return { ...p, board: next };
+                      const cur = boardForBreakpoint(p, currentBp);
+                      const next = fn(cur);
+                      if (sameBoard(cur, next, ids)) return p;
+                      return setBoardForBreakpoint(p, currentBp, next);
                     })
                   }
                   onOpen={(id) => { setSection("account"); setSelectedId(id); }}
+                  focus={focusMode}
+                  onToggleFocus={() => setPrefs((p) => ({ ...p, focus: !p.focus }))}
                 />
               ) : null}
               {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}

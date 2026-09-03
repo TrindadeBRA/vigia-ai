@@ -85,6 +85,7 @@ type Strings = {
   cardWxl: string;
   dragCard: string;
   resetLayout: string;
+  focusMode: string;
   exportGrid: string;
   importGrid: string;
   gridImported: string;
@@ -125,7 +126,7 @@ export const STR: Record<Lang, Strings> = {
     accounts: "Contas",
     settings: "Aparência",
     session5h: "Sessão 5h",
-    resetIn: "Reset em",
+    resetIn: "Reset:",
     week: "Semana",
     weekLimit: "Limite semanal",
     rolling: "Janela rolling",
@@ -199,6 +200,7 @@ export const STR: Record<Lang, Strings> = {
     cardWxl: "Card super largo (2×4)",
     dragCard: "Arrastar",
     resetLayout: "Redefinir grade",
+    focusMode: "Modo foco",
     exportGrid: "Exportar grade",
     importGrid: "Importar grade",
     gridImported: "Grade importada",
@@ -234,7 +236,7 @@ export const STR: Record<Lang, Strings> = {
     accounts: "Accounts",
     settings: "Appearance",
     session5h: "5h session",
-    resetIn: "Resets in",
+    resetIn: "Reset:",
     week: "Week",
     weekLimit: "Weekly limit",
     rolling: "Rolling window",
@@ -308,6 +310,7 @@ export const STR: Record<Lang, Strings> = {
     cardWxl: "Super wide card (2×4)",
     dragCard: "Drag",
     resetLayout: "Reset layout",
+    focusMode: "Focus mode",
     exportGrid: "Export grid",
     importGrid: "Import grid",
     gridImported: "Grid imported",
@@ -343,7 +346,7 @@ export const STR: Record<Lang, Strings> = {
     accounts: "Cuentas",
     settings: "Apariencia",
     session5h: "Sesión 5h",
-    resetIn: "Reset en",
+    resetIn: "Reset:",
     week: "Semana",
     weekLimit: "Límite semanal",
     rolling: "Ventana rolling",
@@ -417,6 +420,7 @@ export const STR: Record<Lang, Strings> = {
     cardWxl: "Card super ancho (2×4)",
     dragCard: "Arrastrar",
     resetLayout: "Restablecer cuadrícula",
+    focusMode: "Modo enfoque",
     exportGrid: "Exportar cuadrícula",
     importGrid: "Importar cuadrícula",
     gridImported: "Cuadrícula importada",
