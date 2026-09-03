@@ -45,6 +45,10 @@ export type ThemeCopy = {
   size: string;
   position: string;
   selectHint: string;
+  exportTheme: string;
+  importTheme: string;
+  themeImported: string;
+  themeImportError: string;
   save: string;
   saveLead: string;
   saving: string;
@@ -177,6 +181,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     size: "Tamanho",
     position: "Posição: arraste no canvas",
     selectHint: "Selecione um elemento no canvas pra editar.",
+    exportTheme: "Exportar tema",
+    importTheme: "Importar tema",
+    themeImported: "Tema importado",
+    themeImportError: "Arquivo inválido",
     save: "Salvar tema",
     saveLead: "Salva no coletor (mesma rede, sem precisar do IP da placa). Depois toque no ícone de recarregar no header da placa pra aplicar.",
     saving: "Salvando…",
@@ -308,6 +316,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     size: "Size",
     position: "Position: drag on the canvas",
     selectHint: "Select an element on the canvas to edit it.",
+    exportTheme: "Export theme",
+    importTheme: "Import theme",
+    themeImported: "Theme imported",
+    themeImportError: "Invalid file",
     save: "Save theme",
     saveLead: "Saves to the collector (same network, no board IP needed). Then tap the reload icon in the board's header to apply it.",
     saving: "Saving…",
@@ -439,6 +451,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     size: "Tamaño",
     position: "Posición: arrastrá en el lienzo",
     selectHint: "Seleccioná un elemento en el lienzo para editarlo.",
+    exportTheme: "Exportar tema",
+    importTheme: "Importar tema",
+    themeImported: "Tema importado",
+    themeImportError: "Archivo inválido",
     save: "Guardar tema",
     saveLead: "Se guarda en el colector (misma red, sin necesitar el IP de la placa). Después tocá el ícono de recargar en el header de la placa para aplicarlo.",
     saving: "Guardando…",

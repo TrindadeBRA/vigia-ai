@@ -1,9 +1,9 @@
-import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
-import { ChipIcon, ClockIcon, ImageIcon, KeyIcon, PlusCircleIcon, TextIcon } from "../../components/icons";
+import { ChipIcon, ClockIcon, DownloadIcon, ImageIcon, KeyIcon, PlusCircleIcon, TextIcon, UploadIcon } from "../../components/icons";
 import { Logo } from "../../components/Logo";
 import { Skeleton } from "../../components/Skeleton";
 import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
@@ -13,7 +13,7 @@ import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
 import { IconCard, providerSupportsCard, type ThemeIconStyle } from "./ThemeCanvasView";
-import { THEME_STR } from "./themeCopy";
+import { THEME_STR, type ThemeCopy } from "./themeCopy";
 import {
   ICON_PROVIDERS,
   PROVIDER_METRICS,
@@ -169,6 +169,96 @@ function themeToJson(t: ThemeState, hasWallpaper: boolean) {
     })),
     texts: t.texts.map((x) => ({ text: x.text, x: x.x, y: x.y, scale: x.scale, ...(x.color ? { color: x.color } : {}) })),
   };
+}
+
+// ── Exportar/importar tema (fundo, relógio, ícones, textos) como JSON ──────
+
+function downloadThemeJson(theme: ThemeState, hasWallpaper: boolean) {
+  const payload = { version: 1, exported_at: new Date().toISOString(), theme: themeToJson(theme, hasWallpaper) };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `vigia-tema-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseThemeJson(text: string): ThemeState | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const candidate = data && typeof data === "object" && "theme" in (data as Record<string, unknown>) ? (data as Record<string, unknown>).theme : data;
+  if (!candidate || typeof candidate !== "object") return null;
+  const migrated = migrateTheme(candidate as Partial<ThemeState>);
+  return { ...migrated, background: { color: migrated.background.color } };
+}
+
+function ThemeIOButtons({
+  theme,
+  hasWallpaper,
+  onImport,
+  c,
+}: {
+  theme: ThemeState;
+  hasWallpaper: boolean;
+  onImport: (t: ThemeState) => void;
+  c: ThemeCopy;
+}) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function flash(text: string) {
+    setMsg(text);
+    window.setTimeout(() => setMsg((m) => (m === text ? null : m)), 3000);
+  }
+
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseThemeJson(String(reader.result || ""));
+      if (!parsed) {
+        flash(c.themeImportError);
+        return;
+      }
+      onImport(parsed);
+      flash(c.themeImported);
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
+        title={c.exportTheme}
+        aria-label={c.exportTheme}
+        onClick={() => downloadThemeJson(theme, hasWallpaper)}
+      >
+        <DownloadIcon size={14} />
+      </button>
+      <button
+        type="button"
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
+        title={c.importTheme}
+        aria-label={c.importTheme}
+        onClick={() => inputRef.current?.click()}
+      >
+        <UploadIcon size={14} />
+      </button>
+      <input ref={inputRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
+      {msg ? <span className="text-[11.5px] text-ink3">{msg}</span> : null}
+    </div>
+  );
 }
 
 function CanvasDot({
@@ -723,6 +813,7 @@ export default function ThemeEditorPage() {
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ThemeIOButtons theme={theme} hasWallpaper={Boolean(currentWallpaperId)} onImport={(t) => setTheme(() => t)} c={c} />
           <Button onClick={() => void send.run(saveTheme, { success: c.savedOk, error: c.saveError })} loading={send.busy}>
             {send.busy ? c.saving : c.save}
           </Button>
