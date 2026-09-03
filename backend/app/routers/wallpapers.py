@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import base64
 import io
+import ipaddress
 import json
 import secrets
+import socket
 import time
 import urllib.error
 import urllib.parse
@@ -245,10 +247,51 @@ def _raw_to_preview(raw_bytes: bytes, w: int, h: int) -> bytes:
     except Exception:
         return b""
 
+# ── Proteção SSRF: só http(s) para hosts públicos, sem seguir redirect pra dentro ──
+# (ver SECURITY_REVIEW.md, Finding 1 — _download_image/_http_json antes aceitavam
+# qualquer URL, incluindo file:// e IPs internos/loopback/link-local).
+
+def _is_blocked_host(hostname: str) -> bool:
+    host = (hostname or "").strip().lower().rstrip(".")
+    if not host or host == "localhost":
+        return True
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return True  # não resolve -> bloqueia por segurança
+    for info in infos:
+        raw_ip = info[4][0].split("%")[0]  # remove zona IPv6 (fe80::1%eth0)
+        try:
+            ip = ipaddress.ip_address(raw_ip)
+        except ValueError:
+            return True
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            return True
+    return False
+
+
+def _validate_public_url(url: str) -> None:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(400, "URL deve ser http:// ou https://")
+    if not parsed.hostname or _is_blocked_host(parsed.hostname):
+        raise HTTPException(400, "host da URL não permitido")
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        _validate_public_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_SAFE_OPENER = urllib.request.build_opener(_SafeRedirectHandler)
+
+
 def _download_image(url: str, timeout: float = 15.0) -> bytes:
+    _validate_public_url(url)
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (VigiaAI/1.0)"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with _SAFE_OPENER.open(req, timeout=timeout) as resp:
             data = resp.read()
             if len(data) > 10_000_000:
                 raise HTTPException(413, "imagem muito grande")
@@ -263,13 +306,14 @@ def _download_image(url: str, timeout: float = 15.0) -> bytes:
         raise HTTPException(502, f"falha ao baixar imagem: {e}")
 
 def _http_json(url: str, headers: dict[str, str] | None = None, timeout: float = 15.0) -> Any:
+    _validate_public_url(url)
     hdrs = dict(headers or {})
     # Wallhaven bloqueia urllib default; usa User-Agent de navegador
     if "User-Agent" not in hdrs and "user-agent" not in {k.lower() for k in hdrs}:
         hdrs["User-Agent"] = "Mozilla/5.0 (VigiaAI/1.0)"
     req = urllib.request.Request(url, headers=hdrs)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with _SAFE_OPENER.open(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
             return json.loads(raw)
     except urllib.error.HTTPError as e:
