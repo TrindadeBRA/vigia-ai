@@ -130,33 +130,22 @@ def evaluate(payload: dict[str, Any], rules: list[dict[str, Any]], armed: dict[s
     return events
 
 
-def format_alarm_notification(event: dict[str, Any]) -> tuple[str, str]:
-    """HTML para o Telegram + id do provedor (ícone em sendPhoto)."""
+def format_alarm_notification(event: dict[str, Any]) -> str:
+    """Uma linha HTML: <b>Provedor</b> - Uso de <b>X% da cota Métrica</b>."""
     rule = event["rule"]
     provider = event["provider"]
     kind = metric_kind(provider, rule["metric"]) or "percent"
     provider_name = html.escape(PROVIDER_NAMES.get(provider, provider))
     metric_name = html.escape(metric_label(provider, rule["metric"]) or rule["metric"])
+    threshold = float(rule["threshold"])
 
-    lines = ["<b>🔔 Alarme Vigia AI</b>", "", f"<b>{provider_name}</b> · {metric_name}"]
-
-    account = (event.get("account_label") or "").strip()
-    if account:
-        lines.append(f"Conta: {html.escape(account)}")
-
-    rule_label = (rule.get("label") or "").strip()
-    if rule_label:
-        lines.append(html.escape(rule_label))
-
-    lines.append("")
     if kind == "percent":
-        lines.append(f"Uso atual: <b>{float(event['value']):.0f}%</b>")
-        lines.append(f"Limiar: {float(rule['threshold']):.0f}%")
-    else:
-        lines.append(f"Saldo atual: <b>${float(event['value']) / 100:.2f}</b>")
-        lines.append(f"Limiar: ${float(rule['threshold']) / 100:.2f}")
+        detail = f"{threshold:.0f}% da cota {metric_name}"
+        return f"<b>{provider_name}</b> - Uso de <b>{detail}</b>"
 
-    return "\n".join(lines), provider
+    amount = f"${threshold / 100:.2f}"
+    detail = f"{amount} da cota {metric_name}"
+    return f"<b>{provider_name}</b> - Saldo de <b>{detail}</b>"
 
 
 class AlarmEngine:
@@ -176,8 +165,8 @@ class AlarmEngine:
         from app import telegram_bot  # import tardio: evita ciclo hub -> alarms -> store
 
         for event in events:
-            caption, provider = format_alarm_notification(event)
+            text = format_alarm_notification(event)
             try:
-                telegram_bot.broadcast(caption, provider=provider)
+                telegram_bot.broadcast(text)
             except Exception as exc:  # noqa: BLE001
                 print(f"[alarms] falha ao enviar telegram: {exc}")

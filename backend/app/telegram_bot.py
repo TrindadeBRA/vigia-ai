@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -13,21 +12,12 @@ from app.store import load, update
 
 TELEGRAM_API = "https://api.telegram.org"
 TELEGRAM_LOG_MESSAGE = f"{TELEGRAM_API}/bot/sendMessage"
-TELEGRAM_LOG_PHOTO = f"{TELEGRAM_API}/bot/sendPhoto"
 CONFIRMATION_MSG = "✅ Vigia AI conectado — você vai receber os alarmes aqui."
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_ICON_DIR = _REPO_ROOT / "frontend" / "public" / "icons"
 
 
 def get_bot_token() -> str:
     cfg = load()
     return str((cfg.get("telegram") or {}).get("bot_token") or "")
-
-
-def provider_icon_path(provider: str) -> Path | None:
-    path = _ICON_DIR / f"{provider}.png"
-    return path if path.is_file() else None
 
 
 def validate_token(token: str) -> dict[str, Any]:
@@ -106,33 +96,15 @@ def _send_message_sync(
     return resp, (time.perf_counter() - start) * 1000
 
 
-def _send_photo_sync(
-    token: str,
-    chat_id: str,
-    photo_path: Path,
-    caption: str,
-    *,
-    parse_mode: str = "HTML",
-) -> tuple[httpx.Response, float]:
-    url = f"{TELEGRAM_API}/bot{token}/sendPhoto"
-    data = {"chat_id": chat_id, "caption": caption, "parse_mode": parse_mode}
-    start = time.perf_counter()
-    with httpx.Client(timeout=15) as client:
-        with photo_path.open("rb") as photo:
-            resp = client.post(url, data=data, files={"photo": (photo_path.name, photo, "image/png")})
-    return resp, (time.perf_counter() - start) * 1000
-
-
 def _log_delivery(
     *,
-    used_photo: bool,
     status: int | None,
     elapsed_ms: float,
     error: str | None = None,
 ) -> None:
     log_notification(
         "POST",
-        TELEGRAM_LOG_PHOTO if used_photo else TELEGRAM_LOG_MESSAGE,
+        TELEGRAM_LOG_MESSAGE,
         label="TELEGRAM",
         status=status,
         elapsed_ms=elapsed_ms,
@@ -140,43 +112,35 @@ def _log_delivery(
     )
 
 
-def broadcast(text: str, *, provider: str | None = None, parse_mode: str = "HTML") -> int:
-    """Envia para todos os chats. Com `provider`, anexa o ícone PNG via sendPhoto."""
+def broadcast(text: str, *, parse_mode: str = "HTML") -> int:
+    """Envia texto para todos os chats registrados."""
     cfg = load()
     token = str(cfg["telegram"].get("bot_token") or "")
     chats = list(cfg["telegram"].get("chats") or [])
     if not token or not chats:
         return 0
 
-    icon = provider_icon_path(provider) if provider else None
     sent = 0
     dead: list[str] = []
     for chat in chats:
         start = time.perf_counter()
-        used_photo = False
         try:
-            if icon is not None:
-                resp, elapsed_ms = _send_photo_sync(token, chat["id"], icon, text, parse_mode=parse_mode)
-                used_photo = True
-            else:
-                resp, elapsed_ms = _send_message_sync(token, chat["id"], text, parse_mode=parse_mode)
+            resp, elapsed_ms = _send_message_sync(token, chat["id"], text, parse_mode=parse_mode)
             data = resp.json()
             if resp.status_code == 200 and data.get("ok"):
                 sent += 1
-                _log_delivery(used_photo=used_photo, status=resp.status_code, elapsed_ms=elapsed_ms)
+                _log_delivery(status=resp.status_code, elapsed_ms=elapsed_ms)
             elif resp.status_code in (400, 403):
                 dead.append(chat["id"])
-                _log_delivery(used_photo=used_photo, status=resp.status_code, elapsed_ms=elapsed_ms)
+                _log_delivery(status=resp.status_code, elapsed_ms=elapsed_ms)
             else:
                 _log_delivery(
-                    used_photo=used_photo,
                     status=resp.status_code,
                     elapsed_ms=elapsed_ms,
                     error=resp.text[:300],
                 )
         except Exception as exc:
             _log_delivery(
-                used_photo=used_photo,
                 status=None,
                 elapsed_ms=(time.perf_counter() - start) * 1000,
                 error=str(exc),
