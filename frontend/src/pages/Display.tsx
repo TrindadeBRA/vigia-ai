@@ -682,7 +682,7 @@ function TileChrome({
 }) {
   return (
     <>
-      <div className={cn("absolute left-1 top-1/2 z-[3] flex -translate-y-1/2 items-center rounded-lg border border-edge bg-chip", TILE_CHROME_CHIP)}>
+      <div className={cn("absolute left-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", TILE_CHROME_CHIP)}>
         <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}><GripIcon size={14} /></button>
       </div>
       <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", TILE_CHROME_CHIP)}>
