@@ -115,26 +115,6 @@ export function AdSenseConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
 
       {!p.configured ? <p className={cfgHint}>{c.adsenseBlurb}</p> : null}
 
-      <ActionRow>
-        <TextField label={c.nickname} placeholder={c.nicknamePh} value={label} onChange={(e) => setLabel(e.target.value)} autoComplete="off" />
-        <Button
-          loading={saveLabel.busy}
-          disabled={!labelDirty}
-          onClick={() =>
-            saveLabel.run(
-              async () => {
-                const res = await patchConfig({ adsense_primary_label: label });
-                if (res.ok) await onReload();
-                return res;
-              },
-              { success: c.saved, error: c.offline },
-            )
-          }
-        >
-          {saveLabel.busy ? c.saving : c.save}
-        </Button>
-      </ActionRow>
-
       <Fold summary={c.adsenseCredsFold}>
         <p className={cfgHint}>{c.adsenseRedirectHint(redirect)}</p>
         <ActionRow>
@@ -230,6 +210,28 @@ export function AdSenseConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
       </ActionRow>
 
       {!hasClient && !credsReady ? <p className={cfgHint}>{c.adsenseNeedCreds}</p> : null}
+
+      <Fold summary={c.nickname}>
+        <ActionRow>
+          <TextField placeholder={c.nicknamePh} value={label} onChange={(e) => setLabel(e.target.value)} autoComplete="off" />
+          <Button
+            loading={saveLabel.busy}
+            disabled={!labelDirty}
+            onClick={() =>
+              saveLabel.run(
+                async () => {
+                  const res = await patchConfig({ adsense_primary_label: label });
+                  if (res.ok) await onReload();
+                  return res;
+                },
+                { success: c.saved, error: c.offline },
+              )
+            }
+          >
+            {saveLabel.busy ? c.saving : c.save}
+          </Button>
+        </ActionRow>
+      </Fold>
 
       {lastMsg ? <FieldStatus status={lastMsg.status} message={lastMsg.message} /> : null}
     </article>

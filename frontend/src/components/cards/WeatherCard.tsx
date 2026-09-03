@@ -1,6 +1,6 @@
 import { cn } from "../../cn";
 import type { WeatherConfig, WeatherPayload } from "../../api/types";
-import { fmtDayLabel, fmtHourLabel, fmtHumidity, fmtPrecip, fmtPressure, fmtTemp, fmtWind, windDir, wmoEmoji, wmoLabel } from "../../format";
+import { fmtDayLabel, fmtHourLabel, fmtHumidity, fmtPrecip, fmtPressure, fmtTemp, fmtWind, isSameWeatherDay, weatherTodayKey, windDir, wmoEmoji, wmoLabel } from "../../format";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { cardLabel, emptyNote, errorText, metricCard, metricsGrid, num } from "../../tw";
@@ -58,7 +58,7 @@ function Icon({ code, compact }: { code: number | null | undefined; compact?: bo
   );
 }
 
-function WeatherHeader({ locName, code, compact, onOpen }: { locName: string; code: number | null | undefined; compact?: boolean; onOpen?: () => void }) {
+function WeatherHeader({ locName, code, compact, onOpen, className }: { locName: string; code: number | null | undefined; compact?: boolean; onOpen?: () => void; className?: string }) {
   const inner = (
     <>
       <Icon code={code} compact={compact} />
@@ -68,14 +68,15 @@ function WeatherHeader({ locName, code, compact, onOpen }: { locName: string; co
       </div>
     </>
   );
+  const margin = className ?? (compact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5");
   if (onOpen) {
     return (
-      <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", compact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
+      <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", margin)} onClick={onOpen}>
         {inner}
       </button>
     );
   }
-  return <div className={cn("flex min-w-0 shrink-0 items-center", compact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")}>{inner}</div>;
+  return <div className={cn("flex min-w-0 shrink-0 items-center", margin)}>{inner}</div>;
 }
 
 function HeroFact({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
@@ -154,6 +155,8 @@ export function WeatherBoardCard({
   const showHumidity = !fields || fields.humidity;
   const showWind = !fields || fields.wind;
   const showPrecip = !fields || fields.precipitation;
+  const todayKey = weatherTodayKey(cur?.time, weather?.timezone);
+  const todayIdx = Math.max(0, daily?.time?.findIndex((d) => isSameWeatherDay(d, todayKey)) ?? 0);
 
   const metaRow = (
     <>
@@ -165,16 +168,16 @@ export function WeatherBoardCard({
   );
 
   if (ns === "sm" || ns === "sw") {
-    const isToday = ns === "sw";
-    const code = isToday ? daily?.weather_code?.[0] : cur?.weather_code;
-    const value = isToday
-      ? `${fmtTemp(daily?.temperature_2m_max?.[0], tempUnit)} / ${fmtTemp(daily?.temperature_2m_min?.[0], tempUnit)}`
+    const isTodayCard = ns === "sw";
+    const code = isTodayCard ? daily?.weather_code?.[todayIdx] : cur?.weather_code;
+    const value = isTodayCard
+      ? `${fmtTemp(daily?.temperature_2m_max?.[todayIdx], tempUnit)} / ${fmtTemp(daily?.temperature_2m_min?.[todayIdx], tempUnit)}`
       : fmtTemp(cur?.temperature_2m, tempUnit);
     return (
       <div className="flex h-full min-h-0 w-full items-center gap-2.5 overflow-hidden">
         <Icon code={code} />
         <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-visible border-0 bg-transparent p-0 text-left" onClick={onOpen}>
-          <HeroFact label={isToday ? t.weatherToday : t.weatherCurrent} value={value} sub={isToday ? wmoLabel(code) : locName || null} />
+          <HeroFact label={isTodayCard ? t.weatherToday : t.weatherCurrent} value={value} sub={isTodayCard ? wmoLabel(code) : locName || null} />
         </button>
       </div>
     );
@@ -198,18 +201,38 @@ export function WeatherBoardCard({
   }
 
   if (ns === "wm") {
+    const days = (daily?.time ?? []).slice(0, 7);
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
-        <WeatherHeader locName={locName || t.weather} code={cur?.weather_code} onOpen={onOpen} />
-        <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-start gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
-          {(daily?.time ?? []).slice(0, 7).map((d, i) => (
-            <div key={d} className="flex items-center gap-2 text-[12px]">
-              <span className="min-w-[34px] shrink-0 font-bold text-ink">{fmtDayLabel(d)}</span>
-              <span className="shrink-0 text-[14px] leading-none">{wmoEmoji(daily?.weather_code?.[i])}</span>
-              <span className={cn(num, "ml-auto shrink-0 font-bold text-ink")}>{fmtTemp(daily?.temperature_2m_max?.[i], tempUnit)}</span>
-              <span className={cn(num, "shrink-0 text-[11px] text-ink3")}>{fmtTemp(daily?.temperature_2m_min?.[i], tempUnit)}</span>
+        <WeatherHeader locName={locName || t.weather} code={cur?.weather_code} onOpen={onOpen} className="mb-3 gap-2.5" />
+        <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
+          {showTemp && cur?.temperature_2m != null ? (
+            <div className="mb-4 shrink-0 border-b border-edge pb-3">
+              <div className={cn(num, "text-[28px] font-[800] leading-none")}>{fmtTemp(cur.temperature_2m, tempUnit)}</div>
+              {showFeels && cur?.apparent_temperature != null ? (
+                <div className="mt-1.5 text-[11px] text-ink3">{t.weatherFeelsLike} {fmtTemp(cur.apparent_temperature, tempUnit)}</div>
+              ) : null}
             </div>
-          ))}
+          ) : null}
+          <div className="flex min-h-0 flex-1 flex-col justify-between">
+            {days.map((d, i) => {
+              const isToday = isSameWeatherDay(d, todayKey);
+              return (
+                <div
+                  key={d}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[12px]",
+                    isToday && "bg-chip shadow-[inset_0_0_0_1px_var(--card-border),inset_2px_0_0_var(--accent)]",
+                  )}
+                >
+                  <span className={cn("min-w-[34px] shrink-0 font-bold", isToday ? "text-ink" : "text-ink2")}>{fmtDayLabel(d)}</span>
+                  <span className="shrink-0 text-[15px] leading-none">{wmoEmoji(daily?.weather_code?.[i])}</span>
+                  <span className={cn(num, "ml-auto shrink-0 font-bold text-ink")}>{fmtTemp(daily?.temperature_2m_max?.[i], tempUnit)}</span>
+                  <span className={cn(num, "shrink-0 text-[11px] text-ink3")}>{fmtTemp(daily?.temperature_2m_min?.[i], tempUnit)}</span>
+                </div>
+              );
+            })}
+          </div>
         </button>
       </div>
     );

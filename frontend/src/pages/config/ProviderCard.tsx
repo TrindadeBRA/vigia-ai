@@ -108,26 +108,6 @@ export function ProviderCard({
 
       {!p.configured ? <p className={cfgHint}>{blurb}</p> : null}
 
-      <ActionRow>
-        <TextField label={c.nickname} placeholder={c.nicknamePh} value={label} onChange={(e) => setLabel(e.target.value)} autoComplete="off" />
-        <Button
-          loading={saveLabel.busy}
-          disabled={!labelDirty}
-          onClick={() =>
-            saveLabel.run(
-              async () => {
-                const res = await patchConfig({ [labelKey]: label });
-                if (res.ok) await onReload();
-                return res;
-              },
-              { success: c.saved, error: c.offline },
-            )
-          }
-        >
-          {saveLabel.busy ? c.saving : c.save}
-        </Button>
-      </ActionRow>
-
       {editable ? (
         <Fold summary={c.secretFold}>
           <ActionRow>
@@ -185,6 +165,28 @@ export function ProviderCard({
 
       <Fold summary={p.accounts.length ? c.extraCount(p.accounts.length) : c.extraTitle}>
         <ExtraAccounts provider={providerId} accounts={p.accounts} placeholder={placeholder} c={c} offline={c.offline} onReload={onReload} />
+      </Fold>
+
+      <Fold summary={c.nickname}>
+        <ActionRow>
+          <TextField placeholder={c.nicknamePh} value={label} onChange={(e) => setLabel(e.target.value)} autoComplete="off" />
+          <Button
+            loading={saveLabel.busy}
+            disabled={!labelDirty}
+            onClick={() =>
+              saveLabel.run(
+                async () => {
+                  const res = await patchConfig({ [labelKey]: label });
+                  if (res.ok) await onReload();
+                  return res;
+                },
+                { success: c.saved, error: c.offline },
+              )
+            }
+          >
+            {saveLabel.busy ? c.saving : c.save}
+          </Button>
+        </ActionRow>
       </Fold>
 
       {lastMsg ? <FieldStatus status={lastMsg.status} message={lastMsg.message} /> : null}

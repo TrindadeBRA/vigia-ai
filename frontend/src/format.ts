@@ -240,7 +240,29 @@ export function fmtHourLabel(iso: string): string {
   }
 }
 
+export function weatherDayKey(iso: string): string {
+  return iso.slice(0, 10);
+}
+
+export function weatherTodayKey(currentTime?: string | null, timezone?: string | null): string {
+  if (currentTime) return weatherDayKey(currentTime);
+  if (timezone) {
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+    } catch {
+      // timezone inválido — cai no fallback abaixo
+    }
+  }
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function isSameWeatherDay(a: string, b: string): boolean {
+  return weatherDayKey(a) === weatherDayKey(b);
+}
+
 export function fmtDayLabel(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (m) return `${m[3]}/${m[2]}`;
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso.slice(5, 10) || iso;
