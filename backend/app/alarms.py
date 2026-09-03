@@ -5,7 +5,9 @@ from __future__ import annotations
 import html
 from typing import Any
 
+from app.formatting import fmt_reset_when
 from app.schemas import AlarmMetric
+from app.netutil import display_lan_url
 from app.store import load
 
 # (chave, label, kind) por provedor — só os campos que a API real preenche
@@ -88,6 +90,14 @@ def metric_label(provider: str, metric: str) -> str | None:
     return None
 
 
+def metric_reset_field(provider: str, metric: str) -> str | None:
+    if provider == "cursor" and metric in ("percent", "other_percent", "remaining_cents"):
+        return "cycle_end"
+    if metric.endswith("_percent"):
+        return metric.replace("_percent", "_resets_at")
+    return None
+
+
 def _fired(kind: str, value: float, threshold: float) -> bool:
     return value >= threshold if kind == "percent" else value <= threshold
 
@@ -117,6 +127,8 @@ def evaluate(payload: dict[str, Any], rules: list[dict[str, Any]], armed: dict[s
             fired = _fired(kind, float(value), float(rule["threshold"]))
             was_armed = armed.get(state_key, False)
             if fired and not was_armed:
+                reset_field = metric_reset_field(provider, rule["metric"])
+                resets_at = account.get(reset_field) if reset_field else None
                 events.append(
                     {
                         "rule": rule,
@@ -124,6 +136,7 @@ def evaluate(payload: dict[str, Any], rules: list[dict[str, Any]], armed: dict[s
                         "account_id": account_id,
                         "account_label": account.get("label") or "",
                         "value": value,
+                        "resets_at": resets_at,
                     }
                 )
             armed[state_key] = fired
@@ -131,7 +144,7 @@ def evaluate(payload: dict[str, Any], rules: list[dict[str, Any]], armed: dict[s
 
 
 def format_alarm_notification(event: dict[str, Any]) -> str:
-    """Uma linha HTML: <b>Provedor</b> - Uso de <b>X% da cota Métrica</b>."""
+    """HTML: linha principal + data/hora do reset."""
     rule = event["rule"]
     provider = event["provider"]
     kind = metric_kind(provider, rule["metric"]) or "percent"
@@ -141,11 +154,25 @@ def format_alarm_notification(event: dict[str, Any]) -> str:
 
     if kind == "percent":
         detail = f"{threshold:.0f}% da cota {metric_name}"
-        return f"<b>{provider_name}</b> - Uso de <b>{detail}</b>"
+        lines = [
+            f"⚠️ <b>{provider_name}</b>",
+            "",
+            f"📊 Uso de <b>{detail}</b>",
+        ]
+    else:
+        amount = f"${threshold / 100:.2f}"
+        detail = f"{amount} da cota {metric_name}"
+        lines = [
+            f"⚠️ <b>{provider_name}</b>",
+            "",
+            f"💰 Saldo de <b>{detail}</b>",
+        ]
 
-    amount = f"${threshold / 100:.2f}"
-    detail = f"{amount} da cota {metric_name}"
-    return f"<b>{provider_name}</b> - Saldo de <b>{detail}</b>"
+    when = fmt_reset_when(event.get("resets_at"))
+    if when:
+        lines.append(f"🕐 Reset em <b>{html.escape(when)}</b>")
+
+    return "\n".join(lines)
 
 
 class AlarmEngine:
@@ -164,9 +191,12 @@ class AlarmEngine:
             return
         from app import telegram_bot  # import tardio: evita ciclo hub -> alarms -> store
 
+        port = int(cfg.get("listen", {}).get("port") or 8787)
+        display_url = display_lan_url(port) or None
+
         for event in events:
             text = format_alarm_notification(event)
             try:
-                telegram_bot.broadcast(text)
+                telegram_bot.broadcast(text, button_url=display_url)
             except Exception as exc:  # noqa: BLE001
                 print(f"[alarms] falha ao enviar telegram: {exc}")

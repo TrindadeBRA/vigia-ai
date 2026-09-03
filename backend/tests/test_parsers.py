@@ -9,6 +9,19 @@ from app.providers.gpt import parse_gpt_payload
 from app.providers.openrouter import parse_openrouter_payload
 
 
+def test_fmt_reset_when_tela_format() -> None:
+    from app.formatting import fmt_reset_when
+
+    assert fmt_reset_when("04/09 03h45") == "04/09 03h45"
+    assert fmt_reset_when("15/09") == "15/09"
+
+
+def test_fmt_reset_when_iso() -> None:
+    from app.formatting import fmt_reset_when
+
+    assert fmt_reset_when("2026-09-04T03:45:00-03:00") == "04/09 03h45"
+
+
 def test_parse_claude_windows() -> None:
     parsed = parse_claude_payload(
         {

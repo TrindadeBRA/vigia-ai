@@ -85,15 +85,22 @@ def _send_message_sync(
     text: str,
     *,
     parse_mode: str | None = "HTML",
+    reply_markup: dict[str, Any] | None = None,
 ) -> tuple[httpx.Response, float]:
     url = f"{TELEGRAM_API}/bot{token}/sendMessage"
     payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
     if parse_mode:
         payload["parse_mode"] = parse_mode
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     start = time.perf_counter()
     with httpx.Client(timeout=15) as client:
         resp = client.post(url, json=payload)
     return resp, (time.perf_counter() - start) * 1000
+
+
+def url_button_markup(url: str, label: str = "Abrir VigiaAI") -> dict[str, Any]:
+    return {"inline_keyboard": [[{"text": label, "url": url}]]}
 
 
 def _log_delivery(
@@ -112,7 +119,7 @@ def _log_delivery(
     )
 
 
-def broadcast(text: str, *, parse_mode: str = "HTML") -> int:
+def broadcast(text: str, *, parse_mode: str = "HTML", button_url: str | None = None) -> int:
     """Envia texto para todos os chats registrados."""
     cfg = load()
     token = str(cfg["telegram"].get("bot_token") or "")
@@ -120,12 +127,19 @@ def broadcast(text: str, *, parse_mode: str = "HTML") -> int:
     if not token or not chats:
         return 0
 
+    reply_markup = url_button_markup(button_url) if button_url else None
     sent = 0
     dead: list[str] = []
     for chat in chats:
         start = time.perf_counter()
         try:
-            resp, elapsed_ms = _send_message_sync(token, chat["id"], text, parse_mode=parse_mode)
+            resp, elapsed_ms = _send_message_sync(
+                token,
+                chat["id"],
+                text,
+                parse_mode=parse_mode,
+                reply_markup=reply_markup,
+            )
             data = resp.json()
             if resp.status_code == 200 and data.get("ok"):
                 sent += 1

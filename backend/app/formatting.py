@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -156,6 +157,18 @@ def cycle_end_label(value: Any) -> str | None:
     if dt is None:
         return None
     return tela_data_utc(dt)
+
+
+def fmt_reset_when(value: Any) -> str | None:
+    """Data/hora do reset no formato da tela (`04/09 03h45` ou `15/09`)."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    if re.fullmatch(r"\d{2}/\d{2}(\s+\d{2}h\d{2})?", s):
+        return s
+    return iso_or_none(value) or s
 
 
 def money_cents(value: Any) -> int | None:

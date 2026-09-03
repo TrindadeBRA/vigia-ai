@@ -88,6 +88,25 @@ def test_cents_metric_fires_when_balance_drops() -> None:
     assert events == []  # já armado, não repete
 
 
+def test_evaluate_includes_resets_at() -> None:
+    armed: dict[str, bool] = {}
+    payload = {
+        "claude": [
+            {
+                "id": "local",
+                "label": "",
+                "ok": True,
+                "error": None,
+                "weekly_percent": 37.0,
+                "weekly_resets_at": "04/09 03h45",
+            }
+        ]
+    }
+    events = evaluate(payload, [_rule(metric="weekly_percent", threshold=25.0)], armed)
+    assert len(events) == 1
+    assert events[0]["resets_at"] == "04/09 03h45"
+
+
 def test_format_alarm_notification_percent() -> None:
     event = {
         "rule": _rule(threshold=25.0, metric="weekly_percent", label="Claude quase no teto"),
@@ -95,9 +114,27 @@ def test_format_alarm_notification_percent() -> None:
         "account_id": "local",
         "account_label": "Pessoal",
         "value": 37.0,
+        "resets_at": "04/09 03h45",
     }
     text = format_alarm_notification(event)
-    assert text == "<b>Claude</b> - Uso de <b>25% da cota Semana</b>"
+    assert text == (
+        "⚠️ <b>Claude</b>\n"
+        "\n"
+        "📊 Uso de <b>25% da cota Semana</b>\n"
+        "🕐 Reset em <b>04/09 03h45</b>"
+    )
+
+
+def test_format_alarm_notification_without_reset() -> None:
+    event = {
+        "rule": _rule(threshold=25.0, metric="weekly_percent"),
+        "provider": "claude",
+        "account_id": "local",
+        "account_label": "",
+        "value": 37.0,
+    }
+    text = format_alarm_notification(event)
+    assert text == "⚠️ <b>Claude</b>\n\n📊 Uso de <b>25% da cota Semana</b>"
 
 
 def test_format_alarm_notification_balance() -> None:
@@ -117,7 +154,7 @@ def test_format_alarm_notification_balance() -> None:
         "value": 500.0,
     }
     text = format_alarm_notification(event)
-    assert text == "<b>fal.ai</b> - Saldo de <b>$10.00 da cota Saldo restante</b>"
+    assert text == "⚠️ <b>fal.ai</b>\n\n💰 Saldo de <b>$10.00 da cota Saldo restante</b>"
 
 
 def test_format_alarm_notification_escapes_html() -> None:
@@ -129,5 +166,5 @@ def test_format_alarm_notification_escapes_html() -> None:
         "value": 5.0,
     }
     text = format_alarm_notification(event)
-    assert text == "<b>Cursor</b> - Uso de <b>10% da cota Uso do plano</b>"
+    assert text == "⚠️ <b>Cursor</b>\n\n📊 Uso de <b>10% da cota Uso do plano</b>"
     assert "<script>" not in text

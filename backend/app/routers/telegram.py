@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 
 from app import telegram_bot
+from app.netutil import display_lan_url
 from app.schemas import OkResult, TelegramChat, TelegramChatBody, TelegramStatus, TelegramTokenBody
 from app.store import load
 
@@ -83,7 +84,10 @@ def remove_chat(body: TelegramChatBody) -> OkResult:
     summary="Envia uma mensagem de teste para todos os chats registrados",
 )
 def test() -> OkResult:
-    sent = telegram_bot.broadcast("Teste OK — você receberá os alarmes aqui.")
+    cfg = load()
+    port = int(cfg.get("listen", {}).get("port") or 8787)
+    display_url = display_lan_url(port) or None
+    sent = telegram_bot.broadcast("Teste OK — você receberá os alarmes aqui.", button_url=display_url)
     if sent == 0:
         raise HTTPException(400, "nenhum chat registrado — mande /start pro bot primeiro")
     return OkResult(ok=True)

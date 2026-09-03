@@ -34,3 +34,11 @@ def panel_lan_url(port: int) -> str:
     if not ips:
         return ""
     return f"http://{ips[0]}:{int(port)}/"
+
+
+def display_lan_url(port: int) -> str:
+    """URL do mostrador web na LAN (atalho em notificações Telegram)."""
+    ips = lan_ipv4()
+    if not ips:
+        return ""
+    return f"http://{ips[0]}:{int(port)}/display"
