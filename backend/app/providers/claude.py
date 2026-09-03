@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from app.formatting import as_percent, as_percent_points, iso_or_none, pick
+from app.formatting import as_percent_points, claude_utilization_percent, iso_or_none, pick
 from app.http_util import http_json
 from app.local.claude_oauth import claude_token_candidates
 from app.store import provider as provider_cfg
@@ -39,8 +39,10 @@ def parse_claude_payload(data: dict[str, Any]) -> dict[str, Any]:
     def _win(obj: Any) -> tuple[float | None, str | None]:
         if not isinstance(obj, dict) or not obj:
             return None, None
-        utilization = obj.get("utilization")
-        pct = as_percent(utilization) if utilization is not None else as_percent_points(obj.get("percent"))
+        pct = pick(
+            as_percent_points(obj.get("percent")),
+            claude_utilization_percent(obj.get("utilization")),
+        )
         return pct, iso_or_none(pick(obj.get("resets_at"), obj.get("resetsAt")))
 
     session_pct, session_reset = _win(data.get("five_hour") or data.get("fiveHour"))
@@ -54,8 +56,10 @@ def parse_claude_payload(data: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(item, dict):
                 continue
             kind = str(item.get("kind") or "").lower()
-            utilization = item.get("utilization")
-            pct = as_percent(utilization) if utilization is not None else as_percent_points(item.get("percent"))
+            pct = pick(
+                as_percent_points(item.get("percent")),
+                claude_utilization_percent(item.get("utilization")),
+            )
             reset = iso_or_none(pick(item.get("resets_at"), item.get("resetsAt")))
             if kind in ("session", "five_hour", "5h") and session_pct is None:
                 session_pct, session_reset = pct, reset

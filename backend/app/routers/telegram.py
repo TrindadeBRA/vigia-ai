@@ -83,7 +83,7 @@ def remove_chat(body: TelegramChatBody) -> OkResult:
     summary="Envia uma mensagem de teste para todos os chats registrados",
 )
 def test() -> OkResult:
-    sent = telegram_bot.broadcast("Vigia AI", "Notificação de teste")
+    sent = telegram_bot.broadcast("<b>🔔 Vigia AI</b>\n\nNotificação de teste — tudo certo!")
     if sent == 0:
         raise HTTPException(400, "nenhum chat registrado — mande /start pro bot primeiro")
     return OkResult(ok=True)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.alarms import evaluate
+from app.alarms import evaluate, format_alarm_notification
 
 
 def _payload(claude_percent: float, ok: bool = True) -> dict:
@@ -86,3 +86,35 @@ def test_cents_metric_fires_when_balance_drops() -> None:
 
     events = evaluate(_payload(0.0), rules, armed)
     assert events == []  # já armado, não repete
+
+
+def test_format_alarm_notification_percent() -> None:
+    event = {
+        "rule": _rule(threshold=80.0, label="Claude quase no teto"),
+        "provider": "claude",
+        "account_id": "local",
+        "account_label": "Pessoal",
+        "value": 85.0,
+    }
+    text, provider = format_alarm_notification(event)
+    assert provider == "claude"
+    assert "<b>🔔 Alarme Vigia AI</b>" in text
+    assert "<b>Claude</b> · Sessão 5h" in text
+    assert "Conta: Pessoal" in text
+    assert "Claude quase no teto" in text
+    assert "Uso atual: <b>85%</b>" in text
+    assert "Limiar: 80%" in text
+
+
+def test_format_alarm_notification_escapes_html() -> None:
+    event = {
+        "rule": _rule(label="<script>", threshold=10.0),
+        "provider": "cursor",
+        "account_id": "local",
+        "account_label": "A & B",
+        "value": 5.0,
+    }
+    text, provider = format_alarm_notification(event)
+    assert provider == "cursor"
+    assert "&lt;script&gt;" in text
+    assert "A &amp; B" in text

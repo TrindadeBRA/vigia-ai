@@ -54,12 +54,32 @@ function suggestLabel(c: typeof ALARMS_STR.pt, provider: string, metric: AlarmMe
     : c.suggestBalance(providerName, `$${(threshold / 100).toFixed(2)}`, metric.label);
 }
 
-function ProviderIcon({ provider, className }: { provider: string; className?: string }) {
+function ProviderIcon({
+  provider,
+  size = "sm",
+  className,
+}: {
+  provider: string;
+  size?: "sm" | "lg";
+  className?: string;
+}) {
   const src = PROVIDER_ICON[provider];
   if (!src) return null;
   return (
-    <span className={cn(iconChip, className)} aria-hidden>
-      <img className={iconImg} src={src} alt="" draggable={false} />
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-[10px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]",
+        size === "lg" ? "size-[42px]" : iconChip,
+        className,
+      )}
+      aria-hidden
+    >
+      <img
+        className={cn("object-contain", size === "lg" ? "size-[26px]" : iconImg)}
+        src={src}
+        alt=""
+        draggable={false}
+      />
     </span>
   );
 }
@@ -214,61 +234,63 @@ export default function AlarmsPage() {
       </Card>
 
       <Card title={c.rulesTitle} lead={c.rulesLead}>
-        <ActionRow>
-          <div className="flex min-w-[140px] flex-1 items-end gap-2">
-            {provider ? <ProviderIcon provider={provider} /> : null}
+        <div className="flex flex-col gap-5">
+          <ActionRow>
+            <div className="flex min-w-[140px] flex-1 items-end gap-2.5">
+              {provider ? <ProviderIcon provider={provider} size="lg" /> : null}
+              <SelectField
+                label={c.provider}
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                wrapperClassName="min-w-0 flex-1"
+                options={providers.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p }))}
+              />
+            </div>
             <SelectField
-              label={c.provider}
-              value={provider}
-              onChange={(e) => setProvider(e.target.value)}
-              wrapperClassName="min-w-0 flex-1"
-              options={providers.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p }))}
+              label={c.metric}
+              value={metric}
+              onChange={(e) => setMetric(e.target.value)}
+              options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.label }))}
             />
-          </div>
-          <SelectField
-            label={c.metric}
-            value={metric}
-            onChange={(e) => setMetric(e.target.value)}
-            options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.label }))}
-          />
-          <TextField
-            label={c.threshold}
-            type="number"
-            value={threshold}
-            onChange={(e) => setThreshold(Number(e.target.value))}
-          />
-        </ActionRow>
-        <ActionRow>
-          <TextField
-            label={c.label}
-            placeholder={c.labelPh}
-            value={label}
-            onChange={(e) => {
-              setLabel(e.target.value);
-              setLabelDirty(e.target.value.trim() !== "");
-            }}
-          />
-          <Button
-            loading={addAction.busy}
-            disabled={!provider || !metric}
-            onClick={() =>
-              addAction.run(
-                async () => {
-                  const res = await createAlarm({ provider, metric, threshold, label });
-                  if (res.ok) {
-                    setLabel("");
-                    setLabelDirty(false);
-                    await reload();
-                  }
-                  return res;
-                },
-                { success: c.added, error: c.addFailed },
-              )
-            }
-          >
-            {addAction.busy ? c.adding : c.add}
-          </Button>
-        </ActionRow>
+            <TextField
+              label={c.threshold}
+              type="number"
+              value={threshold}
+              onChange={(e) => setThreshold(Number(e.target.value))}
+            />
+          </ActionRow>
+          <ActionRow>
+            <TextField
+              label={c.label}
+              placeholder={c.labelPh}
+              value={label}
+              onChange={(e) => {
+                setLabel(e.target.value);
+                setLabelDirty(e.target.value.trim() !== "");
+              }}
+            />
+            <Button
+              loading={addAction.busy}
+              disabled={!provider || !metric}
+              onClick={() =>
+                addAction.run(
+                  async () => {
+                    const res = await createAlarm({ provider, metric, threshold, label });
+                    if (res.ok) {
+                      setLabel("");
+                      setLabelDirty(false);
+                      await reload();
+                    }
+                    return res;
+                  },
+                  { success: c.added, error: c.addFailed },
+                )
+              }
+            >
+              {addAction.busy ? c.adding : c.add}
+            </Button>
+          </ActionRow>
+        </div>
         {currentMetric ? <p className={cfgHint}>{ruleHint(c, currentMetric, threshold)}</p> : null}
         {addAction.message ? <FieldStatus status={addAction.status} message={addAction.message} /> : null}
 

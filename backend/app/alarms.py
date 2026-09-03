@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 from typing import Any
 
 from app.schemas import AlarmMetric
@@ -129,24 +130,33 @@ def evaluate(payload: dict[str, Any], rules: list[dict[str, Any]], armed: dict[s
     return events
 
 
-def _event_message(event: dict[str, Any]) -> tuple[str, str]:
-    """Título curto = provedor + métrica; corpo = só o limite cruzado.
-
-    O nome (auto-sugerido ou digitado pela regra) é ótimo pra lista na UI, mas
-    é longo demais pra caber numa mensagem do Telegram sem cortar — por isso o
-    título é sempre reconstruído a partir do catálogo.
-    """
+def format_alarm_notification(event: dict[str, Any]) -> tuple[str, str]:
+    """HTML para o Telegram + id do provedor (ícone em sendPhoto)."""
     rule = event["rule"]
     provider = event["provider"]
     kind = metric_kind(provider, rule["metric"]) or "percent"
-    provider_name = PROVIDER_NAMES.get(provider, provider)
-    metric_name = metric_label(provider, rule["metric"]) or rule["metric"]
-    title = f"{provider_name} · {metric_name}"
+    provider_name = html.escape(PROVIDER_NAMES.get(provider, provider))
+    metric_name = html.escape(metric_label(provider, rule["metric"]) or rule["metric"])
+
+    lines = ["<b>🔔 Alarme Vigia AI</b>", "", f"<b>{provider_name}</b> · {metric_name}"]
+
+    account = (event.get("account_label") or "").strip()
+    if account:
+        lines.append(f"Conta: {html.escape(account)}")
+
+    rule_label = (rule.get("label") or "").strip()
+    if rule_label:
+        lines.append(html.escape(rule_label))
+
+    lines.append("")
     if kind == "percent":
-        body = f"Uso chegou a {event['value']:.0f}% (limiar {rule['threshold']:.0f}%)"
+        lines.append(f"Uso atual: <b>{float(event['value']):.0f}%</b>")
+        lines.append(f"Limiar: {float(rule['threshold']):.0f}%")
     else:
-        body = f"Saldo em ${event['value'] / 100:.2f} (limiar ${rule['threshold'] / 100:.2f})"
-    return title, body
+        lines.append(f"Saldo atual: <b>${float(event['value']) / 100:.2f}</b>")
+        lines.append(f"Limiar: ${float(rule['threshold']) / 100:.2f}")
+
+    return "\n".join(lines), provider
 
 
 class AlarmEngine:
@@ -166,8 +176,8 @@ class AlarmEngine:
         from app import telegram_bot  # import tardio: evita ciclo hub -> alarms -> store
 
         for event in events:
-            title, body = _event_message(event)
+            caption, provider = format_alarm_notification(event)
             try:
-                telegram_bot.broadcast(title, body)
+                telegram_bot.broadcast(caption, provider=provider)
             except Exception as exc:  # noqa: BLE001
                 print(f"[alarms] falha ao enviar telegram: {exc}")

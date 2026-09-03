@@ -54,10 +54,30 @@ def as_percent(value: Any) -> float | None:
     return round(n, 1)
 
 
+def claude_utilization_percent(value: Any) -> float | None:
+    """`utilization` do Claude OAuth: 0–1 (fração) ou 0–100 (pontos).
+
+    Valores estritamente entre 0 e 1 são fração (0.42 → 42%). Demais casos já vêm
+    em pontos — `1` é 1% usado, não 100% (`as_percent` multiplicaria por engano).
+    """
+    if value is None:
+        return None
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return None
+    if n < 0:
+        n = 0.0
+    if 0 < n < 1:
+        n = n * 100.0
+    if n > 100:
+        n = 100.0
+    return round(n, 1)
+
+
 def as_percent_points(value: Any) -> float | None:
     """Percentual que já vem em 0–100 (não fração 0–1).
 
-    `as_percent` trata 1.0 como 100% — certo pro `utilization` do Claude.
     No Cursor, `autoPercentUsed: 1` é 1% usado; multiplicar vira 100% no ciclo novo.
     """
     if value is None:
