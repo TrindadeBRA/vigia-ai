@@ -1867,6 +1867,25 @@ export default function Display() {
     return () => document.removeEventListener("keydown", onKey);
   }, [prefs.focus, setPrefs]);
 
+  // Mantém prefs.focus em sincronia se o navegador sair do fullscreen por fora do nosso controle
+  // (ex.: usuário clica na barra "Sair da tela cheia" do próprio navegador).
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement) setPrefs((p) => (p.focus ? { ...p, focus: false } : p));
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, [setPrefs]);
+
+  const toggleFocus = () => {
+    const next = !prefs.focus;
+    if (!isNested) {
+      if (next) document.documentElement.requestFullscreen?.().catch(() => {});
+      else if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    }
+    setPrefs((p) => ({ ...p, focus: next }));
+  };
+
   const showOutlet = isCanvas || (isNested && !isNow);
   const focusMode = Boolean(prefs.focus) && !isNested;
   const hideChrome = focusMode || isCanvas;
@@ -1977,7 +1996,7 @@ export default function Display() {
                   }
                   onOpen={(id) => { setSection("account"); setSelectedId(id); }}
                   focus={focusMode}
-                  onToggleFocus={() => setPrefs((p) => ({ ...p, focus: !p.focus }))}
+                  onToggleFocus={toggleFocus}
                   gridWallpaperId={gridWallpaperId}
                   onOpenWallpaper={() => setGridWallpaperOpen(true)}
                 />
