@@ -4,7 +4,7 @@
 
 | Peça | Onde roda | Função |
 | --- | --- | --- |
-| Coletor | Mac (FastAPI) ou Docker | Tokens, APIs, `GET /events` + `GET /usage` + Swagger `/docs` |
+| Coletor | Mac (Fastify (Node 22)) ou Docker | Tokens, APIs, `GET /events` + `GET /usage` + Swagger `/docs` |
 | Frontend | Vite (`:5173`) ou estático no coletor | Mostrador `/display` e configs `/display/config` |
 | Firmware | ESP32 | Wi-Fi, SSE, desenho TFT |
 | Wokwi | Simulador | Mesmo sketch, Wi-Fi simulada (`WOKWI_SIM`) até o coletor no Mac |
@@ -22,15 +22,15 @@ flowchart TB
             C4["backend/data/config.json<br/>gitignored<br/>OpenRouter / DeepSeek / fal.ai / Bitcoin / AdSense"]
         end
 
-        subgraph Coletor["Coletor FastAPI :8787<br/>backend/app/main.py + hub.py"]
+        subgraph Coletor["Coletor Fastify (Node 22) :8787<br/>backend/src/main.ts + hub.ts"]
             Hub["UsageHub<br/>1 ciclo a cada USAGE_INTERVAL_S=60s<br/>RefreshCache por provedor"]
-            Providers["providers/<br/>claude.py / gpt.py / cursor.py<br/>openrouter.py / deepseek.py / opencode_*.py<br/>fal.py / bitcoin.py / adsense.py<br/>currencies + CoinGecko TTL 5min"]
+            Providers["providers/<br/>claude.ts / gpt.ts / cursor.ts<br/>openrouter.ts / deepseek.ts / opencode_*.ts<br/>fal.ts / bitcoin.ts / adsense.ts<br/>currencies + CoinGecko TTL 5min"]
             Hub --> Providers
         end
 
         Credenciais --> Providers
 
-        subgraph Endpoints["Endpoints JSON sem Bearer — CONTRATO_JSON.md / schemas.py"]
+        subgraph Endpoints["Endpoints JSON sem Bearer — CONTRATO_JSON.md / schemas.ts (Zod)"]
             E1["GET /events<br/>SSE — stream a cada 60s<br/>last-good"]
             E2["GET /usage<br/>força ciclo cotas"]
             E3["GET /docs<br/>Swagger"]
@@ -64,7 +64,7 @@ flowchart TB
     end
 ```
 
-> Fluxo: app oficial grava token no host → coletor lê (`backend/app/local/*`) e faz `Authorization: Bearer` nas APIs não-oficiais → `UsageHub` monta 1 snapshot (cada provedor com TTL próprio em `backend/app/refresh_cache.py`) e empurra via `GET /events` SSE — placa + N abas não multiplicam chamadas. `GET /usage` força ciclo extra só de cotas. Ver [`CONTRATO_JSON.md`](CONTRATO_JSON.md) e [`SETUP.md`](SETUP.md#como-o-vigia-lê-as-cotas).
+> Fluxo: app oficial grava token no host → coletor lê (`backend/src/local/*`) e faz `Authorization: Bearer` nas APIs não-oficiais → `UsageHub` monta 1 snapshot (cada provedor com TTL próprio em `backend/src/refreshCache.ts`) e empurra via `GET /events` SSE — placa + N abas não multiplicam chamadas. `GET /usage` força ciclo extra só de cotas. Ver [`CONTRATO_JSON.md`](CONTRATO_JSON.md) e [`SETUP.md`](SETUP.md#como-o-vigia-lê-as-cotas).
 
 ## Fluxo (hardware)
 
@@ -94,7 +94,7 @@ O simulador roda a **mesma** lógica de rede do hardware (`WOKWI_SIM`). Para o E
 
 - TLS + JWT grandes + SQLite + OAuth no ESP32 é frágil.
 - Tokens no flash da placa são extraíveis.
-- Trocar parser quando a API muda é mais fácil em Python.
+- Trocar parser quando a API muda é mais fácil no coletor (TypeScript/Node.js) do que no firmware.
 
 ## Dois firmwares, um sketch
 

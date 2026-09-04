@@ -15,7 +15,7 @@ Guia técnico completo: subir o coletor, configurar provedores, gravar a placa f
 
 ## Quick start
 
-Precisa de **Python ≥ 3.11**, **Node 20+** e, para firmware, [PlatformIO Core](https://platformio.org/).
+Precisa de **Node 22 LTS** e, para firmware, [PlatformIO Core](https://platformio.org/).
 
 ```bash
 ./dev up
@@ -45,8 +45,8 @@ Docker (backend serve o `frontend/dist` em `:8787`):
 | --- | --- |
 | `./dev up` | Backend + Vite; rebuilda `frontend/dist` (coletor em `:8787`) |
 | `./dev down` | Encerra o que ficou em `:8787` / `:5173` |
-| `./dev test` | pytest + `tsc` |
-| `./dev lint` | ruff |
+| `./dev test` | vitest + `tsc` |
+| `./dev lint` | eslint |
 | `./dev wokwi` | Coletor + gateway Wokwi + firmware simulado; rebuilda o dist |
 | `./dev firmware flash` | Grava a ESP32 |
 
@@ -85,7 +85,7 @@ Há **três camadas**. Só a do meio fala com Anthropic / OpenAI / Cursor.
 app oficial (Claude Code / Codex / Cursor)
     grava access token neste host
         ↓
-coletor FastAPI  :8787   (backend/app/providers/* + local/*)
+coletor Fastify (Node 22)  :8787   (backend/src/providers/* + local/*)
     1. lê o token  2. GET/POST no endpoint de cota  3. normaliza
         ↓  JSON sem token  (CONTRATO_JSON.md)
 GET /usage  (na hora)   ·   GET /events  (SSE a cada USAGE_INTERVAL_S)
@@ -97,7 +97,7 @@ O coletor **não** é um OAuth client para Claude/GPT/Cursor. Não tem `client_i
 
 **AdSense** é a exceção: o coletor guarda Client ID/Secret (tipo Web) e faz o authorization code + refresh. Callback em `http://127.0.0.1:{porta}/api/oauth/adsense/callback` — ver [`APIS_ADSENSE.md`](APIS_ADSENSE.md).
 
-`UsageHub` (`backend/app/hub.py`) faz **um** ciclo de APIs e espalha o snapshot. Placa e abas de `/display` só escutam SSE. `GET /usage` força um ciclo extra (botão «Atualizar consumo», Swagger). Falha de um provedor **não** derruba o HTTP 200 nem os outros cards.
+`UsageHub` (`backend/src/hub.ts`) faz **um** ciclo de APIs e espalha o snapshot. Placa e abas de `/display` só escutam SSE. `GET /usage` força um ciclo extra (botão «Atualizar consumo», Swagger). Falha de um provedor **não** derruba o HTTP 200 nem os outros cards.
 
 Esses endpoints **não são produto público**. Path, header e envelope podem mudar; a quebra fica em `ok: false` naquela conta.
 
@@ -111,7 +111,7 @@ Esses endpoints **não são produto público**. Path, header e envelope podem mu
 | Mapeamento | `five_hour` / `kind=session` → `session_percent`; `seven_day` → `weekly_percent`; sonnet/opus se vierem |
 | Não serve | `sk-ant-…` (API paga); `claude setup-token` / `sk-ant-oat01-…` (escopo `user:inference` → 403; precisa `user:profile`) |
 
-Sem `anthropic-beta` → 401. Sem o User-Agent do CLI → 429 persistente. Rate limit é **por access token**. Código: `backend/app/local/claude_oauth.py`, `providers/claude.py`. Doc: [`APIS_CLAUDE.md`](APIS_CLAUDE.md).
+Sem `anthropic-beta` → 401. Sem o User-Agent do CLI → 429 persistente. Rate limit é **por access token**. Código: `backend/src/local/claudeOauth.ts`, `providers/claude.ts`. Doc: [`APIS_CLAUDE.md`](APIS_CLAUDE.md).
 
 #### GPT (ChatGPT / Codex)
 
@@ -123,7 +123,7 @@ Sem `anthropic-beta` → 401. Sem o User-Agent do CLI → 429 persistente. Rate 
 | Mapeamento | `rate_limit.primary_window` (≤ 8 h) → sessão; `secondary_window` → semana; `plan_type` → `plan`. `used_percent` já vem 0–100. |
 | Não serve | `OPENAI_API_KEY` / `sk-…` (ledger da API de plataforma, outro produto) |
 
-Código: `backend/app/local/gpt_oauth.py`, `providers/gpt.py`. Doc: [`APIS_GPT.md`](APIS_GPT.md).
+Código: `backend/src/local/gptOauth.ts`, `providers/gpt.ts`. Doc: [`APIS_GPT.md`](APIS_GPT.md).
 
 #### Cursor
 
@@ -134,7 +134,7 @@ Código: `backend/app/local/gpt_oauth.py`, `providers/gpt.py`. Doc: [`APIS_GPT.m
 | Fallback | `GET https://api2.cursor.sh/auth/usage` (Enterprise: `numRequests` / `maxRequestUsage`) |
 | Mapeamento | `planUsage.autoPercentUsed` → `percent` (já 0–100); `apiPercentUsed` → `other_percent`; `spendLimitUsage` em centavos; `bonusSpend` → `bonus_cents`; `billingCycleEnd` (ms string) → `cycle_end` ISO com ano |
 
-Contas SSO/Team às vezes **não gravam** `cursorAuth/accessToken` — o coletor não inventa o JWT. Código: `backend/app/local/cursor_state.py`, `providers/cursor.py`. Doc: [`APIS_CURSOR.md`](APIS_CURSOR.md).
+Contas SSO/Team às vezes **não gravam** `cursorAuth/accessToken` — o coletor não inventa o JWT. Código: `backend/src/local/cursorState.ts`, `providers/cursor.ts`. Doc: [`APIS_CURSOR.md`](APIS_CURSOR.md).
 
 #### Ordem de credencial e o que nunca sai do host
 
@@ -212,7 +212,7 @@ Depois, no editor: `Cmd+Shift+P` → **Wokwi: Start Simulator**. O display no Wo
 | Pasta | Papel |
 | --- | --- |
 | [`firmware/`](../firmware/) | PlatformIO (`esp32dev` + `wokwi`) |
-| [`backend/`](../backend/) | FastAPI, OpenAPI, provedores |
+| [`backend/`](../backend/) | Fastify (Node 22), OpenAPI, provedores |
 | [`frontend/`](../frontend/) | Vite + React + TypeScript |
 | [``](.) | Contrato, APIs, hardware |
 | [`./dev`](../dev) | Único script de desenvolvimento |

@@ -21,7 +21,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [APIS_ADSENSE.md](APIS_ADSENSE.md)           | Ganhos AdSense (OAuth Google)                                     |
 | [HARDWARE.md](HARDWARE.md)                   | Placa, pinos, drivers TFT                                         |
 | [TOUCH.md](TOUCH.md)                         | Views, XPT2046, calibração, Wokwi                                 |
-| [BACKEND.md](BACKEND.md)                     | Como rodar o FastAPI                                              |
+| [BACKEND.md](BACKEND.md)                     | Como rodar o coletor Fastify (Node 22)                            |
 | [DESKTOP.md](DESKTOP.md)                     | App Electron: instalar, pastas, porta, assinatura                 |
 | [PLANO_ELECTRON.md](PLANO_ELECTRON.md)       | Plano do port para Electron e instaladores                        |
 | [PLANO_NODE.md](PLANO_NODE.md)               | Plano do port do coletor de Python para Node.js                   |

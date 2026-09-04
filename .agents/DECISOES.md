@@ -4,9 +4,9 @@
 
 Cotas são da conta pessoal. Evita hospedar JWT/OAuth. LAN é suficiente para um painel na mesa.
 
-## FastAPI no host, não stdlib pura
+## Fastify (Node 22) no host, não stdlib pura
 
-O protótipo usava `http.server`. O coletor oficial é **FastAPI + Uvicorn**: OpenAPI em `/docs`, modelos Pydantic = contrato, pytest. Tokens continuam só no host.
+O protótipo usava `http.server`, depois **FastAPI + Uvicorn** (Python). O coletor oficial hoje é **Fastify (Node 22) + Zod** (port do FastAPI/Pydantic, ver `PLANO_NODE.md`): OpenAPI em `/docs`, schemas Zod = contrato, vitest. Tokens continuam só no host.
 
 ## Um app React, duas rotas
 
@@ -14,7 +14,7 @@ Painel (`/display/config`) e mostrador (`/display`) são Vite + React + TypeScri
 
 ## Docker opcional
 
-`./dev up --docker`. O container não lê Keychain. Cursor/Codex: overlay `compose.credentials.yaml` (bind-mount somente leitura). Claude no Mac Docker: Python local ou token colado. No Mac da mesa, `./dev up` (Python + Vite) continua o caminho mais simples.
+`./dev up --docker`. O container não lê Keychain. Cursor/Codex: overlay `compose.credentials.yaml` (bind-mount somente leitura). Claude no Mac Docker: Node local ou token colado. No Mac da mesa, `./dev up` (Node + Vite) continua o caminho mais simples.
 
 ## Endpoints internos, não scraping HTML
 
@@ -28,7 +28,7 @@ Decisão de UI física: a Início cabe até **5 cards**, um por *tipo* de proved
 
 ## Wokwi fala com o coletor de verdade (via `wokwigw`)
 
-Resolvido com o [Wokwi IoT Gateway](https://github.com/wokwi/wokwigw) local (`wokwi.toml` → `ws://localhost:9011`). O simulador usa a mesma Wi-Fi simulada do hardware e fala com o backend FastAPI. Mock de dados é uma flag no painel (`mock`), não um firmware separado.
+Resolvido com o [Wokwi IoT Gateway](https://github.com/wokwi/wokwigw) local (`wokwi.toml` → `ws://localhost:9011`). O simulador usa a mesma Wi-Fi simulada do hardware e fala com o backend Fastify (Node 22). Mock de dados é uma flag no painel (`mock`), não um firmware separado.
 
 ## GPIO 2 sem blink
 
