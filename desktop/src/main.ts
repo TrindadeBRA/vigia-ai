@@ -48,7 +48,7 @@ function createWindow(): BrowserWindow {
     minWidth: 420,
     minHeight: 480,
     show: false,
-    backgroundColor: "#0b1220",
+    backgroundColor: "#0f0f0f",
     title: "Vigia AI",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     webPreferences: {
