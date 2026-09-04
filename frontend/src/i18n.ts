@@ -42,6 +42,7 @@ type Strings = {
   usedCount: string;
   limit: string;
   allKeysNote: string;
+  openOfficialSite: string;
   percent: string;
   themeSection: string;
   dark: string;
@@ -166,6 +167,7 @@ export const STR: Record<Lang, Strings> = {
     usedCount: "usados",
     limit: "limite",
     allKeysNote: "Créditos da conta (todas as keys)",
+    openOfficialSite: "Ver site oficial",
     percent: "percentual",
     themeSection: "Tema",
     dark: "Escuro",
@@ -284,6 +286,7 @@ export const STR: Record<Lang, Strings> = {
     usedCount: "used",
     limit: "limit",
     allKeysNote: "Account credits (all keys)",
+    openOfficialSite: "Open official site",
     percent: "percent",
     themeSection: "Theme",
     dark: "Dark",
@@ -402,6 +405,7 @@ export const STR: Record<Lang, Strings> = {
     usedCount: "usados",
     limit: "límite",
     allKeysNote: "Créditos de la cuenta (todas las keys)",
+    openOfficialSite: "Ver sitio oficial",
     percent: "porcentaje",
     themeSection: "Tema",
     dark: "Oscuro",

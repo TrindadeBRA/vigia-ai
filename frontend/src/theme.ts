@@ -81,6 +81,17 @@ export const PROVIDER_ICON: Record<string, string> = {
   currencies: "/icons/currencies.png",
 };
 
+// URL da página oficial de plano/uso de cada provider de IA (usado para o atalho "ver site oficial").
+export const PROVIDER_SITE_URL: Record<string, string> = {
+  claude: "https://claude.ai/settings/usage",
+  gpt: "https://chatgpt.com/#settings/Usage",
+  cursor: "https://cursor.com/dashboard?tab=usage",
+  openrouter: "https://openrouter.ai/settings/credits",
+  deepseek: "https://platform.deepseek.com/usage",
+  opencode: "https://opencode.ai",
+  fal: "https://fal.ai/dashboard/billing",
+};
+
 export function hexToRgba(hex: string, a: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);

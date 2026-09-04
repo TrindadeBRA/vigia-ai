@@ -51,11 +51,19 @@ export default {
         shimmer: {
           to: { backgroundPosition: "-200% 0" },
         },
+        heartbeat: {
+          "0%, 100%": { transform: "scale(1)" },
+          "14%": { transform: "scale(1.14)" },
+          "28%": { transform: "scale(1)" },
+          "42%": { transform: "scale(1.1)" },
+          "70%": { transform: "scale(1)" },
+        },
       },
       animation: {
         fade: "fadeIn .18s ease both",
         "slide-in": "slideIn .18s ease both",
         shimmer: "shimmer 1.2s ease infinite",
+        heartbeat: "heartbeat 1.8s ease-in-out infinite",
       },
     },
   },

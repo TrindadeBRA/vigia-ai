@@ -16,15 +16,16 @@ import { CurrenciesBoardCard, CurrenciesDetail, currenciesAllowedSizes, currenci
 import { WeatherBoardCard, WeatherDetail, weatherAllowedSizes, weatherSizeLabel } from "../components/cards/WeatherCard";
 import { CursorBoardCard, CursorDetail, cursorAllowedSizes, cursorSizeLabel } from "../components/cards/CursorCard";
 import { GptBoardCard, GptDetail, gptAllowedSizes, gptSizeLabel } from "../components/cards/GptCard";
-import { BellIcon, CheckIcon, ChipIcon, CloseIcon, CopyIcon, DownloadIcon, GitHubIcon, GridIcon, GripIcon, MaximizeIcon, MenuIcon, MinimizeIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
+import { BellIcon, CheckIcon, ChipIcon, CloseIcon, CopyIcon, DownloadIcon, ExternalLinkIcon, GitHubIcon, GridIcon, GripIcon, HeartIcon, MaximizeIcon, MenuIcon, MinimizeIcon, PaletteIcon, SettingsIcon, SlidersIcon, TrashIcon, UploadIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, barColor, barGlow, clamp, countdownSecs, fmtBrl, fmtBtc, fmtClock, fmtCountdown, fmtCurrencyAmount, fmtPct, fmtRemain, fmtUsd, fmtWhen, nextFetchAtMs, payloadAgeMs } from "../format";
 import { STR, type Lang, type T } from "../i18n";
-import { ACCENTS, PALETTES, PROVIDER_ICON, applyThemeVars, inverseOn, type ThemeName } from "../theme";
+import { ACCENTS, PALETTES, PROVIDER_ICON, PROVIDER_SITE_URL, applyThemeVars, inverseOn, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn, iconChip, iconImg, metricCard, num, overviewBoard, shell, sideItem, sideItemActive, viewFade } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import NowPage from "./NowPage";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
+import { PixDonateModal } from "../components/PixDonateModal";
 import { ClockBoardCard, clockAllowedSizes, clockSizeLabel } from "../components/cards/ClockCard";
 import { EyeBoardCard, eyeAllowedSizes, eyeSizeLabel } from "../components/cards/EyeCard";
 import { gridWallpaperUrl, useGridWallpaper } from "../hooks/useGridWallpaper";
@@ -1138,9 +1139,10 @@ function Sidebar(props: {
   setupActive: boolean;
   themeActive: boolean;
   alarmsActive: boolean;
+  onOpenPix: () => void;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, themeActive, alarmsActive, t } = props;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, themeActive, alarmsActive, onOpenPix, t } = props;
   const onPage = configActive || setupActive || themeActive || alarmsActive || nowActive;
   const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
   return (
@@ -1195,7 +1197,7 @@ function Sidebar(props: {
           <BellIcon size={16} /> {t.alarms}
         </NavLink>
       </div>
-      <div className="mt-1 shrink-0 border-t border-edge pt-1">
+      <div className="mt-1 flex shrink-0 flex-col gap-px border-t border-edge pt-1">
         <a
           className="flex w-full cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-[9px] py-2 text-left text-[12.5px] text-ink3 no-underline transition-colors duration-150 hover:bg-chip hover:text-ink2"
           href="https://github.com/TrindadeBRA/vigia-ai"
@@ -1204,6 +1206,13 @@ function Sidebar(props: {
         >
           <GitHubIcon size={15} /> GitHub
         </a>
+        <button
+          type="button"
+          onClick={onOpenPix}
+          className="group flex w-full cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-[9px] py-2 text-left text-[12.5px] text-[#e11d48] no-underline transition-colors duration-150 hover:bg-[#e11d48]/10"
+        >
+          <HeartIcon size={13} className="transition-transform duration-150 group-hover:scale-110" /> Apoiar via Pix
+        </button>
       </div>
     </nav>
   );
@@ -1650,14 +1659,26 @@ function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMet
     else if (meta.provider === "bitcoin") body = <BitcoinBody data={data} account={account as BitcoinAccount} t={t} />;
     else if (meta.provider === "adsense") body = <AdsenseBody data={data} account={account as AdsenseAccount} t={t} />;
   }
+  const siteUrl = PROVIDER_SITE_URL[meta.provider];
   return (
     <div className={`w-full ${viewFade}`}>
       <div className="mb-4 flex items-center gap-3">
         <Icon id={meta.provider} large />
-        <div>
+        <div className="flex-1">
           <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{meta.title}</div>
           {meta.label ? <div className={cardLabel}>{meta.label}</div> : null}
         </div>
+        {siteUrl ? (
+          <a
+            className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[9px] border border-edge bg-chip px-2.5 py-1.5 text-[12.5px] font-medium text-ink2 no-underline transition-colors duration-150 hover:bg-chip/70 hover:text-ink"
+            href={siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t.openOfficialSite}
+          >
+            <ExternalLinkIcon size={14} /> {t.openOfficialSite}
+          </a>
+        ) : null}
       </div>
       <div className="flex w-full flex-col gap-[14px]">{!meta.ok ? <div className={metricCard}><div className={errorText}>{meta.error || t.noData}</div></div> : body}</div>
     </div>
@@ -1760,6 +1781,7 @@ export default function Display() {
   const [boards, setBoards] = useGridBoards();
   const [gridWallpaperOpen, setGridWallpaperOpen] = useState(false);
   const [addWidgetOpen, setAddWidgetOpen] = useState(false);
+  const [pixModalOpen, setPixModalOpen] = useState(false);
   const { gridId: gridWallpaperId } = useGridWallpaper();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
@@ -1971,6 +1993,7 @@ export default function Display() {
             onOverview={goOverview}
             onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
             onClose={() => setSidebarOpen(false)}
+            onOpenPix={() => setPixModalOpen(true)}
           />
           ) : null}
         </div>
@@ -2026,6 +2049,7 @@ export default function Display() {
       {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
       <GridWallpaperModal open={gridWallpaperOpen} onClose={() => setGridWallpaperOpen(false)} lang={prefs.lang} />
       <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} />
+      <PixDonateModal open={pixModalOpen} onClose={() => setPixModalOpen(false)} />
     </div>
   );
 }

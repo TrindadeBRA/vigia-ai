@@ -309,7 +309,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-card-hover",
+          "flex min-w-0 max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-card-hover",
           wide ? "max-w-[720px]" : "max-w-[480px]",
         )}
         onClick={(e) => e.stopPropagation()}

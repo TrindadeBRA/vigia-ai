@@ -61,6 +61,15 @@ export function ClockIcon(props: { size?: number }) {
   );
 }
 
+export function ExternalLinkIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 3h6v6M10 14 21 3" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export function GitHubIcon(props: { size?: number }) {
   return (
     <Svg {...props} viewBox="0 0 16 16" fill="currentColor">
@@ -235,6 +244,17 @@ export function PlusCircleIcon(props: { size?: number; className?: string }) {
     <Svg {...props}>
       <circle cx={12} cy={12} r={8.5} stroke="currentColor" strokeWidth={2} />
       <path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function HeartIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M12 20.5s-7.5-4.6-10-9.3C.4 8 1.9 4.5 5.2 3.7 7.4 3.2 9.7 4 12 6.4c2.3-2.4 4.6-3.2 6.8-2.7 3.3.8 4.8 4.3 3.2 7.5-2.5 4.7-10 9.3-10 9.3Z"
+        fill="currentColor"
+      />
     </Svg>
   );
 }
