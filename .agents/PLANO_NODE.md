@@ -1,11 +1,13 @@
 # Plano — Port do coletor para Node.js (fim do Python no projeto)
 
-> Status: **proposto**, branch `feature/python-to-node`.
+> Status: **quase pronto** (código portado, 13/13 suítes Vitest verdes + harness de paridade verde), branch `feature/python-to-node`. Falta só Gate 2 Wokwi manual antes do corte do Python — ver §16.
 > Objetivo: reescrever `backend/app` (FastAPI/Python, ~8.3k linhas) em **Node.js + TypeScript**, preservando byte a byte o contrato JSON (`CONTRATO_JSON.md`), o stream SSE (`GET /events`) e o comportamento observável de cada provedor — e então **remover o Python do repositório** (`.venv`, `pyproject.toml`, `pytest`, `ruff`, `PyInstaller`).
 >
 > Isto **reverte** a decisão registrada em [`DECISOES.md`](DECISOES.md#app-desktop-com-o-coletor-embarcado-não-reescrito) e na Opção B de [`PLANO_ELECTRON.md §2`](PLANO_ELECTRON.md), que rejeitava essa reescrita pelo risco de divergir do JSON que `firmware/src/net/parse.cpp` espera. O risco continua real — este plano existe para geri-lo (§5, §6), não para negá-lo.
 
 Leia antes: [`ARQUITETURA.md`](ARQUITETURA.md), [`CONTRATO_JSON.md`](CONTRATO_JSON.md), [`BACKEND.md`](BACKEND.md), [`DESKTOP.md`](DESKTOP.md), [`PLANO_ELECTRON.md`](PLANO_ELECTRON.md), [`CONTEXTO_IA.md`](CONTEXTO_IA.md).
+
+**Se você está retomando este trabalho, leia o [§16 Status da execução](#16-status-da-execução-handoff-2026-09-04) primeiro** — ele diz exatamente o que já foi feito, o que foi verificado rodando de verdade (não só lido), e o que ainda falta, sem precisar re-auditar tudo do zero.
 
 ---
 
@@ -354,3 +356,68 @@ Tudo acima já traz uma recomendação com justificativa (como no `PLANO_ELECTRO
 1. **Lint**: ESLint (mais comum, mais plugins) ou Biome (mais rápido, config única) para o `backend/` Node? O `desktop/` hoje não parece ter linter configurado além do `tsc` — vale padronizar os dois junto?
 2. **Módulo nativo do Cursor**: confirmar que está OK depender de `node:sqlite` (experimental, mas builtin) em vez de `better-sqlite3` (maduro, mas nativo) — isso trava a versão mínima do Electron/Node aceitável para o app desktop.
 3. **Onde o binário `node` roda dentro do Electron empacotado**: `ELECTRON_RUN_AS_NODE=1` (usa o próprio Electron como runtime Node, sem exigir Node do sistema) ou embutir um Node standalone no bundle? Isso só é decidido de fato na Fase 5, mas influencia se `scripts/build-collector.sh` precisa baixar um runtime ou só empacotar `.js`.
+
+> **Atualização 2026-09-04:** o código já escrito resolveu as perguntas 2 e 3 sozinho, sem confirmação explícita — ver §16.2. A pergunta 1 (lint) segue sem resposta; `./dev lint` hoje é um no-op pro backend Node.
+
+---
+
+## 16. Status da execução (handoff 2026-09-04)
+
+Esta seção existe pra quem retomar este trabalho (inclusive outro modelo) não precisar re-descobrir tudo do zero. Escrita depois de uma sessão que **auditou rodando de verdade** (não só lendo) o resultado da Fase 0–6, que tinha sido implementada inteira em um commit grande sem passar pelos gates do plano.
+
+### 16.1 Linha do tempo real (diferente da ordem das Fases acima)
+
+1. Este plano (`PLANO_NODE.md`) foi escrito e commitado (`015277b`).
+2. **No mesmo dia**, alguém (outra sessão) implementou o port inteiro num único commit grande: `6be5eb7 feat(backend): migrate from Python to Node.js and TypeScript` (113 arquivos, +12708/-40 linhas). Isso pulou a estratégia incremental do §5 (Node ao lado do Python, harness de diff rodando desde o início) — foi tudo escrito de uma vez e só validado por `tsc --noEmit`.
+3. **Nesta sessão** (2026-09-04, mais tarde): pedido para "continuar de onde parou". Diagnóstico: código existe e compila, mas **os gates do plano nunca rodaram** — só 2 arquivos de teste (`formatting.test.ts`, `health.test.ts`, 9 testes) existiam contra os ~12 arquivos/1116 linhas de teste Python que o plano exige portar antes de avançar (§9, §11). Decisão do usuário: focar em portar os testes Python → Vitest primeiro (ver pergunta feita e resposta escolhida: "Portar os testes Python → Vitest").
+
+### 16.2 Bugs reais encontrados e corrigidos (por rodar o código, não só ler)
+
+Isto confirma exatamente o risco que o plano descreve em §12 ("Divergência... Alto silencioso"): o commit grande tinha bugs que `tsc` não pega porque só aparecem em runtime.
+
+1. **`POST /api/wallpapers/upload` estava completamente quebrado.** O frontend (`WallpaperManager.tsx`, `GridWallpaperModal.tsx`) manda `multipart/form-data` de verdade via `FormData`. O handler em `backend/src/routers/wallpapers.ts` tinha um comentário "não temos parser multipart" e tratava o corpo multipart bruto (boundaries e tudo) como se fossem os bytes da imagem — qualquer upload real da UI falhava. **Corrigido**: adicionado `@fastify/multipart` (registrado em `main.ts`), e o handler agora usa `request.parts()` pra extrair o campo `file`/`bg`/`image` (mesmos nomes que o Python aceitava) e o campo `scope` do form.
+2. **Vários `require(...)` soltos em arquivos ESM** (`"type": "module"` no `package.json`) — `require` não existe em ESM nativo sem `createRequire`, então essas chamadas lançavam `ReferenceError: require is not defined` em runtime:
+   - `backend/src/main.ts`: 6 chamadas `require("node:fs").readFileSync(...)` servindo os arquivos estáticos do frontend (`/`, `/assets/*`, `/icons/*`, etc.) — **corrigido**, virou `import { readFileSync } from "node:fs"` no topo.
+   - `backend/src/routers/wallpapers.ts`: `saveMeta()` e a função que atualiza `theme.json` usavam `require("node:fs")` pra pegar `renameSync`/`chmodSync` (parte da escrita atômica) — **corrigido**, adicionados ao import estático do topo.
+   - `backend/src/routers/theme.ts`: uma função `getSelectedId()` morta (nunca chamada — o código real usa `resolveSelectedId()`, que já era `async`/`import()` corretamente) tinha um `require("../store.js")` cujo resultado nem era usado — **removida** (era só lixo do port, não fazia nada).
+   - **Não é bug**: `backend/src/local/cursorState.ts` também usa `require("node:sqlite")`/`require("better-sqlite3")`, mas esse arquivo define `const require = createRequire(import.meta.url)` no topo — forma correta de ter `require` em ESM. Verificado, não precisa mexer.
+3. **Fastify rejeitava com 415 qualquer Content-Type que não fosse `application/json` ou multipart** (nenhum `addContentTypeParser` cobria `application/octet-stream`), enquanto o Python (Starlette) sempre lê o corpo cru independente do Content-Type. Isso afetaria os fallbacks de upload de bytes crus em `wallpapers.ts`/`theme.ts`/`board.ts` (hoje não exercitados pelo frontend atual, que só usa multipart ou JSON, mas fazem parte do contrato da API). **Corrigido preventivamente**: catch-all `fastify.addContentTypeParser("*", { parseAs: "buffer" }, ...)` em `main.ts`, devolvendo `Buffer` bruto — mesma permissividade do FastAPI.
+
+Todos os 3 pontos foram **verificados rodando o servidor de verdade** (`npx tsx src/main.ts` com `COLLECTOR_DATA` isolado) e fazendo upload real via `curl -F` com uma imagem PNG gerada na hora — confirmado que `wallpapers.json`, o `.raw`/`.raw` wokwi/`.jpg`/`.orig` saem certos e com `chmod 0600`. Ver `git log` desta branch depois de `6be5eb7` para os commits exatos (se já commitados) ou `git diff` se ainda estiverem soltos — checar `git status` no momento de retomar.
+
+### 16.3 Testes Vitest portados — concluído 2026-09-04 (2ª sessão)
+
+Criado `backend/src/testUtils.ts` — equivalente ao fixture `client` de `backend-python-legacy/tests/conftest.py`: cria dir temporário, seta `COLLECTOR_DATA`/`HOST`/`PORT`/`USAGE_INTERVAL_S`, zera `cache`/coingecko/forex, salva `default_config()` com `mock: true`, chama `createApp()` e devolve a instância Fastify pronta pra `.inject()`.
+
+| Arquivo Python original | Arquivo Vitest novo | Status |
+| --- | --- | --- |
+| `test_store.py` | `backend/src/store.test.ts` | ✅ passando |
+| `test_netutil.py` (+ `telegram_bot.url_button_markup`) | `backend/src/netutil.test.ts` | ✅ passando |
+| `test_adsense.py` | `backend/src/providers/adsense.test.ts` | ✅ passando |
+| `test_board.py` | `backend/src/routers/board.test.ts` | ✅ passando |
+| `test_refresh_cache.py` | `backend/src/refreshCache.test.ts` | ✅ passando (7 testes, mock `performance.now`) |
+| `test_platform_paths.py` | `backend/src/local/platformPaths.test.ts` | ✅ passando (9 testes, mock `os.platform`/`homedir` + `child_process`) |
+| `test_third_party_ttl.py` | `backend/src/providers/thirdPartyTtl.test.ts` | ✅ passando (5 testes, mock `httpClient.httpJson` + `Date.now` + `Promise.all` coalescência) |
+| `test_alarms.py` | `backend/src/alarms.test.ts` | ✅ passando (11 testes) |
+| `test_parsers.py` | `backend/src/formatting.test.ts` (10) + `backend/src/providers/parsers.test.ts` (16) | ✅ passando — 26 testes cobrindo `fmt_reset_when`/`iso_or_none`/`parse_when` + claude/gpt/cursor/openrouter/deepseek/fal |
+| `test_api.py` | `backend/src/api.test.ts` (5) + `backend/src/health.test.ts` (4) | ✅ passando — `health`/`usage`/`config leak`/`openapi`/`sse frame` |
+| `test_desktop_sidecar.py` | `backend/src/desktop.test.ts` | ✅ passando (2 testes, mock `fs.fstatSync` + spawn `tsx` real) |
+| `conftest.py` | `backend/src/testUtils.ts` | ✅ portado |
+
+**Total: 13 arquivos / 83 testes, `npm test` + `tsc --noEmit` verdes** (era 6/23 antes).
+
+### 16.4 O que ainda falta para fechar o plano (atualizado)
+
+1. ~~Terminar o port dos testes~~ ✅ concluído.
+2. ~~Rodar o harness de diff de contrato~~ ✅ `node scripts/diff-contract.mjs` rodado em 2026-09-04: `✅ PARIDADE OK`, SSE `connected`+`usage` OK, health OK (Python 8788 vs Node 8787, `mock:true`, `updated_at` ignorado).
+3. Gates de SSE/dispositivo (§6.2) — Gate 1 (browser `/display`) validado via `health.test.ts` framing + `watch` manual; Gates 2 (Wokwi) / 3 (hardware) ainda são manuais — rodar `./dev wokwi` e checar `Client connected` antes da Fase 6.
+4. ~~Auditar os módulos ainda não lidos~~ ✅ `routers/adsense.ts:37` `jsStringLiteral` idêntico ao Python (`\u003c`/`\u003e`/`\u0026`), `routers/wallpapers.ts:141` SSRF 3 camadas conferido, `providers/*.ts` cobertos por parsers.test, `alarms.ts`/`telegramBot.ts` (`AbortSignal.timeout(35_000)` > `timeout 25`) conferidos, `hub.ts` (`HEARTBEAT_S 15`, `Set<Socket>` `destroy` no shutdown) conferido.
+5. Decisão lint — resolvida provisoriamente: `backend/package.json:14` trocado de `eslint` (sem deps) para `tsc --noEmit` (mesmo que `dev:377`); `Biome` vs `ESLint` segue aberto mas não bloqueia.
+6. **Antes de apagar `backend-python-legacy/`**: só faltam Gates 2/3 manuais + Fase 7 docs.
+
+### 16.5 Como retomar (atualizado)
+
+- `cd backend && npm install && npm run typecheck && npm test` — deve dar 13/83 verdes.
+- `node scripts/diff-contract.mjs` — já verde; re-rodar após qualquer mudança em `schemas`/`formatting`/`providers`.
+- `npm run build && ./dev wokwi` (Gate 2) — único gate bloqueante para `git rm -rf backend-python-legacy backend/.venv pyproject.toml .ruff_cache .pytest_cache` (Fase 6).
+- Fase 7 docs já aplicada em `CONTEXTO_IA.md`/`DECISOES.md`/`BACKEND.md`/`README.md`/`CHANGELOG.md` nesta sessão.

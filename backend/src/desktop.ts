@@ -1,5 +1,5 @@
 import net from "node:net";
-import fs from "node:fs";
+import * as fs from "node:fs";
 import { VERSION } from "./version.js";
 import { dataDir } from "./config.js";
 import { lanIPv4 } from "./netutil.js";
@@ -17,7 +17,7 @@ function emit(prefix: string, payload: Record<string, unknown>) {
   process.stdout.write(prefix + JSON.stringify(payload) + "\n");
 }
 
-function isParentPipe(): boolean {
+export function isParentPipe(): boolean {
   if ((process.env.VIGIA_WATCH_STDIN || "").trim() === "0") return false;
   try {
     const stat = fs.fstatSync(0);
@@ -26,6 +26,7 @@ function isParentPipe(): boolean {
     return false;
   }
 }
+export const _parentPipe = isParentPipe;
 
 async function bind(host: string, port: number): Promise<net.Server> {
   return new Promise((resolve, reject) => {

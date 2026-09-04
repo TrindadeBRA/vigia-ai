@@ -6,6 +6,19 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- **Coletor em Node.js** — port completo de `backend/app` (FastAPI/Python, ~8.3k linhas) para **Node 22 LTS + Fastify + Zod + Vitest** (`backend/src/`, ver `PLANO_NODE.md`). Mesma árvore de responsabilidades, mesmo contrato JSON (`CONTRATO_JSON.md`) e mesmo framing SSE (`GET /events`), mas sem PyInstaller: bundle `esbuild` + `node:sqlite` builtin + `jimp` puro JS. Harness `scripts/diff-contract.mjs` compara `GET /usage` byte-a-byte entre `backend-python-legacy/` (8788) e Node (8787) — paridade OK.
+- 83 testes Vitest (`backend/src/*.test.ts`) portados 1:1 de `backend-python-legacy/tests/*.py` (12 arquivos, ~1.1k linhas) — `pytest` → `vitest`, `TestClient` → `app.inject()`.
+- `scripts/build-collector.sh` (esbuild) substitui `scripts/build-sidecar.sh` (PyInstaller `--onedir` ~54 MB por SO).
+
+### Changed
+
+- `Dockerfile` single-stage `node:20-alpine` (build frontend + runtime backend) — remove `python:3.12-slim`.
+- `./dev` — `ensure_python()` → `ensure_backend_node()`, `run_backend()` `node dist/main.js`, `cmd_test` `vitest` + `tsc` (backend/frontend/desktop), `cmd_lint` `tsc --noEmit`.
+- `desktop/src/sidecar.ts` / `paths.ts` — `ELECTRON_RUN_AS_NODE=1` e `collectorBundle()` (`backend/dist/desktop.js`) em vez do binário PyInstaller; `devCollector()` fallback `backend/src/desktop.ts` via `tsx`.
+- `README.md` / `.agents/CONTEXTO_IA.md` / `.agents/BACKEND.md` / `.agents/DECISOES.md` — revertem Opção B do `PLANO_ELECTRON.md` (coletor não reescrito) e documentam o port Node.
+
+### Added
+
 - Provedor **GPT** (cota da assinatura ChatGPT / Codex CLI via `~/.codex/auth.json` e `GET /backend-api/wham/usage`). Card no firmware, no mostrador e no painel.
 - Template de issue de feature.
 - **Alarmes + Telegram** (`/display/alarms`): regras de provedor + métrica + limiar, edge-triggered, disparando mensagem no Telegram quando cruzadas. Nome sugerido automaticamente e edição inline das regras — ver `.agents/NOTIFICACOES.md`.

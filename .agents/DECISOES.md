@@ -66,15 +66,13 @@ Firmware e `/display` continuam recebendo o JSON a cada `USAGE_INTERVAL_S`. O co
 
 Web Push exigia HTTPS, service worker e chaves VAPID — frágil em LAN (`127.0.0.1`) e em iOS. **Telegram** funciona em qualquer aparelho com o app, token do bot configurado no painel (`/display/alarms`), long-polling sem webhook público. Um bot por instalação; chats registrados via `/start`. Detalhes: [`NOTIFICACOES.md`](NOTIFICACOES.md).
 
-## App desktop com o coletor embarcado, não reescrito
+## App desktop com o coletor embarcado — reescrito em Node (reverte decisão anterior)
 
-O Electron sobe o **mesmo** coletor FastAPI como processo filho e a janela
-carrega `http://127.0.0.1:<porta>/display` — o endereço que o navegador e a
-placa já usam. Reescrever os provedores em Node teria dado um instalador ~70 MB
-menor e um só runtime, mas custaria reimplementar OAuth do Claude, leitura do
-Keychain, o `state.vscdb` do Cursor e a conversão RGB565, com risco de mudar
-sutilmente o JSON que `firmware/src/net/parse.cpp` parseia. Ver
-[PLANO_ELECTRON.md](PLANO_ELECTRON.md).
+**Reverte** a decisão anterior documentada acima e em `PLANO_ELECTRON.md` Opção B.
+
+O Electron continua subindo o coletor como processo filho na mesma porta, mas o coletor deixou de ser Python/FastAPI e virou **Node 22 + Fastify** (`backend/src/`, ver `PLANO_NODE.md`). Motivo: o app já é 100% Node — eliminar o PyInstaller remove binário de ~54 MB por SO, falso-positivo de antivírus e compilação por plataforma, e o hub SSE simplifica para `Promise.all` (ver `PLANO_NODE.md §1.5`).
+
+O risco de divergir do JSON que `firmware/src/net/parse.cpp` espera foi mitigado com testes Vitest 1:1 (`backend/src/*.test.ts` vs `backend-python-legacy/tests/*.py`, 83 testes), harness de diff byte-a-byte (`scripts/diff-contract.mjs`) e gates SSE (§6). `sharp` foi evitado em favor de `jimp` puro JS para não reintroduzir módulo nativo por ABI do Electron (§2.3). Escolha original (Python) preservada em `backend-python-legacy/` até Fase 6.
 
 ## A porta do app não é sorteada
 

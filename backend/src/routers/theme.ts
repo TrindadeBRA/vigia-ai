@@ -48,16 +48,6 @@ function partition(s: string, sep: string): [string, string, string] {
   return [s.slice(0, idx), sep, s.slice(idx + sep.length)];
 }
 
-function getSelectedId(): string | null {
-  // import dynamically to avoid circular
-  try {
-    // wallpapers meta logic simplified: read config wallpapers selected_id
-    const { load } = require("../store.js");
-    // fallback via reading store directly
-  } catch {}
-  return null;
-}
-
 export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/theme", async () => {
     let theme: string | null = null;

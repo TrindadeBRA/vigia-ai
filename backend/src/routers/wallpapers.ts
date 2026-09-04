@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync, renameSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { lookup } from "node:dns/promises";
@@ -35,7 +35,6 @@ function saveMeta(meta: Record<string, unknown>): void {
   const p = wallpapersMetaPath();
   const tmp = p + ".tmp";
   writeFileSync(tmp, JSON.stringify(meta, null, 2) + "\n", "utf-8");
-  const { renameSync, chmodSync } = require("node:fs") as typeof import("node:fs");
   renameSync(tmp, p);
   try { chmodSync(p, 0o600); } catch {}
 }
@@ -134,7 +133,6 @@ function patchThemeBackgroundType(kind: string): void {
     else { bg.type = kind; raw.background = bg; }
     const tmp = p + ".tmp";
     writeFileSync(tmp, JSON.stringify(raw) + "\n", "utf-8");
-    const { renameSync } = require("node:fs") as typeof import("node:fs");
     renameSync(tmp, p);
   } catch {}
 }
@@ -441,15 +439,33 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     let previewBytes: Buffer | null = null;
 
     if (contentType.includes("multipart/form-data")) {
-      // For simplicity, we don't have multipart parser; fallback to raw body handling
-      const bodyBuf = await getRawBody(request);
-      if (!bodyBuf || bodyBuf.length === 0) return reply.code(400).send({ ok: false, error: "campo file/bg/image obrigatório" });
-      // Try treat as image bytes directly
+      // Campo "file", "bg" (compat tema) ou "image"; "scope" pode vir no form também.
+      let fileBuf: Buffer | null = null;
+      let formScope: string | null = null;
+      const anyRequest = request as unknown as {
+        parts: () => AsyncIterableIterator<
+          | { type: "file"; fieldname: string; toBuffer: () => Promise<Buffer> }
+          | { type: "field"; fieldname: string; value: unknown }
+        >;
+      };
+      for await (const part of anyRequest.parts()) {
+        if (part.type === "file") {
+          if (!fileBuf && ["file", "bg", "image"].includes(part.fieldname)) {
+            fileBuf = await part.toBuffer();
+          } else {
+            await part.toBuffer();
+          }
+        } else if (part.fieldname === "scope") {
+          formScope = String(part.value ?? "").trim();
+        }
+      }
+      if (!scopeParam && (formScope === "theme" || formScope === "grid")) scopeParam = formScope;
+      if (!fileBuf || fileBuf.length === 0) return reply.code(400).send({ ok: false, error: "campo file/bg/image obrigatório" });
       try {
-        rawBytes = await imageToRaw(bodyBuf, targetW, targetH);
+        rawBytes = await imageToRaw(fileBuf, targetW, targetH);
         previewBytes = await rawToPreview(rawBytes, targetW, targetH);
         mkdirSync(wallpapersDir(), { recursive: true });
-        writeFileSync(wallpaperOrigPath(wid), bodyBuf);
+        writeFileSync(wallpaperOrigPath(wid), fileBuf);
       } catch (e) {
         return reply.code(400).send({ ok: false, error: `imagem inválida: ${e}` });
       }

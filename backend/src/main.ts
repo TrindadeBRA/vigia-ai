@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import multipart from "@fastify/multipart";
 import { VERSION } from "./version.js";
 import { lanIPv4 } from "./netutil.js";
 import { load } from "./store.js";
@@ -15,7 +16,7 @@ import { createCurrenciesRoutes } from "./routers/currencies.js";
 import { UsageHub } from "./hub.js";
 import { AlarmEngine } from "./alarms.js";
 import { TelegramPoller } from "./telegramPoller.js";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,6 +44,19 @@ export async function createApp() {
   const port = parseInt(process.env.PORT || String((cfg.listen as any)?.port || 8787), 10);
 
   const fastify = Fastify({ logger: false });
+
+  await fastify.register(multipart, {
+    limits: { fileSize: 15_000_000, files: 1 },
+  });
+
+  // FastAPI/Starlette liam o corpo cru independente do Content-Type; os
+  // parsers padrão do Fastify só cobrem json e (via plugin) multipart, e
+  // rejeitam qualquer outro tipo com 415 antes de chegar no handler. O
+  // catch-all abaixo devolve Buffer bruto pros routers que fazem upload de
+  // bytes (wallpapers RAW, theme, board) — mesma permissividade do Python.
+  fastify.addContentTypeParser("*", { parseAs: "buffer" }, (_req, body, done) => {
+    done(null, body);
+  });
 
   // SSE-aware headers: /events keep-alive, others close+no-store
   fastify.addHook("onSend", async (request, reply, payload) => {
@@ -97,7 +111,7 @@ export async function createApp() {
     const sendFile = (reply: any, file: string, ct?: string) => {
       const p = resolve(join(dist, file));
       if (!existsSync(p) || !statSync(p).isFile()) return reply.code(404).send({ ok: false, error: "not found" });
-      const data = require("node:fs").readFileSync(p);
+      const data = readFileSync(p);
       if (ct) reply.header("Content-Type", ct);
       else if (file.endsWith(".js")) reply.header("Content-Type", "application/javascript");
       else if (file.endsWith(".css")) reply.header("Content-Type", "text/css");
@@ -108,7 +122,7 @@ export async function createApp() {
     const serveIndex = (_req: any, reply: any) => {
       const p = join(dist, "index.html");
       if (!existsSync(p)) return reply.code(404).send({ ok: false, error: "not found" });
-      const data = require("node:fs").readFileSync(p);
+      const data = readFileSync(p);
       reply.header("Content-Type", "text/html");
       return reply.send(data);
     };
@@ -126,7 +140,7 @@ export async function createApp() {
       const p = resolve(join(dist, path));
       const root = resolve(dist);
       if (!p.startsWith(root) || !existsSync(p) || !statSync(p).isFile()) return reply.code(404).send({ ok: false, error: "not found" });
-      const data = require("node:fs").readFileSync(p);
+      const data = readFileSync(p);
       if (path.endsWith(".js")) reply.header("Content-Type", "application/javascript");
       else if (path.endsWith(".css")) reply.header("Content-Type", "text/css");
       return reply.send(data);
@@ -136,7 +150,7 @@ export async function createApp() {
       const p = resolve(join(dist, path));
       const root = resolve(dist);
       if (!p.startsWith(root) || !existsSync(p) || !statSync(p).isFile()) return reply.code(404).send({ ok: false, error: "not found" });
-      return reply.send(require("node:fs").readFileSync(p));
+      return reply.send(readFileSync(p));
     });
     fastify.get("/:staticName", async (req: any, reply: any) => {
       const name: string = req.params.staticName;
@@ -149,7 +163,7 @@ export async function createApp() {
         return reply.code(404).send({ ok: false, error: "not found" });
       }
       const ct = name.endsWith(".webmanifest") ? "application/manifest+json" : undefined;
-      const data = require("node:fs").readFileSync(p);
+      const data = readFileSync(p);
       if (ct) reply.header("Content-Type", ct);
       return reply.send(data);
     });
@@ -159,7 +173,7 @@ export async function createApp() {
         const p = join(dist, "index.html");
         if (existsSync(p)) {
           reply.header("Content-Type", "text/html");
-          return reply.send(require("node:fs").readFileSync(p));
+          return reply.send(readFileSync(p));
         }
       }
       return reply.code(404).send({ ok: false, error: "not found" });
