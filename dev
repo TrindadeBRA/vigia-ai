@@ -377,8 +377,12 @@ cmd_test() {
 cmd_lint() {
   ensure_backend_node
   if [ -f "$ROOT_DIR/backend/package.json" ]; then
-    echo "(lint backend: tsc já roda em ./dev test — adicione eslint se necessário)"
-    (cd "$ROOT_DIR/backend" && npx tsc --noEmit)
+    (cd "$ROOT_DIR/backend" && npm run lint)
+  fi
+  ensure_node
+  (cd "$ROOT_DIR/frontend" && npx tsc --noEmit)
+  if [ -d "$ROOT_DIR/desktop/node_modules" ]; then
+    (cd "$ROOT_DIR/desktop" && npm run typecheck 2>&1 | head -n 20)
   fi
 }
 

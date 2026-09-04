@@ -22,11 +22,6 @@ backend/data/*.json.tmp
 backend/data/theme_bg.raw
 backend/data/wallpapers/
 backend/data/wallpapers.json
-backend-python-legacy/data/*.json
-backend-python-legacy/data/*.json.tmp
-backend-python-legacy/data/theme_bg.raw
-backend-python-legacy/data/wallpapers/
-backend-python-legacy/data/wallpapers.json
 # Node dependencies - ignora qualquer node_modules em qualquer subpasta
 **/node_modules/
 node_modules/
