@@ -44,7 +44,11 @@ mac:
     NSHighResolutionCapable: true
 
 dmg:
-  title: Vigia AI ${version}
+  # ${arch} no título não é cosmético: são dois DMGs (arm64 e x64) e o
+  # electron-builder monta cada um para copiar o conteúdo. Com o mesmo
+  # nome, o segundo vira "Vigia AI 1.0.1 1" e o `hdiutil detach` do
+  # caminho esperado falha, derrubando o build inteiro.
+  title: Vigia AI ${version}${arch}
   contents:
     - x: 140
       y: 200
