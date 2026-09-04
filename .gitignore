@@ -33,5 +33,7 @@ desktop/node_modules
 desktop/out
 desktop/resources/sidecar
 desktop/resources/wwwroot
-build/sidecar
+# residuo do PyInstaller (build/pyinstaller). Ancorado na raiz para nao
+# pegar desktop/build/, que tem os icones e o entitlements versionados.
+/build/
 *.spec
