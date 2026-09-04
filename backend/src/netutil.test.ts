@@ -7,7 +7,7 @@ vi.mock("node:os", async (importOriginal) => {
 
 import * as os from "node:os";
 import { displayLanUrl, panelLanUrl } from "./netutil.js";
-import { urlButtonMarkup } from "./telegramBot.js";
+import { urlButtonMarkup } from "./telegram/bot.js";
 
 function ipv4Interface(address: string): NodeJS.Dict<os.NetworkInterfaceInfo[]> {
   return {

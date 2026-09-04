@@ -1,6 +1,6 @@
 # Backend (coletor)
 
-Node 22 + Fastify em `backend/` (port do Python/FastAPI — ver `PLANO_NODE.md`). Sobe em `0.0.0.0:8787`.
+Node 22 + Fastify em `backend/` (port do Python/FastAPI). Sobe em `0.0.0.0:8787`.
 
 ```bash
 ./dev up                 # + frontend Vite

@@ -1,4 +1,4 @@
-import { getBotToken, pollOnce } from "./telegramBot.js";
+import { getBotToken, pollOnce } from "./bot.js";
 
 export class TelegramPoller {
   private _task: Promise<void> | null = null;

@@ -6,7 +6,7 @@ Cotas são da conta pessoal. Evita hospedar JWT/OAuth. LAN é suficiente para um
 
 ## Fastify (Node 22) no host, não stdlib pura
 
-O protótipo usava `http.server`, depois **FastAPI + Uvicorn** (Python). O coletor oficial hoje é **Fastify (Node 22) + Zod** (port do FastAPI/Pydantic, ver `PLANO_NODE.md`): OpenAPI em `/docs`, schemas Zod = contrato, vitest. Tokens continuam só no host.
+O protótipo usava `http.server`, depois **FastAPI + Uvicorn** (Python). O coletor oficial hoje é **Fastify (Node 22) + Zod** (port do FastAPI/Pydantic): OpenAPI em `/docs`, schemas Zod = contrato, vitest. Tokens continuam só no host.
 
 ## Um app React, duas rotas
 
@@ -68,9 +68,9 @@ Web Push exigia HTTPS, service worker e chaves VAPID — frágil em LAN (`127.0.
 
 ## App desktop com o coletor embarcado — reescrito em Node (reverte decisão anterior)
 
-**Reverte** a decisão anterior documentada acima e em `PLANO_ELECTRON.md` Opção B.
+**Reverte** a decisão anterior documentada acima (Opção B: reescrever o coletor em Node havia sido rejeitada no port do Electron).
 
-O Electron continua subindo o coletor como processo filho na mesma porta, mas o coletor deixou de ser Python/FastAPI e virou **Node 22 + Fastify** (`backend/src/`, ver `PLANO_NODE.md`). Motivo: o app já é 100% Node — eliminar o PyInstaller remove binário de ~54 MB por SO, falso-positivo de antivírus e compilação por plataforma, e o hub SSE simplifica para `Promise.all` (ver `PLANO_NODE.md §1.5`).
+O Electron continua subindo o coletor como processo filho na mesma porta, mas o coletor deixou de ser Python/FastAPI e virou **Node 22 + Fastify** (`backend/src/`). Motivo: o app já é 100% Node — eliminar o PyInstaller remove binário de ~54 MB por SO, falso-positivo de antivírus e compilação por plataforma, e o hub SSE simplifica para `Promise.all`.
 
 O risco de divergir do JSON que `firmware/src/net/parse.cpp` espera foi mitigado com testes Vitest 1:1 (`backend/src/*.test.ts` vs `backend-python-legacy/tests/*.py`, 83 testes), harness de diff byte-a-byte (`scripts/diff-contract.mjs`) e gates SSE (§6). `sharp` foi evitado em favor de `jimp` puro JS para não reintroduzir módulo nativo por ABI do Electron (§2.3). Escolha original (Python) preservada em `backend-python-legacy/` até Fase 6.
 

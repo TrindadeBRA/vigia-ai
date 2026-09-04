@@ -1,6 +1,6 @@
-import { fmtResetWhen } from "./formatting.js";
-import { load } from "./store.js";
-import { displayLanUrl } from "./netutil.js";
+import { fmtResetWhen } from "../formatting.js";
+import { load } from "../store.js";
+import { displayLanUrl } from "../netutil.js";
 
 export const METRICS: Record<string, Array<[string, string, string]>> = {
   claude: [
@@ -194,7 +194,7 @@ export class AlarmEngine {
     const events = evaluate(payload, rules, this._armed);
     if (events.length === 0) return;
     void (async () => {
-      const { broadcast } = await import("./telegramBot.js");
+      const { broadcast } = await import("../telegram/bot.js");
       const port = Number(((cfg.listen as Record<string, unknown>) ?? {}).port ?? 8787);
       const displayUrl = displayLanUrl(port) || null;
       for (const event of events) {

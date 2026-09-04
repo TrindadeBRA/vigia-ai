@@ -4,7 +4,7 @@ O Vigia AI roda como aplicativo em Linux, macOS e Windows. É o **mesmo produto*
 o app embarca o coletor Fastify (Node 22) e a janela carrega `http://127.0.0.1:<porta>/display`,
 o endereço que o navegador e a ESP32 já usavam.
 
-Plano completo: [`PLANO_ELECTRON.md`](PLANO_ELECTRON.md). Decisões: [`DECISOES.md`](DECISOES.md).
+Decisões: [`DECISOES.md`](DECISOES.md).
 
 ## Instalar
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluate, formatAlarmNotification } from "./alarms.js";
+import { evaluate, formatAlarmNotification } from "./engine.js";
 
 function payload(claudePercent: number, ok = true): Record<string, unknown> {
   return {

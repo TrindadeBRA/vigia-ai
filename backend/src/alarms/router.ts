@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { catalogPublic, metricKind } from "../alarms.js";
+import { catalogPublic, metricKind } from "./engine.js";
 import { load, updateSync as update } from "../store.js";
 
 export async function createAlarmsRoutes(app: FastifyInstance): Promise<void> {

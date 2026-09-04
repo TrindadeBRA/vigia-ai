@@ -1,5 +1,5 @@
-import { logNotification } from "./httpClient.js";
-import { load, updateSync as update } from "./store.js";
+import { logNotification } from "../httpClient.js";
+import { load, updateSync as update } from "../store.js";
 
 export const TELEGRAM_API = "https://api.telegram.org";
 export const TELEGRAM_LOG_MESSAGE = `${TELEGRAM_API}/bot/sendMessage`;

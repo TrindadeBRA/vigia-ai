@@ -30,7 +30,7 @@ flowchart TB
 
         Credenciais --> Providers
 
-        subgraph Endpoints["Endpoints JSON sem Bearer — CONTRATO_JSON.md / schemas.ts (Zod)"]
+        subgraph Endpoints["Endpoints JSON sem Bearer — CONTRATO_JSON.md / schemas/ (Zod)"]
             E1["GET /events<br/>SSE — stream a cada 60s<br/>last-good"]
             E2["GET /usage<br/>força ciclo cotas"]
             E3["GET /docs<br/>Swagger"]

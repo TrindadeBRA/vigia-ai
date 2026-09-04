@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import * as telegramBot from "../telegramBot.js";
+import * as telegramBot from "./bot.js";
 import { displayLanUrl } from "../netutil.js";
 import { load } from "../store.js";
 

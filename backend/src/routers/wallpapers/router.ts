@@ -1,15 +1,16 @@
 import type { FastifyInstance } from "fastify";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync, renameSync, chmodSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, renameSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
-import { dataDir } from "../config.js";
-import { load, updateSync as update } from "../store.js";
+import { dataDir } from "../../config.js";
+import { load, updateSync as update } from "../../store.js";
+import { downloadImage, httpJson } from "./ssrfGuard.js";
+import { imageToRaw, rawToPreview } from "./rgb565.js";
+
+export { isBlockedHost, isBlockedIp, validatePublicUrl, downloadImage, httpJson } from "./ssrfGuard.js";
+export { imageToRaw, rawToPreview } from "./rgb565.js";
 
 const MAX_BG_BYTES = 400_000;
-const MAX_PREVIEW_BYTES = 500_000;
-const MAX_DOWNLOAD_BYTES = 10_000_000;
 
 // ---------- paths ----------
 function wallpapersDir(): string { return join(dataDir(), "wallpapers"); }
@@ -135,242 +136,6 @@ function patchThemeBackgroundType(kind: string): void {
     writeFileSync(tmp, JSON.stringify(raw) + "\n", "utf-8");
     renameSync(tmp, p);
   } catch {}
-}
-
-// ---------- SSRF guard ----------
-async function isBlockedHost(hostname: string): Promise<boolean> {
-  const host = (hostname ?? "").trim().toLowerCase().replace(/\.$/, "");
-  if (!host || host === "localhost") return true;
-  let addresses: Array<{ address: string; family: number }>;
-  try {
-    addresses = await lookup(host, { all: true });
-  } catch {
-    return true;
-  }
-  for (const info of addresses) {
-    const rawIp = info.address.split("%")[0];
-    const fam = isIP(rawIp);
-    if (!fam) return true;
-    if (isBlockedIp(rawIp)) return true;
-  }
-  return false;
-}
-function isBlockedIp(ip: string): boolean {
-  // IPv4 checks
-  if (isIP(ip) === 4) {
-    const parts = ip.split(".").map((x) => parseInt(x, 10));
-    if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return true;
-    const [a, b] = parts;
-    // private 10.0.0.0/8
-    if (a === 10) return true;
-    // 172.16.0.0/12
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    // 192.168.0.0/16
-    if (a === 192 && b === 168) return true;
-    // loopback 127.0.0.0/8
-    if (a === 127) return true;
-    // link-local 169.254.0.0/16
-    if (a === 169 && b === 254) return true;
-    // unspecified 0.0.0.0/8
-    if (a === 0) return true;
-    // multicast 224.0.0.0/4
-    if (a >= 224 && a <= 239) return true;
-    // reserved 240.0.0.0/4
-    if (a >= 240) return true;
-    // broadcast 255.255.255.255
-    if (ip === "255.255.255.255") return true;
-    return false;
-  }
-  if (isIP(ip) === 6) {
-    const low = ip.toLowerCase();
-    if (low === "::1" || low === "::") return true;
-    if (low.startsWith("fe80:")) return true; // link-local
-    if (low.startsWith("fc") || low.startsWith("fd")) return true; // unique local
-    if (low.startsWith("ff")) return true; // multicast
-    if (low === "::ffff:127.0.0.1") return true;
-    // unspecified :: already handled
-    return false;
-  }
-  return true;
-}
-async function validatePublicUrl(url: string): Promise<void> {
-  let parsed: URL;
-  try { parsed = new URL(url); } catch { throw Object.assign(new Error("URL deve ser http:// ou https://"), { statusCode: 400 }); }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw Object.assign(new Error("URL deve ser http:// ou https://"), { statusCode: 400 });
-  if (!parsed.hostname || await isBlockedHost(parsed.hostname)) throw Object.assign(new Error("host da URL não permitido"), { statusCode: 400 });
-}
-
-// fetch with manual redirect revalidation per hop and 10MB limit via stream truncation
-async function downloadImage(url: string, timeout = 15_000): Promise<Buffer> {
-  await validatePublicUrl(url);
-  let current = url;
-  let redirects = 0;
-  const maxRedirects = 5;
-  while (true) {
-    const resp = await fetch(current, {
-      headers: { "User-Agent": "Mozilla/5.0 (VigiaAI/1.0)" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(timeout),
-    });
-    if (resp.status >= 300 && resp.status < 400) {
-      const loc = resp.headers.get("location");
-      if (!loc) throw Object.assign(new Error(`falha ao baixar imagem: redirect sem location`), { statusCode: 502 });
-      const next = new URL(loc, current).toString();
-      await validatePublicUrl(next);
-      current = next;
-      redirects++;
-      if (redirects > maxRedirects) throw Object.assign(new Error("muitos redirects"), { statusCode: 502 });
-      continue;
-    }
-    if (!resp.ok) {
-      throw Object.assign(new Error(`falha ao baixar imagem: HTTP ${resp.status}`), { statusCode: 502 });
-    }
-    // 10MB limit via stream truncation: check content-length then read
-    const cl = resp.headers.get("content-length");
-    if (cl && parseInt(cl, 10) > MAX_DOWNLOAD_BYTES) throw Object.assign(new Error("imagem muito grande"), { statusCode: 413 });
-    // read with limit
-    const reader = resp.body?.getReader();
-    if (reader) {
-      const chunks: Uint8Array[] = [];
-      let total = 0;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-          total += value.byteLength;
-          if (total > MAX_DOWNLOAD_BYTES) throw Object.assign(new Error("imagem muito grande"), { statusCode: 413 });
-          chunks.push(value);
-        }
-      }
-      const buf = Buffer.concat(chunks.map((c) => Buffer.from(c)));
-      return buf;
-    } else {
-      const buf = Buffer.from(await resp.arrayBuffer());
-      if (buf.byteLength > MAX_DOWNLOAD_BYTES) throw Object.assign(new Error("imagem muito grande"), { statusCode: 413 });
-      return buf;
-    }
-  }
-}
-async function httpJson(url: string, headers: Record<string, string> = {}, timeout = 15_000): Promise<unknown> {
-  await validatePublicUrl(url);
-  let current = url;
-  let redirects = 0;
-  while (true) {
-    const resp = await fetch(current, {
-      headers: { ...headers, "User-Agent": headers["User-Agent"] ?? "Mozilla/5.0 (VigiaAI/1.0)" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(timeout),
-    });
-    if (resp.status >= 300 && resp.status < 400) {
-      const loc = resp.headers.get("location");
-      if (!loc) throw new Error(`redirect sem location`);
-      const next = new URL(loc, current).toString();
-      await validatePublicUrl(next);
-      current = next;
-      redirects++;
-      if (redirects > 5) throw new Error("muitos redirects");
-      continue;
-    }
-    if (!resp.ok) {
-      const body = await resp.text().catch(() => "");
-      throw Object.assign(new Error(`API erro ${resp.status}: ${body.slice(0, 500)}`), { statusCode: resp.status });
-    }
-    const raw = await resp.text();
-    try { return JSON.parse(raw); } catch (e) { throw Object.assign(new Error(`API JSON inválido: ${e}`), { statusCode: 502 }); }
-  }
-}
-
-// ---------- image conversion ----------
-export async function imageToRaw(imageBytes: Buffer, targetW: number, targetH: number): Promise<Buffer> {
-  let Jimp: unknown;
-  try {
-    const mod = await import("jimp");
-    Jimp = (mod as Record<string, unknown>).default ?? mod;
-  } catch {
-    throw Object.assign(new Error("Jimp não instalado no coletor"), { statusCode: 500 });
-  }
-  const JimpClass = Jimp as unknown as { read: (b: Buffer) => Promise<unknown> };
-  try {
-    const img = await JimpClass.read(imageBytes);
-    // cover crop: resize to cover target, then crop
-    // Jimp has cover method
-    const anyImg = img as unknown as { cover: (w: number, h: number) => unknown; bitmap: { width: number; height: number }; getPixelColor: (x: number, y: number) => number };
-    if (typeof anyImg.cover === "function") {
-      anyImg.cover(targetW, targetH);
-    } else {
-      // fallback manual
-      const iw = anyImg.bitmap.width;
-      const ih = anyImg.bitmap.height;
-      const scale = Math.max(targetW / iw, targetH / ih);
-      const nw = Math.round(iw * scale);
-      const nh = Math.round(ih * scale);
-      (img as unknown as { resize: (w: number, h: number) => void }).resize(nw, nh);
-      const left = Math.floor((nw - targetW) / 2);
-      const top = Math.floor((nh - targetH) / 2);
-      (img as unknown as { crop: (x: number, y: number, w: number, h: number) => void }).crop(left, top, targetW, targetH);
-    }
-    const out = Buffer.alloc(targetW * targetH * 2);
-    let idx = 0;
-    for (let y = 0; y < targetH; y++) {
-      for (let x = 0; x < targetW; x++) {
-        const color = anyImg.getPixelColor(x, y);
-        // Jimp color is 0xRRGGBBAA
-        const r = (color >>> 24) & 0xff;
-        const g = (color >>> 16) & 0xff;
-        const b = (color >>> 8) & 0xff;
-        const v = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
-        out[idx] = v & 0xff;
-        out[idx + 1] = (v >> 8) & 0xff;
-        idx += 2;
-      }
-    }
-    return out;
-  } catch (e) {
-    if ((e as { statusCode?: number }).statusCode) throw e;
-    throw Object.assign(new Error(`falha ao converter imagem: ${e}`), { statusCode: 400 });
-  }
-}
-
-export async function rawToPreview(rawBytes: Buffer, w: number, h: number): Promise<Buffer> {
-  try {
-    const mod = await import("jimp");
-    const Jimp = (mod as Record<string, unknown>).default ?? mod as unknown as { create: (w: number, h: number) => Promise<unknown> };
-    // Use Jimp constructor alternative: new Jimp(w,h)
-    const JimpCtor = Jimp as unknown as new (w: number, h: number) => { bitmap: { data: Buffer }; setPixelColor: (c: number, x: number, y: number) => void; getBufferAsync: (mime: string) => Promise<Buffer> };
-    let img: unknown;
-    try {
-      img = new JimpCtor(w, h);
-    } catch {
-      // alternative via Jimp.create
-      const anyJimp = Jimp as unknown as { create: (w: number, h: number) => Promise<unknown> };
-      if (typeof anyJimp.create === "function") img = await anyJimp.create(w, h);
-      else return Buffer.alloc(0);
-    }
-    const anyImg = img as unknown as { setPixelColor: (c: number, x: number, y: number) => void; getBufferAsync: (mime: string) => Promise<Buffer> };
-    let idx = 0;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const lo = rawBytes[idx];
-        const hi = rawBytes[idx + 1];
-        const v = lo | (hi << 8);
-        let r = (v >> 11) & 0x1f;
-        let g = (v >> 5) & 0x3f;
-        let b = v & 0x1f;
-        r = (r << 3) | (r >> 2);
-        g = (g << 2) | (g >> 4);
-        b = (b << 3) | (b >> 2);
-        // Jimp color: 0xRRGGBBAA, alpha 255
-        const color = (r << 24) | (g << 16) | (b << 8) | 0xff;
-        anyImg.setPixelColor(color >>> 0, x, y);
-        idx += 2;
-      }
-    }
-    const mime = "image/jpeg";
-    const buf = await anyImg.getBufferAsync(mime as unknown as string);
-    return Buffer.from(buf);
-  } catch {
-    return Buffer.alloc(0);
-  }
 }
 
 export async function createWallpapersRoutes(app: FastifyInstance): Promise<void> {
@@ -499,12 +264,6 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
         // downscale to 160x120 via rawToPreview then imageToRaw or direct via Jimp resize
         const preview = await rawToPreview(rawBytes, 240, 160);
         // Use Jimp to resize preview to 160x120 then back to raw
-        const mod = await import("jimp");
-        const Jimp = (mod as Record<string, unknown>).default ?? mod as unknown as { read: (b: Buffer) => Promise<unknown> };
-        const img = await (Jimp as unknown as { read: (b: Buffer) => Promise<{ resize: (w:number,h:number)=>void; getPixelColor:(x:number,y:number)=>number; bitmap:{width:number,height:number} }> }).read(preview);
-        // Already covered by simple method: convert raw 240x160 to 160x120 via image steps earlier
-        // For simplicity, generate via imageToRaw from preview buffer resized
-        // We'll just use direct conversion via Jimp cover from preview
         const rawWokwi = await imageToRaw(preview, 160, 120);
         writeFileSync(wallpaperRawPath(wid, "_wokwi"), rawWokwi);
       } else if (rawBytes.length === 160 * 120 * 2) {
@@ -716,11 +475,6 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     writeFileSync(wallpaperRawPath(wid, "_wokwi"), rawWokwi);
     // preview
     try {
-      const mod = await import("jimp");
-      const Jimp = (mod as Record<string,unknown>).default ?? mod as unknown as { read:(b:Buffer)=>Promise<unknown>};
-      const img = await (Jimp as unknown as { read:(b:Buffer)=>Promise<{ thumbnail:(w:number,h:number)=>void; getBufferAsync:(m:string)=>Promise<Buffer> }> }).read(imageBytes);
-      // thumbnail via cover? Use resize
-      // For preview just use rawToPreview or thumbnail
       const preview = await rawToPreview(rawHw,240,160);
       if (preview.length) writeFileSync(wallpaperPreviewPath(wid), preview);
     } catch {}

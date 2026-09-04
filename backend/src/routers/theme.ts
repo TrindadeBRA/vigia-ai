@@ -60,7 +60,7 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     // get selected id via wallpapers helper if available
     let selectedId: string | null = null;
     try {
-      const wallpapers = await import("./wallpapers.js");
+      const wallpapers = await import("./wallpapers/router.js");
       // wallpapers module may expose _getSelectedId equivalent; try to call internal helper via reading config
       const { load } = await import("../store.js");
       const cfg = load() as Record<string, unknown>;
@@ -131,7 +131,7 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     if (existsSync(orig)) {
       try {
         const bytes = readFileSync(orig);
-        const { imageToRaw } = await import("./wallpapers.js");
+        const { imageToRaw } = await import("./wallpapers/router.js");
         const tw = suffix === "_wokwi" ? 160 : 240;
         const th = suffix === "_wokwi" ? 120 : 160;
         const raw = await (imageToRaw as (b: Buffer, w: number, h: number) => Promise<Buffer>)(bytes, tw, th);

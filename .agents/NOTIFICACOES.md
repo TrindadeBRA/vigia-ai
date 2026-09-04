@@ -7,7 +7,7 @@ principal (`CONTRATO_JSON.md`) — não mexe em `/usage` nem no firmware.
 ## Modelo da regra
 
 `backend/src/alarms.ts:METRICS` é o catálogo curado (por provedor, só os
-campos que a API real preenche — ver `USAGE_EXAMPLE` em `schemas.ts`). Cada
+campos que a API real preenche — ver `USAGE_EXAMPLE` em `schemas/usage.ts`). Cada
 métrica tem um `kind`:
 
 - `percent` (0–100): dispara quando `valor >= limiar` — "avise quando a cota

@@ -1,5 +1,5 @@
 import { utcNow } from "./formatting.js";
-import { UsagePayloadSchema } from "./schemas.js";
+import { UsagePayloadSchema } from "./schemas/index.js";
 import { buildPayload } from "./usage.js";
 
 export const DEFAULT_INTERVAL_S = 60;
