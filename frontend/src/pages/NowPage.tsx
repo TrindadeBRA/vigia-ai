@@ -124,8 +124,11 @@ export default function NowPage({
   const weekday = WEEKDAYS[prefs.lang][clockNow.getDay()];
   const dateStr = `${weekday}, ${pad2(clockNow.getDate())}/${pad2(clockNow.getMonth() + 1)}/${clockNow.getFullYear()}`;
 
-  const failing = providers.filter((p) => !p.ok).length;
-  const working = providers.length - failing;
+  const accountProviders = providers.filter(
+    (p) => p.provider !== "weather" && p.kind !== "weather" && p.provider !== "currencies" && p.kind !== "currencies",
+  );
+  const failing = accountProviders.filter((p) => !p.ok).length;
+  const working = accountProviders.length - failing;
 
   return (
     <div className="flex min-h-full w-full flex-col">
@@ -153,17 +156,17 @@ export default function NowPage({
             </span>
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-edge bg-chip/50 px-4 py-2.5 backdrop-blur-sm max-[860px]:px-3 max-[860px]:py-2">
-            <span className="text-sm font-medium text-ink3 max-[860px]:text-xs">{working} {working === 1 ? "conta" : "contas"}</span>
+            <span className="text-sm font-medium text-ink3 max-[860px]:text-xs">{t.accountsCount(working)}</span>
           </div>
         </div>
       </div>
 
       <div className="mb-6 flex items-baseline justify-between gap-4 max-[860px]:mb-4">
         <h2 className="text-xl font-[750] tracking-[-0.3px] max-[860px]:text-lg">{t.accounts}</h2>
-        <span className="text-sm text-ink3 max-[860px]:text-xs">{providers.length} {providers.length === 1 ? "provedor" : "provedores"}</span>
+        <span className="text-sm text-ink3 max-[860px]:text-xs">{t.providersCount(accountProviders.length)}</span>
       </div>
 
-      {providers.length === 0 ? (
+      {accountProviders.length === 0 ? (
         <div className={emptyNote}>
           {t.noProviders}{" "}
           <Link to="/display/config" className={accentLink}>
@@ -172,7 +175,7 @@ export default function NowPage({
         </div>
       ) : (
         <div className="grid w-full gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))] max-[860px]:gap-3">
-          {providers.map((p) => (
+          {accountProviders.map((p) => (
             <ProviderCard
               key={p.id}
               p={p}

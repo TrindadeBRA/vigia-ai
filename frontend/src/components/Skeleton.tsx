@@ -1,7 +1,7 @@
 import { cn } from "../cn";
 import { cfgCard, cfgGrid, metricCard, metricsGrid, overviewGrid, pageCol, skelShine, viewFade } from "../tw";
 
-export type SkeletonPage = "overview" | "config" | "setup" | "account" | "alarms" | "theme";
+export type SkeletonPage = "overview" | "config" | "setup" | "account" | "alarms" | "theme" | "now";
 
 export function Bone({ className, delay }: { className?: string; delay?: number }) {
   return (
@@ -376,8 +376,35 @@ function ThemeBody() {
   );
 }
 
+function NowBody() {
+  return (
+    <div className="flex min-h-full w-full flex-col">
+      <div className="mb-6 flex items-center justify-between gap-4 max-[860px]:mb-4">
+        <Bone className="h-8 w-24 rounded-lg" />
+      </div>
+      <div className="mb-8 flex flex-col items-center justify-center rounded-3xl border border-edge bg-panel px-6 py-12 shadow-card [.flat_&]:shadow-none max-[860px]:py-8">
+        <Bone className="mb-2 h-[clamp(56px,14vw,96px)] w-[min(90%,420px)] rounded-2xl" />
+        <Bone className="mb-6 h-4 w-40" delay={40} />
+        <div className="flex flex-wrap items-center justify-center gap-4 max-[860px]:gap-3">
+          <Bone className="h-[42px] w-32 rounded-xl" delay={60} />
+          <Bone className="h-[42px] w-24 rounded-xl" delay={80} />
+        </div>
+      </div>
+      <div className="mb-6 flex items-baseline justify-between gap-4 max-[860px]:mb-4">
+        <Bone className="h-[21px] w-24" />
+        <Bone className="h-3 w-20" delay={40} />
+      </div>
+      <div className="grid w-full gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))] max-[860px]:gap-3">
+        {Array.from({ length: 6 }, (_, i) => (
+          <TileSkel key={i} delay={i * 50} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Skeleton({ page = "overview" }: { page?: SkeletonPage }) {
-  const nested = page !== "overview" && page !== "account";
+  const nested = page !== "overview" && page !== "account" && page !== "now";
   return (
     <div className={cn(viewFade, nested ? pageCol : "w-full")} aria-hidden aria-busy="true">
       {page === "overview" ? <OverviewBody /> : null}
@@ -386,6 +413,7 @@ export function Skeleton({ page = "overview" }: { page?: SkeletonPage }) {
       {page === "account" ? <AccountBody /> : null}
       {page === "alarms" ? <AlarmsBody /> : null}
       {page === "theme" ? <ThemeBody /> : null}
+      {page === "now" ? <NowBody /> : null}
     </div>
   );
 }
@@ -412,4 +440,8 @@ export function AlarmsSkeleton() {
 
 export function ThemeSkeleton() {
   return <Skeleton page="theme" />;
+}
+
+export function NowSkeleton() {
+  return <Skeleton page="now" />;
 }

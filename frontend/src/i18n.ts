@@ -56,6 +56,8 @@ type Strings = {
   noProviders: string;
   allOk: string;
   errorsCount: (n: number) => string;
+  accountsCount: (n: number) => string;
+  providersCount: (n: number) => string;
   agoNow: string;
   agoSecs: (s: number) => string;
   autoNote: () => string;
@@ -181,6 +183,8 @@ export const STR: Record<Lang, Strings> = {
     noProviders: "Nenhuma conta visível.",
     allOk: "Tudo certo",
     errorsCount: (n) => (n === 1 ? "1 provedor com erro" : `${n} provedores com erro`),
+    accountsCount: (n) => (n === 1 ? "1 conta" : `${n} contas`),
+    providersCount: (n) => (n === 1 ? "1 provedor" : `${n} provedores`),
     agoNow: "agora mesmo",
     agoSecs: (s) => `atualizado há ${s}s`,
     autoNote: () => "Ao vivo (SSE). Toque para forçar uma consulta agora.",
@@ -300,6 +304,8 @@ export const STR: Record<Lang, Strings> = {
     noProviders: "No accounts visible.",
     allOk: "All good",
     errorsCount: (n) => (n === 1 ? "1 provider failing" : `${n} providers failing`),
+    accountsCount: (n) => (n === 1 ? "1 account" : `${n} accounts`),
+    providersCount: (n) => (n === 1 ? "1 provider" : `${n} providers`),
     agoNow: "just now",
     agoSecs: (s) => `updated ${s}s ago`,
     autoNote: () => "Live (SSE). Tap to force a fetch now.",
@@ -419,6 +425,8 @@ export const STR: Record<Lang, Strings> = {
     noProviders: "Ninguna cuenta visible.",
     allOk: "Todo bien",
     errorsCount: (n) => (n === 1 ? "1 proveedor con error" : `${n} proveedores con error`),
+    accountsCount: (n) => (n === 1 ? "1 cuenta" : `${n} cuentas`),
+    providersCount: (n) => (n === 1 ? "1 proveedor" : `${n} proveedores`),
     agoNow: "recién",
     agoSecs: (s) => `actualizado hace ${s}s`,
     autoNote: () => "En vivo (SSE). Toca para forzar una consulta ahora.",
