@@ -79,12 +79,12 @@ function Badge({ secs, total, showCheck, pal, onClick }: { secs: number; total: 
   const pct = showCheck ? 100 : clamp(((total - secs) / total) * 100, 0, 100);
   const ringColor = showCheck ? pal.good : "var(--accent)";
   const inner = (
-    <div className="flex size-full items-center justify-center rounded-full bg-canvas text-[10px] font-bold text-ink">
-      {showCheck ? <CheckIcon size={12} /> : <span className={num}>{Math.min(99, secs)}</span>}
+    <div className="flex size-full items-center justify-center rounded-full bg-canvas text-[11px] font-bold text-ink">
+      {showCheck ? <CheckIcon size={14} /> : <span className={num}>{Math.min(99, secs)}</span>}
     </div>
   );
   const style = { background: `conic-gradient(${ringColor} ${pct}%, var(--track) 0)` };
-  const ring = "ml-0.5 size-[26px] shrink-0 rounded-full p-[3px]";
+  const ring = "ml-0.5 size-[30px] shrink-0 rounded-full p-[3px]";
   if (onClick) {
     return (
       <button className={`${ring} cursor-pointer border-0 bg-clip-padding transition-transform duration-100 hover:scale-110 active:scale-95`} style={style} onClick={onClick} title="Atualizar agora" aria-label="Atualizar agora">
