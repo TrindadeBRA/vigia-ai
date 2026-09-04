@@ -1,0 +1,27 @@
+{
+  "name": "vigia-ai-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App de desktop do Vigia AI — Electron + coletor FastAPI como sidecar",
+  "license": "MIT",
+  "main": "out/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "npm run build && electron out/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  }
+}

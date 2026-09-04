@@ -93,6 +93,8 @@ def main() -> None:
         app,
         log_level=os.environ.get("VIGIA_LOG_LEVEL", "info"),
         timeout_keep_alive=0,
+        # Sem isso o uvicorn espera os streams SSE fecharem — e eles não fecham.
+        timeout_graceful_shutdown=int(os.environ.get("VIGIA_GRACEFUL_S", "3")),
         # O Electron gerencia o ciclo de vida; sinais tratados abaixo.
         access_log=False,
     )
