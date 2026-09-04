@@ -976,69 +976,151 @@ export default function ThemeEditorPage() {
         {/* Painel de propriedades — camadas do tema + edição do item selecionado. */}
         <div className="flex flex-col gap-[14px]">
           <Card title={c.elements}>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               {theme.clock.enabled ? (
                 <button
                   type="button"
                   onClick={() => setSelected("clock")}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
-                    selected === "clock" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                    "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+                    selected === "clock"
+                      ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
+                      : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
                   )}
                 >
-                  <span className="font-mono text-[12px] text-ink3">{formatClock(now, theme.clock.format24h)}</span>
-                  <span className="font-[650]">{c.clock}</span>
+                  <span
+                    className={cn(
+                      "flex size-7 shrink-0 items-center justify-center rounded-md border",
+                      selected === "clock" ? "border-accent/30 bg-accent/10 text-accent" : "border-edge bg-panel text-ink2 group-hover:border-ink3/20",
+                    )}
+                  >
+                    <ClockIcon size={14} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] font-bold leading-none">{c.clock}</span>
+                    <span className="block truncate text-[10.5px] leading-none text-ink3">
+                      {theme.clock.format24h ? "24h" : "12h"} · {theme.clock.showBackground ? (lang === "pt" ? "com fundo" : lang === "es" ? "con fondo" : "with bg") : lang === "pt" ? "sem fundo" : lang === "es" ? "sin fondo" : "no bg"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 rounded-full border border-edge bg-panel px-2 py-0.5 font-mono text-[11px] font-bold leading-none text-ink">
+                    {formatClock(now, theme.clock.format24h)}
+                  </span>
                 </button>
               ) : null}
               {theme.icons.map((icon) => {
                 const value = formatThemeMetric(usage, icon.provider, icon.metric);
+                const label = providerLabel(icon.provider);
+                const subtitle = icon.metric === "none" ? c.metricNone : metricLabel(icon.metric, lang);
+                const displayValue = value || (icon.metric === "none" ? "—" : "—");
+                const isSelected = selected === `icon:${icon.id}`;
                 return (
                   <button
                     type="button"
                     key={icon.id}
                     onClick={() => setSelected(`icon:${icon.id}`)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
-                      selected === `icon:${icon.id}` ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                      "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+                      isSelected
+                        ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
+                        : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
                     )}
                   >
-                    {icon.provider === "brand" ? (
-                      <Logo size={18} />
-                    ) : icon.provider === "weather" ? (
-                      <span className="text-[15px]">{weatherEmoji(usage)}</span>
-                    ) : (
-                      <img src={PROVIDER_ICON[icon.provider]} alt="" className="size-[18px] object-contain" />
-                    )}
-                    <span className="min-w-0 flex-1 truncate font-[650]">{providerLabel(icon.provider)}</span>
-                    <span className="shrink-0 font-mono text-[12px] text-ink2">{value || (icon.metric === "none" ? c.metricNone : "—")}</span>
+                    <span
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-md border",
+                        isSelected ? "border-accent/30 bg-accent/10" : "border-edge bg-panel group-hover:border-ink3/20",
+                      )}
+                    >
+                      {icon.provider === "brand" ? (
+                        <Logo size={16} />
+                      ) : icon.provider === "weather" ? (
+                        <span className="text-[15px] leading-none">{weatherEmoji(usage)}</span>
+                      ) : (
+                        <img src={PROVIDER_ICON[icon.provider]} alt="" className="size-5 object-contain" draggable={false} />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-bold leading-none">{label}</span>
+                      <span className="block truncate text-[10.5px] leading-none text-ink3">{subtitle}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "max-w-[88px] shrink-0 truncate rounded-full border px-2 py-0.5 text-right font-mono text-[11px] font-bold leading-none",
+                        isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink",
+                      )}
+                      title={displayValue}
+                    >
+                      {displayValue}
+                    </span>
                   </button>
                 );
               })}
-              {theme.texts.map((txt) => (
-                <button
-                  type="button"
-                  key={txt.id}
-                  onClick={() => setSelected(`text:${txt.id}`)}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
-                    selected === `text:${txt.id}` ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
-                  )}
-                >
-                  <span className="min-w-0 flex-1 truncate font-[650]">{txt.text || "…"}</span>
-                </button>
-              ))}
-              {!theme.clock.enabled && theme.icons.length === 0 && theme.texts.length === 0 ? <p className={cfgStatus}>{c.noIcons}</p> : null}
+              {theme.texts.map((txt) => {
+                const isSelected = selected === `text:${txt.id}`;
+                return (
+                  <button
+                    type="button"
+                    key={txt.id}
+                    onClick={() => setSelected(`text:${txt.id}`)}
+                    className={cn(
+                      "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+                      isSelected
+                        ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
+                        : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-md border",
+                        isSelected ? "border-accent/30 bg-accent/10 text-accent" : "border-edge bg-panel text-ink2 group-hover:border-ink3/20",
+                      )}
+                    >
+                      <TextIcon size={13} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-bold leading-none">{txt.text || "…"}</span>
+                      <span className="block truncate text-[10.5px] leading-none text-ink3">{c.texts}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10.5px] font-bold leading-none",
+                        isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink3",
+                      )}
+                    >
+                      {txt.scale.toFixed(1)}×
+                    </span>
+                  </button>
+                );
+              })}
+              {!theme.clock.enabled && theme.icons.length === 0 && theme.texts.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-edge bg-canvas/60 px-2.5 py-3 text-center text-[12px] leading-relaxed text-ink3">{c.noIcons}</div>
+              ) : null}
+              <div className="my-1 h-px bg-edge" aria-hidden />
               <button
                 type="button"
                 onClick={() => setSelected("background")}
                 className={cn(
-                  "mt-1 flex w-full items-center gap-2 rounded-[10px] border px-2.5 py-2 text-left text-sm",
-                  selected === "background" ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                  "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+                  selected === "background"
+                    ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
+                    : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
                 )}
               >
-                <span className="size-[18px] shrink-0 rounded-full shadow-[inset_0_0_0_1.5px_var(--card-border)]" style={{ background: theme.background.color }} />
-                <span className="min-w-0 flex-1 truncate font-[650]">{c.background}</span>
-                <span className="shrink-0 font-mono text-[11px] text-ink3">{theme.background.color.toUpperCase()}</span>
+                <span
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-md border",
+                    selected === "background" ? "border-accent/30 bg-accent/10" : "border-edge bg-panel group-hover:border-ink3/20",
+                  )}
+                >
+                  <span className="size-5 shrink-0 rounded-full border border-white/15 shadow-sm" style={{ background: theme.background.color }} aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-bold leading-none">{c.background}</span>
+                  <span className="block truncate text-[10.5px] leading-none text-ink3">{theme.background.color.toUpperCase()}</span>
+                </span>
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-edge bg-panel text-ink3">
+                  <ImageIcon size={12} />
+                </span>
               </button>
             </div>
           </Card>

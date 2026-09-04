@@ -24,6 +24,9 @@ import { accentLink, barFill, barTrack, cardLabel, emptyNote, errorText, iconBtn
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import NowPage from "./NowPage";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
+import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
+import { ClockBoardCard, clockAllowedSizes, clockSizeLabel } from "../components/cards/ClockCard";
+import { EyeBoardCard, eyeAllowedSizes, eyeSizeLabel } from "../components/cards/EyeCard";
 import { gridWallpaperUrl, useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useGridBoards, type BoardsMap } from "../hooks/useGridBoards";
 
@@ -32,7 +35,7 @@ const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>
   return hits.length ? hits : closestCorners(args);
 };
 
-type Prefs = { theme: ThemeName; accent: number; lang: Lang; focus?: boolean };
+type Prefs = { theme: ThemeName; accent: number; lang: Lang; focus?: boolean; widgets?: WidgetKind[] };
 
 /** Layout salvo para a quantidade exata de colunas visíveis (o "breakpoint" é o número de colunas, não um bucket fixo). */
 function boardForCols(boards: BoardsMap, cols: number): BoardLayout {
@@ -467,6 +470,18 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
   return list;
 }
 
+/** Widgets extras (relógio, olho/logo) — não vêm do backend, só do que o usuário habilitou. */
+export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): ProviderMeta[] {
+  const list: ProviderMeta[] = [];
+  if (enabled?.includes("clock")) {
+    list.push({ id: "widget:clock", provider: "clock", ok: true, error: null, title: t.widgetClock, label: "", metrics: [] });
+  }
+  if (enabled?.includes("eye")) {
+    list.push({ id: "widget:eye", provider: "eye", ok: true, error: null, title: t.widgetEye, label: "", metrics: [] });
+  }
+  return list;
+}
+
 function wmoLabel(code: number | null | undefined): string {
   if (code == null) return "--";
   const map: Record<number, string> = {
@@ -536,6 +551,7 @@ const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl",
 
 function sizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
+  if (s === "xs") return t.widgetQuarter;
   if (s === "sm") return t.cardSmall;
   if (s === "sw") return t.cardSmallWeek;
   if (s === "sx") return t.cardSmallOnDemand;
@@ -551,6 +567,7 @@ function sizeLabel(size: CardSize, t: T): string {
 
 function SizeIcon({ size, className }: { size: CardSize; className?: string }) {
   const s = normalizeSize(size);
+  if (s === "xs") return <span className={cn("block size-[4px] rounded-[1px] border-[1.5px] border-current", className)} />;
   if (s === "sm") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-current", className)} />;
   if (s === "sw") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-dashed border-current", className)} />;
   if (s === "sx") return <span className={cn("block size-[7px] rounded-[2px] border-[1.5px] border-dotted border-current", className)} />;
@@ -736,6 +753,52 @@ function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetS
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => currenciesSizeLabel(s, t, p.currencies?.items)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <CurrenciesBoardCard currencies={p.currencies} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+function ClockTileCard({ p, size, dragging, lifted, t, nowMs, grip, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs: number; grip?: object; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const allowed = clockAllowedSizes();
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => clockSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
+      ) : null}
+      <ClockBoardCard nowMs={nowMs} size={size} />
+    </div>
+  );
+}
+
+function EyeTileCard({ p, size, dragging, lifted, t, grip, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const allowed = eyeAllowedSizes();
+  const isClone = isCloneId(p.id);
+  return (
+    <div
+      className={cn(
+        "group/tile relative flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden rounded-2xl border bg-panel shadow-card",
+        "px-3.5 pb-3 pt-3",
+        lifted && "border-accent shadow-card-hover rotate-[1.5deg] cursor-grabbing",
+        dragging && !lifted && "border-dashed border-edge opacity-35",
+        !dragging && !lifted && "border-edge transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent hover:shadow-card-hover",
+        "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
+        !lifted && viewFade,
+      )}
+    >
+      {!lifted ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => eyeSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
+      ) : null}
+      <EyeBoardCard size={size} />
     </div>
   );
 }
@@ -935,6 +998,13 @@ function ProviderCard({
   }
   if (p.provider === "currencies" || p.kind === "currencies") {
     return <CurrenciesTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  // Widgets extras: sem "conta"/dados de backend, só visuais
+  if (p.provider === "clock") {
+    return <ClockTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs ?? Date.now()} grip={grip} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "eye") {
+    return <EyeTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
   const sm = normalizeSize(size) === "sm";
   return (
@@ -1193,6 +1263,7 @@ function Overview({
   onToggleFocus,
   gridWallpaperId,
   onOpenWallpaper,
+  onOpenAddWidget,
 }: {
   providers: ProviderMeta[];
   updatedAt: string;
@@ -1207,6 +1278,7 @@ function Overview({
   onToggleFocus: () => void;
   gridWallpaperId: string | null;
   onOpenWallpaper: () => void;
+  onOpenAddWidget: () => void;
 }) {
   const failing = providers.filter((p) => !p.ok).length;
   const age = payloadAgeMs(updatedAt, now);
@@ -1371,6 +1443,15 @@ function Overview({
             }
           >
             {t.resetLayout}
+          </button>
+          <button
+            type="button"
+            className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
+            title={t.addWidget}
+            aria-label={t.addWidget}
+            onClick={onOpenAddWidget}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
           <button
             type="button"
@@ -1678,6 +1759,7 @@ export default function Display() {
   const [currentCols, setCurrentCols] = useState<number>(() => colsForWidth(window.innerWidth));
   const [boards, setBoards] = useGridBoards();
   const [gridWallpaperOpen, setGridWallpaperOpen] = useState(false);
+  const [addWidgetOpen, setAddWidgetOpen] = useState(false);
   const { gridId: gridWallpaperId } = useGridWallpaper();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
@@ -1783,7 +1865,14 @@ export default function Display() {
 
   const providers = data ? buildProviders(data, t, now) : [];
   const bpBoard = boardForCols(boards, currentCols);
-  const displayProviders = expandProvidersWithClones(providers, bpBoard);
+  const boardProviders = data ? [...providers, ...buildWidgetProviders(prefs.widgets, t)] : providers;
+  const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
+  const toggleWidget = (kind: WidgetKind) =>
+    setPrefs((p) => {
+      const cur = p.widgets ?? [];
+      const next = cur.includes(kind) ? cur.filter((k) => k !== kind) : [...cur, kind];
+      return { ...p, widgets: next };
+    });
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null = null;
   if (data && section === "account") {
@@ -1926,6 +2015,7 @@ export default function Display() {
                   onToggleFocus={toggleFocus}
                   gridWallpaperId={gridWallpaperId}
                   onOpenWallpaper={() => setGridWallpaperOpen(true)}
+                  onOpenAddWidget={() => setAddWidgetOpen(true)}
                 />
               ) : null}
               {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
@@ -1935,6 +2025,7 @@ export default function Display() {
       </div>
       {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
       <GridWallpaperModal open={gridWallpaperOpen} onClose={() => setGridWallpaperOpen(false)} lang={prefs.lang} />
+      <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} />
     </div>
   );
 }

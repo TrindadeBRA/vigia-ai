@@ -118,6 +118,15 @@ type Strings = {
   // Currencies
   currencies: string;
   currenciesEmpty: string;
+  // Widgets extras (relógio, olho/logo)
+  addWidget: string;
+  addWidgetHint: string;
+  widgetClock: string;
+  widgetEye: string;
+  widgetAdd: string;
+  widgetRemove: string;
+  widgetSmall: string;
+  widgetQuarter: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -230,6 +239,14 @@ export const STR: Record<Lang, Strings> = {
     adsenseWallet: "Carteira",
     currencies: "Moedas",
     currenciesEmpty: "Nenhuma moeda configurada.",
+    addWidget: "Adicionar widget",
+    addWidgetHint: "Widgets extras não usam dados de conta — são só visuais.",
+    widgetClock: "Relógio",
+    widgetEye: "Olho",
+    widgetAdd: "Adicionar",
+    widgetRemove: "Remover",
+    widgetSmall: "Pequeno",
+    widgetQuarter: "1/4",
   },
   en: {
     overview: "Overview",
@@ -340,6 +357,14 @@ export const STR: Record<Lang, Strings> = {
     adsenseWallet: "Wallet",
     currencies: "Currencies",
     currenciesEmpty: "No currency configured.",
+    addWidget: "Add widget",
+    addWidgetHint: "Extra widgets don't use account data — they're just visual.",
+    widgetClock: "Clock",
+    widgetEye: "Eye",
+    widgetAdd: "Add",
+    widgetRemove: "Remove",
+    widgetSmall: "Small",
+    widgetQuarter: "1/4",
   },
   es: {
     overview: "Resumen",
@@ -450,6 +475,14 @@ export const STR: Record<Lang, Strings> = {
     adsenseWallet: "Billetera",
     currencies: "Monedas",
     currenciesEmpty: "Ninguna moneda configurada.",
+    addWidget: "Agregar widget",
+    addWidgetHint: "Los widgets extra no usan datos de cuenta — son solo visuales.",
+    widgetClock: "Reloj",
+    widgetEye: "Ojo",
+    widgetAdd: "Agregar",
+    widgetRemove: "Quitar",
+    widgetSmall: "Pequeño",
+    widgetQuarter: "1/4",
   },
 };
 
