@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
+import { STATUS_CODES } from "node:http";
 import { VERSION } from "./version.js";
 import { lanIPv4 } from "./netutil.js";
 import { load } from "./store.js";
@@ -64,13 +65,30 @@ export async function createApp() {
     done(null, body);
   });
 
-  // Log de acesso estilo Uvicorn (INFO) — visível no ./dev up
+  // Log de acesso no mesmo padrão do UPDATE (magenta) porém em verde — visível no ./dev up
   if (!isTest) {
+    const GREEN = "\x1b[32m";
+    const RESET = "\x1b[0m";
+    const USE_COLOR = Boolean(process.stdout.isTTY);
+    const PREFIX_WIDTH = 21;
+    function requestPrefix(method: string): string {
+      const prefix = `REQUEST - ${method}:`.padEnd(PREFIX_WIDTH, " ");
+      return USE_COLOR ? `${GREEN}${prefix}${RESET}` : prefix;
+    }
+    fastify.addHook("onRequest", (request, _reply, done) => {
+      (request as unknown as Record<string, unknown>).__startTime = performance.now();
+      done();
+    });
     fastify.addHook("onResponse", (request, reply, done) => {
       const ip = (request as unknown as { ip?: string }).ip ?? request.socket?.remoteAddress ?? "-";
-      // Formato próximo ao Uvicorn: 127.0.0.1:xxxxx - "GET /health HTTP/1.1" 200
-      const port = (request.socket?.remotePort ? `:${request.socket.remotePort}` : "");
-      console.log(`${ip}${port} - "${request.method} ${request.url} HTTP/1.1" ${reply.statusCode}`);
+      const port = request.socket?.remotePort ? `:${request.socket.remotePort}` : "";
+      const start = (request as unknown as Record<string, unknown>).__startTime as number | undefined;
+      const elapsedMs = start ? performance.now() - start : 0;
+      const reason = (STATUS_CODES as Record<number, string>)[reply.statusCode] ?? "";
+      const prefix = requestPrefix(request.method);
+      const requestLine = `"${request.method} ${request.url} HTTP/1.1"`;
+      // Mesmo formato do httpClient: prefix + host - requestLine status reason (elapsed)
+      console.log(`${prefix}${ip}${port} - ${requestLine} ${reply.statusCode} ${reason} (${elapsedMs.toFixed(0)}ms)`);
       done();
     });
   }
