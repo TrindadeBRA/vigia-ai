@@ -31,6 +31,9 @@ import { EyeBoardCard, eyeAllowedSizes, eyeSizeLabel } from "../components/cards
 import { gridWallpaperUrl, useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useGridBoards, type BoardsMap } from "../hooks/useGridBoards";
 
+/** Largura da sidebar (Sidebar `w-[264px]`) — usada para compensar o cálculo de colunas do grid quando ela some no modo foco. */
+const SIDEBAR_W = 264;
+
 const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
   const hits = pointerWithin(args);
   return hits.length ? hits : closestCorners(args);
@@ -1297,7 +1300,6 @@ function Overview({
   const idsKey = ids.join("|");
   const gridRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(8);
-  const focusColsRef = useRef<number | null>(null);
   const [pad, setPad] = useState(12);
   const [fillPx, setFillPx] = useState(0);
   const [cellPx, setCellPx] = useState(104);
@@ -1307,14 +1309,6 @@ function Overview({
   const unitPx = rowPxFor(cellPx);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  useEffect(() => {
-    if (focus) {
-      const el = gridRef.current;
-      focusColsRef.current = el && el.clientWidth > 0 ? colsForWidth(el.clientWidth) : cols;
-    } else {
-      focusColsRef.current = null;
-    }
-  }, [focus]);
   const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
   const active = activeId ? byId.get(activeId) : null;
@@ -1329,7 +1323,11 @@ function Overview({
     if (!el) return;
     const measure = () => {
       if (el.clientWidth < 1) return;
-      const nextCols = focusColsRef.current ?? colsForWidth(el.clientWidth);
+      // Modo foco esconde a sidebar (só ocupa espaço acima de 860px) e o grid ganha essa
+      // largura de volta — descontamos aqui pra manter a mesma quantidade de colunas do
+      // modo normal, independente do device, e trocar de modo não trocar de "board" salvo.
+      const widthForCols = focus && window.innerWidth > 860 ? Math.max(0, el.clientWidth - SIDEBAR_W) : el.clientWidth;
+      const nextCols = colsForWidth(widthForCols);
       setCols(nextCols);
       onColsChange?.(nextCols);
       const cell = Math.max(80, Math.floor((el.clientWidth - CELL_GAP * Math.max(0, nextCols - 1)) / Math.max(1, nextCols)));
