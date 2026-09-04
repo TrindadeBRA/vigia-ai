@@ -193,6 +193,26 @@ export type ConfigCopy = {
   // Outros
   outrosTitle: string;
   outrosLead: string;
+  // App desktop (Electron) — só aparece quando window.vigia existe
+  appTitle: string;
+  appLead: string;
+  appOpenBrowser: string;
+  appCopyLan: string;
+  appNoLan: string;
+  appAutostart: string;
+  appAutostartHint: string;
+  appLan: string;
+  appLanHint: string;
+  appLanWarn: string;
+  appRestart: string;
+  appRestarting: string;
+  appRestarted: string;
+  appRestartFail: string;
+  appDataFolder: string;
+  appLogsFolder: string;
+  appVersionLabel: string;
+  appCollectorLabel: string;
+  appCheckUpdates: string;
   currenciesTitle: string;
   currenciesLead: string;
   currenciesBaseLabel: string;
@@ -397,6 +417,25 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     financeiroLead: "Carteira Bitcoin, AdSense e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
     outrosTitle: "Outros",
     outrosLead: "Widgets extras no painel — previsão do tempo e o que mais for surgindo.",
+    appTitle: "Aplicativo",
+    appLead: "Ajustes que só existem no app instalado. O coletor continua sendo o mesmo — o painel no navegador e a placa falam com ele do mesmo jeito.",
+    appOpenBrowser: "Abrir no navegador",
+    appCopyLan: "Copiar link da LAN",
+    appNoLan: "Sem endereço na rede local.",
+    appAutostart: "Abrir junto com o sistema",
+    appAutostartHint: "O app inicia minimizado na bandeja, então a placa encontra o coletor sem você abrir nada.",
+    appLan: "Acesso pela rede local",
+    appLanHint: "Desligado, o coletor só aceita conexões deste computador — a ESP32 e outros aparelhos deixam de enxergar o painel.",
+    appLanWarn: "LAN only: não exponha esta porta na internet.",
+    appRestart: "Reiniciar o coletor",
+    appRestarting: "Reiniciando…",
+    appRestarted: "Coletor reiniciado.",
+    appRestartFail: "Falha ao reiniciar o coletor.",
+    appDataFolder: "Abrir a pasta de dados",
+    appLogsFolder: "Abrir a pasta de logs",
+    appVersionLabel: "Versão do app",
+    appCollectorLabel: "Versão do coletor",
+    appCheckUpdates: "Procurar atualizações",
     currenciesTitle: "Cotação de moedas",
     currenciesLead: "Adicione quantas moedas quiser — fiat (dólar, euro...) ou cripto — e veja a cotação convertida para a moeda base.",
     currenciesBaseLabel: "Moeda base (cotações convertidas para)",
@@ -599,6 +638,25 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     financeiroLead: "Bitcoin wallet, AdSense and currency quotes — dollar, euro, crypto, whatever you want to track.",
     outrosTitle: "Other",
     outrosLead: "Extra widgets on the display — weather forecast and more to come.",
+    appTitle: "Application",
+    appLead: "Settings that only exist in the installed app. The collector is still the same one — the browser panel and the board talk to it exactly as before.",
+    appOpenBrowser: "Open in browser",
+    appCopyLan: "Copy LAN link",
+    appNoLan: "No address on the local network.",
+    appAutostart: "Launch at login",
+    appAutostartHint: "The app starts minimized in the tray, so the board finds the collector without you opening anything.",
+    appLan: "Local network access",
+    appLanHint: "When off, the collector only accepts connections from this computer — the ESP32 and other devices stop seeing the panel.",
+    appLanWarn: "LAN only: never expose this port to the internet.",
+    appRestart: "Restart the collector",
+    appRestarting: "Restarting…",
+    appRestarted: "Collector restarted.",
+    appRestartFail: "Could not restart the collector.",
+    appDataFolder: "Open data folder",
+    appLogsFolder: "Open logs folder",
+    appVersionLabel: "App version",
+    appCollectorLabel: "Collector version",
+    appCheckUpdates: "Check for updates",
     currenciesTitle: "Currency quotes",
     currenciesLead: "Add as many currencies as you want — fiat (dollar, euro...) or crypto — and see the rate converted to your base currency.",
     currenciesBaseLabel: "Base currency (quotes converted to)",
@@ -801,6 +859,25 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     financeiroLead: "Billetera Bitcoin, AdSense y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
     outrosTitle: "Otros",
     outrosLead: "Widgets extra en el panel — pronóstico del tiempo y más por venir.",
+    appTitle: "Aplicación",
+    appLead: "Ajustes que solo existen en la app instalada. El colector sigue siendo el mismo — el panel en el navegador y la placa hablan con él igual que antes.",
+    appOpenBrowser: "Abrir en el navegador",
+    appCopyLan: "Copiar enlace de la LAN",
+    appNoLan: "Sin dirección en la red local.",
+    appAutostart: "Abrir al iniciar sesión",
+    appAutostartHint: "La app arranca minimizada en la bandeja, así la placa encuentra el colector sin que abras nada.",
+    appLan: "Acceso por la red local",
+    appLanHint: "Apagado, el colector solo acepta conexiones de este ordenador — la ESP32 y otros aparatos dejan de ver el panel.",
+    appLanWarn: "Solo LAN: no expongas este puerto a internet.",
+    appRestart: "Reiniciar el colector",
+    appRestarting: "Reiniciando…",
+    appRestarted: "Colector reiniciado.",
+    appRestartFail: "No se pudo reiniciar el colector.",
+    appDataFolder: "Abrir la carpeta de datos",
+    appLogsFolder: "Abrir la carpeta de registros",
+    appVersionLabel: "Versión de la app",
+    appCollectorLabel: "Versión del colector",
+    appCheckUpdates: "Buscar actualizaciones",
     currenciesTitle: "Cotización de monedas",
     currenciesLead: "Agrega las monedas que quieras — fiat (dólar, euro...) o cripto — y mira la cotización convertida a tu moneda base.",
     currenciesBaseLabel: "Moneda base (cotizaciones convertidas a)",

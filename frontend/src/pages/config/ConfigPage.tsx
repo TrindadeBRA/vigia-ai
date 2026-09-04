@@ -3,8 +3,10 @@ import { Skeleton } from "../../components/Skeleton";
 import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
 import { AdSenseConfigCard } from "./AdSenseConfigCard";
 import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
+import { DesktopCard } from "./DesktopCard";
 import { ProviderCard } from "./ProviderCard";
 import { Button, Fold } from "./ui";
+import { isDesktop } from "../../desktop";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
 import { WeatherConfigCard } from "./WeatherConfigCard";
@@ -186,6 +188,13 @@ export default function ConfigPage() {
       <div className={cfgGrid}>
         <WallpaperProviderCards c={c} />
       </div>
+
+      {/* Só existe dentro do app Electron; no navegador não renderiza nada. */}
+      {isDesktop() ? (
+        <div className={`${cfgGrid} mt-2`}>
+          <DesktopCard c={c} />
+        </div>
+      ) : null}
     </div>
   );
 }

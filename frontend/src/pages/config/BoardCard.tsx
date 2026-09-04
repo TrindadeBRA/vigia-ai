@@ -2,6 +2,7 @@ import type { ConfigPublic } from "../../api/types";
 import { useRequest } from "../../hooks/useRequest";
 import type { ConfigCopy } from "./copy";
 import { Button, Card, CodeRow, FieldStatus } from "./ui";
+import { saveTextFile } from "../../desktop";
 
 export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
   const dl = useRequest();
@@ -16,13 +17,7 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
           onClick={() =>
             dl.run(
               async () => {
-                const blob = new Blob([cfg.urls.secrets_h_file], { type: "text/plain" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "secrets.h";
-                a.click();
-                URL.revokeObjectURL(url);
+                await saveTextFile("secrets.h", cfg.urls.secrets_h_file);
                 return { ok: true };
               },
               { success: c.boardOk, error: c.fail },

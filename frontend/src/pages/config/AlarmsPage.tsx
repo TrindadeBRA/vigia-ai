@@ -5,6 +5,7 @@ import type { AlarmMetric, AlarmsPublic, TelegramChat } from "../../api/types";
 import { Skeleton } from "../../components/Skeleton";
 import { cn } from "../../cn";
 import { useRequest } from "../../hooks/useRequest";
+import { saveTextFile } from "../../desktop";
 import { DownloadIcon, SlidersIcon, TrashIcon, UploadIcon } from "../../components/icons";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgHint, cfgStatus, iconBtn, iconChip, iconImg, pageCol, viewFade } from "../../tw";
@@ -97,15 +98,11 @@ function downloadAlarmsJson(rules: AlarmsPublic["rules"]) {
     label: r.label,
   }));
   const payload = { version: 1, exported_at: new Date().toISOString(), alarms };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `vigia-alarmes-${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  void saveTextFile(
+    `vigia-alarmes-${new Date().toISOString().slice(0, 10)}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json",
+  );
 }
 
 function parseAlarmsJson(text: string): ExportedAlarmRule[] | null {
