@@ -57,6 +57,10 @@ uso: ./dev <comando>
   ./dev app build       instalador da plataforma atual (dist/)
   ./dev test            pytest + tsc
   ./dev lint            ruff
+  ./dev release         publica os instaladores: tag + GitHub Actions
+  ./dev release 1.0.2   sobe a versão antes de taguear
+  ./dev release --dry   roda a matriz sem tocar em Releases (artifacts, 14 dias)
+  ./dev release --status  acompanha a última execução
 
 Ctrl+C encerra os processos que este script subiu.
 EOF
@@ -378,6 +382,136 @@ cmd_app_build() {
   "$ROOT_DIR/scripts/build-desktop.sh" "$@"
 }
 
+RELEASE_WORKFLOW="release-desktop.yml"
+
+# A versão que o electron-builder usa para nomear o release. NÃO é a tag: ele
+# lê o package.json. Se os dois divergirem, os artefatos vão parar num release
+# que ninguém está olhando — por isso o comando abaixo força a igualdade.
+desktop_version() {
+  sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "$ROOT_DIR/desktop/package.json" | head -1
+}
+
+ensure_gh() {
+  command -v gh >/dev/null 2>&1 || {
+    echo "erro: gh (GitHub CLI) não encontrado — instale com: brew install gh" >&2
+    exit 1
+  }
+  gh auth status >/dev/null 2>&1 || {
+    echo "erro: gh não autenticado — rode: gh auth login" >&2
+    exit 1
+  }
+}
+
+release_guards() {
+  local branch local_sha remote_sha
+  branch="$(git -C "$ROOT_DIR" branch --show-current)"
+
+  # Uma tag aponta para um commit. Se a árvore está suja, o que você testou
+  # não é o que vai ser compilado nos runners.
+  if ! git -C "$ROOT_DIR" diff --quiet || ! git -C "$ROOT_DIR" diff --cached --quiet; then
+    echo "erro: há mudanças não commitadas — a tag apontaria para outro estado" >&2
+    git -C "$ROOT_DIR" status --short >&2
+    exit 1
+  fi
+
+  # O runner clona do origin: um commit só local vira uma tag órfã lá.
+  git -C "$ROOT_DIR" fetch -q origin "$branch" 2>/dev/null || true
+  local_sha="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+  remote_sha="$(git -C "$ROOT_DIR" rev-parse "origin/$branch" 2>/dev/null || echo "")"
+  if [ "$local_sha" != "$remote_sha" ]; then
+    echo "erro: $branch não está sincronizada com origin/$branch" >&2
+    echo "      rode: git push origin $branch" >&2
+    exit 1
+  fi
+}
+
+cmd_release() {
+  local dry=0 status=0 skip_tests=0 want="" tag version branch
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --dry|--dry-run) dry=1 ;;
+      --status) status=1 ;;
+      --skip-tests) skip_tests=1 ;;
+      -*) echo "opção desconhecida: $1" >&2; exit 1 ;;
+      *) want="$1" ;;
+    esac
+    shift
+  done
+  ensure_gh
+  branch="$(git -C "$ROOT_DIR" branch --show-current)"
+
+  if [ "$status" -eq 1 ]; then
+    local runs
+    runs="$(gh run list --workflow "$RELEASE_WORKFLOW" --limit 5 2>/dev/null || true)"
+    if [ -z "$runs" ]; then
+      echo "nenhuma execução de $RELEASE_WORKFLOW até agora."
+      echo "dispare com: ./dev release   (ou ./dev release --dry para ensaiar)"
+      return 0
+    fi
+    echo "$runs"
+    echo
+    echo "detalhe de uma run:  gh run view <id>"
+    echo "acompanhar ao vivo:  gh run watch <id>"
+    return 0
+  fi
+
+  if [ "$dry" -eq 1 ]; then
+    echo "== ensaio: matriz completa, sem tocar em Releases =="
+    echo "   (os instaladores ficam como artifacts da run por 14 dias)"
+    gh workflow run "$RELEASE_WORKFLOW" --ref "$branch" -f publish=false
+    echo
+    echo "acompanhe com: ./dev release --status"
+    return 0
+  fi
+
+  # Bump opcional. Feito antes das travas para a árvore ficar limpa de novo.
+  if [ -n "$want" ] && [ "$want" != "$(desktop_version)" ]; then
+    echo "== versão $(desktop_version) → $want =="
+    (cd "$ROOT_DIR/desktop" && npm version "$want" --no-git-tag-version >/dev/null)
+    git -C "$ROOT_DIR" add desktop/package.json desktop/package-lock.json
+    git -C "$ROOT_DIR" commit -q -m "chore(desktop): versão $want"
+    git -C "$ROOT_DIR" push -q origin "$branch"
+  fi
+
+  version="$(desktop_version)"
+  tag="v$version"
+
+  release_guards
+
+  if git -C "$ROOT_DIR" rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+    echo "erro: a tag $tag já existe localmente" >&2
+    echo "      apague com: git tag -d $tag" >&2
+    exit 1
+  fi
+  if git -C "$ROOT_DIR" ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1; then
+    echo "erro: a tag $tag já existe no origin — suba a versão em vez de reusá-la" >&2
+    exit 1
+  fi
+
+  if [ "$skip_tests" -eq 0 ]; then
+    echo "== testes antes de publicar (pule com --skip-tests) =="
+    cmd_test
+  fi
+
+  echo "== tag $tag em $(git -C "$ROOT_DIR" rev-parse --short HEAD) ($branch) =="
+  git -C "$ROOT_DIR" tag -a "$tag" -m "Vigia AI $version"
+  git -C "$ROOT_DIR" push -q origin "$tag"
+
+  cat <<MSG
+
+Tag publicada. A matriz de 4 runners começou (macOS arm64/x64, Windows, Linux)
+— cada um compila o próprio sidecar, então leva alguns minutos.
+
+  ./dev release --status     acompanhar
+
+O release nasce como RASCUNHO: quando a matriz terminar, revise os artefatos e
+clique em "Publish release". Sem os secrets de assinatura os binários saem sem
+assinar — vale dizer isso no corpo do release.
+
+  gh release view $tag --web
+MSG
+}
+
 if [ $# -lt 1 ]; then
   usage
   exit 0
@@ -390,6 +524,7 @@ case "$1" in
   wokwi|simulador|sim) cmd_sim ;;
   test) cmd_test ;;
   lint) cmd_lint ;;
+  release) shift; cmd_release "$@" ;;
   app)
     shift
     case "${1:-}" in
