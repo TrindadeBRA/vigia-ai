@@ -2011,7 +2011,7 @@ export default function Display() {
             fetchFailed ? (
               <div className={emptyNote}>{t.fetchFail}</div>
             ) : (
-              <Skeleton page={section === "account" ? "account" : "overview"} />
+              <Skeleton page={isNow ? "now" : section === "account" ? "account" : "overview"} />
             )
           ) : (
             <>
