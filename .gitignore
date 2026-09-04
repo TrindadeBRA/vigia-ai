@@ -1,46 +1,63 @@
+# --- Firmware / PlatformIO ---
 .pio
-.vscode
-.idea
 *.bin
 *.elf
-.DS_Store
+compile_commands.json
+firmware/src/secrets.h
+firmware/src/assets/icons/__pycache__/
+
+# --- Python legado (mantido por compatibilidade, repo agora é Node) ---
 __pycache__/
 *.pyc
-.cache/
-.ruff_cache/
+*.pyo
+*.egg-info/
 .pytest_cache/
-compile_commands.json
-
-.env
-!.env.example
-
-firmware/src/secrets.h
-.tools/
+.ruff_cache/
+.cache/
 backend/.venv
+
+# --- Node / Build ---
+**/node_modules/
+node_modules/
+**/dist/
+dist/
+/dist/
+**/out/
+out/
+**/coverage/
+coverage/
+*.tsbuildinfo
+.eslintcache
+.vite/
+.vite
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Frontend ---
+frontend/dist
+
+# --- Backend (Node) ---
 backend/data/*.json
 backend/data/*.json.tmp
 backend/data/theme_bg.raw
 backend/data/wallpapers/
 backend/data/wallpapers.json
-# Node dependencies - ignora qualquer node_modules em qualquer subpasta
-**/node_modules/
-node_modules/
-# Build outputs - ignora qualquer dist/out em qualquer subpasta
-**/dist/
-dist/
-**/out/
-out/
-frontend/dist
-*.egg-info/
-.vite/
+!backend/data/.gitkeep
+backend/dist/
 
-# build do app desktop (Electron)
-/dist/
+# --- Desktop (Electron) ---
 desktop/out
-desktop/resources/sidecar
-desktop/resources/collector
-desktop/resources/wwwroot
-# residuo do PyInstaller (build/pyinstaller). Ancorado na raiz para nao
-# pegar desktop/build/, que tem os icones e o entitlements versionados.
+desktop/dist
+desktop/resources/
 /build/
 *.spec
+
+# --- Ferramentas / Sistema ---
+.tools/
+.vscode
+.idea
+.DS_Store
+.env
+!.env.example
