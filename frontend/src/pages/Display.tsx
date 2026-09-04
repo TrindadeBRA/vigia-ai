@@ -1197,9 +1197,9 @@ function Sidebar(props: {
           <BellIcon size={16} /> {t.alarms}
         </NavLink>
       </div>
-      <div className="mt-1 flex shrink-0 flex-col gap-px border-t border-edge pt-1">
+      <div className="mt-1 flex shrink-0 items-center gap-1.5 border-t border-edge pt-1">
         <a
-          className="flex w-full cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-[9px] py-2 text-left text-[12.5px] text-ink3 no-underline transition-colors duration-150 hover:bg-chip hover:text-ink2"
+          className="flex flex-1 cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-[9px] py-2 text-left text-[12.5px] text-ink3 no-underline transition-colors duration-150 hover:bg-chip hover:text-ink2"
           href="https://github.com/TrindadeBRA/vigia-ai"
           target="_blank"
           rel="noopener noreferrer"
@@ -1209,9 +1209,9 @@ function Sidebar(props: {
         <button
           type="button"
           onClick={onOpenPix}
-          className="group flex w-full cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-[9px] py-2 text-left text-[12.5px] text-[#e11d48] no-underline transition-colors duration-150 hover:bg-[#e11d48]/10"
+          className="group flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[#e11d48]/25 bg-[#e11d48]/10 px-2.5 py-1.5 text-[12px] font-bold text-[#e11d48] no-underline transition-colors duration-150 hover:border-[#e11d48]/45 hover:bg-[#e11d48]/18"
         >
-          <HeartIcon size={13} className="transition-transform duration-150 group-hover:scale-110" /> Apoiar via Pix
+          <HeartIcon size={12} className="transition-transform duration-150 group-hover:scale-110" /> Apoiar
         </button>
       </div>
     </nav>
