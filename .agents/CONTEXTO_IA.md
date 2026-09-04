@@ -24,6 +24,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [BACKEND.md](BACKEND.md)                     | Como rodar o FastAPI                                              |
 | [DESKTOP.md](DESKTOP.md)                     | App Electron: instalar, pastas, porta, assinatura                 |
 | [PLANO_ELECTRON.md](PLANO_ELECTRON.md)       | Plano do port para Electron e instaladores                        |
+| [PLANO_NODE.md](PLANO_NODE.md)               | Plano do port do coletor de Python para Node.js                   |
 | [FRONTEND.md](FRONTEND.md)                   | Painel e mostrador React                                          |
 | [FIRMWARE.md](FIRMWARE.md)                   | PlatformIO, Wokwi, `secrets.h`                                    |
 | [DECISOES.md](DECISOES.md)                   | Por que as escolhas atuais                                        |
