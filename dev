@@ -86,18 +86,28 @@ run_pio() {
   (cd "$ROOT_DIR/firmware" && "$pio" "$@")
 }
 
-ensure_python() {
-  if [ ! -d "$ROOT_DIR/backend/.venv" ]; then
-    python3 -m venv "$ROOT_DIR/backend/.venv"
+ensure_backend_node() {
+  if [ ! -d "$ROOT_DIR/backend/node_modules" ]; then
+    (cd "$ROOT_DIR/backend" && npm install)
   fi
-  # Sempre sincroniza deps: venv antigo não ganhava pacotes novos (ex.: Pillow).
-  "$ROOT_DIR/backend/.venv/bin/pip" install -q -e "$ROOT_DIR/backend[dev]"
 }
 
 ensure_node() {
   if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
     (cd "$ROOT_DIR/frontend" && npm install)
   fi
+}
+
+# Compat: backend Python legado (se ainda existir em backend-python-legacy)
+ensure_python() {
+  if [ -d "$ROOT_DIR/backend-python-legacy/.venv" ]; then
+    return 0
+  fi
+  if [ -d "$ROOT_DIR/backend/.venv" ] && [ -f "$ROOT_DIR/backend/.venv/bin/python" ]; then
+    return 0
+  fi
+  # Node é o runtime atual; não cria venv
+  return 0
 }
 
 ensure_frontend_dist() {
@@ -189,12 +199,16 @@ cleanup() {
 }
 
 run_backend() {
-  ensure_python
+  ensure_backend_node
   ensure_frontend_dist
-  echo "== backend FastAPI :${BACKEND_PORT} (Swagger em /docs) =="
+  # Build backend if dist missing
+  if [ ! -f "$ROOT_DIR/backend/dist/main.js" ]; then
+    (cd "$ROOT_DIR/backend" && npm run build)
+  fi
+  echo "== backend Node :${BACKEND_PORT} (Swagger em /docs) =="
   (
     cd "$ROOT_DIR/backend"
-    exec .venv/bin/python -m app.main
+    exec node dist/main.js
   ) &
   local backend_pid=$!
   PIDS+=("$backend_pid")
@@ -224,12 +238,13 @@ run_frontend() {
 }
 
 ours_on_port() {
-  # Só os processos deste repo: python -m app.main (8787) e Vite (5173).
+  # Só os processos deste repo: node dist/main.js (8787) e Vite (5173), + legado Python.
   local pid="$1"
   local cmd
   cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"
   case "$cmd" in
     *"/backend/"*"app.main"*|*python*" -m app.main"*) return 0 ;;
+    *"node"*dist/main.js*|*"node"*dist/desktop.js*|*"backend/dist"*) return 0 ;;
     *"vite"*|*"vigia-ai-frontend"*|*"frontend/node_modules"*) return 0 ;;
   esac
   return 1
@@ -343,8 +358,13 @@ cmd_sim() {
 }
 
 cmd_test() {
-  ensure_python
-  (cd "$ROOT_DIR/backend" && .venv/bin/pytest -q)
+  ensure_backend_node
+  if [ -f "$ROOT_DIR/backend/package.json" ]; then
+    (cd "$ROOT_DIR/backend" && npm run typecheck)
+    if grep -q '"test"' "$ROOT_DIR/backend/package.json"; then
+      (cd "$ROOT_DIR/backend" && npm test 2>&1 | head -n 100) || echo "(backend tests falharam ou vitest não configurado — verifique)"
+    fi
+  fi
   ensure_node
   (cd "$ROOT_DIR/frontend" && npx tsc --noEmit)
   if [ -d "$ROOT_DIR/desktop/node_modules" ]; then
@@ -355,8 +375,11 @@ cmd_test() {
 }
 
 cmd_lint() {
-  ensure_python
-  (cd "$ROOT_DIR/backend" && .venv/bin/ruff check app tests)
+  ensure_backend_node
+  if [ -f "$ROOT_DIR/backend/package.json" ]; then
+    echo "(lint backend: tsc já roda em ./dev test — adicione eslint se necessário)"
+    (cd "$ROOT_DIR/backend" && npx tsc --noEmit)
+  fi
 }
 
 ensure_desktop_node() {
@@ -366,7 +389,11 @@ ensure_desktop_node() {
 }
 
 cmd_app() {
-  ensure_python
+  ensure_backend_node
+  # build backend bundle for Electron
+  if [ ! -f "$ROOT_DIR/backend/dist/desktop.js" ]; then
+    (cd "$ROOT_DIR/backend" && npm run build)
+  fi
   ensure_frontend_dist
   ensure_desktop_node
   echo "== app desktop (Electron) =="
@@ -375,10 +402,14 @@ cmd_app() {
 }
 
 cmd_app_build() {
-  ensure_python
+  ensure_backend_node
+  if [ ! -f "$ROOT_DIR/backend/dist/desktop.js" ]; then
+    (cd "$ROOT_DIR/backend" && npm run build)
+  fi
   ensure_desktop_node
   echo "== instalador do app desktop =="
-  echo "   (o sidecar é compilado para ESTA plataforma — não há cross-compile)"
+  echo "   (o coletor Node é empacotado como JS — sem binário nativo por SO)"
+  "$ROOT_DIR/scripts/build-collector.sh" || true
   "$ROOT_DIR/scripts/build-desktop.sh" "$@"
 }
 

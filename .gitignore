@@ -22,16 +22,28 @@ backend/data/*.json.tmp
 backend/data/theme_bg.raw
 backend/data/wallpapers/
 backend/data/wallpapers.json
-frontend/node_modules
+backend-python-legacy/data/*.json
+backend-python-legacy/data/*.json.tmp
+backend-python-legacy/data/theme_bg.raw
+backend-python-legacy/data/wallpapers/
+backend-python-legacy/data/wallpapers.json
+# Node dependencies - ignora qualquer node_modules em qualquer subpasta
+**/node_modules/
+node_modules/
+# Build outputs - ignora qualquer dist/out em qualquer subpasta
+**/dist/
+dist/
+**/out/
+out/
 frontend/dist
 *.egg-info/
 .vite/
 
 # build do app desktop (Electron)
 /dist/
-desktop/node_modules
 desktop/out
 desktop/resources/sidecar
+desktop/resources/collector
 desktop/resources/wwwroot
 # residuo do PyInstaller (build/pyinstaller). Ancorado na raiz para nao
 # pegar desktop/build/, que tem os icones e o entitlements versionados.

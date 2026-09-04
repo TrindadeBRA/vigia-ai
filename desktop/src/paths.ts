@@ -55,7 +55,7 @@ export function frontendDist(): string {
     : join(repoRoot(), "frontend", "dist");
 }
 
-/** Binário do coletor empacotado pelo PyInstaller (só existe no build). */
+/** Binário do coletor empacotado pelo PyInstaller (legado, só existe no build antigo). */
 export function sidecarBinary(): string | null {
   const name = process.platform === "win32" ? "vigia-collector.exe" : "vigia-collector";
   const candidates = isPackaged
@@ -67,7 +67,27 @@ export function sidecarBinary(): string | null {
   return candidates.find((p) => existsSync(p)) ?? null;
 }
 
-/** Interpretador do venv, usado só em desenvolvimento. */
+/** Bundle Node do coletor (novo, esbuild). */
+export function collectorBundle(): string | null {
+  const candidates = isPackaged
+    ? [join(process.resourcesPath, "collector", "desktop.js"), join(process.resourcesPath, "collector", "desktop.cjs")]
+    : [
+        join(repoRoot(), "backend", "dist", "desktop.js"),
+        join(repoRoot(), "desktop", "resources", "collector", "desktop.js"),
+        join(repoRoot(), "build", "collector", "desktop.js"),
+      ];
+  return candidates.find((p) => existsSync(p)) ?? null;
+}
+
+export function devCollector(): string | null {
+  const bundle = collectorBundle();
+  if (bundle) return bundle;
+  // fallback dev via tsx
+  const tsSrc = join(repoRoot(), "backend", "src", "desktop.ts");
+  return existsSync(tsSrc) ? tsSrc : null;
+}
+
+/** Interpretador do venv, usado só em desenvolvimento (legado Python). */
 export function devPython(): string | null {
   const rel =
     process.platform === "win32"
