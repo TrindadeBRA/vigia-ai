@@ -1,0 +1,89 @@
+appId: com.trindadebra.vigia-ai
+productName: Vigia AI
+copyright: MIT — Vigia AI
+
+directories:
+  output: ../dist
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+  - "!**/*.map"
+
+# O sidecar e o painel entram como recursos, não como código do Electron.
+extraResources:
+  - from: resources/sidecar
+    to: sidecar
+  - from: ../frontend/dist
+    to: wwwroot
+  - from: build/trayTemplate.png
+    to: trayTemplate.png
+  - from: build/trayTemplate@2x.png
+    to: trayTemplate@2x.png
+
+# asar liga: o código do app fica empacotado, os recursos acima ficam fora
+# (o sidecar precisa ser um arquivo executável real no disco).
+asar: true
+
+mac:
+  category: public.app-category.developer-tools
+  icon: build/icon.png
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    # Sobe direto para a bandeja quando aberto pelo autostart.
+    LSUIElement: false
+    NSHighResolutionCapable: true
+
+dmg:
+  title: Vigia AI ${version}
+  contents:
+    - x: 140
+      y: 200
+    - x: 400
+      y: 200
+      type: link
+      path: /Applications
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Vigia AI
+
+linux:
+  icon: build/icon.png
+  category: Utility
+  synopsis: Painel de cotas de IA — Claude, GPT, Cursor e outros
+  description: >
+    Coletor local de cotas de assinaturas de IA com painel web e suporte a um
+    mostrador ESP32 na rede local. Os tokens nunca saem deste computador.
+  target:
+    - AppImage
+    - deb
+  desktop:
+    entry:
+      Name: Vigia AI
+      Comment: Painel de cotas de IA
+      Categories: Utility;Development;
+
+publish:
+  provider: github
+  owner: TrindadeBRA
+  repo: vigia-ai

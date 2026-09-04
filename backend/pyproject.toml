@@ -42,3 +42,6 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+  "slow: sobe o coletor de verdade (handshake do sidecar do app desktop)",
+]

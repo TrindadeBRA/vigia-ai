@@ -53,6 +53,8 @@ uso: ./dev <comando>
   ./dev firmware wokwi  só compila o env wokwi (não sobe o gateway)
   ./dev firmware flash  grava na ESP32
   ./dev firmware monitor
+  ./dev app             app desktop (Electron) em desenvolvimento
+  ./dev app build       instalador da plataforma atual (dist/)
   ./dev test            pytest + tsc
   ./dev lint            ruff
 
@@ -341,11 +343,39 @@ cmd_test() {
   (cd "$ROOT_DIR/backend" && .venv/bin/pytest -q)
   ensure_node
   (cd "$ROOT_DIR/frontend" && npx tsc --noEmit)
+  if [ -d "$ROOT_DIR/desktop/node_modules" ]; then
+    (cd "$ROOT_DIR/desktop" && npm run typecheck)
+  else
+    echo "(pulando o typecheck do desktop: rode ./dev app uma vez)"
+  fi
 }
 
 cmd_lint() {
   ensure_python
   (cd "$ROOT_DIR/backend" && .venv/bin/ruff check app tests)
+}
+
+ensure_desktop_node() {
+  if [ ! -d "$ROOT_DIR/desktop/node_modules" ]; then
+    (cd "$ROOT_DIR/desktop" && npm install)
+  fi
+}
+
+cmd_app() {
+  ensure_python
+  ensure_frontend_dist
+  ensure_desktop_node
+  echo "== app desktop (Electron) =="
+  # Se já houver um coletor em :8787, o app se conecta a ele em vez de subir outro.
+  (cd "$ROOT_DIR/desktop" && npm run build && ./node_modules/.bin/electron out/main.js)
+}
+
+cmd_app_build() {
+  ensure_python
+  ensure_desktop_node
+  echo "== instalador do app desktop =="
+  echo "   (o sidecar é compilado para ESTA plataforma — não há cross-compile)"
+  "$ROOT_DIR/scripts/build-desktop.sh" "$@"
 }
 
 if [ $# -lt 1 ]; then
@@ -360,6 +390,17 @@ case "$1" in
   wokwi|simulador|sim) cmd_sim ;;
   test) cmd_test ;;
   lint) cmd_lint ;;
+  app)
+    shift
+    case "${1:-}" in
+      "") cmd_app ;;
+      build) shift; cmd_app_build "$@" ;;
+      *)
+        echo "uso: ./dev app [build]" >&2
+        exit 1
+        ;;
+    esac
+    ;;
   firmware)
     shift
     case "${1:-}" in

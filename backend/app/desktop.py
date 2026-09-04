@@ -16,6 +16,7 @@ import asyncio
 import json
 import os
 import socket
+import stat
 import sys
 import threading
 from typing import Any
@@ -60,6 +61,21 @@ def _bind(host: str, port: int) -> socket.socket:
     sock.listen(128)
     sock.set_inheritable(True)
     return sock
+
+
+def _parent_pipe() -> bool:
+    """A stdin é um pipe do processo pai?
+
+    Só nesse caso o EOF significa "o pai morreu". Rodando solto no terminal a
+    stdin é um TTY, e em background é /dev/null — vigiar os dois faria o
+    coletor encerrar assim que subisse.
+    """
+    if os.environ.get("VIGIA_WATCH_STDIN", "").strip() == "0":
+        return False
+    try:
+        return stat.S_ISFIFO(os.fstat(sys.stdin.fileno()).st_mode)
+    except (OSError, ValueError, AttributeError):
+        return False
 
 
 def _watch_parent(shutdown: "threading.Event") -> None:
@@ -119,8 +135,8 @@ def main() -> None:
                 "pid": os.getpid(),
             },
         )
-        watcher = threading.Thread(target=_watch_parent, args=(stop,), daemon=True)
-        watcher.start()
+        if _parent_pipe():
+            threading.Thread(target=_watch_parent, args=(stop,), daemon=True).start()
         while not stop.is_set() and not serve.done():
             await asyncio.sleep(0.25)
         if not serve.done():
