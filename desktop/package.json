@@ -4,6 +4,8 @@
   "private": true,
   "description": "App de desktop do Vigia AI — Electron + coletor FastAPI como sidecar",
   "license": "MIT",
+  "homepage": "https://github.com/TrindadeBRA/vigia-ai",
+  "author": "TrindadeBRA <trindadebra@gmail.com>",
   "main": "out/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",

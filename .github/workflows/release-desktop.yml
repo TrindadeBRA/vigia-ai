@@ -73,6 +73,18 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.publish }}" = "true" ]; then
             PUBLISH=onTagOrDraft
           fi
+
+          # Um secret que não existe vira variável VAZIA, não ausente. O
+          # electron-builder trata CSC_LINK="" como caminho de certificado,
+          # resolve para o diretório atual e morre com "desktop not a file".
+          # Sem certificado o certo é não ter a variável e desligar a busca
+          # por identidade — é o que acontece numa máquina local, onde ela
+          # simplesmente não está definida.
+          if [ -z "${CSC_LINK:-}" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+
           npx electron-builder ${{ matrix.args }} \
             --config electron-builder.yml \
             --publish "$PUBLISH"
