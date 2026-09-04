@@ -43,7 +43,13 @@ export async function createApp() {
   const host = process.env.HOST || String((cfg.listen as any)?.host || "0.0.0.0");
   const port = parseInt(process.env.PORT || String((cfg.listen as any)?.port || 8787), 10);
 
-  const fastify = Fastify({ logger: false });
+  const isTest = Boolean(process.env.VITEST) || process.env.NODE_ENV === "test";
+  const fastify = Fastify({
+    logger: isTest ? false : { level: process.env.VIGIA_LOG_LEVEL || "info" },
+    disableRequestLogging: !isTest,
+    // Expor req.ip corretamente atrás de proxy/dev
+    trustProxy: true,
+  });
 
   await fastify.register(multipart, {
     limits: { fileSize: 15_000_000, files: 1 },
@@ -57,6 +63,17 @@ export async function createApp() {
   fastify.addContentTypeParser("*", { parseAs: "buffer" }, (_req, body, done) => {
     done(null, body);
   });
+
+  // Log de acesso estilo Uvicorn (INFO) — visível no ./dev up
+  if (!isTest) {
+    fastify.addHook("onResponse", (request, reply, done) => {
+      const ip = (request as unknown as { ip?: string }).ip ?? request.socket?.remoteAddress ?? "-";
+      // Formato próximo ao Uvicorn: 127.0.0.1:xxxxx - "GET /health HTTP/1.1" 200
+      const port = (request.socket?.remotePort ? `:${request.socket.remotePort}` : "");
+      console.log(`${ip}${port} - "${request.method} ${request.url} HTTP/1.1" ${reply.statusCode}`);
+      done();
+    });
+  }
 
   // SSE-aware headers: /events keep-alive, others close+no-store
   fastify.addHook("onSend", async (request, reply, payload) => {

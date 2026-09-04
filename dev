@@ -42,7 +42,7 @@ usage() {
 uso: ./dev <comando>
 
   ./dev                 esta ajuda
-  ./dev up              backend FastAPI + frontend Vite
+  ./dev up              backend Node + frontend Vite
   ./dev up --docker     Compose na raiz (anexado, Ctrl+C encerra)
   ./dev up --docker -d  Compose na raiz em background (sobrevive ao terminal)
   ./dev down            encerra o que este script deixou em :8787 / :5173
@@ -55,8 +55,8 @@ uso: ./dev <comando>
   ./dev firmware monitor
   ./dev app             app desktop (Electron) em desenvolvimento
   ./dev app build       instalador da plataforma atual (dist/)
-  ./dev test            pytest + tsc
-  ./dev lint            ruff
+  ./dev test            vitest + tsc (backend/frontend/desktop)
+  ./dev lint            eslint + tsc
   ./dev release         publica os instaladores: tag + GitHub Actions
   ./dev release 1.0.2   sobe a versão antes de taguear
   ./dev release --dry   roda a matriz sem tocar em Releases (artifacts, 14 dias)
