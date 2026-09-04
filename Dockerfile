@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json* ./frontend/
 RUN cd frontend && npm install
@@ -12,7 +12,7 @@ RUN cd backend && npm install
 COPY backend ./backend
 RUN cd backend && npm run build
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY --from=build /build/backend/dist ./dist
 COPY --from=build /build/backend/package.json ./package.json

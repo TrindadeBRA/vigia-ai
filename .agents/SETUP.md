@@ -214,7 +214,7 @@ Depois, no editor: `Cmd+Shift+P` → **Wokwi: Start Simulator**. O display no Wo
 | [`firmware/`](../firmware/) | PlatformIO (`esp32dev` + `wokwi`) |
 | [`backend/`](../backend/) | Fastify (Node 22), OpenAPI, provedores |
 | [`frontend/`](../frontend/) | Vite + React + TypeScript |
-| [``](.) | Contrato, APIs, hardware |
+| [`.agents/`](../.agents/) | Contrato, APIs, hardware |
 | [`./dev`](../dev) | Único script de desenvolvimento |
 
 Arquitetura completa: [`ARQUITETURA.md`](ARQUITETURA.md). Contrato da placa: [`CONTRATO_JSON.md`](CONTRATO_JSON.md). Para agentes de IA: [`../AGENTS.md`](../AGENTS.md) e [`CONTEXTO_IA.md`](CONTEXTO_IA.md).
