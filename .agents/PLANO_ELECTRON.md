@@ -1,7 +1,10 @@
 # Plano — Vigia AI Desktop (Electron)
 
-> Status: **proposta**. Nada implementado ainda.
+> Status: **implementado** (fases 0–7) na branch `feature/electron-port`.
 > Objetivo: empacotar o Vigia AI como **aplicativo de desktop** (Linux / macOS / Windows) com instalador, mantendo o modo web e o firmware ESP32 funcionando **sem nenhuma mudança de contrato**.
+>
+> Guia de uso: [`DESKTOP.md`](DESKTOP.md). O que a execução mudou em relação a
+> este plano está em **§14**.
 
 Leia antes: [`ARQUITETURA.md`](ARQUITETURA.md), [`CONTRATO_JSON.md`](CONTRATO_JSON.md), [`CONTEXTO_IA.md`](CONTEXTO_IA.md).
 
@@ -231,6 +234,19 @@ Fallback se der ruim: instruir o uso de `~/.claude/.credentials.json` (caminho j
 | **6. Distribuição** | CI GitHub Actions (matriz macos-14 / macos-13 / windows-latest / ubuntu-latest), release por tag, `electron-updater` | Tag `v1.1.0` publica os 4 artefatos; app instalado detecta e aplica update |
 | **7. Documentação** | README (seção "Instalar o app"), `.agents/DESKTOP.md`, `DECISOES.md`, `CHANGELOG.md` | Um usuário sem Python/Node instala e usa sem ler o repositório |
 
+Todas concluídas. Estado de cada uma:
+
+| Fase | Estado | Evidência |
+| --- | --- | --- |
+| 0 | ✅ | 73 testes verdes, ruff limpo, resíduos `.NET` removidos |
+| 1 | ✅ | Painel renderiza com cotas reais dentro da janela |
+| 2 | ✅ | Binário de 54 MB roda com `PATH=/usr/bin:/bin`, sem Python |
+| 3 | ✅ | 5 reinícios seguidos → 1 coletor vivo; fechar o app encerra em ~2 s |
+| 4 | ✅ | Card «Aplicativo» só aparece no app; mesmo bundle na web |
+| 5 | ✅ | `.dmg`/`.zip` arm64 e x64 gerados (116–124 MB) |
+| 6 | ✅ | `ci.yml` com matriz de 3 SOs + `release-desktop.yml` com 4 runners |
+| 7 | ✅ | README, `DESKTOP.md`, `DECISOES.md`, `CHANGELOG.md`, `CONTEXTO_IA.md` |
+
 Fases 0–4 são o port propriamente dito; 5–7 são a distribuição.
 
 ---
@@ -266,3 +282,47 @@ Fases 0–4 são o port propriamente dito; 5–7 são a distribuição.
 3. Criar `backend/app/desktop.py` (uvicorn explícito, handshake `VIGIA_READY`, `COLLECTOR_DATA` obrigatório).
 4. `npm init` em `desktop/`, `main.ts` mínimo que dá spawn no venv e abre `http://127.0.0.1:8787/display`.
 5. Build ad-hoc assinado no macOS **só para testar o prompt do Keychain** — é o gate da Fase 1.
+
+---
+
+## 14. O que a execução mudou
+
+Três coisas só apareceram rodando o código.
+
+### 14.1 O SSE segurava o encerramento (não previsto)
+
+O coletor levava mais de 5 s para morrer e caía no `SIGKILL`. Causa: o uvicorn
+espera as conexões fecharem no shutdown, e os streams `GET /events` **nunca**
+fecham sozinhos. Resolvido com `timeout_graceful_shutdown=3` em
+`backend/app/desktop.py`; o encerramento caiu para ~2 s.
+
+### 14.2 Corrida entre o coletor velho e o novo (não previsto)
+
+Ao reiniciar, o evento `exit` do processo antigo chegava **depois** do `start()`
+do novo e disparava o restart automático — deixando dois coletores na mesma
+porta. Resolvido com uma guarda de geração em `desktop/src/sidecar.ts`: cada
+spawn recebe um número e os handlers de um filho antigo saem cedo.
+
+### 14.3 O watcher de stdin era agressivo demais
+
+§5.3 previa encerrar o coletor quando a stdin fechasse. Na prática isso matava o
+binário assim que ele subia fora do Electron: em background a stdin é
+`/dev/null` e no terminal é um TTY — os dois dão EOF na hora. Agora só vigia
+quando a stdin é de fato um **pipe** do processo pai.
+
+### 14.4 O Keychain não deu problema (§9.1 era o maior risco)
+
+O provedor Claude lê o OAuth de dentro do `.app` empacotado sem prompt: quem
+consulta o Keychain é o `/usr/bin/security`, assinado pela Apple, e a ACL do
+item se aplica a ele. Testado com o `.app` gerado pelo electron-builder, ainda
+**sem** Developer ID. Falta validar com um build **assinado e notarizado** — a
+troca de identidade de assinatura é justamente o que pode fazer o macOS pedir
+autorização de novo. Os fallbacks (`~/.claude/.credentials.json` e token colado)
+seguem valendo.
+
+### 14.5 Ainda em aberto
+
+- Assinatura e notarização reais no macOS (precisa de conta Apple Developer).
+- Assinatura Authenticode no Windows.
+- Instalar e usar em VMs limpas de Windows e Linux — o critério da fase 5 foi
+  verificado só no macOS, que é a máquina onde o port foi feito.

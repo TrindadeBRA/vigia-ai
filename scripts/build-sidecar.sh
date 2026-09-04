@@ -10,12 +10,17 @@ VENV="$ROOT_DIR/backend/.venv"
 OUT="$ROOT_DIR/desktop/resources/sidecar"
 WORK="$ROOT_DIR/build/pyinstaller"
 
+# No Windows (Git Bash no CI) o interpretador é `python`, e o venv usa Scripts/.
+BOOTSTRAP_PY="python3"
+command -v python3 >/dev/null 2>&1 || BOOTSTRAP_PY="python"
+
 if [ ! -d "$VENV" ]; then
   echo "== criando backend/.venv =="
-  python3 -m venv "$VENV"
+  "$BOOTSTRAP_PY" -m venv "$VENV"
 fi
 PY="$VENV/bin/python"
 [ -x "$PY" ] || PY="$VENV/Scripts/python.exe"
+[ -x "$PY" ] || { echo "erro: não achei o python do venv em $VENV" >&2; exit 1; }
 
 echo "== dependências =="
 "$PY" -m pip install -q -e "$ROOT_DIR/backend" pyinstaller
@@ -58,7 +63,9 @@ echo "== PyInstaller =="
   "$ROOT_DIR/backend/app/desktop.py"
 
 echo "== movendo para desktop/resources/sidecar =="
-mv "$WORK/dist/vigia-collector/"* "$OUT/"
+# `mv dir/*` deixa arquivos ocultos para trás; cp -R + rm é portátil.
+cp -R "$WORK/dist/vigia-collector/." "$OUT/"
+rm -rf "$WORK/dist"
 
 BIN="$OUT/vigia-collector"
 [ -f "$BIN" ] || BIN="$OUT/vigia-collector.exe"

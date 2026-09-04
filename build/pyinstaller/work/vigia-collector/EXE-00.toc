@@ -56,7 +56,7 @@
  [],
  False,
  False,
- 1788548005,
+ 1788548400,
  [('run',
    '/Users/trindadebra/Documents/TrindadeBRA/vigia-ai/backend/.venv/lib/python3.14/site-packages/PyInstaller/bootloader/Darwin-64bit/run',
    'EXECUTABLE')],

@@ -22,6 +22,8 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [HARDWARE.md](HARDWARE.md)                   | Placa, pinos, drivers TFT                                         |
 | [TOUCH.md](TOUCH.md)                         | Views, XPT2046, calibração, Wokwi                                 |
 | [BACKEND.md](BACKEND.md)                     | Como rodar o FastAPI                                              |
+| [DESKTOP.md](DESKTOP.md)                     | App Electron: instalar, pastas, porta, assinatura                 |
+| [PLANO_ELECTRON.md](PLANO_ELECTRON.md)       | Plano do port para Electron e instaladores                        |
 | [FRONTEND.md](FRONTEND.md)                   | Painel e mostrador React                                          |
 | [FIRMWARE.md](FIRMWARE.md)                   | PlatformIO, Wokwi, `secrets.h`                                    |
 | [DECISOES.md](DECISOES.md)                   | Por que as escolhas atuais                                        |
@@ -74,12 +76,21 @@ frontend/src/pages/config/WallpaperProvidersConfigCard.tsx  chaves de API dos pr
 backend/app/routers/board.py       rotas /api/board — layout do board (posição/tamanho dos cards) espelhado do localStorage
 frontend/src/hooks/useGridBoards.ts  hook do layout do board (localStorage + backend)
 firmware/platformio.ini
+backend/app/desktop.py             entrypoint do coletor como sidecar do Electron
+desktop/src/main.ts                processo principal do app (janela, bandeja, menu)
+desktop/src/sidecar.ts             spawn/handshake/restart do coletor
+desktop/src/preload.ts             ponte window.vigia (allowlist)
+frontend/src/desktop.ts            acesso à ponte, com feature-detection
+frontend/src/pages/config/DesktopCard.tsx  card «Aplicativo» (só no app)
+scripts/build-sidecar.sh           PyInstaller do coletor
+scripts/build-desktop.sh           build completo do instalador
 ./dev                          único script
 ```
 
 ## Como validar
 
 - `./dev up` — mostrador em http://127.0.0.1:5173/display ; configs em http://127.0.0.1:5173/display/config ; Swagger em http://127.0.0.1:8787/docs
+- `./dev app` — o mesmo painel dentro do app Electron (ver [DESKTOP.md](DESKTOP.md))
 - `./dev test`
 - `./dev wokwi` e Wokwi: Start Simulator
 - Hardware: `firmware/src/secrets.h` + `./dev firmware flash`

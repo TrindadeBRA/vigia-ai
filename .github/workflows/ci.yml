@@ -34,6 +34,37 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run build
 
+  desktop:
+    name: desktop (typecheck + sidecar)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Typecheck do Electron
+        working-directory: desktop
+        run: |
+          npm install --ignore-scripts
+          npm run typecheck
+
+      # O handshake do sidecar é o contrato entre o coletor e o Electron
+      # (desktop/src/sidecar.ts). Roda nos três SOs porque os caminhos de
+      # credencial e o encerramento sem SIGTERM divergem por plataforma.
+      - name: Testes do coletor
+        working-directory: backend
+        run: |
+          pip install -e ".[dev]"
+          pytest -q
+
   firmware:
     runs-on: ubuntu-latest
     steps:

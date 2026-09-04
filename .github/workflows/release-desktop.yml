@@ -1,0 +1,90 @@
+name: Instaladores do app desktop
+
+# Dispara na tag (v1.2.3) ou manualmente. Cada SO compila o próprio sidecar:
+# PyInstaller não faz cross-compile.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Anexar os artefatos a um release do GitHub"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-14, name: "macOS (arm64)", args: "--mac --arm64" }
+          - { os: macos-13, name: "macOS (x64)", args: "--mac --x64" }
+          - { os: windows-latest, name: "Windows (x64)", args: "--win" }
+          - { os: ubuntu-latest, name: "Linux (x64)", args: "--linux" }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Sidecar (PyInstaller)
+        shell: bash
+        run: |
+          python -m venv backend/.venv
+          ./scripts/build-sidecar.sh
+
+      - name: Electron
+        working-directory: desktop
+        run: |
+          npm install
+          npm run build
+
+      - name: Instalador
+        working-directory: desktop
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Assinatura + notarização no macOS. Sem os segredos, o build sai
+          # sem assinar — instalável, mas o Gatekeeper reclama na 1ª abertura.
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          PUBLISH=never
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.publish }}" = "true" ]; then
+            PUBLISH=onTagOrDraft
+          fi
+          npx electron-builder ${{ matrix.args }} \
+            --config electron-builder.yml \
+            --publish "$PUBLISH"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vigia-ai-${{ matrix.os }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.deb

@@ -45,6 +45,7 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 | -------------- | ------------------------------------------------------------------------------------------------------ |
 | 🖥️ **Físico**   | ESP32 Dev Module + TFT SPI **3,5"** touch (XPT2046), tela sempre ligada na mesa                        |
 | 🌐 **Web**      | [`/display`](.agents/SETUP.md), mesmo layout, responsivo (desktop e mobile), tema/cor salvos no navegador |
+| 💻 **App**      | Instalador para **Linux, macOS e Windows** — não precisa de Python nem de Node ([`.agents/DESKTOP.md`](.agents/DESKTOP.md)) |
 | 🧪 **Simulado** | [Wokwi](https://wokwi.com/) no VS Code — testa o firmware sem soldar nada                              |
 
 > [!WARNING]
@@ -196,10 +197,19 @@ Quer entender exatamente como cada provedor é consultado (endpoints, headers, m
 
 ## Comece agora
 
+### Como aplicativo
+
+Baixe o instalador da sua plataforma nos [releases](https://github.com/TrindadeBRA/vigia-ai/releases) — `.dmg` (macOS), `.exe` (Windows), `.AppImage` ou `.deb` (Linux). **Não precisa instalar Python nem Node**: o coletor vai embarcado.
+
+O app é o mesmo produto: continua servindo `/display` na rede local para a ESP32 e para o navegador, e o menu tem **Abrir no navegador** quando você preferir uma aba. Detalhes em [`.agents/DESKTOP.md`](.agents/DESKTOP.md).
+
+### A partir do código
+
 Precisa de **Python ≥ 3.11**, **Node 20+** e, para o firmware, [PlatformIO Core](https://platformio.org/).
 
 ```bash
-./dev up
+./dev up      # coletor + painel web
+./dev app     # o mesmo, dentro do app desktop
 ```
 
 Isso já sobe o coletor e o mostrador web em `http://127.0.0.1:8787/display`. Para gravar a placa física, simular no Wokwi, configurar provedores e ver todos os comandos disponíveis:

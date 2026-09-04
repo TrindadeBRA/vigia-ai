@@ -65,3 +65,35 @@ Firmware e `/display` continuam recebendo o JSON a cada `USAGE_INTERVAL_S`. O co
 ## Telegram em vez de Web Push nos alarmes
 
 Web Push exigia HTTPS, service worker e chaves VAPID — frágil em LAN (`127.0.0.1`) e em iOS. **Telegram** funciona em qualquer aparelho com o app, token do bot configurado no painel (`/display/alarms`), long-polling sem webhook público. Um bot por instalação; chats registrados via `/start`. Detalhes: [`NOTIFICACOES.md`](NOTIFICACOES.md).
+
+## App desktop com o coletor embarcado, não reescrito
+
+O Electron sobe o **mesmo** coletor FastAPI como processo filho e a janela
+carrega `http://127.0.0.1:<porta>/display` — o endereço que o navegador e a
+placa já usam. Reescrever os provedores em Node teria dado um instalador ~70 MB
+menor e um só runtime, mas custaria reimplementar OAuth do Claude, leitura do
+Keychain, o `state.vscdb` do Cursor e a conversão RGB565, com risco de mudar
+sutilmente o JSON que `firmware/src/net/parse.cpp` parseia. Ver
+[PLANO_ELECTRON.md](PLANO_ELECTRON.md).
+
+## A porta do app não é sorteada
+
+A ESP32 guarda `USAGE_URL` no `secrets.h`. Se o app escolhesse uma porta livre
+qualquer no boot, toda placa já gravada pararia de achar o coletor. Porta
+ocupada vira decisão explícita do usuário — e quando quem está na porta é outro
+Vigia (o `./dev up`, por exemplo), o app se conecta a ele em vez de subir um
+segundo coletor.
+
+## O coletor morre quando a stdin fecha
+
+Windows não entrega `SIGTERM`. Sem um segundo caminho de encerramento, fechar o
+app deixaria o coletor rodando e segurando a porta. O sidecar vigia a stdin: o
+EOF significa que o Electron morreu. Só quando ela é de fato um pipe do pai —
+num terminal é TTY e em background é `/dev/null`, e vigiar esses dois faria o
+coletor encerrar assim que subisse.
+
+## Um build do frontend para web e desktop
+
+O painel não sabe se está num navegador ou no app: ele testa `window.vigia` em
+runtime. Assim o `/display` servido na LAN e o app são literalmente o mesmo
+bundle, e nada de desktop pode quebrar a versão web.

@@ -18,9 +18,15 @@ All notable changes to this project are documented here.
 - Card **AdSense** no mostrador (`/display`), no mesmo padrão dos demais provedores.
 - Layout do board (`/display`) agora também persiste no backend (`/api/board`), além do `localStorage` — sincroniza entre dispositivos na mesma LAN.
 - **Exportar/Importar alarmes** (`/display/alarms`): baixa as regras salvas como JSON e repõe a partir de um arquivo — ver `.agents/NOTIFICACOES.md`.
+- **App desktop (Electron)** para Linux, macOS e Windows, com instaladores (`.dmg`, `.exe` NSIS, `.AppImage`, `.deb`). O app embarca o coletor FastAPI (PyInstaller) e carrega o mesmo `/display` que o navegador e a placa usam — sem exigir Python ou Node instalados. Bandeja, abrir junto com o sistema, toggle de acesso pela LAN, "abrir no navegador", diálogo nativo pro `secrets.h`, e auto-update — ver `.agents/DESKTOP.md` e `.agents/PLANO_ELECTRON.md`.
+- `backend/app/desktop.py`: entrypoint do coletor como sidecar, com handshake `VIGIA_READY`/`VIGIA_ERROR` e encerramento por fechamento da stdin (Windows não entrega `SIGTERM`).
+- `./dev app` e `./dev app build`; `./dev test` passou a incluir o typecheck do desktop.
 
 ### Fixed
 
+- **Claude no Windows**: `os.uname()` não existe fora de POSIX, e a leitura de credencial quebrava com `AttributeError` antes mesmo de tentar o `~/.claude/.credentials.json`. Trocado por `sys.platform`.
+- **Cursor no Linux/Windows**: os candidatos de `state.vscdb` eram testados sempre na ordem do macOS, então a mensagem de "não encontrei" mostrava um caminho do macOS em qualquer SO. Agora a ordem segue a plataforma atual.
+- Mensagens de provedor que diziam "neste Mac" em caminho de código multiplataforma.
 - OpenCode Go: `percent` das janelas rolling/weekly/monthly usava `as_percent()` (fração 0–1, certo pro Claude), mas a API do OpenCode já devolve 0–100 — `percent: 1.0` (1% usado) virava 100% na tela. Trocado para `as_percent_points()`, igual ao Cursor.
 - Claude: no schema novo (`limits[]`), o campo `percent` também já vem 0–100, mas o parser usava `as_percent()` (a mesma função certa pro `utilization` do schema antigo). Sessão/semana com uso baixo logo após o reset (ex.: 1%) virava 100% na tela. Trocado para `as_percent_points()` quando `utilization` não está presente.
 - Modo foco (`/display`) forçava tela cheia do navegador via `requestFullscreen`, e um listener de `fullscreenchange` desligava o foco sozinho ao trocar de aba (a troca de aba já sai da tela cheia do browser). Agora o foco só esconde a UI, sem mexer em tela cheia.
