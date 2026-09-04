@@ -142,6 +142,21 @@ Mesmo contrato JSON, layout responsivo: sidebar no desktop, menu hambúrguer no 
 </tr>
 </table>
 
+### Editor de tema (`/display/theme`)
+
+Monta o fundo, o relógio e os ícones dos provedores livremente num canvas — cada ícone traz a cota ao vivo, escolhida por você. Salva no coletor; a placa aplica ao tocar em recarregar.
+
+<table>
+<tr>
+<th align="center">Editor no painel web</th>
+<th align="center">Tema aplicado na placa</th>
+</tr>
+<tr>
+<td><img src=".agents/assets/web/web-theme-editor.png" width="440" alt="Editor de tema com canvas, papel de parede e lista de elementos (relógio, Claude, Cursor, Bitcoin, AdSense)"></td>
+<td><img src=".agents/assets/firmware/display-theme-custom.png" width="240" alt="Tema personalizado rodando na tela ILI9341, com cards Cursor e Claude, relógio e mini-cards de Bitcoin e AdSense"></td>
+</tr>
+</table>
+
 ## Como funciona
 
 ```
