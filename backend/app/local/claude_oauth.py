@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -87,7 +88,8 @@ def from_macos_keychain() -> tuple[str | None, int | None, str | None]:
             _last_keychain_err = result[2]
             return result
     _last_keychain_err = None
-    if os.uname().sysname != "Darwin":
+    # os.uname() não existe no Windows — sys.platform funciona nos três SOs.
+    if sys.platform != "darwin":
         return None, None, None
     best: tuple[str, int | None] | None = None
     last_err = None
@@ -132,6 +134,16 @@ def credentials_path(cfg: dict | None = None) -> Path:
     if stored:
         return Path(stored).expanduser()
     return Path.home() / ".claude" / ".credentials.json"
+
+
+def missing_login_hint(cfg: dict | None = None) -> str:
+    """Texto do card quando não há login. Fora do macOS não existe Keychain."""
+    if sys.platform == "darwin":
+        return last_keychain_error() or "Nenhum login encontrado — rode `claude` neste Mac"
+    return (
+        "Nenhum login encontrado — rode `claude` neste computador "
+        f"(o token fica em {credentials_path(cfg)})"
+    )
 
 
 def claude_token_candidates(cfg: dict | None = None) -> list[tuple[str, str, int | None]]:

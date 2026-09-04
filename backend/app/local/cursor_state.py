@@ -6,6 +6,7 @@ import base64
 import json
 import os
 import sqlite3
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -22,18 +23,26 @@ def state_db_path(cfg: dict | None = None) -> Path:
         stored = str((cfg.get("paths") or {}).get("cursor_state_db") or "").strip()
     if stored:
         return Path(stored).expanduser()
-    home = Path.home()
-    candidates = [
-        home / "Library/Application Support/Cursor/User/globalStorage/state.vscdb",
-        home / ".config/Cursor/User/globalStorage/state.vscdb",
-    ]
-    appdata = os.environ.get("APPDATA")
-    if appdata:
-        candidates.append(Path(appdata) / "Cursor/User/globalStorage/state.vscdb")
-    for path in candidates:
+    for path in state_db_candidates():
         if path.is_file():
             return path
-    return candidates[0]
+    # Nenhum existe: devolve o caminho nativo do SO — é ele que aparece na mensagem de erro.
+    return state_db_candidates()[0]
+
+
+def state_db_candidates() -> list[Path]:
+    """Locais do state.vscdb, na ordem do SO atual primeiro."""
+    home = Path.home()
+    rel = "Cursor/User/globalStorage/state.vscdb"
+    macos = home / "Library/Application Support" / rel
+    linux = home / ".config" / rel
+    appdata = os.environ.get("APPDATA", "").strip()
+    windows = Path(appdata) / rel if appdata else home / "AppData/Roaming" / rel
+    if sys.platform == "darwin":
+        return [macos, linux, windows]
+    if sys.platform.startswith("win"):
+        return [windows, linux, macos]
+    return [linux, macos, windows]
 
 
 CURSOR_STATE_CACHE_TTL_S = 30.0

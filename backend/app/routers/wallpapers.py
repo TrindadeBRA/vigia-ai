@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import io
 import ipaddress
 import json
@@ -15,8 +14,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, Response
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response
 
 from app.config import data_dir
 from app.store import load, update
@@ -983,9 +982,6 @@ async def import_wallpaper(request: Request) -> dict[str, Any]:
         ext = ".png"
     elif image_bytes[:6] in (b"GIF87a", b"GIF89a"):
         ext = ".gif"
-    orig_path = _wallpaper_orig_path(wid).with_suffix(ext)
-    # Na verdade _wallpaper_orig_path retorna sem extensão, vamos usar .orig + ext
-    # Simplifica: salva como .orig
     _wallpaper_orig_path(wid).write_bytes(image_bytes)
     # Também salva com extensão para preview fallback
     try:

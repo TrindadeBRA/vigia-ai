@@ -140,7 +140,7 @@ def _fetch_gpt_local(cands: list[tuple[str, str, str | None, int | None]]) -> di
     last_err = "sem token GPT"
     for _source, token, account_id, _exp in cands:
         if gpt_token_expired(token):
-            last_err = "OAuth expirado; abra o Codex neste Mac (`codex login`)"
+            last_err = "OAuth expirado; abra o Codex neste computador (`codex login`)"
             continue
         result = fetch_gpt_one(token, account_id)
         if result.get("ok"):

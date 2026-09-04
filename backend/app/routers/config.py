@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from app.config import in_docker
-from app.local.claude_oauth import claude_token_candidates, credentials_path, last_keychain_error
+from app.local.claude_oauth import claude_token_candidates, credentials_path, missing_login_hint
 from app.local.cursor_state import cursor_missing_hint, cursor_token_candidates, jwt_expired
 from app.local.gpt_oauth import auth_path as gpt_auth_path, gpt_missing_hint, gpt_token_candidates, gpt_token_expired
 from app.netutil import lan_ipv4
@@ -91,7 +91,7 @@ def _claude_card(cfg: dict[str, Any]) -> ProviderCardPublic:
     if expired_only:
         return ProviderCardPublic(
             source="expired",
-            label="OAuth expirado — abra o Claude Code neste Mac para renovar",
+            label="OAuth expirado — abra o Claude Code neste computador para renovar",
             configured=False,
             suffix=None,
             mode="need_local",
@@ -121,7 +121,7 @@ def _claude_card(cfg: dict[str, Any]) -> ProviderCardPublic:
             local_label=str(p.get("local_label") or ""),
             accounts=extras,
         )
-    hint = last_keychain_error() or "Nenhum login encontrado — rode `claude` neste Mac"
+    hint = missing_login_hint(cfg)
     return ProviderCardPublic(
         source="missing",
         label=hint,
@@ -165,7 +165,7 @@ def _gpt_card(cfg: dict[str, Any]) -> ProviderCardPublic:
     if expired_only:
         return ProviderCardPublic(
             source="expired",
-            label="OAuth expirado — rode `codex login` neste Mac para renovar",
+            label="OAuth expirado — rode `codex login` neste computador para renovar",
             configured=False,
             suffix=None,
             mode="need_local",

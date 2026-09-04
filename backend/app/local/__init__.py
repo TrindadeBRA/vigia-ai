@@ -3,6 +3,7 @@ from app.local.claude_oauth import (
     claude_token_candidates,
     credentials_path,
     last_keychain_error,
+    missing_login_hint,
     parse_oauth_blob,
 )
 from app.local.cursor_state import (
@@ -21,6 +22,7 @@ __all__ = [
     "claude_token_candidates",
     "credentials_path",
     "last_keychain_error",
+    "missing_login_hint",
     "parse_oauth_blob",
     "cursor_missing_hint",
     "cursor_token_candidates",

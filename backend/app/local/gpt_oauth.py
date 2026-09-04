@@ -77,8 +77,8 @@ def gpt_token_candidates(cfg: dict | None = None) -> list[tuple[str, str, str | 
 def gpt_missing_hint(cfg: dict | None = None) -> str:
     path = auth_path(cfg)
     if path.is_file():
-        return "auth.json sem access_token — rode `codex login` neste Mac"
-    return f"Nenhum login Codex encontrado — rode `codex login` neste Mac (sem {path})"
+        return "auth.json sem access_token — rode `codex login` neste computador"
+    return f"Nenhum login Codex encontrado — rode `codex login` neste computador (sem {path})"
 
 
 def gpt_token_expired(token: str) -> bool:

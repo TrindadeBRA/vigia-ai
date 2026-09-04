@@ -16,7 +16,7 @@ CLAUDE_USER_AGENT = "claude-code/2.1"
 
 SCOPE_HINT = (
     "token sem escopo user:profile (típico de claude setup-token / oat). "
-    "Apague o token colado no painel e use o Claude Code logado neste Mac (`claude` / /login)."
+    "Apague o token colado no painel e use o Claude Code logado neste computador (`claude` / /login)."
 )
 
 
@@ -121,7 +121,7 @@ def _fetch_claude_local(cands: list[tuple[str, str, int | None]]) -> dict[str, A
     now_ms = int(time.time() * 1000)
     for _source, token, exp_ms in cands:
         if exp_ms and exp_ms < now_ms:
-            last_err = "OAuth expirado; abra o Claude Code neste Mac"
+            last_err = "OAuth expirado; abra o Claude Code neste computador"
             continue
         result = fetch_claude_one(token)
         if result.get("ok"):

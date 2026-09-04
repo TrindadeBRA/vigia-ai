@@ -166,7 +166,7 @@ def _fetch_cursor_local(cands: list[tuple[str, str, str | None]]) -> dict[str, A
     last_err = "sem JWT Cursor"
     for _source, token, plan in cands:
         if jwt_expired(token):
-            last_err = "JWT expirado; abra o Cursor neste Mac"
+            last_err = "JWT expirado; abra o Cursor neste computador"
             continue
         parsed = fetch_cursor_one(token, plan)
         if parsed.get("ok"):
