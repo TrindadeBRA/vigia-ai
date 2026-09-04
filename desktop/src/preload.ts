@@ -46,3 +46,28 @@ const api = {
 contextBridge.exposeInMainWorld("vigia", api);
 
 export type VigiaBridge = typeof api;
+
+/**
+ * Marca o `<html>` para o CSS do frontend saber que está rodando dentro do app
+ * e em qual plataforma. É o que liga as regras de `index.css` que abrem espaço
+ * para os semáforos do macOS (titleBarStyle: "hiddenInset") e transformam o
+ * cabeçalho em área de arrastar. No navegador nada disso existe e o CSS não
+ * casa com nenhum seletor — segue valendo **um único build** do frontend.
+ */
+function markRoot(): void {
+  const root = document.documentElement;
+  if (!root) return;
+  root.dataset.vigiaDesktop = "1";
+  root.dataset.vigiaPlatform = process.platform;
+}
+
+markRoot();
+document.addEventListener("DOMContentLoaded", markRoot);
+
+// Em tela cheia o macOS esconde os semáforos — o recuo do cabeçalho some junto.
+ipcRenderer.on("vigia:fullscreen", (_event, on: boolean) => {
+  const root = document.documentElement;
+  if (!root) return;
+  if (on) root.dataset.vigiaFullscreen = "1";
+  else delete root.dataset.vigiaFullscreen;
+});

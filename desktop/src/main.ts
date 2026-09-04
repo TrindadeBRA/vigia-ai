@@ -62,6 +62,12 @@ function createWindow(): BrowserWindow {
 
   window.once("ready-to-show", () => window.show());
 
+  // O renderer usa isso para recolher o espaço dos semáforos em tela cheia.
+  const sendFullscreen = () => window.webContents.send("vigia:fullscreen", window.isFullScreen());
+  window.on("enter-full-screen", sendFullscreen);
+  window.on("leave-full-screen", sendFullscreen);
+  window.webContents.on("did-finish-load", sendFullscreen);
+
   // A janela só navega no próprio coletor. Qualquer outro link vai pro navegador.
   const allowed = (target: string) => {
     try {
@@ -273,12 +279,17 @@ if (!app.requestSingleInstanceLock()) {
   app.on("activate", showWindow);
 
   app.on("before-quit", async (event) => {
-    if (quitting || !sidecar) return;
+    if (quitting) return;
+    // Marcar ANTES de qualquer saída: é esta flag que libera o handler de
+    // `close` da janela (que no macOS esconde em vez de fechar). Sair daqui
+    // sem marcar deixava o app impossível de encerrar quando não havia
+    // coletor nosso — o caso de se anexar a um `./dev up` já no ar.
     quitting = true;
+    destroyTray();
+    if (!sidecar) return; // anexado a um coletor externo: não é nosso para parar
     event.preventDefault();
     log("encerrando o coletor");
     await sidecar.stop();
-    destroyTray();
     app.quit();
   });
 

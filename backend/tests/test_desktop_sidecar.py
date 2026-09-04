@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -83,3 +84,27 @@ def test_porta_ocupada_devolve_codigo_3(tmp_path: Path):
     assert proc.returncode == 3, out
     line = next(ln for ln in out.splitlines() if ln.startswith(ERROR))
     assert json.loads(line[len(ERROR) :])["code"] == "port_in_use"
+
+
+def test_parent_pipe_accepts_socketpair(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O libuv (Node/Electron) faz o stdio com socketpair(), não com pipe().
+
+    Testar só S_ISFIFO desligava o vigia de stdin exatamente dentro do
+    Electron: o coletor ignorava o fechamento da stdin e só morria no SIGKILL
+    depois do timeout de 10 s. TTY e /dev/null continuam de fora — são char
+    devices, e vigiá-los mataria o coletor assim que ele subisse.
+    """
+    from app.desktop import _parent_pipe
+
+    parent, child = socket.socketpair()
+    with parent, child:
+        monkeypatch.setattr("sys.stdin", child.makefile("r"))
+        assert _parent_pipe() is True
+
+
+def test_parent_pipe_ignores_tty_and_devnull(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.desktop import _parent_pipe
+
+    with open(os.devnull) as devnull:
+        monkeypatch.setattr("sys.stdin", devnull)
+        assert _parent_pipe() is False

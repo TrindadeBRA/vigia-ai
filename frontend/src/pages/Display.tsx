@@ -1927,19 +1927,22 @@ export default function Display() {
 
   return (
     <div className={cn(shellClass, isCanvas && "fixed inset-0 z-50 overflow-hidden bg-black")}>
+      {/* Punho para mover a janela no app quando o cabeçalho está recolhido. */}
+      <div data-drag-handle aria-hidden />
       {/* ── Header ── */}
       <div
+        data-app-header
         className={cn(
           "sticky top-0 z-30 flex shrink-0 items-center gap-2 bg-[var(--bg-translucent)] px-3 shadow-[0_1px_0_var(--card-border)] backdrop-blur-[14px] backdrop-saturate-150 [.flat_&]:bg-canvas [.flat_&]:backdrop-blur-none",
           "overflow-hidden transition-[height,opacity] duration-300 ease-in-out",
           hideChrome ? "h-0 opacity-0 pointer-events-none shadow-none" : "h-14",
         )}
       >
+        <button className={`${iconBtn} -mr-1.5 hidden shrink-0 max-[860px]:flex`} onClick={() => setSidebarOpen(true)} title={t.overview} aria-label={t.overview}><MenuIcon size={19} /></button>
+        <button data-app-brand className="group/brand -mr-1.5 flex shrink-0 cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
+          <Logo size={38} showText={false} />
+        </button>
         <div className="flex min-w-0 flex-1 items-center gap-0.5">
-          <button className={`${iconBtn} hidden shrink-0 max-[860px]:flex`} onClick={() => setSidebarOpen(true)} title={t.overview} aria-label={t.overview}><MenuIcon size={19} /></button>
-          <button className="group/brand flex shrink-0 cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
-            <Logo size={38} showText={false} />
-          </button>
           {pageTitle ? (
             <div className="ml-0.5 flex min-w-0 items-center gap-1.5 text-ink3 max-[520px]:hidden">
               <span aria-hidden className="text-[15px] leading-none">/</span>

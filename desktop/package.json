@@ -1,6 +1,6 @@
 {
   "name": "vigia-ai-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "App de desktop do Vigia AI — Electron + coletor FastAPI como sidecar",
   "license": "MIT",

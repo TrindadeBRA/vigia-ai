@@ -320,7 +320,29 @@ troca de identidade de assinatura é justamente o que pode fazer o macOS pedir
 autorização de novo. Os fallbacks (`~/.claude/.credentials.json` e token colado)
 seguem valendo.
 
-### 14.5 Ainda em aberto
+### 14.5 A janela sem barra de título cobrava um acerto no CSS (não previsto)
+
+A janela usa `titleBarStyle: "hiddenInset"` no macOS: não há barra de título e
+os semáforos flutuam **sobre** o conteúdo — caíam em cima do olho do logo — e,
+sem barra, não sobrava nada para arrastar a janela. A correção é toda no
+frontend, com o `preload` marcando `data-vigia-desktop` / `data-vigia-platform`
+no `<html>` e o `index.css` reagindo a esses atributos:
+
+- recuo de 84px à esquerda do cabeçalho (`[data-app-header]`), que some quando
+  o app entra em tela cheia e o macOS recolhe os semáforos (o processo
+  principal avisa pelo canal `vigia:fullscreen`);
+- o olho (`[data-app-brand]`) sai do canto dos semáforos e vai para depois do
+  contador, via `order` — por isso o botão do logo é filho **direto** do
+  cabeçalho em `Display.tsx`: `order` só reordena irmãos diretos;
+- cabeçalho como área de arraste (`-webkit-app-region: drag`), com `no-drag`
+  nos controles;
+- `[data-drag-handle]`, um punho fixo no canto dos semáforos, para quando o
+  cabeçalho está recolhido (modo foco e canvas).
+
+No navegador esses atributos não existem, nenhum seletor casa e o CSS some do
+caminho — segue valendo **um único build** do frontend (§6, §7).
+
+### 14.6 Ainda em aberto
 
 - Assinatura e notarização reais no macOS (precisa de conta Apple Developer).
 - Assinatura Authenticode no Windows.

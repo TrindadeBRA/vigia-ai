@@ -39,13 +39,13 @@ instalado os dados vão para a pasta do usuário:
 
 | SO | Pasta |
 | --- | --- |
-| macOS | `~/Library/Application Support/Vigia AI/data` |
-| Windows | `%APPDATA%\Vigia AI\data` |
-| Linux | `~/.config/Vigia AI/data` |
+| macOS | `~/Library/Application Support/vigia-ai-desktop/data` |
+| Windows | `%APPDATA%\vigia-ai-desktop\data` |
+| Linux | `~/.config/vigia-ai-desktop/data` |
 
 Na primeira execução o app **copia** o `backend/data/` do repositório, se
 existir — quem já usava `./dev up` não abre o app com as contas em branco.
-Logs ficam em `.../Vigia AI/logs/`. Os dois têm atalho no card Aplicativo.
+Logs ficam em `.../vigia-ai-desktop/logs/`. Os dois têm atalho no card Aplicativo.
 
 ## Porta e a placa
 

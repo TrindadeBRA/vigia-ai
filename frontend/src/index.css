@@ -21,3 +21,62 @@
   --glow: rgba(230, 57, 49, .14);
   --bg-translucent: rgba(15, 15, 15, .82);
 }
+
+/* ── Dentro do app Electron ────────────────────────────────────────────────
+   O preload (desktop/src/preload.ts) escreve `data-vigia-*` no <html>. No
+   navegador esses atributos não existem, nenhum seletor daqui casa e o CSS
+   some do caminho — é o que mantém um único build servindo web e desktop. */
+
+/* No macOS a janela usa titleBarStyle "hiddenInset": não há barra de título e
+   os semáforos (fechar/minimizar/zoom) flutuam sobre o canto superior esquerdo
+   do conteúdo. Sem recuo eles caem em cima do logo. */
+:root[data-vigia-platform="darwin"] [data-app-header] {
+  padding-left: 84px;
+}
+
+/* Em tela cheia o macOS recolhe os semáforos — o recuo perde a razão de ser. */
+:root[data-vigia-platform="darwin"][data-vigia-fullscreen] [data-app-header] {
+  padding-left: 0.75rem; /* = px-3, o padding normal do cabeçalho */
+}
+
+/* Cabeçalho como área de arrastar, igual a um app nativo. */
+:root[data-vigia-desktop] [data-app-header] {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ...menos nos controles: a área de arraste engole o clique deles. */
+:root[data-vigia-desktop] [data-app-header] :is(a, button, input, select, textarea, [role="button"], [data-no-drag]) {
+  -webkit-app-region: no-drag;
+}
+
+/* Com o cabeçalho recolhido (modo foco e canvas) sobraria nada para pegar a
+   janela. Este punho fica só no canto dos semáforos — faixa que no macOS já é
+   deles — e some em tela cheia e fora do app. */
+[data-drag-handle] {
+  display: none;
+}
+:root[data-vigia-platform="darwin"] [data-drag-handle] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  display: block;
+  width: 150px;
+  height: 34px;
+  -webkit-app-region: drag;
+}
+:root[data-vigia-platform="darwin"][data-vigia-fullscreen] [data-drag-handle] {
+  display: none;
+}
+
+/* No macOS o logo sai do canto dos semáforos e vai para depois do contador —
+   o cabeçalho é flex, então basta reordenar. `order` só vale entre filhos
+   diretos: é por isso que o botão do logo não fica mais dentro do grupo da
+   esquerda em Display.tsx. */
+:root[data-vigia-platform="darwin"] [data-app-brand] {
+  order: 1;
+  margin-right: 0;
+  margin-left: 0.25rem;
+}

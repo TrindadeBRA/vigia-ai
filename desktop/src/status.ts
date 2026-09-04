@@ -21,8 +21,11 @@ const SHELL = (title: string, body: string) => `<!doctype html>
   .dot { width: .5rem; height: .5rem; border-radius: 50%; background: #e63931;
          display: inline-block; margin-right: .5rem; animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+  /* A janela não tem barra de título no macOS: esta faixa é o que resta para
+     arrastá-la enquanto o coletor não sobe. */
+  .drag { position: fixed; top: 0; left: 0; right: 0; height: 38px; -webkit-app-region: drag; }
 </style></head>
-<body><main class="card">${body}</main></body></html>`;
+<body><div class="drag"></div><main class="card">${body}</main></body></html>`;
 
 export function loadingPage(port: number): string {
   return page(

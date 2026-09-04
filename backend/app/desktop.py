@@ -64,18 +64,25 @@ def _bind(host: str, port: int) -> socket.socket:
 
 
 def _parent_pipe() -> bool:
-    """A stdin é um pipe do processo pai?
+    """A stdin é um canal do processo pai?
 
     Só nesse caso o EOF significa "o pai morreu". Rodando solto no terminal a
     stdin é um TTY, e em background é /dev/null — vigiar os dois faria o
-    coletor encerrar assim que subisse.
+    coletor encerrar assim que subisse. Ambos são char devices, então testar
+    FIFO/socket já os exclui.
+
+    Aceitar socket não é detalhe: o libuv (Node/Electron) cria os pipes de
+    stdio com `socketpair()`, não com `pipe()`. Testar só S_ISFIFO desligava
+    este vigia exatamente dentro do Electron, e o encerramento caía sempre no
+    SIGKILL depois do timeout.
     """
     if os.environ.get("VIGIA_WATCH_STDIN", "").strip() == "0":
         return False
     try:
-        return stat.S_ISFIFO(os.fstat(sys.stdin.fileno()).st_mode)
+        mode = os.fstat(sys.stdin.fileno()).st_mode
     except (OSError, ValueError, AttributeError):
         return False
+    return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
 
 
 def _watch_parent(shutdown: "threading.Event") -> None:
