@@ -111,11 +111,32 @@ def tela_data_utc(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%d/%m")
 
 
+def _from_unix(n: float) -> datetime:
+    # Connect/proto JSON manda Timestamp em ms (13 dígitos) ou segundos (10).
+    if n > 1e11:
+        n = n / 1000.0
+    return datetime.fromtimestamp(n, tz=timezone.utc)
+
+
 def parse_when(value: Any) -> datetime | None:
     if value is None:
         return None
     if isinstance(value, datetime):
         return value
+    if isinstance(value, dict):
+        sec = pick(value.get("seconds"), value.get("secondsTime"))
+        if sec is None:
+            return None
+        try:
+            n = float(sec)
+        except (TypeError, ValueError):
+            return None
+        nanos = value.get("nanos") or 0
+        try:
+            n += float(nanos) / 1e9
+        except (TypeError, ValueError):
+            pass
+        return _from_unix(n)
     if isinstance(value, str):
         s = value.strip()
         if not s:
@@ -129,14 +150,13 @@ def parse_when(value: Any) -> datetime | None:
                 return datetime.fromisoformat(s.replace("Z", "+00:00"))
             except ValueError:
                 return None
-    if isinstance(value, (int, float)) and value > 1e11:
-        return datetime.fromtimestamp(value / 1000.0, tz=timezone.utc)
     if isinstance(value, (int, float)) and value > 1e9:
-        return datetime.fromtimestamp(float(value), tz=timezone.utc)
+        return _from_unix(float(value))
     return None
 
 
 def iso_or_none(value: Any) -> str | None:
+    """Normaliza para ISO-8601 com ano (BRT). Sem ano o countdown vira 362d."""
     if value is None:
         return None
     if isinstance(value, str) and "/" in value.strip() and "h" in value:
@@ -145,7 +165,7 @@ def iso_or_none(value: Any) -> str | None:
     if dt is None:
         s = str(value).strip() if value is not None else ""
         return s or None
-    return tela_brt(dt)
+    return iso_brt(dt)
 
 
 def cycle_end_label(value: Any) -> str | None:
@@ -168,7 +188,10 @@ def fmt_reset_when(value: Any) -> str | None:
         return None
     if re.fullmatch(r"\d{2}/\d{2}(\s+\d{2}h\d{2})?", s):
         return s
-    return iso_or_none(value) or s
+    dt = parse_when(value)
+    if dt is None:
+        return s
+    return tela_brt(dt)
 
 
 def money_cents(value: Any) -> int | None:

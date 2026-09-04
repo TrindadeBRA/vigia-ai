@@ -118,7 +118,7 @@ Mesmo contrato JSON, layout responsivo: sidebar no desktop, menu hambúrguer no 
 <th align="center">Detalhe — Cursor</th>
 </tr>
 <tr>
-<td><img src=".agents/assets/web/web-overview.png" width="360" alt="Visão geral do mostrador web com sidebar e cards das 5 contas"></td>
+<td><img src=".agents/assets/web/web-overview.png" width="360" alt="Visão geral do mostrador web com sidebar e cards de várias contas, clima e moedas"></td>
 <td><img src=".agents/assets/web/web-detail-cursor.png" width="360" alt="Detalhe da conta Cursor no mostrador web"></td>
 </tr>
 <tr>

@@ -48,8 +48,15 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
         ondemand_used = max(0, ondemand_limit - ondemand_remain)
     elif ondemand_limit is not None:
         ondemand_used = 0
+    bonus = money_cents(pick(usage.get("bonusSpend"), usage.get("bonus_spend")))
+    # Só o fim do ciclo. billingCycleStart já passou → sem ano vira "Reset: 362d".
     cycle_end = iso_or_none(
-        data.get("billingCycleEnd") or data.get("billing_cycle_end") or usage.get("endDate")
+        pick(
+            data.get("billingCycleEnd"),
+            data.get("billing_cycle_end"),
+            usage.get("endDate"),
+            usage.get("end_date"),
+        )
     )
     # proto3 omite scalar 0: ciclo novo chega sem autoPercentUsed/apiPercentUsed.
     if percent is None and other_percent is None and ondemand_limit is None and not cycle_end:
@@ -66,7 +73,7 @@ def parse_cursor_dashboard(data: dict[str, Any], plan: str | None) -> dict[str, 
         "used_cents": ondemand_used,
         "limit_cents": ondemand_limit,
         "remaining_cents": ondemand_remain,
-        "bonus_cents": 0,
+        "bonus_cents": bonus if bonus is not None else 0,
         "cycle_end": cycle_end,
         "plan": (plan or data.get("membershipType") or "").strip() or None,
         "requests_used": None,

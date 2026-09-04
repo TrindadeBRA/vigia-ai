@@ -151,13 +151,15 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
   );
 }
 
-export function Logo({ size = 28 }: { size?: number }) {
+export function Logo({ size = 28, showText = true }: { size?: number; showText?: boolean }) {
   return (
     <>
       <EyeMark size={size} />
-      <div className="whitespace-nowrap text-[15px] font-extrabold tracking-[.2px]">
-        VIGIA<span className="text-accent"> AI</span>
-      </div>
+      {showText && (
+        <div className="whitespace-nowrap text-[15px] font-extrabold tracking-[.2px]">
+          VIGIA<span className="text-accent"> AI</span>
+        </div>
+      )}
     </>
   );
 }

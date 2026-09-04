@@ -188,6 +188,58 @@ def test_parse_cursor_dashboard_omitted_zero_fields() -> None:
     assert parsed["other_percent"] == 0.0
 
 
+def test_iso_or_none_keeps_year() -> None:
+    from app.formatting import iso_or_none
+
+    out = iso_or_none("2026-09-30T01:09:01Z")
+    assert out is not None
+    assert out.startswith("2026-09-")
+
+
+def test_parse_when_cursor_millis_string() -> None:
+    """Connect RPC manda billingCycleEnd como string de ms — sem isso o reset vira 362d."""
+    from app.formatting import iso_or_none, parse_when
+
+    dt = parse_when("1790816941000")
+    assert dt is not None
+    assert dt.year == 2026
+    iso = iso_or_none("1790816941000")
+    assert iso is not None
+    assert iso.startswith("2026-09-30")  # 01:09 UTC → 22:09 BRT no dia 30
+
+
+def test_parse_when_protobuf_timestamp() -> None:
+    from app.formatting import parse_when
+
+    dt = parse_when({"seconds": 1790816941, "nanos": 0})
+    assert dt is not None
+    assert dt.timestamp() == 1790816941
+
+
+def test_parse_cursor_dashboard_millis_cycle_end() -> None:
+    parsed = parse_cursor_dashboard(
+        {
+            "billingCycleStart": "1788224941000",
+            "billingCycleEnd": "1790816941000",
+            "planUsage": {
+                "autoPercentUsed": 26.28,
+                "apiPercentUsed": 23.16,
+                "bonusSpend": 10868,
+            },
+            "spendLimitUsage": {"individualLimit": 1000, "individualRemaining": 1000},
+            "membershipType": "pro",
+        },
+        "pro",
+    )
+    assert parsed is not None
+    assert parsed["percent"] == 26.3
+    assert parsed["other_percent"] == 23.2
+    assert parsed["bonus_cents"] == 10868
+    assert parsed["cycle_end"] is not None
+    assert "2026" in parsed["cycle_end"]
+    assert parsed["cycle_end"].startswith("2026-09-30")
+
+
 def test_parse_openrouter_credits() -> None:
     parsed = parse_openrouter_payload({"data": {"total_credits": 10.0, "total_usage": 6.66}})
     assert parsed["ok"] is True

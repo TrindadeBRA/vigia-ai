@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from app.formatting import utc_now
+from app.formatting import BRT, iso_brt, utc_now
 from app.providers.adsense import adsense_fail, fetch_adsense_accounts
 from app.providers.bitcoin import bitcoin_fail, fetch_bitcoin_accounts
 from app.providers.claude import claude_fail, fetch_claude_accounts
@@ -66,7 +67,7 @@ def mock_payload() -> dict[str, Any]:
                 "limit_cents": 1000,
                 "remaining_cents": 1000,
                 "bonus_cents": 0,
-                "cycle_end": "01/09",
+                "cycle_end": iso_brt(datetime.now(BRT) + timedelta(days=27)),
                 "plan": "pro",
                 "requests_used": None,
                 "requests_limit": None,

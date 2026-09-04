@@ -1829,7 +1829,7 @@ export default function Display() {
         <div className="flex min-w-0 flex-1 items-center gap-0.5">
           <button className={`${iconBtn} hidden shrink-0 max-[860px]:flex`} onClick={() => setSidebarOpen(true)} title={t.overview} aria-label={t.overview}><MenuIcon size={19} /></button>
           <button className="group/brand flex shrink-0 cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
-            <Logo size={28} />
+            <Logo size={38} showText={false} />
           </button>
           {pageTitle ? (
             <div className="ml-0.5 flex min-w-0 items-center gap-1.5 text-ink3 max-[520px]:hidden">

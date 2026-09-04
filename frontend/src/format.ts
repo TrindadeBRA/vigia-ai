@@ -106,6 +106,17 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+/** Virada dez→jan sem ano. Além disso é data já passada, não "Reset: 362d". */
+const MAX_YEARLESS_ROLL_MS = 45 * 24 * 3600 * 1000;
+
+function rollYearless(thisYear: number, nextYear: number, nowMs: number): number | null {
+  if (Number.isNaN(thisYear)) return null;
+  if (thisYear >= nowMs - 24 * 3600 * 1000) return thisYear;
+  const delta = nextYear - nowMs;
+  if (!Number.isNaN(nextYear) && delta > 0 && delta <= MAX_YEARLESS_ROLL_MS) return nextYear;
+  return thisYear;
+}
+
 /** Interpreta ISO ou o formato da tela (`30/09 17h07`, BRT) como epoch ms. */
 export function parseResetMs(raw: string | null | undefined, nowMs = Date.now()): number | null {
   if (!raw) return null;
@@ -122,10 +133,7 @@ export function parseResetMs(raw: string | null | undefined, nowMs = Date.now())
     const mi = Number(m[4]);
     const y = new Date(nowMs).getFullYear();
     const mk = (year: number) => Date.parse(`${year}-${pad2(mo)}-${pad2(dd)}T${pad2(hh)}:${pad2(mi)}:00-03:00`);
-    let t = mk(y);
-    if (Number.isNaN(t)) return null;
-    if (t < nowMs - 24 * 3600 * 1000) t = mk(y + 1);
-    return Number.isNaN(t) ? null : t;
+    return rollYearless(mk(y), mk(y + 1), nowMs);
   }
   const dmy = /^(\d{2})\/(\d{2})$/.exec(s);
   if (!dmy) return null;
@@ -133,17 +141,15 @@ export function parseResetMs(raw: string | null | undefined, nowMs = Date.now())
   const mo = Number(dmy[2]);
   const y = new Date(nowMs).getFullYear();
   const mk = (year: number) => Date.parse(`${year}-${pad2(mo)}-${pad2(dd)}T00:00:00-03:00`);
-  let t = mk(y);
-  if (Number.isNaN(t)) return null;
-  if (t < nowMs - 24 * 3600 * 1000) t = mk(y + 1);
-  return Number.isNaN(t) ? null : t;
+  return rollYearless(mk(y), mk(y + 1), nowMs);
 }
 
 /** Cronômetro até o reset. Plano GPT free não tem janela 5h — usa a cota longa. */
 export function fmtCountdown(resetsAt: string | null | undefined, nowMs = Date.now()): string | null {
   const end = parseResetMs(resetsAt, nowMs);
   if (end == null) return null;
-  const sec = Math.max(0, Math.floor((end - nowMs) / 1000));
+  const sec = Math.floor((end - nowMs) / 1000);
+  if (sec < 0) return null;
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
