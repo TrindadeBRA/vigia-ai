@@ -1,5 +1,7 @@
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import { STATUS_CODES } from "node:http";
 import { VERSION } from "./version.js";
 import { lanIPv4 } from "./netutil.js";
@@ -54,6 +56,19 @@ export async function createApp() {
 
   await fastify.register(multipart, {
     limits: { fileSize: 15_000_000, files: 1 },
+  });
+
+  // Nunca foi registrado no port inicial (só um placeholder em /openapi.json) —
+  // /docs sempre voltava 404, apesar de anunciado no README, no console de
+  // boot e num link clicável do painel (NetworkCard.tsx). Registrar cedo,
+  // antes dos routers, pra @fastify/swagger capturar as rotas via onRoute.
+  await fastify.register(swagger, {
+    openapi: {
+      info: { title: "Vigia AI", version: VERSION },
+    },
+  });
+  await fastify.register(swaggerUi, {
+    routePrefix: "/docs",
   });
 
   // FastAPI/Starlette liam o corpo cru independente do Content-Type; os
@@ -125,10 +140,7 @@ export async function createApp() {
     await hub.stop();
   });
 
-  // OpenAPI / docs placeholder (fastify swagger could be added later)
-  fastify.get("/openapi.json", async () => {
-    return { openapi: "3.0.0", info: { title: "Vigia AI", version: VERSION } };
-  });
+  fastify.get("/openapi.json", async () => fastify.swagger());
 
   await fastify.register(createUsageRoutes, { prefix: "" });
   await fastify.register(createConfigRoutes, { prefix: "" });

@@ -37,6 +37,8 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- **`GET /docs` (Swagger) sempre voltava 404 no coletor Node** — `@fastify/swagger`/`@fastify/swagger-ui` estavam instalados mas nunca registrados (só um placeholder estático em `/openapi.json`); o Python original tinha Swagger funcional via FastAPI. Regressão silenciosa: o README, o log de boot e um link clicável no painel (`NetworkCard.tsx`) anunciavam a URL como disponível. Registrados os dois plugins em `backend/src/main.ts`; `/openapi.json` agora devolve o spec real gerado (`fastify.swagger()`), com `paths` de verdade em vez do stub `{openapi, info}`.
+- Dependência `@fastify/static` (não usada em lugar nenhum do código) removida do backend — tinha 2 CVEs (bypass de autorização + path traversal). `@fastify/swagger-ui` atualizado pra `^6.1.1`, que resolve a mesma dependência internamente (usada pra servir os assets estáticos do `/docs`).
 - **Claude no Windows**: `os.uname()` não existe fora de POSIX, e a leitura de credencial quebrava com `AttributeError` antes mesmo de tentar o `~/.claude/.credentials.json`. Trocado por `sys.platform`.
 - **Cursor no Linux/Windows**: os candidatos de `state.vscdb` eram testados sempre na ordem do macOS, então a mensagem de "não encontrei" mostrava um caminho do macOS em qualquer SO. Agora a ordem segue a plataforma atual.
 - Mensagens de provedor que diziam "neste Mac" em caminho de código multiplataforma.
