@@ -35,6 +35,7 @@ export function ProviderCard({
   nowMs,
   grip,
   bg,
+  readonly,
   onOpen,
   onSetSize,
   onDuplicate,
@@ -50,6 +51,7 @@ export function ProviderCard({
   nowMs?: number;
   grip?: object;
   bg?: string | null;
+  readonly?: boolean;
   onOpen: () => void;
   onSetSize: (next: CardSize) => void;
   onDuplicate?: (id: string) => void;
@@ -58,50 +60,50 @@ export function ProviderCard({
 }) {
   // Cards dedicados com layout por tamanho
   if (p.provider === "claude") {
-    return <ClaudeTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <ClaudeTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "cursor") {
-    return <CursorTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <CursorTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "gpt") {
-    return <GptTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <GptTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "bitcoin") {
-    return <BitcoinTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <BitcoinTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "adsense") {
-    return <AdsenseTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <AdsenseTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "openrouter" || p.provider === "deepseek" || p.provider === "opencode" || p.provider === "fal") {
-    return <CreditsTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <CreditsTileCard p={p} pal={pal} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "weather" || p.kind === "weather") {
-    return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <WeatherTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "currencies" || p.kind === "currencies") {
-    return <CurrenciesTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <CurrenciesTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "git" || p.kind === "git") {
-    return <GitTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <GitTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "retroachievements" || p.kind === "retroachievements") {
-    return <RetroAchievementsTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <RetroAchievementsTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "rss" || p.kind === "rss") {
-    return <RssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <RssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   // Widgets extras: sem "conta"/dados de backend, só visuais
   if (p.provider === "clock") {
-    return <ClockTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs ?? Date.now()} grip={grip} bg={bg} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <ClockTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs ?? Date.now()} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "eye") {
-    return <EyeTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
+    return <EyeTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} />;
   }
   if (p.provider === "note" || p.kind === "note") {
-    return <NoteTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onUpdate={(id, patch) => (p as unknown as { _onNoteUpdate?: (id: string, patch: { text?: string; color?: string }) => void })._onNoteUpdate?.(id, patch)} />;
+    return <NoteTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onUpdate={(id, patch) => (p as unknown as { _onNoteUpdate?: (id: string, patch: { text?: string; color?: string }) => void })._onNoteUpdate?.(id, patch)} />;
   }
   if (p.provider === "image" || p.kind === "image") {
-    return <ImageTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onEdit={() => onOpen()} onTransformChange={(id, next) => (p as unknown as { _onImageTransform?: (id: string, next: { x: number; y: number; scale: number }) => void })._onImageTransform?.(id, next)} />;
+    return <ImageTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onEdit={() => onOpen()} onTransformChange={(id, next) => (p as unknown as { _onImageTransform?: (id: string, next: { x: number; y: number; scale: number }) => void })._onImageTransform?.(id, next)} />;
   }
   const sm = normalizeSize(size) === "sm";
   const { ready: ntcReady } = useNameToColor();
@@ -146,7 +148,7 @@ export function ProviderCard({
       )}
       style={genericStyle}
     >
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} isClone={isCloneId(p.id)} onDuplicate={onDuplicate} onRemove={onRemove} bg={fallbackBg} onSetBg={onSetBgGeneric} />
       ) : null}
       <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>

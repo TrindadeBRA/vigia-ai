@@ -93,7 +93,7 @@ export function rectFor(size: CardSize | undefined, cols: number): Rect {
   if (s === "sm" || s === "sw" || s === "sx" || s === "sc" || s === "scw") return { w: 2, h: 1 };
   if (s === "md") return { w: 2, h: 2 };
   if (s === "lg") return { w: Math.min(4, Math.max(2, cols)), h: 2 };
-  if (s === "wl") return { w: 2, h: 8 };
+  if (s === "wl") return { w: Math.min(4, Math.max(2, cols)), h: 8 };
   if (s === "wm") return { w: 2, h: 3 };
   if (s === "wxl") return { w: Math.min(4, Math.max(2, cols)), h: 8 };
   return { w: Math.min(4, Math.max(2, cols)), h: 4 };

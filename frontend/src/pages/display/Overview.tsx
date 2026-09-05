@@ -138,6 +138,7 @@ export function Overview({
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
   const [dropPreview, setDropPreview] = useState<Cell | null>(null);
   const unitPx = rowPxFor(cellPx);
+  const readonly = Boolean(kiosk);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const layout = displayBoard(ids, board, cols);
@@ -188,6 +189,7 @@ export function Overview({
   }, [idsKey]);
 
   function onDragStart(e: DragStartEvent) {
+    if (readonly) return;
     setActiveId(String(e.active.id));
     setDropPreview(null);
     const box = e.active.rect.current.initial;
@@ -195,6 +197,7 @@ export function Overview({
   }
 
   function onDragOver(e: DragOverEvent) {
+    if (readonly) return;
     const from = String(e.active.id);
     const over = e.over ? String(e.over.id) : null;
     if (!over || over === from) {
@@ -210,6 +213,7 @@ export function Overview({
   }
 
   function onDragEnd(e: DragEndEvent) {
+    if (readonly) return;
     const from = String(e.active.id);
     const over = e.over ? String(e.over.id) : null;
     setActiveId(null);
@@ -367,6 +371,47 @@ export function Overview({
             <Link to="/display/config" className={accentLink}>
               {t.configCta}
             </Link>
+          </div>
+        ) : readonly ? (
+          <div
+            ref={gridRef}
+            className={cn(overviewBoard, "min-h-0 flex-1")}
+            style={{
+              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+              gridAutoRows: unitPx,
+              minHeight: fillPx > 0 ? fillPx : undefined,
+            }}
+          >
+            {ids.map((id) => {
+              const p = byId.get(id);
+              const pos = layout.pos[id];
+              if (!p || !pos) return null;
+              const size = normalizeSize(layout.size[id]);
+              const bg = cardBg(layout, id);
+              const isNote = id.startsWith("note:");
+              if (isNote && onUpdateNote) {
+                (p as unknown as Record<string, unknown>)._onNoteUpdate = onUpdateNote;
+              }
+              return (
+                <div
+                  key={id}
+                  style={{ gridColumn: `${pos.c + 1} / span ${rectFor(size, cols).w}`, gridRow: `${pos.r + 1} / span ${rectFor(size, cols).h}` }}
+                  className="min-h-0 min-w-0 h-full"
+                >
+                  <ProviderCard
+                    p={p}
+                    pal={pal}
+                    size={size}
+                    t={t}
+                    nowMs={now}
+                    bg={bg}
+                    onOpen={() => onOpen(id)}
+                    onSetSize={() => { }}
+                    readonly={true}
+                  />
+                </div>
+              );
+            })}
           </div>
         ) : (
           <DndContext

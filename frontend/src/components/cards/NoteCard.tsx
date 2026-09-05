@@ -177,6 +177,7 @@ export function NoteBoardCard({
     text,
     colorId,
     size,
+    readonly,
     onUpdate,
     t,
     onEditingChange,
@@ -184,6 +185,7 @@ export function NoteBoardCard({
     text: string;
     colorId: string;
     size: CardSize;
+    readonly?: boolean;
     onUpdate: (patch: { text?: string; color?: string }) => void;
     t: T;
     onEditingChange?: (editing: boolean) => void;
@@ -191,6 +193,7 @@ export function NoteBoardCard({
     void colorId;
     void size;
     const [editing, setEditing] = useState(false);
+    useEffect(() => { if (readonly && editing) setEditing(false); }, [readonly, editing]);
     useEffect(() => { onEditingChange?.(editing); }, [editing, onEditingChange]);
     const [draft, setDraft] = useState(text);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -366,6 +369,7 @@ export function NoteBoardCard({
     const onContentClick = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
         if (target.tagName === "INPUT" && target.getAttribute("type") === "checkbox" && target.hasAttribute("data-task-index")) {
+            if (readonly) return;
             e.preventDefault();
             e.stopPropagation();
             const idx = Number(target.getAttribute("data-task-index"));
@@ -380,6 +384,7 @@ export function NoteBoardCard({
     };
 
     const onContentDoubleClick = (e: React.MouseEvent) => {
+        if (readonly) return;
         const target = e.target as HTMLElement;
         if (target.closest("a")) return;
         if (target.tagName === "INPUT" && target.hasAttribute("data-task-index")) return;
@@ -411,14 +416,14 @@ export function NoteBoardCard({
                         className={cn("h-full overflow-auto p-1 text-[13px] leading-relaxed text-ink", !text.trim() && "flex items-center justify-center")}
                         onClick={onContentClick}
                         onDoubleClick={onContentDoubleClick}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(true); } }}
+                        role={readonly ? undefined : "button"}
+                        tabIndex={readonly ? -1 : 0}
+                        onKeyDown={(e) => { if (readonly) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setEditing(true); } }}
                     >
                         {text.trim() ? (
                             <div className="prose prose-sm max-w-none break-words text-ink [&_a]:break-all [&_a]:text-accent [&_a]:underline" onClick={onContentClick} onDoubleClick={onContentDoubleClick} dangerouslySetInnerHTML={{ __html: html }} />
                         ) : (
-                            <span className="text-center text-[12.5px] text-ink3" onDoubleClick={onContentDoubleClick}>{t.widgetNoteEmpty || "Toque duas vezes para escrever..."}</span>
+                            <span className="text-center text-[12.5px] text-ink3" onDoubleClick={readonly ? undefined : onContentDoubleClick}>{t.widgetNoteEmpty || "Toque duas vezes para escrever..."}</span>
                         )}
                     </div>
                 )}

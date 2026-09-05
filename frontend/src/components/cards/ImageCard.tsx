@@ -45,6 +45,7 @@ export function ImageBoardCard({
     transform,
     t,
     size,
+    readonly,
     onConfigure,
     onTransformChange,
 }: {
@@ -53,6 +54,7 @@ export function ImageBoardCard({
     transform?: { x: number; y: number; scale: number } | null;
     t: T;
     size: CardSize;
+    readonly?: boolean;
     onConfigure?: () => void;
     onTransformChange?: (next: { x: number; y: number; scale: number }) => void;
 }) {
@@ -66,7 +68,8 @@ export function ImageBoardCard({
             <button
                 type="button"
                 className="flex h-full min-h-0 w-full flex-1 cursor-pointer items-center justify-center border-0 bg-transparent p-0"
-                onClick={onConfigure}
+                onClick={readonly ? undefined : onConfigure}
+                disabled={Boolean(readonly)}
                 aria-label={t.imageConfigure ?? "Configurar imagem"}
             >
                 <ImagePlaceholder t={t} compact={compact} />
@@ -76,7 +79,7 @@ export function ImageBoardCard({
 
     const isCover = fit !== "contain";
     const tx = transform ?? { x: 0, y: 0, scale: 1 };
-    const canPanZoom = isCover && Boolean(onTransformChange);
+    const canPanZoom = !readonly && isCover && Boolean(onTransformChange);
 
     // drag state
     const containerRef = useState(() => ({ current: null as HTMLDivElement | null }))[0];

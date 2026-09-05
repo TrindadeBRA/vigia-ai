@@ -77,13 +77,13 @@ const TILE_STATE = (dragging?: boolean, lifted?: boolean) => cn(
   "[.flat_&]:shadow-none [.flat_&]:hover:translate-y-0 [.flat_&]:rotate-0",
 );
 
-export function WeatherTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function WeatherTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const allowed = weatherAllowedSizes(p.weather);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => weatherSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <WeatherBoardCard weather={p.weather} config={p.weatherConfig} t={t} size={size} onOpen={onOpen} />
@@ -91,13 +91,13 @@ export function WeatherTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen
   );
 }
 
-export function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const allowed = currenciesAllowedSizes(p.currencies?.items);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => currenciesSizeLabel(s, t, p.currencies?.items)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <CurrenciesBoardCard currencies={p.currencies} t={t} size={size} onOpen={onOpen} />
@@ -105,13 +105,13 @@ export function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, bg, onO
   );
 }
 
-export function ClockTileCard({ p, size, dragging, lifted, t, nowMs, grip, bg, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs: number; grip?: object; bg?: string | null; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function ClockTileCard({ p, size, dragging, lifted, t, nowMs, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs: number; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const allowed = clockAllowedSizes();
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => clockSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <ClockBoardCard nowMs={nowMs} size={size} />
@@ -119,13 +119,13 @@ export function ClockTileCard({ p, size, dragging, lifted, t, nowMs, grip, bg, o
   );
 }
 
-export function EyeTileCard({ p, size, dragging, lifted, t, grip, bg, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function EyeTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const allowed = eyeAllowedSizes();
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => eyeSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <EyeBoardCard size={size} />
@@ -133,14 +133,14 @@ export function EyeTileCard({ p, size, dragging, lifted, t, grip, bg, onSetSize,
   );
 }
 
-export function ClaudeTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function ClaudeTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
   const allowed = claudeAllowedSizes(null, p.metrics);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => claudeSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <ClaudeBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
@@ -148,14 +148,14 @@ export function ClaudeTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip,
   );
 }
 
-export function CursorTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function CursorTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw" || normalizeSize(size) === "sx";
   const allowed = cursorAllowedSizes(null, p.metrics);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => cursorSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <CursorBoardCard metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
@@ -163,14 +163,14 @@ export function CursorTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip,
   );
 }
 
-export function GptTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function GptTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
   const allowed = gptAllowedSizes(null, p.metrics);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => gptSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <GptBoardCard metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
@@ -178,14 +178,14 @@ export function GptTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg
   );
 }
 
-export function CreditsTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function CreditsTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs?: number; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
   const allowed = creditsAllowedSizes(p.metrics);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => creditsSizeLabel(s, t, p.metrics)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <CreditsBoardCard providerId={p.provider} metrics={p.metrics} label={p.label} title={p.title} ok={p.ok} error={p.error} t={t} pal={pal} nowMs={nowMs} size={size} onOpen={onOpen} />
@@ -193,14 +193,14 @@ export function CreditsTileCard({ p, pal, size, dragging, lifted, t, nowMs, grip
   );
 }
 
-export function BitcoinTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function BitcoinTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
   const allowed = bitcoinAllowedSizes(null, p.metrics);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => bitcoinSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <BitcoinBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} size={size} onOpen={onOpen} />
@@ -208,14 +208,14 @@ export function BitcoinTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen
   );
 }
 
-export function AdsenseTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function AdsenseTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; pal: Pal; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const sm = normalizeSize(size) === "sm" || normalizeSize(size) === "sw";
   const allowed = adsenseAllowedSizes(null, p.metrics);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, sm ? "px-2.5 py-2" : "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => adsenseSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <AdsenseBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} size={size} onOpen={onOpen} />
@@ -223,13 +223,13 @@ export function AdsenseTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen
   );
 }
 
-export function GitTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function GitTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const allowed = gitAllowedSizes(p.gitRepo ?? null);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => gitSizeLabel(s, t, p.gitRepo ?? null)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <GitBoardCard repo={p.gitRepo ?? null} git={p.git} t={t} size={size} onOpen={onOpen} />
@@ -237,13 +237,13 @@ export function GitTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, on
   );
 }
 
-export function RetroAchievementsTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function RetroAchievementsTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const allowed = retroAllowedSizes(p.retroachievements ?? null);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => retroSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <RetroAchievementsBoardCard account={p.retroachievements!} metrics={p.metrics} t={t} size={size} onOpen={onOpen} />
@@ -251,13 +251,13 @@ export function RetroAchievementsTileCard({ p, size, dragging, lifted, t, grip, 
   );
 }
 
-export function RssTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function RssTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void }) {
   const allowed = rssAllowedSizes(p.rss);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => rssSizeLabel(s, t, p.rss)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
       <RssBoardCard rss={p.rss} t={t} size={size} onOpen={onOpen} />
@@ -265,28 +265,28 @@ export function RssTileCard({ p, size, dragging, lifted, t, grip, bg, onOpen, on
   );
 }
 
-export function NoteTileCard({ p, size, dragging, lifted, t, grip, bg, onSetSize, onDuplicate, onRemove, onUpdate, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onUpdate?: (id: string, patch: { text?: string; color?: string }) => void; onSetBg?: (id: string, next: string | null) => void }) {
+export function NoteTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onUpdate, onSetBg }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onUpdate?: (id: string, patch: { text?: string; color?: string }) => void; onSetBg?: (id: string, next: string | null) => void }) {
   void imageAllowedSizes;
   const style = useTileStyle(bg);
   const [editing, setEditing] = useState(false);
-  const chromeHidden = editing || Boolean(lifted);
+  const chromeHidden = readonly || editing || Boolean(lifted);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
       {!chromeHidden ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={noteAllowedSizes()} getLabel={(s) => noteSizeLabel(s, t)} isClone={true} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} />
       ) : null}
-      <NoteBoardCard text={p.note?.text ?? ""} colorId={p.note?.color ?? "yellow"} size={size} t={t} onUpdate={(patch) => onUpdate?.(p.id, patch)} onEditingChange={setEditing} />
+      <NoteBoardCard text={p.note?.text ?? ""} colorId={p.note?.color ?? "yellow"} size={size} t={t} readonly={readonly} onUpdate={(patch) => onUpdate?.(p.id, patch)} onEditingChange={setEditing} />
     </div>
   );
 }
 
-export function ImageTileCard({ p, size, dragging, lifted, t, grip, bg, onSetSize, onDuplicate, onRemove, onEdit, onSetBg, onTransformChange }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onEdit?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onTransformChange?: (id: string, next: { x: number; y: number; scale: number }) => void }) {
+export function ImageTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onEdit, onSetBg, onTransformChange }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onEdit?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onTransformChange?: (id: string, next: { x: number; y: number; scale: number }) => void }) {
   // image widgets are always removable (not clones only) — show remove for all
   const showRemove = true;
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "p-2", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted ? (
+      {!lifted && !readonly ? (
         <div className="absolute inset-0 z-[3] pointer-events-none">
           <div className="absolute left-1 top-1 flex items-center rounded-lg border border-edge bg-chip pointer-events-auto opacity-0 group-hover/tile:opacity-100 group-hover/tile:pointer-events-auto transition-opacity max-[860px]:opacity-100 max-[860px]:pointer-events-auto">
             <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...grip}>
@@ -302,7 +302,7 @@ export function ImageTileCard({ p, size, dragging, lifted, t, grip, bg, onSetSiz
           </div>
         </div>
       ) : null}
-      <ImageBoardCard src={p.imageSrc} fit={p.imageFit} transform={p.imageTransform} t={t} size={size} onConfigure={() => onEdit?.(p.id)} onTransformChange={onTransformChange ? (next) => onTransformChange(p.id, next) : undefined} />
+      <ImageBoardCard src={p.imageSrc} fit={p.imageFit} transform={p.imageTransform} t={t} size={size} readonly={readonly} onConfigure={() => onEdit?.(p.id)} onTransformChange={!readonly && onTransformChange ? (next) => onTransformChange(p.id, next) : undefined} />
     </div>
   );
 }
