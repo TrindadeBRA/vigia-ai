@@ -8,7 +8,12 @@ Decisões: [`DECISOES.md`](DECISOES.md).
 
 ## Instalar
 
-Baixe da [página de releases](https://github.com/TrindadeBRA/vigia-ai/releases):
+**macOS**: `brew tap TrindadeBRA/vigia-ai && brew install --cask vigia-ai`
+(recomendado — evita o aviso de Gatekeeper, ver seção "Assinatura de
+código"). Fórmula em [`TrindadeBRA/homebrew-vigia-ai`](https://github.com/TrindadeBRA/homebrew-vigia-ai),
+atualizada por `./dev cask` a cada release ([RELEASE.md](RELEASE.md)).
+
+Ou baixe da [página de releases](https://github.com/TrindadeBRA/vigia-ai/releases):
 
 | SO | Arquivo |
 | --- | --- |

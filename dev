@@ -61,6 +61,7 @@ uso: ./dev <comando>
   ./dev release 1.0.2   sobe a versão antes de taguear
   ./dev release --dry   roda a matriz sem tocar em Releases (artifacts, 14 dias)
   ./dev release --status  acompanha a última execução
+  ./dev cask             atualiza a Homebrew tap (depois que a matriz terminar)
 
 Ctrl+C encerra os processos que este script subiu.
 EOF
@@ -478,12 +479,28 @@ cmd_app_build() {
 }
 
 RELEASE_WORKFLOW="release-desktop.yml"
+HOMEBREW_TAP_REPO="git@github.com:TrindadeBRA/homebrew-vigia-ai.git"
 
 # A versão que o electron-builder usa para nomear o release. NÃO é a tag: ele
 # lê o package.json. Se os dois divergirem, os artefatos vão parar num release
 # que ninguém está olhando — por isso o comando abaixo força a igualdade.
 desktop_version() {
   sed -n 's/.*"version": "\([^"]*\)".*/\1/p' "$ROOT_DIR/desktop/package.json" | head -1
+}
+
+# backend, frontend e desktop têm versão própria em package.json e PRECISAM
+# andar juntas (.agents/RELEASE.md) — o electron-builder só olha a do
+# desktop pra decidir o release do GitHub, então bumpar só um dos três é
+# como a v2.2.0 nasceu quebrada (CI tentou publicar em cima de release
+# antigo, 422 already_exists). backend/src/version.ts é constante hardcoded,
+# não vem do package.json, então precisa de sed à parte.
+bump_all_versions() {
+  local want="$1"
+  (cd "$ROOT_DIR/backend" && npm version "$want" --no-git-tag-version --allow-same-version >/dev/null)
+  sed -i.bak "s/export const VERSION = \"[^\"]*\";/export const VERSION = \"$want\";/" "$ROOT_DIR/backend/src/version.ts"
+  rm -f "$ROOT_DIR/backend/src/version.ts.bak"
+  (cd "$ROOT_DIR/frontend" && npm version "$want" --no-git-tag-version --allow-same-version >/dev/null)
+  (cd "$ROOT_DIR/desktop" && npm version "$want" --no-git-tag-version --allow-same-version >/dev/null)
 }
 
 ensure_gh() {
@@ -561,10 +578,12 @@ cmd_release() {
 
   # Bump opcional. Feito antes das travas para a árvore ficar limpa de novo.
   if [ -n "$want" ] && [ "$want" != "$(desktop_version)" ]; then
-    echo "== versão $(desktop_version) → $want =="
-    (cd "$ROOT_DIR/desktop" && npm version "$want" --no-git-tag-version >/dev/null)
-    git -C "$ROOT_DIR" add desktop/package.json desktop/package-lock.json
-    git -C "$ROOT_DIR" commit -q -m "chore(desktop): versão $want"
+    echo "== versão $(desktop_version) → $want (backend + frontend + desktop) =="
+    bump_all_versions "$want"
+    git -C "$ROOT_DIR" add backend/package.json backend/package-lock.json backend/src/version.ts \
+                            frontend/package.json frontend/package-lock.json \
+                            desktop/package.json desktop/package-lock.json
+    git -C "$ROOT_DIR" commit -q -m "chore: versão $want"
     git -C "$ROOT_DIR" push -q origin "$branch"
   fi
 
@@ -599,12 +618,66 @@ Tag publicada. A matriz de 4 runners começou (macOS arm64/x64, Windows, Linux)
 
   ./dev release --status     acompanhar
 
-O release nasce como RASCUNHO: quando a matriz terminar, revise os artefatos e
-clique em "Publish release". Sem os secrets de assinatura os binários saem sem
-assinar — vale dizer isso no corpo do release.
+O release já publica direto (releaseType: release no electron-builder.yml,
+não nasce mais como rascunho). Sem os secrets de assinatura da Apple os
+binários de macOS saem sem assinar — o Gatekeeper vai acusar "app
+danificado" pra quem baixar o .dmg direto (mitigado com o
+fix-gatekeeper.command dentro do pacote, ver .agents/RELEASE.md).
+
+Quando a matriz terminar, atualize a Homebrew tap (instala sem esse aviso,
+ver .agents/RELEASE.md):
+
+  ./dev cask         (usa a versão atual do desktop/package.json)
 
   gh release view $tag --web
 MSG
+}
+
+# Atualiza a fórmula na tap TrindadeBRA/homebrew-vigia-ai: baixa os .dmg do
+# release, recalcula sha256 e dá push. Roda DEPOIS que a matriz do
+# ./dev release terminar (precisa dos assets já publicados). Usa as
+# credenciais git/gh já autenticadas nesta máquina — sem secret novo no CI.
+cmd_cask() {
+  local version="${1:-$(desktop_version)}" tag work
+  tag="v$version"
+  ensure_gh
+
+  if ! gh release view "$tag" --repo TrindadeBRA/vigia-ai >/dev/null 2>&1; then
+    echo "erro: release $tag não encontrado (ainda rodando? veja: ./dev release --status)" >&2
+    exit 1
+  fi
+
+  work="$(mktemp -d)"
+  trap 'rm -rf "$work"' EXIT
+
+  echo "== baixando .dmg de $tag =="
+  gh release download "$tag" --repo TrindadeBRA/vigia-ai --dir "$work" \
+    --pattern "Vigia-AI-${version}-arm64.dmg" --pattern "Vigia-AI-${version}.dmg"
+
+  local sha_arm sha_intel
+  sha_arm="$(shasum -a 256 "$work/Vigia-AI-${version}-arm64.dmg" | cut -d' ' -f1)"
+  sha_intel="$(shasum -a 256 "$work/Vigia-AI-${version}.dmg" | cut -d' ' -f1)"
+
+  echo "== clonando a tap =="
+  git clone -q "$HOMEBREW_TAP_REPO" "$work/tap"
+
+  local cask="$work/tap/Casks/vigia-ai.rb"
+  sed -i.bak \
+    -e "s/version \".*\"/version \"$version\"/" \
+    -e "s/arm:   \"[a-f0-9]*\"/arm:   \"$sha_arm\"/" \
+    -e "s/intel: \"[a-f0-9]*\"/intel: \"$sha_intel\"/" \
+    "$cask"
+  rm -f "$cask.bak"
+
+  if git -C "$work/tap" diff --quiet; then
+    echo "tap já está em $version — nada a fazer."
+    return 0
+  fi
+
+  git -C "$work/tap" add Casks/vigia-ai.rb
+  git -C "$work/tap" commit -q -m "cask: vigia-ai $version"
+  git -C "$work/tap" push -q origin main
+  echo "== tap atualizada para $version =="
 }
 
 if [ $# -lt 1 ]; then
@@ -620,6 +693,7 @@ case "$1" in
   test) cmd_test ;;
   lint) cmd_lint ;;
   release) shift; cmd_release "$@" ;;
+  cask) shift; cmd_cask "$@" ;;
   app)
     shift
     case "${1:-}" in
