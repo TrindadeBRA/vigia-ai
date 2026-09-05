@@ -31,11 +31,15 @@ asar: true
 mac:
   category: public.app-category.developer-tools
   icon: build/icon.png
+  # Sem `arch:` fixo aqui de propósito: cada job da matriz do CI já passa
+  # --arm64 ou --x64 na CLI (release-desktop.yml). Fixar [arm64, x64] aqui
+  # fazia CADA job buildar os dois archs e colidir publicando os mesmos
+  # nomes de arquivo no mesmo release (422 already_exists) quando os dois
+  # rodam em paralelo (RELEASE.md). Pra build local dos dois de uma vez,
+  # use `npm run dist:mac` (já passa --x64 --arm64 na CLI).
   target:
     - target: dmg
-      arch: [arm64, x64]
     - target: zip
-      arch: [arm64, x64]
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist

@@ -1,6 +1,6 @@
 {
   "name": "vigia-ai-desktop",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "private": true,
   "description": "App de desktop do Vigia AI — Electron + coletor Fastify (Node 22) como sidecar",
   "license": "MIT",
@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
-    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64",
     "dist:win": "npm run build && electron-builder --win",
     "dist:linux": "npm run build && electron-builder --linux"
   },
