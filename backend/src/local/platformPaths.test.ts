@@ -108,7 +108,7 @@ describe("claude keychain fora do macOS", () => {
 
 describe("state.vscdb caminhos por plataforma", () => {
   it.each([
-    ["darwin", "Library/Application Support"],
+    ["darwin", join("Library", "Application Support")],
     ["linux", ".config"],
     ["win32", "AppData"],
   ] as const)("prioriza caminho do SO %s", (plat, trecho) => {
