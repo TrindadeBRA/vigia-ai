@@ -6,7 +6,7 @@ import type { ThemeName } from "../../theme";
 
 export type NoteData = { id: string; text: string; color: NoteColorId };
 
-export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; notes?: NoteData[] };
+export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; notes?: NoteData[]; wallpaperParallax?: boolean };
 
 export function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
   const [prefs, setPrefs] = useState<Prefs>(() => {

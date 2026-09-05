@@ -59,6 +59,8 @@ export default function Display() {
   const [driftMs, setDriftMs] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchFailed, setFetchFailed] = useState(false);
+  const [backendVersion, setBackendVersion] = useState<string | null>(null);
+  const [firmwareVersion, setFirmwareVersion] = useState<string | null>(null);
   const [currentCols, setCurrentCols] = useState<number>(() => colsForWidth(window.innerWidth));
   const [boards, setBoards] = useGridBoards();
   const [gridWallpaperOpen, setGridWallpaperOpen] = useState(false);
@@ -119,6 +121,8 @@ export default function Display() {
         if (typeof h.interval_s === "number" && h.interval_s >= 15) {
           setPollMs(h.interval_s * 1000);
         }
+        if (typeof h.version === "string") setBackendVersion(h.version);
+        setFirmwareVersion(h.firmware_version ?? null);
       })
       .catch(() => { });
   }, []);
@@ -396,6 +400,7 @@ export default function Display() {
                   focus={focusMode}
                   onToggleFocus={toggleFocus}
                   gridWallpaperId={gridWallpaperId}
+                  wallpaperParallax={prefs.wallpaperParallax !== false}
                   onOpenWallpaper={() => setGridWallpaperOpen(true)}
                   onOpenAddWidget={() => setAddWidgetOpen(true)}
                   kiosk={isKiosk}
@@ -432,7 +437,13 @@ export default function Display() {
         </main>
       </div>
       {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
-      <GridWallpaperModal open={gridWallpaperOpen} onClose={() => setGridWallpaperOpen(false)} lang={prefs.lang} />
+      <GridWallpaperModal
+        open={gridWallpaperOpen}
+        onClose={() => setGridWallpaperOpen(false)}
+        lang={prefs.lang}
+        parallax={prefs.wallpaperParallax !== false}
+        onToggleParallax={(v) => setPrefs((p) => ({ ...p, wallpaperParallax: v }))}
+      />
       <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} onAddImage={() => { setEditingImageId(null); setImageModalOpen(true); }} onAddNote={() => noteWidgets.add("", "yellow")} />
       <ImageWidgetModal
         open={imageModalOpen}

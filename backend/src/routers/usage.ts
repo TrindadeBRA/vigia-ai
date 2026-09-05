@@ -12,13 +12,14 @@ const SSE_HEADERS = {
 
 export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
   app.get("/health", async (request, reply) => {
-    const hub = (app as unknown as { hub?: { seconds: number } }).hub;
+    const hub = (app as unknown as { hub?: { seconds: number; deviceFirmwareVersion: string | null } }).hub;
     const listenHost = (app as unknown as { listenHost?: string }).listenHost ?? "0.0.0.0";
     const listenPort = (app as unknown as { listenPort?: number }).listenPort ?? 8787;
     const intervalS = hub?.seconds ?? 60;
     return {
       ok: true,
       version: VERSION,
+      firmware_version: hub?.deviceFirmwareVersion ?? null,
       panel: "/",
       panel_lan: panelLanUrl(listenPort),
       display: "/display",
@@ -31,15 +32,15 @@ export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/usage", async (request, reply) => {
-    const hub = (app as unknown as { hub?: { refresh: (opts: unknown) => Promise<unknown>; noteDevice: (ip: string | null, screen: string | null) => void } }).hub;
+    const hub = (app as unknown as { hub?: { refresh: (opts: unknown) => Promise<unknown>; noteDevice: (ip: string | null, screen: string | null, firmware?: string | null) => void } }).hub;
     // note device via headers
     const device = (request.headers["x-vigia-device"] as string | undefined) ?? (request.headers["X-Vigia-Device"] as string | undefined);
     if (device === "esp32" && hub) {
       const ip = request.ip;
-      const screen = (request.headers["x-vigia-screen"] as string | undefined) ?? (request.headers["x-vigia-screen"] as string | undefined) ?? null;
       // Fastify lowercases headers, so check case-insensitive
       const screenHeader = (request.headers["x-vigia-screen"] as string | undefined) ?? null;
-      hub.noteDevice(ip, screenHeader);
+      const firmwareHeader = (request.headers["x-vigia-firmware"] as string | undefined) ?? null;
+      hub.noteDevice(ip, screenHeader, firmwareHeader);
     }
     if (!hub) return reply.code(503).send({ ok: false, error: "hub not ready" });
     const payload = await hub.refresh({ forceQuota: true });
@@ -53,7 +54,8 @@ export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
     if (device === "esp32") {
       const ip = request.ip;
       const screen = (request.headers["x-vigia-screen"] as string | undefined) ?? null;
-      hub.noteDevice(ip, screen);
+      const firmware = (request.headers["x-vigia-firmware"] as string | undefined) ?? null;
+      hub.noteDevice(ip, screen, firmware);
     }
 
     // hijack raw response for SSE

@@ -1,6 +1,7 @@
 #include "net/usage_client.h"
 
 #include "net/parse.h"
+#include "version.h"
 #include "ui/customtheme.h"
 #include "ui/ui.h"
 
@@ -257,6 +258,7 @@ static void sseOpen()
   // Resolução da tela (protótipo do tema — deixa o editor acertar o
   // tamanho do fundo sem o usuário precisar digitar o IP da placa).
   g_http.addHeader("X-Vigia-Screen", String(tft.width()) + "x" + String(tft.height()));
+  g_http.addHeader("X-Vigia-Firmware", FIRMWARE_VERSION);
   g_http.useHTTP10(true);
   int code = g_http.GET();
   Serial.printf("coletor SSE GET -> HTTP %d\n", code);
@@ -377,6 +379,7 @@ void usageClientFetch()
 
   http.addHeader("X-Vigia-Device", "esp32");
   http.addHeader("X-Vigia-Screen", String(tft.width()) + "x" + String(tft.height()));
+  http.addHeader("X-Vigia-Firmware", FIRMWARE_VERSION);
   int code = http.GET();
   Serial.printf("coletor GET %s -> HTTP %d\n", USAGE_URL, code);
   if (code != 200)
@@ -452,6 +455,7 @@ static void addVigiaDeviceHeaders(HTTPClient &http)
 {
   http.addHeader("X-Vigia-Device", "esp32");
   http.addHeader("X-Vigia-Screen", String(tft.width()) + "x" + String(tft.height()));
+  http.addHeader("X-Vigia-Firmware", FIRMWARE_VERSION);
 }
 
 // GET <coletor>/api/theme/background — stream direto pro storage do tema

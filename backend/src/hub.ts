@@ -119,6 +119,7 @@ export class UsageHub {
   deviceSeenAt: number | null = null;
   deviceWidth: number | null = null;
   deviceHeight: number | null = null;
+  deviceFirmwareVersion: string | null = null;
   private _lock: Promise<void> = Promise.resolve();
   private _lockRelease: (() => void) | null = null;
 
@@ -127,12 +128,13 @@ export class UsageHub {
     this._onPayload = onPayload ?? null;
   }
 
-  noteDevice(ip: string | null | undefined, screen: string | null | undefined): void {
+  noteDevice(ip: string | null | undefined, screen: string | null | undefined, firmware?: string | null): void {
     if (!ip) return;
     this.deviceIp = ip;
     this.deviceSeenAt = performance.now() / 1000; // monotonic seconds similar to time.monotonic
     // also store wall clock? python uses time.monotonic
     // deviceSeenAt is monotonic float
+    if (firmware) this.deviceFirmwareVersion = firmware;
     if (screen) {
       const [wS, , hS] = partition(screen, "x");
       try {

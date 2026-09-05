@@ -59,6 +59,11 @@ type Strings = {
   langSection: string;
   refreshSection: string;
   refreshNow: string;
+  versionSection: string;
+  versionFrontend: string;
+  versionBackend: string;
+  versionFirmware: string;
+  versionUnknown: string;
   noData: string;
   noProviders: string;
   allOk: string;
@@ -261,6 +266,11 @@ export const STR: Record<Lang, Strings> = {
     langSection: "Idioma",
     refreshSection: "Dados de uso",
     refreshNow: "Atualizar consumo",
+    versionSection: "Versões",
+    versionFrontend: "Frontend",
+    versionBackend: "Backend",
+    versionFirmware: "Firmware",
+    versionUnknown: "—",
     noData: "sem dados",
     noProviders: "Nenhuma conta visível.",
     allOk: "Tudo certo",
@@ -453,6 +463,11 @@ export const STR: Record<Lang, Strings> = {
     langSection: "Language",
     refreshSection: "Usage data",
     refreshNow: "Fetch usage now",
+    versionSection: "Versions",
+    versionFrontend: "Frontend",
+    versionBackend: "Backend",
+    versionFirmware: "Firmware",
+    versionUnknown: "—",
     noData: "no data",
     noProviders: "No accounts visible.",
     allOk: "All good",
@@ -645,6 +660,11 @@ export const STR: Record<Lang, Strings> = {
     langSection: "Idioma",
     refreshSection: "Datos de uso",
     refreshNow: "Actualizar consumo",
+    versionSection: "Versiones",
+    versionFrontend: "Frontend",
+    versionBackend: "Backend",
+    versionFirmware: "Firmware",
+    versionUnknown: "—",
     noData: "sin datos",
     noProviders: "Ninguna cuenta visible.",
     allOk: "Todo bien",

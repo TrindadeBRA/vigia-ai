@@ -4,7 +4,7 @@ import { useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useRequest } from "../hooks/useRequest";
 import type { Lang } from "../i18n";
 import { THEME_STR } from "../pages/config/themeCopy";
-import { Button, FieldStatus, Modal, SelectField } from "../pages/config/ui";
+import { Button, FieldStatus, Modal, SelectField, Switch } from "../pages/config/ui";
 import { WallhavenAdvancedFilters } from "../pages/config/wallpaperManager/WallhavenAdvancedFilters";
 import { WALLHAVEN_DEFAULTS, wallhavenFiltersToQuery, type WallhavenFilters } from "../pages/config/wallpaperManager/wallhavenFilters";
 
@@ -14,16 +14,28 @@ type ProviderStatus = {
   wallhaven: { configured: boolean; has_key?: boolean };
 };
 
-export function GridWallpaperModal({ open, onClose, lang }: { open: boolean; onClose: () => void; lang: Lang }) {
+export function GridWallpaperModal({
+  open,
+  onClose,
+  lang,
+  parallax,
+  onToggleParallax,
+}: {
+  open: boolean;
+  onClose: () => void;
+  lang: Lang;
+  parallax: boolean;
+  onToggleParallax: (v: boolean) => void;
+}) {
   if (!open) return null;
   return (
     <Modal title="Wallpaper do grid" onClose={onClose} wide>
-      <GridWallpaperContent lang={lang} />
+      <GridWallpaperContent lang={lang} parallax={parallax} onToggleParallax={onToggleParallax} />
     </Modal>
   );
 }
 
-function GridWallpaperContent({ lang }: { lang: Lang }) {
+function GridWallpaperContent({ lang, parallax, onToggleParallax }: { lang: Lang; parallax: boolean; onToggleParallax: (v: boolean) => void }) {
   const c = THEME_STR[lang];
   const { wallpapers, gridId, fetchAll, setGridWallpaper } = useGridWallpaper();
   const selectReq = useRequest();
@@ -124,9 +136,17 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm leading-relaxed text-ink2">
-        O wallpaper será exibido apenas na área do grid, em alta qualidade (imagem original). Ao ativar o modo tela cheia, ele expande para toda a tela.
+        O wallpaper será exibido apenas na área do grid, em alta qualidade (imagem original), ponta a ponta. Ao ativar o modo tela cheia, ele expande para toda a tela.
         Reutiliza o mesmo seletor/biblioteca do tema.
       </p>
+
+      <div className="flex items-center justify-between gap-3 rounded-[10px] border border-edge bg-canvas px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Efeito parallax</p>
+          <p className="text-xs text-ink3">Fundo fixo, sem esticar: só os cards se movem por cima ao rolar. Desative para o fundo rolar junto com o grid.</p>
+        </div>
+        <Switch compact checked={parallax} onChange={(e) => onToggleParallax(e.currentTarget.checked)} label="Efeito parallax" />
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <input

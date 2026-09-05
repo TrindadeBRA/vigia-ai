@@ -6,10 +6,10 @@ export async function fetchUsage(): Promise<UsagePayload> {
   return res.json() as Promise<UsagePayload>;
 }
 
-export async function fetchHealth(): Promise<{ interval_s?: number }> {
+export async function fetchHealth(): Promise<{ interval_s?: number; version?: string; firmware_version?: string | null }> {
   const res = await fetch("/health", { cache: "no-store" });
   if (!res.ok) throw new Error(`health HTTP ${res.status}`);
-  return res.json() as Promise<{ interval_s?: number }>;
+  return res.json() as Promise<{ interval_s?: number; version?: string; firmware_version?: string | null }>;
 }
 
 /** Stream SSE do contrato JSON. O browser reconecta sozinho. */

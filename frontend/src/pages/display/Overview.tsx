@@ -1,5 +1,5 @@
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragOverEvent, type DragStartEvent } from "@dnd-kit/core";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import {
   cardBg,
@@ -101,6 +101,7 @@ export function Overview({
   onRemoveNote,
   onDuplicateNote,
   onUpdateNote,
+  wallpaperParallax = true,
 }: {
   providers: ProviderMeta[];
   updatedAt: string;
@@ -122,6 +123,8 @@ export function Overview({
   onRemoveNote?: (id: string) => void;
   onDuplicateNote?: (id: string) => void;
   onUpdateNote?: (id: string, patch: { text?: string; color?: string }) => void;
+  /** Wallpaper fixo (parallax): ancorado na área visível do `<main>`, não estica com o conteúdo e não rola com o grid. Default true. */
+  wallpaperParallax?: boolean;
 }) {
   const failing = providers.filter((p) => !p.ok).length;
   const age = payloadAgeMs(updatedAt, now);
@@ -137,6 +140,7 @@ export function Overview({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
   const [dropPreview, setDropPreview] = useState<Cell | null>(null);
+  const [bgRect, setBgRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const unitPx = rowPxFor(cellPx);
   const readonly = Boolean(kiosk);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -150,7 +154,7 @@ export function Overview({
   const previewCells = dropPreview && activeId ? rectCells(dropPreview, activeRect) : [];
   const previewKeys = new Set(previewCells.map((c) => `${c.r}:${c.c}`));
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = gridRef.current;
     if (!el) return;
     const measure = () => {
@@ -166,7 +170,11 @@ export function Overview({
       setCellPx(cell);
       const main = el.closest("main");
       const gridBox = el.getBoundingClientRect();
-      const mainBottom = main ? main.getBoundingClientRect().bottom : window.innerHeight;
+      const mainRect = main ? main.getBoundingClientRect() : null;
+      const mainBottom = mainRect ? mainRect.bottom : window.innerHeight;
+      if (mainRect) {
+        setBgRect({ top: mainRect.top, left: mainRect.left, width: mainRect.width, height: mainRect.height });
+      }
       const tiles = [...el.children].filter((node) => node.querySelector('[aria-label="Arrastar"], [aria-label="Drag"], [aria-label="Arrastrar"]'));
       const lastBottom = tiles.reduce((max, node) => Math.max(max, node.getBoundingClientRect().bottom), gridBox.top);
       const leftover = Math.round(mainBottom - lastBottom);
@@ -282,25 +290,42 @@ export function Overview({
   }
 
   const gridBgUrl = gridWallpaperUrl(gridWallpaperId);
+  const parallax = wallpaperParallax && Boolean(bgRect);
   return (
-    <div className={cn("flex min-h-full flex-col", gridBgUrl && "relative", gridBgUrl && !focus && "overflow-hidden rounded-xl")}>
-      {/* Grid wallpaper: apenas na área do grid; em fullscreen cobre a tela toda */}
+    <div className={cn("flex min-h-full flex-col", gridBgUrl && !parallax && "relative", gridBgUrl && !parallax && !focus && "overflow-hidden rounded-xl")}>
+      {/* Grid wallpaper: por padrão fixo (parallax) — ancorado na área visível do <main>, ponta a ponta,
+          sem esticar e sem rolar junto do grid; só os cards se movem por cima ao rolar. */}
       {gridBgUrl ? (
-        <>
-          <img
-            key={gridWallpaperId}
-            src={gridBgUrl}
-            alt=""
-            draggable={false}
-            className={cn(
-              "pointer-events-none object-cover",
-              focus ? "fixed inset-0 z-0 size-full" : "absolute inset-0 z-0 size-full",
-            )}
-            style={{ imageRendering: "auto" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <div className={cn("pointer-events-none", focus ? "fixed inset-0 z-0 bg-black/25" : "absolute inset-0 z-0 bg-black/25")} aria-hidden />
-        </>
+        parallax && bgRect ? (
+          <div className="pointer-events-none fixed z-0" style={{ top: bgRect.top, left: bgRect.left, width: bgRect.width, height: bgRect.height }} aria-hidden>
+            <img
+              key={gridWallpaperId}
+              src={gridBgUrl}
+              alt=""
+              draggable={false}
+              className="size-full object-cover"
+              style={{ imageRendering: "auto" }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="absolute inset-0 bg-black/25" />
+          </div>
+        ) : (
+          <>
+            <img
+              key={gridWallpaperId}
+              src={gridBgUrl}
+              alt=""
+              draggable={false}
+              className={cn(
+                "pointer-events-none object-cover",
+                focus ? "fixed inset-0 z-0 size-full" : "absolute inset-0 z-0 size-full",
+              )}
+              style={{ imageRendering: "auto" }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className={cn("pointer-events-none", focus ? "fixed inset-0 z-0 bg-black/25" : "absolute inset-0 z-0 bg-black/25")} aria-hidden />
+          </>
+        )
       ) : null}
       <div className={cn("relative z-10 flex flex-col", gridBgUrl && !focus && "p-3", focus && gridBgUrl && "p-4")}>
         <div className="mb-[18px] flex w-full flex-wrap items-center justify-between gap-3">
