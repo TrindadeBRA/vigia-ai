@@ -1,6 +1,6 @@
 {
   "name": "vigia-ai-desktop",
-  "version": "2.2.3",
+  "version": "2.3.0",
   "private": true,
   "description": "App de desktop do Vigia AI — Electron + coletor Fastify (Node 22) como sidecar",
   "license": "MIT",
