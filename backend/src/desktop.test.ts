@@ -53,11 +53,15 @@ describe("desktop handshake (slow)", () => {
     const backendDir = process.cwd().endsWith("backend") ? process.cwd() : join(process.cwd(), "backend");
     // No Windows o shim em node_modules/.bin/ é "tsx.cmd" — spawn() não resolve
     // extensão sozinho (isso não passa por um shell), então sem o .cmd explícito
-    // dá ENOENT mesmo com o arquivo existindo.
-    const tsxBin = join(backendDir, "node_modules", ".bin", process.platform === "win32" ? "tsx.cmd" : "tsx");
+    // dá ENOENT mesmo com o arquivo existindo. E um .cmd/.bat não é executável
+    // nativo do Windows (precisa do cmd.exe pra interpretar) — spawn() sem
+    // shell:true rejeita com EINVAL mesmo apontando pro arquivo certo.
+    const isWin = process.platform === "win32";
+    const tsxBin = join(backendDir, "node_modules", ".bin", isWin ? "tsx.cmd" : "tsx");
     const proc = spawn(tsxBin, ["src/desktop.ts"], {
       cwd: backendDir,
       stdio: ["pipe", "pipe", "pipe"],
+      shell: isWin,
       env: {
         ...process.env,
         HOST: "127.0.0.1",
