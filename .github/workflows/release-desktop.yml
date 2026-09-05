@@ -41,6 +41,10 @@ jobs:
           npm install
           npm run build
 
+      - name: Coletor (deps)
+        working-directory: backend
+        run: npm install
+
       - name: Coletor (Node bundle)
         shell: bash
         run: |
