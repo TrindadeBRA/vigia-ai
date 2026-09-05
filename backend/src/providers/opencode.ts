@@ -2,8 +2,9 @@
  * Provedor OpenCode: API key única + assinatura (Go) e saldo (Zen).
  * Port of backend-python-legacy/app/providers/opencode.py
  */
-import { httpJson } from "../httpClient.js";
 import { asPercentPoints, isoOrNone } from "../formatting.js";
+import { httpJson } from "../httpClient.js";
+import { opencodeTokenCandidates } from "../local/opencodeAuth.js";
 import { provider as providerCfg } from "../store.js";
 
 const OC_KEY_RE = /sk-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*/;
@@ -137,23 +138,42 @@ export async function fetchOpencodeOne(rawKey: string): Promise<Record<string, u
   };
 }
 
-export async function fetchOpencodeAccounts(cfg: Record<string, unknown>): Promise<Array<Record<string, unknown>>> {
-  const p = providerCfg(cfg, "opencode") as Record<string, unknown>;
-  let accounts = Array.isArray(p.accounts) ? [...(p.accounts as unknown[])] : [];
-  if (accounts.length === 0 && !p.hidden) {
-    const legacy = String(p.paste_secret ?? "").trim();
-    if (legacy) accounts = [{ id: "legacy", label: String(p.local_label ?? ""), secret: legacy }];
+async function fetchOpencodeLocal(cands: Array<[string, string]>): Promise<Record<string, unknown>> {
+  let lastErr = "sem key OpenCode";
+  for (const [, key] of cands) {
+    const result = await fetchOpencodeOne(key);
+    if (result.ok) return result;
+    lastErr = String(result.error ?? lastErr);
   }
-  const out: Array<Record<string, unknown>> = [];
-  for (const accRaw of accounts) {
+  return opencodeFail(lastErr);
+}
+
+export async function fetchOpencodeAccounts(cfg: Record<string, unknown>): Promise<Array<Record<string, unknown>>> {
+  const accounts: Array<Record<string, unknown>> = [];
+  const p = providerCfg(cfg, "opencode") as Record<string, unknown>;
+
+  if (!p.hidden) {
+    const localCands = opencodeTokenCandidates(cfg);
+    if (localCands.length > 0) {
+      const result = await fetchOpencodeLocal(localCands);
+      accounts.push({ id: "local", label: String(p.local_label ?? ""), ...result });
+    }
+  }
+
+  let extra = Array.isArray(p.accounts) ? [...(p.accounts as unknown[])] : [];
+  if (extra.length === 0) {
+    const legacy = String(p.paste_secret ?? "").trim();
+    if (legacy) extra = [{ id: "legacy", label: String(p.local_label ?? ""), secret: legacy }];
+  }
+  for (const accRaw of extra) {
     const acc = accRaw as Record<string, unknown>;
     const key = String(acc.secret ?? "").trim();
     const label = String(acc.label ?? "").trim();
     const aid = String(acc.id ?? "extra");
     const result = await fetchOpencodeOne(key);
-    out.push({ id: aid, label, ...result });
+    accounts.push({ id: aid, label, ...result });
   }
-  return out;
+  return accounts;
 }
 
 export const clean_opencode_key = cleanOpencodeKey;

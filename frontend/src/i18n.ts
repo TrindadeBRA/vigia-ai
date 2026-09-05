@@ -48,7 +48,14 @@ type Strings = {
   dark: string;
   light: string;
   contrast: string;
+  auto: string;
   accentSection: string;
+  accentCustomHint: string;
+  accentCustomPlaceholder: string;
+  accentCustomApply: string;
+  accentCustomClear: string;
+  accentCustomCurrent: string;
+  accentNtcHint: string;
   langSection: string;
   refreshSection: string;
   refreshNow: string;
@@ -121,15 +128,45 @@ type Strings = {
   // Currencies
   currencies: string;
   currenciesEmpty: string;
-  // Widgets extras (relógio, olho/logo)
+  // Widgets extras (relógio, olho/logo, nota, imagem)
   addWidget: string;
   addWidgetHint: string;
   widgetClock: string;
   widgetEye: string;
+  widgetNote: string;
+  widgetNoteDesc: string;
+  widgetImage: string;
+  widgetImageDesc: string;
   widgetAdd: string;
   widgetRemove: string;
   widgetSmall: string;
   widgetQuarter: string;
+  widgetNoteEdit: string;
+  widgetNoteSave: string;
+  widgetNoteCancel: string;
+  widgetNotePlaceholder: string;
+  widgetNoteEmpty: string;
+  widgetNoteAdd: string;
+  widgetNoteCount: (n: number) => string;
+  imageEmpty: string;
+  imageEmptyHint: string;
+  imageConfigure: string;
+  imageAddTitle: string;
+  imageEditTitle: string;
+  imageTabUpload: string;
+  imageTabUrl: string;
+  imageTabSearch: string;
+  imageDropHint: string;
+  imageChooseFile: string;
+  imageUrlHint: string;
+  imageUseUrl: string;
+  imagePreview: string;
+  imageFitCover: string;
+  imageFitContain: string;
+  imageLabelPh: string;
+  imageNeedSrc: string;
+  imageAdd: string;
+  save: string;
   // Git
   git: string;
   gitEmpty: string;
@@ -211,7 +248,14 @@ export const STR: Record<Lang, Strings> = {
     dark: "Escuro",
     light: "Claro",
     contrast: "Contraste",
+    auto: "Automático",
     accentSection: "Cor",
+    accentCustomHint: "Ou digite qualquer texto — ex.: \"oceano\", \"vermelho\", \"#ff6600\" — a cor é gerada via NameToColor.",
+    accentCustomPlaceholder: "ex.: oceano, azul claro, #ff6600",
+    accentCustomApply: "Aplicar",
+    accentCustomClear: "Usar paleta",
+    accentCustomCurrent: "cor personalizada",
+    accentNtcHint: "NameToColor",
     langSection: "Idioma",
     refreshSection: "Dados de uso",
     refreshNow: "Atualizar consumo",
@@ -285,10 +329,40 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Widgets extras não usam dados de conta — são só visuais.",
     widgetClock: "Relógio",
     widgetEye: "Olho",
+    widgetNote: "Nota",
+    widgetNoteDesc: "Post-it com Markdown e cor personalizável.",
+    widgetImage: "Imagem",
+    widgetImageDesc: "Foto, URL ou busca em Wallhaven/Pexels/Unsplash/Giphy.",
     widgetAdd: "Adicionar",
     widgetRemove: "Remover",
     widgetSmall: "Pequeno",
     widgetQuarter: "1/4",
+    widgetNoteEdit: "Editar",
+    widgetNoteSave: "Salvar",
+    widgetNoteCancel: "Cancelar",
+    widgetNotePlaceholder: "Escreva sua nota... (Markdown suportado)",
+    widgetNoteEmpty: "Toque para escrever...",
+    widgetNoteAdd: "Adicionar nota",
+    widgetNoteCount: (n) => (n === 1 ? "1 nota" : `${n} notas`),
+    imageEmpty: "Sem imagem",
+    imageEmptyHint: "Clique para configurar",
+    imageConfigure: "Configurar imagem",
+    imageAddTitle: "Adicionar imagem",
+    imageEditTitle: "Editar imagem",
+    imageTabUpload: "Upload",
+    imageTabUrl: "URL / Base64",
+    imageTabSearch: "Buscar",
+    imageDropHint: "Arraste uma imagem ou clique para selecionar",
+    imageChooseFile: "Escolher arquivo",
+    imageUrlHint: "Cole a URL da imagem ou um data:image/... base64",
+    imageUseUrl: "Usar",
+    imagePreview: "Prévia",
+    imageFitCover: "Preencher",
+    imageFitContain: "Conter",
+    imageLabelPh: "Legenda opcional",
+    imageNeedSrc: "Escolha uma imagem",
+    imageAdd: "Adicionar",
+    save: "Salvar",
     git: "Git",
     gitEmpty: "Nenhum repositório configurado.",
     gitCommits: "commits",
@@ -364,7 +438,14 @@ export const STR: Record<Lang, Strings> = {
     dark: "Dark",
     light: "Light",
     contrast: "Contrast",
+    auto: "Auto",
     accentSection: "Color",
+    accentCustomHint: "Or type any text — e.g. \"ocean\", \"red\", \"#ff6600\" — color is generated via NameToColor.",
+    accentCustomPlaceholder: "e.g.: ocean, light blue, #ff6600",
+    accentCustomApply: "Apply",
+    accentCustomClear: "Use palette",
+    accentCustomCurrent: "custom color",
+    accentNtcHint: "NameToColor",
     langSection: "Language",
     refreshSection: "Usage data",
     refreshNow: "Fetch usage now",
@@ -438,10 +519,40 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Extra widgets don't use account data — they're just visual.",
     widgetClock: "Clock",
     widgetEye: "Eye",
+    widgetNote: "Note",
+    widgetNoteDesc: "Post-it with Markdown and custom color.",
+    widgetImage: "Image",
+    widgetImageDesc: "Photo, URL or search Wallhaven/Pexels/Unsplash/Giphy.",
     widgetAdd: "Add",
     widgetRemove: "Remove",
     widgetSmall: "Small",
     widgetQuarter: "1/4",
+    widgetNoteEdit: "Edit",
+    widgetNoteSave: "Save",
+    widgetNoteCancel: "Cancel",
+    widgetNotePlaceholder: "Write your note... (Markdown supported)",
+    widgetNoteEmpty: "Tap to write...",
+    widgetNoteAdd: "Add note",
+    widgetNoteCount: (n) => (n === 1 ? "1 note" : `${n} notes`),
+    imageEmpty: "No image",
+    imageEmptyHint: "Click to configure",
+    imageConfigure: "Configure image",
+    imageAddTitle: "Add image",
+    imageEditTitle: "Edit image",
+    imageTabUpload: "Upload",
+    imageTabUrl: "URL / Base64",
+    imageTabSearch: "Search",
+    imageDropHint: "Drag an image or click to select",
+    imageChooseFile: "Choose file",
+    imageUrlHint: "Paste image URL or data:image/... base64",
+    imageUseUrl: "Use",
+    imagePreview: "Preview",
+    imageFitCover: "Cover",
+    imageFitContain: "Contain",
+    imageLabelPh: "Optional caption",
+    imageNeedSrc: "Pick an image",
+    imageAdd: "Add",
+    save: "Save",
     git: "Git",
     gitEmpty: "No repository configured.",
     gitCommits: "commits",
@@ -517,7 +628,14 @@ export const STR: Record<Lang, Strings> = {
     dark: "Oscuro",
     light: "Claro",
     contrast: "Contraste",
+    auto: "Automático",
     accentSection: "Color",
+    accentCustomHint: "O escribe cualquier texto — ej.: \"océano\", \"rojo\", \"#ff6600\" — el color se genera vía NameToColor.",
+    accentCustomPlaceholder: "ej.: océano, azul claro, #ff6600",
+    accentCustomApply: "Aplicar",
+    accentCustomClear: "Usar paleta",
+    accentCustomCurrent: "color personalizado",
+    accentNtcHint: "NameToColor",
     langSection: "Idioma",
     refreshSection: "Datos de uso",
     refreshNow: "Actualizar consumo",
@@ -591,10 +709,40 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Los widgets extra no usan datos de cuenta — son solo visuales.",
     widgetClock: "Reloj",
     widgetEye: "Ojo",
+    widgetNote: "Nota",
+    widgetNoteDesc: "Post-it con Markdown y color personalizable.",
+    widgetImage: "Imagen",
+    widgetImageDesc: "Foto, URL o búsqueda en Wallhaven/Pexels/Unsplash/Giphy.",
     widgetAdd: "Agregar",
     widgetRemove: "Quitar",
     widgetSmall: "Pequeño",
     widgetQuarter: "1/4",
+    widgetNoteEdit: "Editar",
+    widgetNoteSave: "Guardar",
+    widgetNoteCancel: "Cancelar",
+    widgetNotePlaceholder: "Escribe tu nota... (Markdown soportado)",
+    widgetNoteEmpty: "Toca para escribir...",
+    widgetNoteAdd: "Agregar nota",
+    widgetNoteCount: (n) => (n === 1 ? "1 nota" : `${n} notas`),
+    imageEmpty: "Sin imagen",
+    imageEmptyHint: "Toca para configurar",
+    imageConfigure: "Configurar imagen",
+    imageAddTitle: "Agregar imagen",
+    imageEditTitle: "Editar imagen",
+    imageTabUpload: "Subir",
+    imageTabUrl: "URL / Base64",
+    imageTabSearch: "Buscar",
+    imageDropHint: "Arrastra una imagen o haz clic para seleccionar",
+    imageChooseFile: "Elegir archivo",
+    imageUrlHint: "Pega la URL de la imagen o un data:image/... base64",
+    imageUseUrl: "Usar",
+    imagePreview: "Vista previa",
+    imageFitCover: "Cubrir",
+    imageFitContain: "Contener",
+    imageLabelPh: "Leyenda opcional",
+    imageNeedSrc: "Elige una imagen",
+    imageAdd: "Agregar",
+    save: "Guardar",
     git: "Git",
     gitEmpty: "Ningún repositorio configurado.",
     gitCommits: "commits",

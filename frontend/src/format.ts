@@ -1,4 +1,4 @@
-import type { ThemeName } from "./theme";
+import type { ResolvedThemeName } from "./theme";
 import { PALETTES, hexToRgba } from "./theme";
 
 export const POLL_MS = 60000;
@@ -26,14 +26,14 @@ export function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
-export function barColor(pct: number | null | undefined, pal: (typeof PALETTES)[ThemeName]): string {
+export function barColor(pct: number | null | undefined, pal: (typeof PALETTES)[ResolvedThemeName]): string {
   if (pct == null || pct < 0) return pal.textMuted;
   if (pct < 70) return pal.good;
   if (pct < 90) return pal.warn;
   return pal.bad;
 }
 
-export function barGlow(pct: number | null | undefined, pal: (typeof PALETTES)[ThemeName]): string {
+export function barGlow(pct: number | null | undefined, pal: (typeof PALETTES)[ResolvedThemeName]): string {
   if (pct == null || pct < 70) return "none";
   if (pct < 90) return `0 0 7px ${hexToRgba(pal.warn, 0.4)}`;
   return `0 0 10px ${hexToRgba(pal.bad, 0.55)}`;

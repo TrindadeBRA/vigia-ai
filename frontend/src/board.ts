@@ -7,6 +7,8 @@ export type Rect = { w: number; h: number };
 export type BoardLayout = {
   size: Record<string, CardSize>;
   pos: Record<string, Cell>;
+  /** Cor de fundo por card (hex #rrggbb). Texto é derivado via generateReadableColor. */
+  bg?: Record<string, string>;
   /** Colunas no momento em que o usuário posicionou os cards. Resize não altera isso. */
   layoutCols?: number;
   /** Layout antigo (lista). Lido só na migração. */
@@ -34,7 +36,35 @@ export function quarterRowPxFor(cellPx: number): number {
 export const MIN_PAD_ROWS = 12;
 
 export function emptyBoard(): BoardLayout {
-  return { size: {}, pos: {} };
+  return { size: {}, pos: {}, bg: {} };
+}
+
+export function cardBg(board: BoardLayout | undefined, id: string): string | null {
+  const v = board?.bg?.[id];
+  return typeof v === "string" && v ? v : null;
+}
+
+export function normalizeCardBg(v: string | null | undefined): string | null {
+  if (!v || typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s) return null;
+  // aceita #rgb, #rrggbb, #rrggbbaa -> normaliza para #rrggbb
+  if (/^#[0-9a-fA-F]{3}$/.test(s)) return `#${s.slice(1).split("").map((c) => c + c).join("").toLowerCase()}`;
+  if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
+  if (/^#[0-9a-fA-F]{8}$/.test(s)) return `#${s.slice(1, 7).toLowerCase()}`;
+  return null;
+}
+
+export function setCardBg(ids: string[], board: BoardLayout, id: string, color: string | null): BoardLayout {
+  if (!ids.includes(id) && !cardBg(board, id) && !color) return board;
+  const nextBg = { ...(board.bg || {}) };
+  const norm = normalizeCardBg(color);
+  if (norm) nextBg[id] = norm;
+  else delete nextBg[id];
+  // se não mudou, retorna o mesmo objeto
+  const prev = normalizeCardBg(board.bg?.[id] ?? null);
+  if (prev === norm) return board;
+  return { ...board, bg: nextBg };
 }
 
 export const MIN_COLS = 4;
@@ -179,8 +209,13 @@ function packRowMajor(ids: string[], size: Record<string, CardSize>, cols: numbe
 
 export function packBoard(ids: string[], board: BoardLayout, cols: number): BoardLayout {
   const size: Record<string, CardSize> = {};
-  for (const id of ids) size[id] = normalizeSize(board.size[id]);
-  return { size, pos: packRowMajor(ids, size, cols), layoutCols: cols };
+  const bg: Record<string, string> = {};
+  for (const id of ids) {
+    size[id] = normalizeSize(board.size[id]);
+    const norm = normalizeCardBg(board.bg?.[id] ?? null);
+    if (norm) bg[id] = norm;
+  }
+  return { size, pos: packRowMajor(ids, size, cols), bg, layoutCols: cols };
 }
 
 function migrateOrder(ids: string[], prev: BoardLayout, cols: number): Record<string, Cell> {
@@ -218,7 +253,14 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
   for (const id of Object.keys(pos)) {
     if (!seen.has(id)) delete pos[id];
   }
-  return { size, pos, layoutCols: prev.layoutCols };
+  // preserva bg só para ids existentes, normalizado
+  const bg: Record<string, string> = {};
+  for (const id of ids) {
+    const raw = (prev.bg as Record<string, string> | undefined)?.[id];
+    const norm = normalizeCardBg(raw);
+    if (norm) bg[id] = norm;
+  }
+  return { size, pos, bg, layoutCols: prev.layoutCols };
 }
 
 function overlaps(ids: string[], board: BoardLayout, cols: number): boolean {
@@ -261,7 +303,7 @@ export function displayBoard(ids: string[], board: BoardLayout, cols: number): B
   const sameCols = savedCols == null || savedCols === cols;
   if (sameCols && cardsFit(ids, synced, cols) && !overlaps(ids, synced, cols)) return synced;
   const ordered = readingOrder(ids, synced);
-  return { size: synced.size, pos: packRowMajor(ordered, synced.size, cols), layoutCols: savedCols };
+  return { size: synced.size, pos: packRowMajor(ordered, synced.size, cols), bg: synced.bg, layoutCols: savedCols };
 }
 
 export function withLayoutCols(board: BoardLayout, cols: number): BoardLayout {
@@ -308,6 +350,7 @@ export function sameBoard(a: BoardLayout | undefined, b: BoardLayout, ids: strin
   if (!a) return false;
   for (const id of ids) {
     if ((a.size[id] || "lg") !== (b.size[id] || "lg")) return false;
+    if ((normalizeCardBg(a.bg?.[id] ?? null) || "") !== (normalizeCardBg(b.bg?.[id] ?? null) || "")) return false;
     const pa = a.pos?.[id];
     const pb = b.pos?.[id];
     if (!pa || !pb || pa.r !== pb.r || pa.c !== pb.c) return false;
@@ -424,7 +467,8 @@ export function duplicateBoard(ids: string[], board: BoardLayout, id: string, co
   if (!ids.includes(baseId) && !ids.includes(id)) return board;
   const newId = nextCloneId(baseId, board);
   const size = board.size[id] || board.size[baseId] || "md";
-  const next: BoardLayout = { size: { ...board.size, [newId]: size as CardSize }, pos: { ...board.pos }, layoutCols: board.layoutCols };
+  const bgSrc = normalizeCardBg(board.bg?.[id] ?? board.bg?.[baseId] ?? null);
+  const next: BoardLayout = { size: { ...board.size, [newId]: size as CardSize }, pos: { ...board.pos }, bg: { ...(board.bg || {}), ...(bgSrc ? { [newId]: bgSrc } : {}) }, layoutCols: board.layoutCols };
   const occ = occupancy([...ids, newId], { ...board, size: next.size, pos: next.pos }, cols);
   // place new clone at first free
   const rect = rectFor(size as CardSize, cols);
@@ -441,7 +485,9 @@ export function removeCloneBoard(board: BoardLayout, id: string): BoardLayout {
   if (!isCloneId(id)) return board;
   const size = { ...board.size };
   const pos = { ...board.pos };
+  const bg = { ...(board.bg || {}) };
   delete size[id];
   delete pos[id];
-  return { ...board, size, pos };
+  delete bg[id];
+  return { ...board, size, pos, bg };
 }

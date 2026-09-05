@@ -1,8 +1,9 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "../../../cn";
 import { cfgStatus } from "../../../tw";
 import { Button, Card, FieldStatus, SelectField } from "../ui";
 import { useWp } from "./context";
+import { WallhavenAdvancedFilters } from "./WallhavenAdvancedFilters";
 
 export function WallpaperLibrary() {
     const {
@@ -17,6 +18,8 @@ export function WallpaperLibrary() {
         searchResults,
         searchTotal,
         searchPage,
+        wallhavenFilters,
+        setWallhavenFilters,
         uploadReq,
         selectReq,
         listReq,
@@ -31,6 +34,15 @@ export function WallpaperLibrary() {
         handleImport,
     } = useWp();
     const fileRef = useRef<HTMLInputElement>(null);
+
+    // Wallhaven: carrega 9 wallpapers automaticamente ao abrir (mesmo sem busca)
+    useEffect(() => {
+        if (searchProvider !== "wallhaven") return;
+        if (searchResults.length > 0) return;
+        if (searchReq.busy) return;
+        void searchReq.run(() => handleSearch(1), { error: c.searchError });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchProvider]);
 
     return (
         <div className="flex flex-col gap-6">
@@ -145,7 +157,7 @@ export function WallpaperLibrary() {
                                 className="flex-1 rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink placeholder:text-ink3"
                             />
                             <Button
-                                disabled={!searchQuery.trim() || !canSearch}
+                                disabled={(!searchQuery.trim() && searchProvider !== "wallhaven") || !canSearch}
                                 loading={searchReq.busy}
                                 onClick={() => void searchReq.run(() => handleSearch(1), { error: c.searchError })}
                             >
@@ -153,6 +165,9 @@ export function WallpaperLibrary() {
                             </Button>
                         </div>
                     </div>
+                    {searchProvider === "wallhaven" ? (
+                        <WallhavenAdvancedFilters value={wallhavenFilters} onChange={setWallhavenFilters} />
+                    ) : null}
                     {!canSearch ? (
                         <p className={`${cfgStatus} text-warn`}>
                             {c.searchNeedsKey(searchProvider === "pexels" ? c.providerPexels : c.providerUnsplash)}

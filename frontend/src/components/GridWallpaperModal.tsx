@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../cn";
-import { useRequest } from "../hooks/useRequest";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
-import { Button, FieldStatus, Modal, SelectField } from "../pages/config/ui";
-import { THEME_STR } from "../pages/config/themeCopy";
+import { useRequest } from "../hooks/useRequest";
 import type { Lang } from "../i18n";
+import { THEME_STR } from "../pages/config/themeCopy";
+import { Button, FieldStatus, Modal, SelectField } from "../pages/config/ui";
+import { WallhavenAdvancedFilters } from "../pages/config/wallpaperManager/WallhavenAdvancedFilters";
+import { WALLHAVEN_DEFAULTS, wallhavenFiltersToQuery, type WallhavenFilters } from "../pages/config/wallpaperManager/wallhavenFilters";
 
 type ProviderStatus = {
   pexels: { configured: boolean };
@@ -34,14 +36,24 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{ id: string; provider: string; thumb?: string; full?: string; preview?: string; resolution?: string; photographer?: string }>>([]);
   const [searchPage, setSearchPage] = useState(1);
+  const [wallhavenFilters, setWallhavenFilters] = useState<WallhavenFilters>({ ...WALLHAVEN_DEFAULTS });
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/wallpapers", { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => setProviders(j.providers))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
+
+  // Wallhaven: carrega 9 wallpapers automaticamente ao abrir (mesmo sem busca)
+  useEffect(() => {
+    if (searchProvider !== "wallhaven") return;
+    if (searchResults.length > 0) return;
+    if (searchReq.busy) return;
+    void searchReq.run(() => handleSearch(1), { error: c.searchError });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchProvider]);
 
   const canSearch = searchProvider === "wallhaven" ? true : searchProvider === "pexels" ? Boolean(providers?.pexels.configured) : Boolean(providers?.unsplash.configured);
 
@@ -59,9 +71,17 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
   }
 
   async function handleSearch(page = 1) {
-    if (!searchQuery.trim()) throw new Error(c.searchError);
+    const isWallhaven = searchProvider === "wallhaven";
+    if (!searchQuery.trim() && !isWallhaven) throw new Error(c.searchError);
     const q = encodeURIComponent(searchQuery.trim());
-    const url = `/api/wallpapers/search/${searchProvider}?q=${q}&page=${page}&per_page=15`;
+    const perPage = isWallhaven && !searchQuery.trim() && page === 1 ? 9 : 15;
+    let url = `/api/wallpapers/search/${searchProvider}?page=${page}&per_page=${perPage}`;
+    if (searchQuery.trim()) url += `&q=${q}`;
+    if (isWallhaven) {
+      const extra = wallhavenFiltersToQuery(wallhavenFilters);
+      const qs = new URLSearchParams(extra).toString();
+      if (qs) url += `&${qs}`;
+    }
     const r = await fetch(url);
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error((j as { error?: string }).error || c.searchError);
@@ -169,7 +189,7 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
                   <img src={`/api/wallpapers/${w.id}/preview`} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                 </div>
                 <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                  <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0,6)}` : w.id.slice(0,8)}</span>
+                  <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}</span>
                   <button
                     type="button"
                     className="shrink-0 rounded-full bg-bad px-1.5 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90"
@@ -212,11 +232,16 @@ function GridWallpaperContent({ lang }: { lang: Lang }) {
               placeholder={c.searchPlaceholder}
               className="flex-1 rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink placeholder:text-ink3"
             />
-            <Button disabled={!searchQuery.trim() || !canSearch} loading={searchReq.busy} onClick={() => void searchReq.run(() => handleSearch(1), { error: c.searchError })}>
+            <Button disabled={(!searchQuery.trim() && searchProvider !== "wallhaven") || !canSearch} loading={searchReq.busy} onClick={() => void searchReq.run(() => handleSearch(1), { error: c.searchError })}>
               {searchReq.busy ? c.searching : c.searchButton}
             </Button>
           </div>
         </div>
+        {searchProvider === "wallhaven" ? (
+          <div className="mt-3">
+            <WallhavenAdvancedFilters value={wallhavenFilters} onChange={setWallhavenFilters} />
+          </div>
+        ) : null}
         {!canSearch ? <p className="mt-2 text-xs text-warn">{c.searchNeedsKey(searchProvider === "pexels" ? c.providerPexels : c.providerUnsplash)}</p> : null}
         <FieldStatus status={searchReq.status} message={searchReq.message} />
         {searchResults.length > 0 ? (

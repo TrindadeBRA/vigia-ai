@@ -2,6 +2,7 @@ import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type Dra
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import {
+  cardBg,
   CELL_GAP,
   colsForWidth,
   displayBoard,
@@ -18,18 +19,19 @@ import {
   rectFor,
   removeCloneBoard,
   rowPxFor,
+  setCardBg,
   setCardSize,
   slotKey,
   syncBoard,
   type BoardLayout,
   type CardSize,
-  type Cell,
+  type Cell
 } from "../../board";
 import { cn } from "../../cn";
 import { DownloadIcon, MaximizeIcon, MinimizeIcon, UploadIcon } from "../../components/icons";
+import { payloadAgeMs } from "../../format";
 import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
 import type { T } from "../../i18n";
-import { payloadAgeMs } from "../../format";
 import { accentLink, emptyNote, num, overviewBoard } from "../../tw";
 import { boardCollision, downloadBoardJson, parseBoardJson } from "./boardHelpers";
 import { BoardTile, EmptySlot, ProviderCard } from "./BoardTile";
@@ -93,6 +95,12 @@ export function Overview({
   gridWallpaperId,
   onOpenWallpaper,
   onOpenAddWidget,
+  kiosk,
+  onRemoveImage,
+  onDuplicateImage,
+  onRemoveNote,
+  onDuplicateNote,
+  onUpdateNote,
 }: {
   providers: ProviderMeta[];
   updatedAt: string;
@@ -108,6 +116,12 @@ export function Overview({
   gridWallpaperId: string | null;
   onOpenWallpaper: () => void;
   onOpenAddWidget: () => void;
+  kiosk?: boolean;
+  onRemoveImage?: (id: string) => void;
+  onDuplicateImage?: (id: string) => void;
+  onRemoveNote?: (id: string) => void;
+  onDuplicateNote?: (id: string) => void;
+  onUpdateNote?: (id: string, patch: { text?: string; color?: string }) => void;
 }) {
   const failing = providers.filter((p) => !p.ok).length;
   const age = payloadAgeMs(updatedAt, now);
@@ -218,7 +232,49 @@ export function Overview({
   }
 
   function handleRemove(id: string) {
+    if (id.startsWith("img:")) {
+      onRemoveImage?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
+      return;
+    }
+    if (id.startsWith("note:")) {
+      onRemoveNote?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
+      return;
+    }
     onBoard((b) => removeCloneBoard(b, id));
+  }
+
+  function handleDuplicateImage(id: string) {
+    if (id.startsWith("img:")) {
+      onDuplicateImage?.(id);
+      return;
+    }
+    handleDuplicate(id);
+  }
+
+  function handleDuplicateNote(id: string) {
+    if (id.startsWith("note:")) {
+      onDuplicateNote?.(id);
+      return;
+    }
+    handleDuplicate(id);
   }
 
   const gridBgUrl = gridWallpaperUrl(gridWallpaperId);
@@ -243,150 +299,162 @@ export function Overview({
         </>
       ) : null}
       <div className={cn("relative z-10 flex flex-col", gridBgUrl && !focus && "p-3", focus && gridBgUrl && "p-4")}>
-      <div className="mb-[18px] flex w-full flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink2">
-          <span className={cn("size-[7px] shrink-0 rounded-full", failing ? "bg-bad shadow-[0_0_5px_var(--bad)]" : "bg-good shadow-[0_0_5px_var(--good)]", "[.flat_&]:shadow-none")} />
-          <span>{failing ? t.errorsCount(failing) : t.allOk}</span>
-          <span className={num}>{agoS != null ? `· ${agoS < 3 ? t.agoNow : t.agoSecs(agoS)}` : ""}</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
-            title={t.resetLayout}
-            onClick={() =>
-              onBoard((b) => {
-                const baseIds = ids.filter((id) => !isCloneId(id));
-                const clean: BoardLayout = { size: {}, pos: {}, layoutCols: b.layoutCols };
-                for (const id of baseIds) {
-                  if (b.size[id]) clean.size[id] = b.size[id];
-                  if (b.pos[id]) clean.pos[id] = b.pos[id];
-                }
-                return packBoard(baseIds, displayBoard(baseIds, clean, cols), cols);
-              })
-            }
-          >
-            {t.resetLayout}
-          </button>
-          <button
-            type="button"
-            className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
-            title={t.addWidget}
-            aria-label={t.addWidget}
-            onClick={onOpenAddWidget}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-          </button>
-          <button
-            type="button"
-            className={cn("flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink", focus && "border-accent text-accent")}
-            title="Wallpaper do grid"
-            aria-label="Wallpaper do grid"
-            onClick={onOpenWallpaper}
-          >
-            {/* ícone simples de imagem */}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
-          </button>
-          <button
-            type="button"
-            className={cn(
-              "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink",
-              focus && "border-accent text-accent",
-            )}
-            title={t.focusMode}
-            aria-label={t.focusMode}
-            onClick={onToggleFocus}
-          >
-            {focus ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
-          </button>
-          <GridIOButtons board={board} onImport={(b) => onBoard(() => b)} t={t} />
-        </div>
-      </div>
-      {providers.length === 0 ? (
-        <div className={emptyNote}>
-          {t.noProviders}{" "}
-          <Link to="/display/config" className={accentLink}>
-            {t.configCta}
-          </Link>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={boardCollision}
-          autoScroll={{ threshold: { x: 0.08, y: 0.12 }, acceleration: 12 }}
-          onDragStart={onDragStart}
-          onDragOver={onDragOver}
-          onDragEnd={onDragEnd}
-          onDragCancel={() => { setActiveId(null); setLiftSize(null); setDropPreview(null); }}
-        >
-          <div
-            ref={gridRef}
-            className={cn(overviewBoard, "min-h-0 flex-1")}
-            style={{
-              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-              gridAutoRows: unitPx,
-              minHeight: fillPx > 0 ? fillPx : undefined,
-            }}
-          >
-            {holes.map((cell) => (
-              <div
-                key={slotKey(cell.r, cell.c)}
-                style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
-                className="min-h-0 min-w-0 h-full"
-              >
-                <EmptySlot
-                  id={slotKey(cell.r, cell.c)}
-                  active={Boolean(activeId)}
-                  preview={previewKeys.has(`${cell.r}:${cell.c}`)}
-                />
-              </div>
-            ))}
-            {ids.map((id) => {
-              const p = byId.get(id);
-              const pos = layout.pos[id];
-              if (!p || !pos) return null;
-              const size = normalizeSize(layout.size[id]);
-              return (
-                <BoardTile
-                  key={id}
-                  p={p}
-                  pal={pal}
-                  size={size}
-                  t={t}
-                  nowMs={now}
-                  col={pos.c}
-                  row={pos.r}
-                  rect={rectFor(size, cols)}
-                  onOpen={() => onOpen(id)}
-                  onSetSize={(next) => onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols))}
-                  onDuplicate={handleDuplicate}
-                  onRemove={handleRemove}
-                />
-              );
-            })}
-            {previewCells
-              .filter((cell) => !holeKeys.has(`${cell.r}:${cell.c}`))
-              .map((cell) => (
-                <div
-                  key={`drop-preview-${cell.r}:${cell.c}`}
-                  aria-hidden
-                  className="pointer-events-none z-[3] min-h-0 min-w-0 rounded-2xl border border-dashed border-accent bg-chip transition-colors duration-150"
-                  style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
-                />
-              ))}
+        <div className="mb-[18px] flex w-full flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink2">
+            <span className={cn("size-[7px] shrink-0 rounded-full", failing ? "bg-bad shadow-[0_0_5px_var(--bad)]" : "bg-good shadow-[0_0_5px_var(--good)]", "[.flat_&]:shadow-none")} />
+            <span>{failing ? t.errorsCount(failing) : t.allOk}</span>
+            <span className={num}>{agoS != null ? `· ${agoS < 3 ? t.agoNow : t.agoSecs(agoS)}` : ""}</span>
           </div>
-          <DragOverlay zIndex={80} dropAnimation={null}>
-            {active ? (
-              <div
-                className="pointer-events-none cursor-grabbing"
-                style={(() => { const r = rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * unitPx + (r.h - 1) * CELL_GAP) }; })()}
+          {kiosk ? null : (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
+                title={t.resetLayout}
+                onClick={() =>
+                  onBoard((b) => {
+                    const baseIds = ids.filter((id) => !isCloneId(id));
+                    const clean: BoardLayout = { size: {}, pos: {}, bg: {}, layoutCols: b.layoutCols };
+                    for (const id of baseIds) {
+                      if (b.size[id]) clean.size[id] = b.size[id];
+                      if (b.pos[id]) clean.pos[id] = b.pos[id];
+                      if (b.bg?.[id]) (clean.bg as Record<string, string>)[id] = b.bg[id];
+                    }
+                    return packBoard(baseIds, displayBoard(baseIds, clean, cols), cols);
+                  })
+                }
               >
-                <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => { }} onSetSize={() => { }} />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+                {t.resetLayout}
+              </button>
+              <button
+                type="button"
+                className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
+                title={t.addWidget}
+                aria-label={t.addWidget}
+                onClick={onOpenAddWidget}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+              </button>
+              <button
+                type="button"
+                className={cn("flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink", focus && "border-accent text-accent")}
+                title="Wallpaper do grid"
+                aria-label="Wallpaper do grid"
+                onClick={onOpenWallpaper}
+              >
+                {/* ícone simples de imagem */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink",
+                  focus && "border-accent text-accent",
+                )}
+                title={t.focusMode}
+                aria-label={t.focusMode}
+                onClick={onToggleFocus}
+              >
+                {focus ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+              </button>
+              <GridIOButtons board={board} onImport={(b) => onBoard(() => b)} t={t} />
+            </div>
+          )}
+        </div>
+        {providers.length === 0 ? (
+          <div className={emptyNote}>
+            {t.noProviders}{" "}
+            <Link to="/display/config" className={accentLink}>
+              {t.configCta}
+            </Link>
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={boardCollision}
+            autoScroll={{ threshold: { x: 0.08, y: 0.12 }, acceleration: 12 }}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            onDragCancel={() => { setActiveId(null); setLiftSize(null); setDropPreview(null); }}
+          >
+            <div
+              ref={gridRef}
+              className={cn(overviewBoard, "min-h-0 flex-1")}
+              style={{
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridAutoRows: unitPx,
+                minHeight: fillPx > 0 ? fillPx : undefined,
+              }}
+            >
+              {holes.map((cell) => (
+                <div
+                  key={slotKey(cell.r, cell.c)}
+                  style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
+                  className="min-h-0 min-w-0 h-full"
+                >
+                  <EmptySlot
+                    id={slotKey(cell.r, cell.c)}
+                    active={Boolean(activeId)}
+                    preview={previewKeys.has(`${cell.r}:${cell.c}`)}
+                  />
+                </div>
+              ))}
+              {ids.map((id) => {
+                const p = byId.get(id);
+                const pos = layout.pos[id];
+                if (!p || !pos) return null;
+                const size = normalizeSize(layout.size[id]);
+                const bg = cardBg(layout, id);
+                const isImage = id.startsWith("img:");
+                const isNote = id.startsWith("note:");
+                // injeta handler de update para notas
+                if (isNote && onUpdateNote) {
+                  (p as unknown as Record<string, unknown>)._onNoteUpdate = onUpdateNote;
+                }
+                return (
+                  <BoardTile
+                    key={id}
+                    p={p}
+                    pal={pal}
+                    size={size}
+                    t={t}
+                    nowMs={now}
+                    col={pos.c}
+                    row={pos.r}
+                    rect={rectFor(size, cols)}
+                    bg={bg}
+                    onOpen={() => onOpen(id)}
+                    onSetSize={(next) => onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols))}
+                    onDuplicate={isImage ? handleDuplicateImage : isNote ? handleDuplicateNote : handleDuplicate}
+                    onRemove={handleRemove}
+                    onSetBg={(cid, next) => onBoard((b) => setCardBg(ids, displayBoard(ids, b, cols), cid, next))}
+                  />
+                );
+              })}
+              {previewCells
+                .filter((cell) => !holeKeys.has(`${cell.r}:${cell.c}`))
+                .map((cell) => (
+                  <div
+                    key={`drop-preview-${cell.r}:${cell.c}`}
+                    aria-hidden
+                    className="pointer-events-none z-[3] min-h-0 min-w-0 rounded-2xl border border-dashed border-accent bg-chip transition-colors duration-150"
+                    style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
+                  />
+                ))}
+            </div>
+            <DragOverlay zIndex={80} dropAnimation={null}>
+              {active ? (
+                <div
+                  className="pointer-events-none cursor-grabbing"
+                  style={(() => { const r = rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * unitPx + (r.h - 1) * CELL_GAP) }; })()}
+                >
+                  <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => { }} onSetSize={() => { }} />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
       </div>
     </div>
   );

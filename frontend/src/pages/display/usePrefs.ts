@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import type { WidgetKind } from "../../components/AddWidgetModal";
+import type { NoteColorId } from "../../components/cards/NoteCard";
 import type { Lang } from "../../i18n";
 import type { ThemeName } from "../../theme";
 
-export type Prefs = { theme: ThemeName; accent: number; lang: Lang; focus?: boolean; widgets?: WidgetKind[] };
+export type NoteData = { id: string; text: string; color: NoteColorId };
+
+export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; notes?: NoteData[] };
 
 export function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void] {
   const [prefs, setPrefs] = useState<Prefs>(() => {

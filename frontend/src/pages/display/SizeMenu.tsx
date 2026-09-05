@@ -4,6 +4,7 @@ import { normalizeSize, type CardSize } from "../../board";
 import { cn } from "../../cn";
 import { CheckIcon, CopyIcon, GripIcon, TrashIcon } from "../../components/icons";
 import type { T } from "../../i18n";
+import { TileColorPicker } from "./TileColorPicker";
 
 const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl", "wm", "wl", "wxl"];
 
@@ -131,7 +132,7 @@ export function SizeMenu({ size, t, onChange, allowed, getLabel }: { size: CardS
 
 const TILE_CHROME_CHIP = "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100 max-[860px]:pointer-events-auto max-[860px]:opacity-100";
 
-/** Chrome flutuante do tile: alça de arrastar isolada à esquerda (evita clique acidental nos outros botões) + duplicar/tamanho/remover à direita. */
+/** Chrome flutuante do tile: alça de arrastar isolada à esquerda (evita clique acidental nos outros botões) + duplicar/cor/tamanho/remover à direita. */
 export function TileChrome({
   id,
   t,
@@ -143,6 +144,8 @@ export function TileChrome({
   isClone,
   onDuplicate,
   onRemove,
+  bg,
+  onSetBg,
 }: {
   id: string;
   t: T;
@@ -154,6 +157,8 @@ export function TileChrome({
   isClone: boolean;
   onDuplicate?: (id: string) => void;
   onRemove?: (id: string) => void;
+  bg?: string | null;
+  onSetBg?: (id: string, next: string | null) => void;
 }) {
   return (
     <>
@@ -162,6 +167,7 @@ export function TileChrome({
       </div>
       <div className={cn("absolute right-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", TILE_CHROME_CHIP)}>
         {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(id); }}><CopyIcon size={12} /></button> : null}
+        {onSetBg ? <TileColorPicker value={bg ?? null} onChange={(next) => onSetBg(id, next)} /> : null}
         <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={getLabel} />
         {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(id); }}><TrashIcon size={12} /></button> : null}
       </div>

@@ -8,6 +8,10 @@ const LID_TRAVEL = 52;
 const POINTER_REACH = 260;
 const POINTER_HOLD_MS = 1800;
 
+const DIZZY_MS = 3400;
+const DIZZY_REQUIRED = Math.PI * 2 * 2.2;
+const DIZZY_WINDOW_MS = 2800;
+
 type Gaze = { x: number; y: number };
 
 function easeOutCubic(t: number): number {
@@ -24,16 +28,34 @@ function nextTarget(from: Gaze): Gaze {
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * 0.8 };
 }
 
+function spiralPath(): string {
+  const turns = 3.1;
+  const steps = 110;
+  let d = "";
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * turns * Math.PI * 2;
+    const r = 1.4 + (IRIS_R - 1.6) * (i / steps);
+    const x = Math.cos(t) * r;
+    const y = Math.sin(t) * r;
+    d += i === 0 ? `M ${x.toFixed(2)} ${y.toFixed(2)}` : ` L ${x.toFixed(2)} ${y.toFixed(2)}`;
+  }
+  return d;
+}
+const SPIRAL_D = spiralPath();
+
 export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: boolean }) {
   const clipId = `eye-clip-${useId().replace(/:/g, "")}`;
   const svgRef = useRef<SVGSVGElement>(null);
   const irisRef = useRef<SVGGElement>(null);
   const topLidRef = useRef<SVGRectElement>(null);
   const botLidRef = useRef<SVGRectElement>(null);
+  const spiralRef = useRef<SVGGElement>(null);
+  const spiralInnerRef = useRef<SVGGElement>(null);
+  const dizzyUntilRef = useRef(0);
+  const dizzyStartRef = useRef(0);
 
   useEffect(() => {
-    if (prefersReducedMotion()) return;
-
+    const reduced = prefersReducedMotion();
     const t0 = performance.now();
     let raf: number | null = null;
     let gaze: Gaze = { x: 0, y: 0 };
@@ -47,10 +69,75 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
     let blinkMs = 160;
     let pointer: { x: number; y: number; at: number } | null = null;
 
+    // detecção de círculo ao redor do olho
+    let lastAngle: number | null = null;
+    let accum = 0;
+    let winStart = t0;
+    let cooldownUntil = 0;
+
     function onPointerMove(e: PointerEvent) {
       pointer = { x: e.clientX, y: e.clientY, at: performance.now() };
+      if (!follow || reduced) return;
+      const now = performance.now();
+      if (now < cooldownUntil) return;
+      const box = svgRef.current?.getBoundingClientRect();
+      if (!box) return;
+      const cx = box.left + box.width / 2;
+      const cy = box.top + box.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      const rPx = Math.max(14, size / 2);
+      const minDist = rPx * 0.65;
+      const maxDist = rPx * 3.4;
+      if (dist < minDist || dist > maxDist) {
+        lastAngle = null;
+        return;
+      }
+      const ang = Math.atan2(dy, dx);
+      if (lastAngle !== null) {
+        let delta = ang - lastAngle;
+        // normaliza para [-PI, PI]
+        delta = ((delta + Math.PI) % (2 * Math.PI)) - Math.PI;
+        // ignora saltos grandes (teleporte do ponteiro)
+        if (Math.abs(delta) > 1.2) {
+          lastAngle = ang;
+          return;
+        }
+        if (now - winStart > DIZZY_WINDOW_MS) {
+          accum = 0;
+          winStart = now;
+        }
+        accum += delta;
+        if (Math.abs(accum) >= DIZZY_REQUIRED) {
+          accum = 0;
+          winStart = now;
+          lastAngle = null;
+          cooldownUntil = now + DIZZY_MS + 600;
+          dizzyStartRef.current = now;
+          dizzyUntilRef.current = now + DIZZY_MS;
+          // avisa todos os olhos + dashboard
+          window.dispatchEvent(new CustomEvent("vigia:eye-dizzy", { detail: { at: now } }));
+        }
+      }
+      lastAngle = ang;
     }
-    if (follow) window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+
+    function onDizzy(e: Event) {
+      const now = performance.now();
+      // se já está tonto, estende um pouco
+      if (now < dizzyUntilRef.current) {
+        dizzyUntilRef.current = Math.max(dizzyUntilRef.current, now + DIZZY_MS * 0.7);
+        return;
+      }
+      const detail = (e as CustomEvent).detail as { at?: number } | undefined;
+      // evita loop infinito: se o evento veio deste mesmo olho há <50ms, já tratamos acima
+      dizzyStartRef.current = now;
+      dizzyUntilRef.current = now + DIZZY_MS;
+      void detail;
+    }
+    window.addEventListener("vigia:eye-dizzy", onDizzy as EventListener);
 
     function tracked(now: number): Gaze | null {
       if (!pointer || now - pointer.at > POINTER_HOLD_MS) return null;
@@ -64,6 +151,37 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
     }
 
     function tick(now: number) {
+      const isDizzy = now < dizzyUntilRef.current;
+
+      if (isDizzy) {
+        const elapsed = now - dizzyStartRef.current;
+        const rot = reduced ? 0 : (elapsed * 0.62) % 360;
+        const pulse = 1 + Math.sin(now / 180) * 0.06;
+        const wobbleX = Math.sin(now / 90) * 1.2;
+        const wobbleY = Math.cos(now / 110) * 1.0;
+        spiralRef.current?.setAttribute("opacity", "1");
+        irisRef.current?.setAttribute("opacity", "0");
+        spiralRef.current?.setAttribute("transform", `translate(${(50 + wobbleX).toFixed(2)} ${(50 + wobbleY).toFixed(2)})`);
+        spiralInnerRef.current?.setAttribute("transform", `rotate(${rot.toFixed(1)}) scale(${pulse.toFixed(3)})`);
+        // pálpebras levemente entreabertas quando tonto
+        topLidRef.current?.setAttribute("transform", `translate(0 ${(LID_TRAVEL * 0.08).toFixed(2)})`);
+        botLidRef.current?.setAttribute("transform", `translate(0 ${(-LID_TRAVEL * 0.08).toFixed(2)})`);
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+
+      // volta ao normal
+      spiralRef.current?.setAttribute("opacity", "0");
+      irisRef.current?.setAttribute("opacity", "1");
+
+      if (reduced) {
+        irisRef.current?.setAttribute("transform", `translate(50 50)`);
+        topLidRef.current?.setAttribute("transform", `translate(0 0)`);
+        botLidRef.current?.setAttribute("transform", `translate(0 0)`);
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+
       const aim = tracked(now);
       if (aim) {
         gaze.x += (aim.x - gaze.x) * 0.16;
@@ -116,19 +234,21 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
     raf = requestAnimationFrame(tick);
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      if (follow) window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("vigia:eye-dizzy", onDizzy as EventListener);
     };
-  }, [follow]);
+  }, [follow, size]);
 
   return (
     <svg
       ref={svgRef}
-      className="block shrink-0 overflow-visible drop-shadow-[0_2px_4px_var(--shadow)] transition-transform duration-[180ms] ease-out group-hover/brand:scale-[1.08] [.flat_&]:drop-shadow-none"
+      className="block shrink-0 overflow-visible drop-shadow-[0_2px_4px_var(--shadow)] transition-transform duration-[180ms] ease-out group-hover/brand:scale-[1.08] [.flat_&]:drop-shadow-none cursor-pointer"
       width={size}
       height={size}
       viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
+      role="img"
     >
       <defs>
         <clipPath id={clipId}>
@@ -142,6 +262,13 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
           <circle className="fill-black/55" r={7.5} />
           <circle className="fill-white opacity-[.92]" cx={-6} cy={-6.5} r={4.4} />
           <circle className="fill-white opacity-45" cx={6.5} cy={7} r={2.1} />
+        </g>
+        <g ref={spiralRef} opacity={0} transform="translate(50 50)">
+          <circle className="fill-accent" r={IRIS_R} />
+          <g ref={spiralInnerRef} transform="rotate(0)">
+            <path d={SPIRAL_D} fill="none" stroke="white" strokeWidth={2.4} strokeLinecap="round" opacity={0.96} />
+            <circle r={2.6} fill="white" opacity={0.95} />
+          </g>
         </g>
         <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={topLidRef} x={-10} y={-104} width={120} height={104} />
         <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={botLidRef} x={-10} y={100} width={120} height={104} />

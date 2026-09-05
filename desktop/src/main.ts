@@ -9,9 +9,9 @@ import { BrowserWindow, app, dialog, shell } from "electron";
 import { join } from "node:path";
 
 import { registerIpc } from "./ipc";
-import { makeLogger, logFile } from "./logger";
+import { logFile, makeLogger } from "./logger";
 import { buildMenu } from "./menu";
-import { appVersion, frontendDist, migrateLegacyData, isPackaged } from "./paths";
+import { appVersion, frontendDist, isPackaged, migrateLegacyData } from "./paths";
 import { configuredHost, configuredPort, probeVigia, suggestFreePort } from "./ports";
 import { Sidecar, type SidecarFailure } from "./sidecar";
 import { errorPage, loadingPage } from "./status";
@@ -19,6 +19,8 @@ import { createTray, destroyTray, refreshTray } from "./tray";
 import { checkForUpdates, initUpdater } from "./updater";
 
 const log = makeLogger("main");
+
+const isKiosk = process.argv.includes("--kiosk") || app.commandLine.hasSwitch("kiosk");
 
 let win: BrowserWindow | null = null;
 let sidecar: Sidecar | null = null;
@@ -30,12 +32,16 @@ function currentPort(): number {
   return attachedPort ?? sidecar?.info?.port ?? configuredPort();
 }
 
+function displayUrl(port: number): string {
+  return `http://127.0.0.1:${port}/display${isKiosk ? "?kiosk=true" : ""}`;
+}
+
 function urls() {
   const port = currentPort();
   const lanIp = sidecar?.info?.lan?.[0];
   return {
-    local: `http://127.0.0.1:${port}/display`,
-    lan: lanIp ? `http://${lanIp}:${port}/display` : null,
+    local: displayUrl(port),
+    lan: lanIp ? `http://${lanIp}:${port}/display${isKiosk ? "?kiosk=true" : ""}` : null,
     docs: `http://127.0.0.1:${port}/docs`,
     config: `http://127.0.0.1:${port}/display/config`,
   };
@@ -51,6 +57,9 @@ function createWindow(): BrowserWindow {
     backgroundColor: "#0f0f0f",
     title: "Vigia AI",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    fullscreen: isKiosk ? true : undefined,
+    kiosk: isKiosk ? true : undefined,
+    alwaysOnTop: isKiosk ? true : undefined,
     webPreferences: {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -60,7 +69,14 @@ function createWindow(): BrowserWindow {
     },
   });
 
-  window.once("ready-to-show", () => window.show());
+  window.once("ready-to-show", () => {
+    if (isKiosk) {
+      window.setAlwaysOnTop(true, "screen-saver");
+      window.setKiosk(true);
+      window.setFullScreen(true);
+    }
+    window.show();
+  });
 
   // O renderer usa isso para recolher o espaço dos semáforos em tela cheia.
   const sendFullscreen = () => window.webContents.send("vigia:fullscreen", window.isFullScreen());
@@ -115,7 +131,7 @@ function showWindow(): void {
 async function onReady(port: number): Promise<void> {
   attachedPort = null;
   if (!win || win.isDestroyed()) win = createWindow();
-  await win.loadURL(`http://127.0.0.1:${port}/display`);
+  await win.loadURL(displayUrl(port));
   refreshTray(trayDeps());
 }
 
@@ -129,7 +145,7 @@ async function onFailure(failure: SidecarFailure): Promise<void> {
     if (existing) {
       log(`porta ${port} já tem um Vigia ${existing.version} — anexando`);
       attachedPort = port;
-      await win.loadURL(`http://127.0.0.1:${port}/display`);
+      await win.loadURL(displayUrl(port));
       refreshTray(trayDeps());
       return;
     }
@@ -140,7 +156,7 @@ async function onFailure(failure: SidecarFailure): Promise<void> {
         "Outro programa está usando essa porta e o coletor não conseguiu subir.",
         free
           ? `A porta <code>${free}</code> está livre. Trocar a porta exige regravar o ` +
-              "<code>secrets.h</code> da ESP32, porque a placa guarda a URL do coletor."
+          "<code>secrets.h</code> da ESP32, porque a placa guarda a URL do coletor."
           : "",
       ),
     );
@@ -150,7 +166,7 @@ async function onFailure(failure: SidecarFailure): Promise<void> {
       message: `A porta ${port} está ocupada.`,
       detail: free
         ? `Posso usar a porta ${free}. Atenção: a ESP32 guarda a URL do coletor no secrets.h — ` +
-          "trocar a porta exige gerar e regravar esse arquivo pelo painel."
+        "trocar a porta exige gerar e regravar esse arquivo pelo painel."
         : "Libere a porta e tente de novo.",
       buttons: free ? [`Usar a porta ${free}`, "Tentar de novo", "Ver log"] : ["Tentar de novo", "Ver log"],
       defaultId: 0,
@@ -241,7 +257,7 @@ async function bootstrap(): Promise<void> {
   if (existing) {
     log(`coletor externo já responde em :${port} (v${existing.version}) — anexando`);
     attachedPort = port;
-    await win.loadURL(`http://127.0.0.1:${port}/display`);
+    await win.loadURL(displayUrl(port));
   } else {
     sidecar = new Sidecar({ host, port, log });
     sidecar.on("ready", (info) => void onReady(info.port));

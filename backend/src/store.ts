@@ -98,6 +98,7 @@ const _WALLPAPER_PROVIDERS_DEFAULT: Record<string, unknown> = {
   pexels_key: "",
   unsplash_key: "",
   wallhaven_key: "",
+  giphy_key: "",
 };
 
 const _GIT_DEFAULT: Record<string, unknown> = {
@@ -223,9 +224,36 @@ export function _parseAlarms(raw: unknown): Array<Record<string, unknown>> {
     } catch {
       continue;
     }
+    const provider = String(it.provider);
+    // ── Calendário: threshold é "X tempo antes" + unidade + calendário alvo ──
+    if (provider === "calendar") {
+      const metric = String(it.metric);
+      if (!["event", "task", "all", "events", "tasks"].includes(metric)) continue;
+      const normalizedMetric = metric === "events" ? "event" : metric === "tasks" ? "task" : metric;
+      if (threshold <= 0 || !Number.isFinite(threshold)) continue;
+      const rawUnit = String((it as Record<string, unknown>).threshold_unit ?? (it as Record<string, unknown>).unit ?? "minutes").toLowerCase();
+      let threshold_unit = "minutes";
+      if (["minutes", "minutos", "minute", "min", "m"].includes(rawUnit)) threshold_unit = "minutes";
+      else if (["hours", "horas", "hour", "h", "hr"].includes(rawUnit)) threshold_unit = "hours";
+      else if (["days", "dias", "day", "d"].includes(rawUnit)) threshold_unit = "days";
+      else continue;
+      const calendar_id = String((it as Record<string, unknown>).calendar_id ?? (it as Record<string, unknown>).calendarId ?? "*").trim() || "*";
+      out.push({
+        id: String(it.id),
+        provider: "calendar",
+        metric: normalizedMetric,
+        threshold,
+        threshold_unit,
+        calendar_id,
+        enabled: Boolean((it as Record<string, unknown>).enabled ?? true),
+        label: String(it.label ?? ""),
+        account_id: "*",
+      });
+      continue;
+    }
     out.push({
       id: String(it.id),
-      provider: String(it.provider),
+      provider,
       account_id: String(it.account_id ?? "*"),
       metric: String(it.metric),
       threshold,
@@ -308,6 +336,7 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   (cfg.paths as Record<string, unknown>).claude_credentials = String(paths.claude_credentials ?? "");
   (cfg.paths as Record<string, unknown>).cursor_state_db = String(paths.cursor_state_db ?? "");
   (cfg.paths as Record<string, unknown>).codex_auth = String(paths.codex_auth ?? "");
+  (cfg.paths as Record<string, unknown>).opencode_auth = String(paths.opencode_auth ?? "");
   const providersRaw = (typeof raw.providers === "object" && raw.providers !== null ? raw.providers : {}) as Record<string, unknown>;
   const providers = cfg.providers as Record<string, Record<string, unknown>>;
   for (const name of PROVIDERS) {
@@ -453,7 +482,7 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   const rawWp = (typeof raw.wallpapers === "object" && raw.wallpapers !== null ? raw.wallpapers : {}) as Record<string, unknown>;
   const wp = cfg.wallpapers as Record<string, unknown>;
   const rawProv = (typeof rawWp.providers === "object" && rawWp.providers !== null ? rawWp.providers : {}) as Record<string, unknown>;
-  for (const k of ["pexels_key", "unsplash_key", "wallhaven_key"]) {
+  for (const k of ["pexels_key", "unsplash_key", "wallhaven_key", "giphy_key"]) {
     if (k in rawProv && typeof rawProv[k] === "string") {
       (wp.providers as Record<string, unknown>)[k] = String(rawProv[k]).trim();
     }

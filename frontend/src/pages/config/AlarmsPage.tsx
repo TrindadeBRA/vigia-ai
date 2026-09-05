@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { createAlarm, fetchAlarms } from "../../api/client";
-import type { AlarmsPublic } from "../../api/types";
+import { createAlarm, fetchAlarms, fetchConfig } from "../../api/client";
+import type { AlarmsPublic, ConfigPublic } from "../../api/types";
 import { Skeleton } from "../../components/Skeleton";
 import { useRequest } from "../../hooks/useRequest";
-import { pageCol, cfgHint, cfgStatus, viewFade } from "../../tw";
+import { cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
 import { ALARMS_STR } from "./alarmsCopy";
-import type { ConfigOutlet } from "./usePublicConfig";
-import { useTelegram } from "./useTelegram";
-import { ActionRow, Button, Card, FieldStatus, SelectField, StatusPill, TextField } from "./ui";
 import { AlarmsIOButtons } from "./alarmsPage/AlarmsIOButtons";
+import { CalendarAlarmCard } from "./alarmsPage/CalendarAlarmCard";
 import { PROVIDER_LABEL, ruleHint, suggestLabel } from "./alarmsPage/helpers";
 import { ProviderIcon } from "./alarmsPage/ProviderIcon";
 import { RulesList } from "./alarmsPage/RulesList";
 import { TelegramConnectedPanel } from "./alarmsPage/TelegramConnectedPanel";
+import { ActionRow, Button, Card, FieldStatus, SelectField, StatusPill, TextField } from "./ui";
+import type { ConfigOutlet } from "./usePublicConfig";
+import { useTelegram } from "./useTelegram";
 
 export default function AlarmsPage() {
   const ctx = useOutletContext<ConfigOutlet | null>();
@@ -36,7 +37,25 @@ export default function AlarmsPage() {
     void reload();
   }, [reload]);
 
-  const providers = data ? Object.keys(data.metrics || {}) : [];
+  const [cfg, setCfg] = useState<ConfigPublic | null>(null);
+  useEffect(() => {
+    void fetchConfig().then(setCfg).catch(() => { });
+  }, []);
+
+  // Só mostra provedores que têm alguma conta configurada (ou calendar que é separado)
+  const providers = useMemo(() => {
+    if (!data) return [];
+    const all = Object.keys(data.metrics || {}).filter((p) => p !== "calendar");
+    if (!cfg) return all;
+    return all.filter((p) => {
+      const card = (cfg.providers as Record<string, { configured?: boolean; accounts?: unknown[] }>)[p];
+      if (!card) return false;
+      if (card.configured) return true;
+      if (Array.isArray(card.accounts) && card.accounts.length > 0) return true;
+      return false;
+    });
+  }, [data, cfg]);
+
   const [provider, setProvider] = useState("");
   const [metric, setMetric] = useState("");
   const [threshold, setThreshold] = useState(80);
@@ -46,6 +65,7 @@ export default function AlarmsPage() {
   useEffect(() => {
     if (!data) return;
     if (!provider && providers.length) setProvider(providers[0]);
+    if (provider && !providers.includes(provider) && providers.length) setProvider(providers[0]);
   }, [data, provider, providers]);
 
   useEffect(() => {
@@ -165,68 +185,77 @@ export default function AlarmsPage() {
       </Card>
 
       <Card title={c.rulesTitle} lead={c.rulesLead} action={<AlarmsIOButtons data={data} c={c} onReload={reload} />}>
-        <div className="flex flex-col gap-5">
-          <ActionRow>
-            <div className="flex min-w-[140px] flex-1 items-end gap-2.5">
-              {provider ? <ProviderIcon provider={provider} size="lg" /> : null}
+        {providers.length === 0 ? (
+          <div className="rounded-xl border border-edge bg-canvas/40 px-3 py-3 text-sm leading-relaxed text-ink2">
+            <p className="m-0 font-semibold text-ink">{c.noProvidersConfigured}</p>
+            <p className="m-0 mt-1 text-[12.5px]">{c.noProvidersHint}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            <ActionRow>
+              <div className="flex min-w-[140px] flex-1 items-end gap-2.5">
+                {provider ? <ProviderIcon provider={provider} size="lg" /> : null}
+                <SelectField
+                  label={c.provider}
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value)}
+                  wrapperClassName="min-w-0 flex-1"
+                  options={providers.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p }))}
+                />
+              </div>
               <SelectField
-                label={c.provider}
-                value={provider}
-                onChange={(e) => setProvider(e.target.value)}
-                wrapperClassName="min-w-0 flex-1"
-                options={providers.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p }))}
+                label={c.metric}
+                value={metric}
+                onChange={(e) => setMetric(e.target.value)}
+                options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.label }))}
               />
-            </div>
-            <SelectField
-              label={c.metric}
-              value={metric}
-              onChange={(e) => setMetric(e.target.value)}
-              options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.label }))}
-            />
-            <TextField
-              label={c.threshold}
-              type="number"
-              value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value))}
-            />
-          </ActionRow>
-          <ActionRow>
-            <TextField
-              label={c.label}
-              placeholder={c.labelPh}
-              value={label}
-              onChange={(e) => {
-                setLabel(e.target.value);
-                setLabelDirty(e.target.value.trim() !== "");
-              }}
-            />
-            <Button
-              loading={addAction.busy}
-              disabled={!provider || !metric}
-              onClick={() =>
-                addAction.run(
-                  async () => {
-                    const res = await createAlarm({ provider, metric, threshold, label });
-                    if (res.ok) {
-                      setLabel("");
-                      setLabelDirty(false);
-                      await reload();
-                    }
-                    return res;
-                  },
-                  { success: c.added, error: c.addFailed },
-                )
-              }
-            >
-              {addAction.busy ? c.adding : c.add}
-            </Button>
-          </ActionRow>
-        </div>
-        {currentMetric ? <p className={cfgHint}>{ruleHint(c, currentMetric, threshold)}</p> : null}
+              <TextField
+                label={c.threshold}
+                type="number"
+                value={threshold}
+                onChange={(e) => setThreshold(Number(e.target.value))}
+              />
+            </ActionRow>
+            <ActionRow>
+              <TextField
+                label={c.label}
+                placeholder={c.labelPh}
+                value={label}
+                onChange={(e) => {
+                  setLabel(e.target.value);
+                  setLabelDirty(e.target.value.trim() !== "");
+                }}
+              />
+              <Button
+                loading={addAction.busy}
+                disabled={!provider || !metric}
+                onClick={() =>
+                  addAction.run(
+                    async () => {
+                      const res = await createAlarm({ provider, metric, threshold, label });
+                      if (res.ok) {
+                        setLabel("");
+                        setLabelDirty(false);
+                        await reload();
+                      }
+                      return res;
+                    },
+                    { success: c.added, error: c.addFailed },
+                  )
+                }
+              >
+                {addAction.busy ? c.adding : c.add}
+              </Button>
+            </ActionRow>
+          </div>
+        )}
+        {currentMetric && providers.length ? <p className={cfgHint}>{ruleHint(c, currentMetric, threshold)}</p> : null}
         {addAction.message ? <FieldStatus status={addAction.status} message={addAction.message} /> : null}
 
         <RulesList data={data} c={c} onReload={reload} className="mt-6" />
       </Card>
+
+      <CalendarAlarmCard c={c} data={data} onReload={reload} />
     </div>
   );
 }

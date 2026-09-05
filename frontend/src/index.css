@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("/fonts/PressStart2P.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -36,7 +44,8 @@
 
 /* Em tela cheia o macOS recolhe os semáforos — o recuo perde a razão de ser. */
 :root[data-vigia-platform="darwin"][data-vigia-fullscreen] [data-app-header] {
-  padding-left: 0.75rem; /* = px-3, o padding normal do cabeçalho */
+  padding-left: 0.75rem;
+  /* = px-3, o padding normal do cabeçalho */
 }
 
 /* Cabeçalho como área de arrastar, igual a um app nativo. */
@@ -57,6 +66,7 @@
 [data-drag-handle] {
   display: none;
 }
+
 :root[data-vigia-platform="darwin"] [data-drag-handle] {
   position: fixed;
   top: 0;
@@ -67,6 +77,7 @@
   height: 34px;
   -webkit-app-region: drag;
 }
+
 :root[data-vigia-platform="darwin"][data-vigia-fullscreen] [data-drag-handle] {
   display: none;
 }
@@ -79,4 +90,22 @@
   order: 1;
   margin-right: 0;
   margin-left: 0.25rem;
+}
+
+/* ── Easter egg: Konami Code → Press Start 2P ─────────────────────────────
+   Sequência: ↑ ↑ ↓ ↓ ← → ← → B A  (em qualquer lugar do dashboard).
+   Repetir a sequência desativa. Persistido em localStorage. */
+html.konami-mode,
+html.konami-mode body {
+  font-family: "Press Start 2P", monospace !important;
+}
+
+html.konami-mode * {
+  font-family: "Press Start 2P", monospace !important;
+}
+
+html.konami-mode {
+  /* Press Start 2P é bem maior que a fonte padrão — compensa um pouco */
+  letter-spacing: -0.02em;
+  image-rendering: pixelated;
 }

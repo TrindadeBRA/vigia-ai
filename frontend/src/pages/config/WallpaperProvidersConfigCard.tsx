@@ -9,7 +9,7 @@ import { ActionRow, Button, FieldStatus, StatusPill, TextField } from "./ui";
 
 const MASK = "•".repeat(24);
 
-type Field = "pexels_key" | "unsplash_key" | "wallhaven_key";
+type Field = "pexels_key" | "unsplash_key" | "wallhaven_key" | "giphy_key";
 
 function WallpaperProviderCard({
   name,
@@ -129,7 +129,7 @@ export function WallpaperProviderCards({ c }: { c: ConfigCopy }) {
         c={c}
         name={c.providerPexels}
         hint={c.providerNeedsKey}
-        hasKey={Boolean(providers.pexels.configured)}
+        hasKey={Boolean((providers as unknown as Record<string, { configured?: boolean }>).pexels?.configured)}
         onSave={(v) => saveField("pexels_key", v)}
         onClear={() => clearField("pexels_key")}
       />
@@ -137,7 +137,10 @@ export function WallpaperProviderCards({ c }: { c: ConfigCopy }) {
         c={c}
         name={c.providerWallhaven}
         hint={c.providerOptionalKey}
-        hasKey={Boolean(providers.wallhaven.has_key)}
+        hasKey={Boolean(
+          (providers as unknown as Record<string, { configured?: boolean; has_key?: boolean }>).wallhaven?.has_key ??
+          (providers as unknown as Record<string, { configured?: boolean }>).wallhaven?.configured,
+        )}
         optional
         onSave={(v) => saveField("wallhaven_key", v)}
         onClear={() => clearField("wallhaven_key")}
@@ -146,9 +149,17 @@ export function WallpaperProviderCards({ c }: { c: ConfigCopy }) {
         c={c}
         name={c.providerUnsplash}
         hint={c.providerNeedsKey}
-        hasKey={Boolean(providers.unsplash.configured)}
+        hasKey={Boolean((providers as unknown as Record<string, { configured?: boolean }>).unsplash?.configured)}
         onSave={(v) => saveField("unsplash_key", v)}
         onClear={() => clearField("unsplash_key")}
+      />
+      <WallpaperProviderCard
+        c={c}
+        name="Giphy"
+        hint={c.providerNeedsKey}
+        hasKey={Boolean((providers as unknown as Record<string, { configured?: boolean }>).giphy?.configured)}
+        onSave={(v) => saveField("giphy_key", v)}
+        onClear={() => clearField("giphy_key")}
       />
     </>
   );

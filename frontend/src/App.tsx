@@ -1,13 +1,15 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useKonamiCode } from "./hooks/useKonamiCode";
+import "./index.css";
+import CanvasPage from "./pages/CanvasPage";
 import Display from "./pages/Display";
 import AlarmsPage from "./pages/config/AlarmsPage";
 import ConfigPage from "./pages/config/ConfigPage";
 import SetupPage from "./pages/config/SetupPage";
 import ThemeEditorPage from "./pages/config/ThemeEditorPage";
-import CanvasPage from "./pages/CanvasPage";
-import "./index.css";
 
 export default function App() {
+  useKonamiCode();
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>

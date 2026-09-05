@@ -3,7 +3,7 @@ import type { ClaudeAccount } from "../../api/types";
 import type { Metric } from "../../pages/display/types";
 import { barColor, barGlow, clamp, fmtCountdown, fmtPct, fmtRemain, fmtWhen } from "../../format";
 import type { T } from "../../i18n";
-import { PROVIDER_ICON, type ThemeName, PALETTES } from "../../theme";
+import { PROVIDER_ICON, type ResolvedThemeName, PALETTES } from "../../theme";
 import { barFill, barTrack, cardLabel, errorText, metricCard, metricsGrid, num } from "../../tw";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
@@ -79,7 +79,7 @@ export function claudeSizeLabel(size: CardSize, t: T): string {
 
 /* ── Primitivos visuais (reúso máximo) ─────────────────────────────── */
 
-function barStyle(pct: number, pal: (typeof PALETTES)[ThemeName]) {
+function barStyle(pct: number, pal: (typeof PALETTES)[ResolvedThemeName]) {
   const v = clamp(pct, 0, 100);
   return { width: `${v}%`, minWidth: v > 0 ? 7 : 0, background: barColor(pct, pal), boxShadow: barGlow(pct, pal) };
 }
@@ -133,7 +133,7 @@ function ClaudeHeader({
 
 /* ── Linhas de métrica ────────────────────────────────────────────── */
 
-function CompactRow({ m, pal, t, nowMs }: { m: Metric; pal: (typeof PALETTES)[ThemeName]; t: T; nowMs?: number }) {
+function CompactRow({ m, pal, t, nowMs }: { m: Metric; pal: (typeof PALETTES)[ResolvedThemeName]; t: T; nowMs?: number }) {
   const clock = m.countdownAt ? fmtCountdown(m.countdownAt, nowMs) : null;
   if (m.pct == null) {
     return (
@@ -159,7 +159,7 @@ function CompactRow({ m, pal, t, nowMs }: { m: Metric; pal: (typeof PALETTES)[Th
   );
 }
 
-function Row({ m, pal, t, nowMs }: { m: Metric; pal: (typeof PALETTES)[ThemeName]; t: T; nowMs?: number }) {
+function Row({ m, pal, t, nowMs }: { m: Metric; pal: (typeof PALETTES)[ResolvedThemeName]; t: T; nowMs?: number }) {
   const clock = m.countdownAt ? fmtCountdown(m.countdownAt, nowMs) : null;
   if (m.pct == null) {
     return (
@@ -212,7 +212,7 @@ export function ClaudeBoardCard({
   ok: boolean;
   error: string | null;
   t: T;
-  pal: (typeof PALETTES)[ThemeName];
+  pal: (typeof PALETTES)[ResolvedThemeName];
   nowMs?: number;
   size: CardSize;
   onOpen: () => void;
@@ -368,7 +368,7 @@ function DetailMetricCard({
 }: {
   label: string;
   pct: number | null | undefined;
-  pal: (typeof PALETTES)[ThemeName];
+  pal: (typeof PALETTES)[ResolvedThemeName];
   sub?: string | null;
 }) {
   const display = pct != null ? fmtPct(pct) : null;
@@ -398,7 +398,7 @@ export function ClaudeDetail({
   account: ClaudeAccount;
   updatedAt: string;
   t: T;
-  pal: (typeof PALETTES)[ThemeName];
+  pal: (typeof PALETTES)[ResolvedThemeName];
   nowMs: number;
 }) {
   const c = account;

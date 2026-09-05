@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useRequest } from "../../../hooks/useRequest";
 import type { Lang } from "../../../i18n";
 import { THEME_STR, type ThemeCopy } from "../themeCopy";
+import { WALLHAVEN_DEFAULTS, wallhavenFiltersToQuery, type WallhavenFilters } from "./wallhavenFilters";
 
 export type WallpaperItem = {
     id: string;
@@ -53,6 +54,8 @@ export type WallpaperApi = {
     searchResults: SearchResult[];
     searchTotal: number | null;
     searchPage: number;
+    wallhavenFilters: WallhavenFilters;
+    setWallhavenFilters: (v: WallhavenFilters) => void;
     listReq: ReturnType<typeof useRequest>;
     uploadReq: ReturnType<typeof useRequest>;
     selectReq: ReturnType<typeof useRequest>;
@@ -96,6 +99,7 @@ export function WallpaperManager({
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchTotal, setSearchTotal] = useState<number | null>(null);
     const [searchPage, setSearchPage] = useState(1);
+    const [wallhavenFilters, setWallhavenFilters] = useState<WallhavenFilters>({ ...WALLHAVEN_DEFAULTS });
 
     const listReq = useRequest();
     const uploadReq = useRequest();
@@ -171,9 +175,17 @@ export function WallpaperManager({
     }
 
     async function handleSearch(page = 1) {
-        if (!searchQuery.trim()) return { ok: false, error: c.searchError };
+        const isWallhaven = searchProvider === "wallhaven";
+        if (!searchQuery.trim() && !isWallhaven) return { ok: false, error: c.searchError };
         const q = encodeURIComponent(searchQuery.trim());
-        const url = `/api/wallpapers/search/${searchProvider}?q=${q}&page=${page}&per_page=15`;
+        const perPage = isWallhaven && !searchQuery.trim() && page === 1 ? 9 : 15;
+        let url = `/api/wallpapers/search/${searchProvider}?page=${page}&per_page=${perPage}`;
+        if (searchQuery.trim()) url += `&q=${q}`;
+        if (isWallhaven) {
+            const extra = wallhavenFiltersToQuery(wallhavenFilters);
+            const qs = new URLSearchParams(extra).toString();
+            if (qs) url += `&${qs}`;
+        }
         const r = await fetch(url);
         const j = (await r.json().catch(() => ({ ok: false }))) as { ok?: boolean; error?: string; results?: SearchResult[]; total?: number };
         if (!r.ok) throw new Error((j as { error?: string }).error || c.searchError);
@@ -230,6 +242,8 @@ export function WallpaperManager({
         searchResults,
         searchTotal,
         searchPage,
+        wallhavenFilters,
+        setWallhavenFilters,
         listReq,
         uploadReq,
         selectReq,

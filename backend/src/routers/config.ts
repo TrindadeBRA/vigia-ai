@@ -4,6 +4,7 @@ import { inDocker } from "../config.js";
 import { credentialsPath, missingLoginHint } from "../local/claudeOauth.js";
 import { cursorMissingHint, cursorTokenCandidates, jwtExpired } from "../local/cursorState.js";
 import { authPath as gptAuthPath, gptMissingHint, gptTokenCandidates, gptTokenExpired } from "../local/gptOauth.js";
+import { authPath as opencodeAuthPath, opencodeMissingHint, opencodeTokenCandidates } from "../local/opencodeAuth.js";
 import { lanIPv4 } from "../netutil.js";
 import { cleanBitcoinAddress } from "../providers/bitcoin.js";
 import { cleanDeepseekKey } from "../providers/deepseek.js";
@@ -139,6 +140,31 @@ function _adsenseCard(cfg: Record<string, unknown>): Record<string, unknown> {
   return { source: "missing", label: "Cole o Client ID e o Client Secret (tipo Web) do Google Cloud", configured: false, suffix: null, mode: "need_paste", hidden: Boolean(p.hidden), local_label: String(p.local_label ?? ""), primary_label: String(p.local_label ?? ""), accounts: extras };
 }
 
+function _opencodeCard(cfg: Record<string, unknown>): Record<string, unknown> {
+  const p = providerCfg(cfg, "opencode") as Record<string, unknown>;
+  const cands = opencodeTokenCandidates(cfg);
+  const paste = String(p.paste_secret ?? "").trim();
+  const extras = accountsPublic(p);
+  let live: [string, string] | null = null;
+  for (const [source, token] of cands) {
+    live = [source, token];
+    break;
+  }
+  if (live) {
+    const [source] = live;
+    let label = source === "env" ? "Lido de OPENCODE_AUTH_CONTENT" : `Lido de ${opencodeAuthPath(cfg)}`;
+    if (paste) label += " · key colada ignorada na conta local (o app tem prioridade)";
+    return { source, label, configured: true, suffix: null, mode: "local", hidden: Boolean(p.hidden), local_label: String(p.local_label ?? ""), primary_label: String(p.local_label ?? ""), accounts: extras };
+  }
+  if (paste) {
+    return { source: "env", label: "Key salva neste coletor", configured: true, suffix: suffix(paste), mode: "paste", hidden: Boolean(p.hidden), local_label: String(p.local_label ?? ""), primary_label: String(p.local_label ?? ""), accounts: extras };
+  }
+  if (inDocker()) {
+    return { source: "missing", label: "Docker não lê ~/.local/share/opencode — monte o auth.json ou cole a key abaixo", configured: Boolean(extras.length > 0), suffix: null, mode: "need_paste", hidden: Boolean(p.hidden), local_label: String(p.local_label ?? ""), primary_label: String(p.local_label ?? ""), accounts: extras };
+  }
+  return { source: "missing", label: opencodeMissingHint(cfg), configured: Boolean(extras.length > 0), suffix: null, mode: "need_local", hidden: Boolean(p.hidden), local_label: String(p.local_label ?? ""), primary_label: String(p.local_label ?? ""), accounts: extras };
+}
+
 function _keyCard(cfg: Record<string, unknown>, name: string): Record<string, unknown> {
   const p = providerCfg(cfg, name) as Record<string, unknown>;
   const paste = String(p.paste_secret ?? "").trim();
@@ -202,7 +228,7 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
       cursor: _cursorCard(cfg),
       openrouter: _keyCard(cfg, "openrouter"),
       deepseek: _keyCard(cfg, "deepseek"),
-      opencode: _keyCard(cfg, "opencode"),
+      opencode: _opencodeCard(cfg),
       fal: _keyCard(cfg, "fal"),
       bitcoin: _keyCard(cfg, "bitcoin"),
       adsense: _adsenseCard(cfg),

@@ -7,19 +7,23 @@ import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
 import { MenuIcon, SettingsIcon } from "../components/icons";
+import { ImageWidgetModal } from "../components/ImageWidgetModal";
 import { Logo } from "../components/Logo";
 import { PixDonateModal } from "../components/PixDonateModal";
 import { Skeleton } from "../components/Skeleton";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, countdownSecs, fmtClock, nextFetchAtMs, payloadAgeMs } from "../format";
 import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
+import { useImageWidgets } from "../hooks/useImageWidgets";
+import { useNoteWidgets } from "../hooks/useNoteWidgets";
+import { useServerNotes } from "../hooks/useServerNotes";
 import { STR } from "../i18n";
-import { ACCENTS, PALETTES, applyThemeVars } from "../theme";
+import { ACCENTS, PALETTES, applyThemeVars, getSystemTheme, resolveTheme } from "../theme";
 import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
 import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
-import { buildProviders, buildWidgetProviders } from "./display/buildProviders";
+import { buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
 import { SettingsDrawer } from "./display/SettingsDrawer";
@@ -30,7 +34,11 @@ import NowPage from "./NowPage";
 
 export default function Display() {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  const isKiosk = (() => {
+    const v = new URLSearchParams(search).get("kiosk");
+    return v === "1" || v?.toLowerCase() === "true";
+  })();
   const isConfig = pathname === "/display/config";
   const isSetup = pathname === "/display/setup";
   const isTheme = pathname === "/display/theme" || pathname === "/display/tema";
@@ -55,15 +63,30 @@ export default function Display() {
   const [boards, setBoards] = useGridBoards();
   const [gridWallpaperOpen, setGridWallpaperOpen] = useState(false);
   const [addWidgetOpen, setAddWidgetOpen] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const { gridId: gridWallpaperId } = useGridWallpaper();
+  const imageWidgets = useImageWidgets();
+  const noteWidgets = useNoteWidgets();
+  const serverNotes = useServerNotes();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
 
-  const pal = PALETTES[prefs.theme];
-  const flat = prefs.theme === "contrast";
-  const accent = ACCENTS[prefs.theme][prefs.accent] || ACCENTS[prefs.theme][0];
+  const [systemTheme, setSystemTheme] = useState(() => getSystemTheme());
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => setSystemTheme(mql.matches ? "dark" : "light");
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+  const resolvedTheme = resolveTheme(prefs.theme);
+  // Quando em "auto", o tema efetivo segue o sistema; caso contrário usa o escolhido.
+  const effectiveTheme = prefs.theme === "auto" ? systemTheme : resolvedTheme;
+  const pal = PALETTES[effectiveTheme];
+  const flat = effectiveTheme === "contrast";
+  const accent = prefs.accentCustom || ACCENTS[effectiveTheme][prefs.accent] || ACCENTS[effectiveTheme][0];
   const t = STR[prefs.lang];
   const pageTitle = isConfig ? t.config : isSetup ? t.board : isTheme ? t.theme : isAlarms ? t.alarms : isNow ? t.now : null;
   const outlet: DisplayOutlet = { lang: prefs.lang, data, nowMs: now, driftMs };
@@ -118,6 +141,13 @@ export default function Display() {
     }
   }
 
+  // olho tonto (circular ao redor) equivale a tocar no Badge: força GET /usage
+  useEffect(() => {
+    const onDizzy = () => void loadUsage();
+    window.addEventListener("vigia:eye-dizzy", onDizzy as EventListener);
+    return () => window.removeEventListener("vigia:eye-dizzy", onDizzy as EventListener);
+  }, []);
+
   function applyPayload(json: UsagePayload) {
     const isNew = json.updated_at !== lastUpdatedAtRef.current;
     lastUpdatedAtRef.current = json.updated_at;
@@ -160,8 +190,30 @@ export default function Display() {
   }
 
   const providers = data ? buildProviders(data, t, now) : [];
+  const imageProvidersRaw = buildImageProviders(imageWidgets.items, t);
+  const imageProviders = imageProvidersRaw.map((p) => Object.assign(p, {
+    _onImageTransform: (id: string, next: { x: number; y: number; scale: number }) => imageWidgets.update(id, { transform: next }),
+  }));
+  // Notas: locais (localStorage) + servidor (criadas via Telegram /note)
+  const localNoteProvidersRaw = buildNoteProviders(noteWidgets.items, t);
+  const serverNoteProvidersRaw = buildNoteProviders(serverNotes.items as unknown as Array<{ id: string; text: string; color: string }>, t);
+  const localNoteProviders = localNoteProvidersRaw.map((p) => Object.assign(p, {
+    _onNoteUpdate: (id: string, patch: { text?: string; color?: string }) => {
+      const noteId = id.replace(/^note:/, "");
+      noteWidgets.update(noteId, patch as never);
+    },
+    _noteSource: "local" as const,
+  }));
+  const serverNoteProviders = serverNoteProvidersRaw.map((p) => Object.assign(p, {
+    _onNoteUpdate: (id: string, patch: { text?: string; color?: string }) => {
+      const noteId = id.replace(/^note:/, "");
+      void serverNotes.update(noteId, patch as never);
+    },
+    _noteSource: "server" as const,
+  }));
+  const noteProviders = [...localNoteProviders, ...serverNoteProviders];
   const bpBoard = boardForCols(boards, currentCols);
-  const boardProviders = data ? [...providers, ...buildWidgetProviders(prefs.widgets, t)] : providers;
+  const boardProviders = data ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders] : [...imageProviders, ...noteProviders, ...buildWidgetProviders(prefs.widgets, t)];
   const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
   const toggleWidget = (kind: WidgetKind) =>
     setPrefs((p) => {
@@ -193,12 +245,34 @@ export default function Display() {
     return () => document.removeEventListener("keydown", onKey);
   }, [prefs.focus, setPrefs]);
 
+  // Kiosk: tenta entrar em fullscreen real (para embeds). Browsers exigem gesto do usuário,
+  // então tenta de imediato e também na primeira interação.
+  useEffect(() => {
+    if (!isKiosk) return;
+    const tryFs = () => {
+      if (document.fullscreenElement) return;
+      document.documentElement.requestFullscreen?.().catch(() => { });
+    };
+    tryFs();
+    const onFirstInteract = () => {
+      tryFs();
+      document.removeEventListener("click", onFirstInteract);
+      document.removeEventListener("keydown", onFirstInteract);
+    };
+    document.addEventListener("click", onFirstInteract);
+    document.addEventListener("keydown", onFirstInteract);
+    return () => {
+      document.removeEventListener("click", onFirstInteract);
+      document.removeEventListener("keydown", onFirstInteract);
+    };
+  }, [isKiosk]);
+
   const toggleFocus = () => {
     setPrefs((p) => ({ ...p, focus: !p.focus }));
   };
 
   const showOutlet = isCanvas || (isNested && !isNow);
-  const focusMode = Boolean(prefs.focus) && !isNested;
+  const focusMode = (Boolean(prefs.focus) || isKiosk) && !isNested;
   const hideChrome = focusMode || isCanvas;
 
   return (
@@ -310,12 +384,46 @@ export default function Display() {
                     })
                   }
                   onColsChange={setCurrentCols}
-                  onOpen={(id) => { setSection("account"); setSelectedId(id); }}
+                  onOpen={(id) => {
+                    if (id.startsWith("img:")) {
+                      setEditingImageId(id);
+                      setImageModalOpen(true);
+                      return;
+                    }
+                    setSection("account");
+                    setSelectedId(id);
+                  }}
                   focus={focusMode}
                   onToggleFocus={toggleFocus}
                   gridWallpaperId={gridWallpaperId}
                   onOpenWallpaper={() => setGridWallpaperOpen(true)}
                   onOpenAddWidget={() => setAddWidgetOpen(true)}
+                  kiosk={isKiosk}
+                  onRemoveImage={(id) => imageWidgets.remove(id)}
+                  onDuplicateImage={(id) => {
+                    const src = imageWidgets.items.find((x) => x.id === id);
+                    if (!src) return;
+                    imageWidgets.add(src.src, src.fit, src.label);
+                  }}
+                  onRemoveNote={(id) => {
+                    const raw = id.replace(/^note:/, "");
+                    // tenta remover do servidor primeiro; se não existir lá, remove local
+                    const isServer = serverNotes.items.some((n) => n.id === raw);
+                    if (isServer) void serverNotes.remove(raw);
+                    else noteWidgets.remove(raw);
+                  }}
+                  onDuplicateNote={(id) => {
+                    const raw = id.replace(/^note:/, "");
+                    const isServer = serverNotes.items.some((n) => n.id === raw);
+                    if (isServer) void serverNotes.duplicate(raw);
+                    else noteWidgets.duplicate(raw);
+                  }}
+                  onUpdateNote={(id, patch) => {
+                    const raw = id.replace(/^note:/, "");
+                    const isServer = serverNotes.items.some((n) => n.id === raw);
+                    if (isServer) void serverNotes.update(raw, patch as never);
+                    else noteWidgets.update(raw, patch as never);
+                  }}
                 />
               ) : null}
               {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
@@ -325,7 +433,18 @@ export default function Display() {
       </div>
       {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
       <GridWallpaperModal open={gridWallpaperOpen} onClose={() => setGridWallpaperOpen(false)} lang={prefs.lang} />
-      <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} />
+      <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} onAddImage={() => { setEditingImageId(null); setImageModalOpen(true); }} onAddNote={() => noteWidgets.add("", "yellow")} />
+      <ImageWidgetModal
+        open={imageModalOpen}
+        onClose={() => { setImageModalOpen(false); setEditingImageId(null); }}
+        lang={prefs.lang}
+        t={t}
+        mode={editingImageId ? "edit" : "add"}
+        editSrc={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.src ?? null : null}
+        editLabel={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.label ?? null : null}
+        onAdd={(src, fit, label) => { imageWidgets.add(src, fit, label); }}
+        onSaveEdit={(src, fit, label) => { if (editingImageId) imageWidgets.update(editingImageId, { src, fit, label }); }}
+      />
       <PixDonateModal open={pixModalOpen} onClose={() => setPixModalOpen(false)} />
     </div>
   );

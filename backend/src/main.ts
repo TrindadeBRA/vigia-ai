@@ -16,6 +16,7 @@ import { createCalendarRoutes } from "./routers/calendar.js";
 import { createConfigRoutes } from "./routers/config.js";
 import { createCurrenciesRoutes } from "./routers/currencies.js";
 import { createGitRoutes } from "./routers/git.js";
+import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
 import { createThemeRoutes } from "./routers/theme.js";
@@ -160,6 +161,7 @@ export async function createApp() {
   await fastify.register(createRetroachievementsRoutes, { prefix: "" });
   await fastify.register(createCalendarRoutes, { prefix: "" });
   await fastify.register(createRssRoutes, { prefix: "" });
+  await fastify.register(createNotesRoutes, { prefix: "" });
 
   const dist = frontendDist();
   if (dist) {
@@ -205,6 +207,17 @@ export async function createApp() {
       const p = resolve(join(dist, path));
       const root = resolve(dist);
       if (!p.startsWith(root) || !existsSync(p) || !statSync(p).isFile()) return reply.code(404).send({ ok: false, error: "not found" });
+      return reply.send(readFileSync(p));
+    });
+    fastify.get("/fonts/*", async (req: any, reply: any) => {
+      const path = (req.params as any)["*"] ? `fonts/${(req.params as any)["*"]}` : req.url.slice(1).split("?")[0];
+      const p = resolve(join(dist, path));
+      const root = resolve(dist);
+      if (!p.startsWith(root) || !existsSync(p) || !statSync(p).isFile()) return reply.code(404).send({ ok: false, error: "not found" });
+      if (path.endsWith(".ttf")) reply.header("Content-Type", "font/ttf");
+      else if (path.endsWith(".woff2")) reply.header("Content-Type", "font/woff2");
+      else if (path.endsWith(".woff")) reply.header("Content-Type", "font/woff");
+      else if (path.endsWith(".otf")) reply.header("Content-Type", "font/otf");
       return reply.send(readFileSync(p));
     });
     fastify.get("/:staticName", async (req: any, reply: any) => {

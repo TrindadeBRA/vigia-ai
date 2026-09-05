@@ -1,7 +1,19 @@
-export type ThemeName = "dark" | "light" | "contrast";
+export type ThemeName = "dark" | "light" | "contrast" | "auto";
+
+export type ResolvedThemeName = Exclude<ThemeName, "auto">;
+
+export function getSystemTheme(): ResolvedThemeName {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+export function resolveTheme(theme: ThemeName): ResolvedThemeName {
+  if (theme !== "auto") return theme;
+  return getSystemTheme();
+}
 
 export const PALETTES: Record<
-  ThemeName,
+  ResolvedThemeName,
   {
     bg: string;
     card: string;
@@ -61,7 +73,7 @@ export const PALETTES: Record<
   },
 };
 
-export const ACCENTS: Record<ThemeName, string[]> = {
+export const ACCENTS: Record<ResolvedThemeName, string[]> = {
   dark: ["#e63931", "#ff9619", "#f7db21", "#4ad252", "#3ab2de", "#4a8eff", "#c555de"],
   light: ["#c52421", "#d64900", "#c59600", "#198e21", "#008a9c", "#2149bd", "#8400ce"],
   contrast: ["#ff0000", "#ffa600", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"],
@@ -113,7 +125,7 @@ export function inverseOn(hex: string): string {
 }
 
 export function applyThemeVars(
-  pal: (typeof PALETTES)[ThemeName],
+  pal: (typeof PALETTES)[ResolvedThemeName],
   accent: string,
   flat: boolean,
 ): void {
@@ -134,4 +146,17 @@ export function applyThemeVars(
   root.setProperty("--shadow", pal.shadow);
   root.setProperty("--glow", flat ? "rgba(0,0,0,0)" : hexToRgba(accent, 0.16));
   root.setProperty("--bg-translucent", hexToRgba(pal.bg, flat ? 1 : 0.82));
+  // Sincroniza <meta name="theme-color"> com a cor de destaque (accent / NameToColor)
+  // para colorir a barra do navegador / PWA no mobile e desktop.
+  if (typeof document !== "undefined") {
+    const metas = document.querySelectorAll('meta[name="theme-color"]');
+    if (metas.length === 0) {
+      const m = document.createElement("meta");
+      m.name = "theme-color";
+      m.content = accent;
+      document.head.appendChild(m);
+    } else {
+      metas.forEach((m) => m.setAttribute("content", accent));
+    }
+  }
 }

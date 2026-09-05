@@ -1,6 +1,6 @@
 import { fmtResetWhen } from "../formatting.js";
-import { load } from "../store.js";
 import { displayLanUrl } from "../netutil.js";
+import { load } from "../store.js";
 
 export const METRICS: Record<string, Array<[string, string, string]>> = {
   claude: [
@@ -54,17 +54,46 @@ export const PROVIDER_NAMES: Record<string, string> = {
   fal: "fal.ai",
   bitcoin: "Bitcoin",
   adsense: "AdSense",
+  calendar: "Calendário",
 };
+
+export const CALENDAR_METRICS: Array<[string, string, string]> = [
+  ["event", "Eventos", "calendar"],
+  ["task", "Tarefas", "calendar"],
+  ["all", "Eventos e tarefas", "calendar"],
+];
+
+export const CALENDAR_THRESHOLD_UNITS: Record<string, number> = {
+  minutes: 60_000,
+  hours: 3_600_000,
+  days: 86_400_000,
+};
+
+export function calendarThresholdMs(threshold: number, unit: string): number {
+  const ms = CALENDAR_THRESHOLD_UNITS[unit] ?? CALENDAR_THRESHOLD_UNITS.minutes;
+  return Math.max(60_000, Math.trunc(threshold * ms));
+}
+
+export function calendarThresholdLabel(threshold: number, unit: string): string {
+  if (unit === "days") return threshold === 1 ? "1 dia antes" : `${threshold} dias antes`;
+  if (unit === "hours") return threshold === 1 ? "1 hora antes" : `${threshold} horas antes`;
+  return threshold === 1 ? "1 minuto antes" : `${threshold} minutos antes`;
+}
 
 export function catalogPublic(): Record<string, Array<{ key: string; label: string; kind: string }>> {
   const out: Record<string, Array<{ key: string; label: string; kind: string }>> = {};
   for (const [provider, fields] of Object.entries(METRICS)) {
     out[provider] = fields.map(([key, label, kind]) => ({ key, label, kind }));
   }
+  out.calendar = CALENDAR_METRICS.map(([key, label, kind]) => ({ key, label, kind }));
   return out;
 }
 
 export function metricKind(provider: string, metric: string): string | null {
+  if (provider === "calendar") {
+    for (const [key, , kind] of CALENDAR_METRICS) if (key === metric) return kind;
+    return null;
+  }
   for (const [key, , kind] of METRICS[provider] ?? []) {
     if (key === metric) return kind;
   }
@@ -72,6 +101,10 @@ export function metricKind(provider: string, metric: string): string | null {
 }
 
 export function metricLabel(provider: string, metric: string): string | null {
+  if (provider === "calendar") {
+    for (const [key, label] of CALENDAR_METRICS) if (key === metric) return label;
+    return null;
+  }
   for (const [key, label] of METRICS[provider] ?? []) {
     if (key === metric) return label;
   }
@@ -101,6 +134,90 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#x27;");
 }
 
+function calendarEventTime(ev: Record<string, unknown>): number | null {
+  const raw = (ev.dtstart as string | null) ?? (ev.due as string | null) ?? null;
+  if (!raw) return null;
+  const t = new Date(String(raw)).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+function evaluateCalendarRule(
+  rule: Record<string, unknown>,
+  payload: Record<string, unknown>,
+  armed: Record<string, boolean>,
+  events: Array<Record<string, unknown>>,
+): void {
+  const metric = String(rule.metric);
+  const thresholdMs = calendarThresholdMs(Number(rule.threshold), String((rule as Record<string, unknown>).threshold_unit ?? "minutes"));
+  const wantedCalendar = String((rule as Record<string, unknown>).calendar_id ?? "*");
+  const calPayload = payload.calendar as Record<string, unknown> | null | undefined;
+  if (!calPayload || typeof calPayload !== "object" || Array.isArray(calPayload)) return;
+  const calendars = (calPayload.calendars ?? null) as Array<Record<string, unknown>> | null | undefined;
+  if (!Array.isArray(calendars) || calendars.length === 0) return;
+  const now = Date.now();
+  for (const cal of calendars) {
+    if (!cal || typeof cal !== "object" || Array.isArray(cal)) continue;
+    const calId = String((cal as Record<string, unknown>).id ?? "");
+    if (wantedCalendar !== "*" && wantedCalendar !== calId) continue;
+    const calEvents = (cal as Record<string, unknown>).events as Array<Record<string, unknown>> | null | undefined;
+    if (!Array.isArray(calEvents)) continue;
+    for (const ev of calEvents) {
+      if (!ev || typeof ev !== "object" || Array.isArray(ev)) continue;
+      const kind = String((ev as Record<string, unknown>).kind ?? "events");
+      if (metric !== "all" && metric !== kind && !(metric === "event" && kind === "events") && !(metric === "task" && kind === "tasks")) continue;
+      const t = calendarEventTime(ev as Record<string, unknown>);
+      if (t == null) continue;
+      const diff = t - now;
+      // dispara quando faltar <= threshold e ainda não passou (diff >= 0)
+      // e não dispara para eventos já passados
+      if (diff < 0 || diff > thresholdMs) continue;
+      const uid = String((ev as Record<string, unknown>).uid ?? (ev as Record<string, unknown>).summary ?? t);
+      const stateKey = `${String(rule.id)}:calendar:${calId}:${uid}`;
+      const wasArmed = armed[stateKey] ?? false;
+      if (!wasArmed) {
+        events.push({
+          rule,
+          provider: "calendar",
+          calendar_id: calId,
+          calendar_label: String((cal as Record<string, unknown>).label ?? ""),
+          event: ev,
+          event_time: new Date(t).toISOString(),
+          value: diff,
+        });
+      }
+      armed[stateKey] = true;
+      // rearma quando sair da janela (evento passou ou foi reagendado para longe)
+      // para não repetir, mantemos armed=true até o evento passar; limpeza é feita abaixo
+    }
+  }
+  // limpa armed de eventos que já passaram ou saíram da janela (evita vazamento)
+  for (const key of Object.keys(armed)) {
+    if (!key.startsWith(`${String(rule.id)}:calendar:`)) continue;
+    // se não está mais na janela, desarma para permitir novo disparo se reagendado
+    // verificamos se ainda existe um evento correspondente na janela
+    let stillInWindow = false;
+    for (const cal of calendars) {
+      if (!cal || typeof cal !== "object") continue;
+      const calId = String((cal as Record<string, unknown>).id ?? "");
+      if (wantedCalendar !== "*" && wantedCalendar !== calId) continue;
+      const calEvents = (cal as Record<string, unknown>).events as Array<Record<string, unknown>> | null | undefined;
+      if (!Array.isArray(calEvents)) continue;
+      for (const ev of calEvents) {
+        const kind = String((ev as Record<string, unknown>).kind ?? "events");
+        if (metric !== "all" && metric !== kind && !(metric === "event" && kind === "events") && !(metric === "task" && kind === "tasks")) continue;
+        const t = calendarEventTime(ev as Record<string, unknown>);
+        if (t == null) continue;
+        const diff = t - now;
+        if (diff < 0 || diff > thresholdMs) continue;
+        const uid = String((ev as Record<string, unknown>).uid ?? (ev as Record<string, unknown>).summary ?? t);
+        if (key === `${String(rule.id)}:calendar:${calId}:${uid}`) { stillInWindow = true; break; }
+      }
+      if (stillInWindow) break;
+    }
+    if (!stillInWindow) delete armed[key];
+  }
+}
+
 export function evaluate(
   payload: Record<string, unknown>,
   rules: Array<Record<string, unknown>>,
@@ -109,16 +226,17 @@ export function evaluate(
   const events: Array<Record<string, unknown>> = [];
   for (const rule of rules) {
     if (!rule.enabled && rule.enabled !== undefined ? !rule.enabled : false) {
-      // rule.get("enabled", true) -> if enabled is false, skip
       if (rule.enabled === false) continue;
     }
     if (rule.enabled === false) continue;
-    // python: if not rule.get("enabled", True): continue
     if (rule.enabled === false) continue;
-    // need to handle rule.enabled missing defaults to true
     const enabled = (rule as Record<string, unknown>).enabled;
     if (enabled === false) continue;
     const provider = String(rule.provider);
+    if (provider === "calendar") {
+      evaluateCalendarRule(rule, payload, armed, events);
+      continue;
+    }
     const kind = metricKind(provider, String(rule.metric));
     if (kind === null) continue;
     const accounts = (payload[provider] as unknown) as Array<Record<string, unknown>> | null | undefined;
@@ -126,11 +244,6 @@ export function evaluate(
     for (const account of accounts) {
       if (account === null || typeof account !== "object" || Array.isArray(account)) continue;
       const acc = account as Record<string, unknown>;
-      if (!acc.ok && acc.ok !== undefined ? !acc.ok : acc.ok === false) {
-        // python: if not isinstance(account, dict) or not account.get("ok", True): continue
-        // get("ok", True) defaults True, so undefined ok counts as True
-        // we check only if ok explicitly false
-      }
       if (acc.ok === false) continue;
       const accountId = String(acc.id ?? "");
       const wanted = String((rule as Record<string, unknown>).account_id ?? "*");
@@ -161,6 +274,28 @@ export function evaluate(
 export function formatAlarmNotification(event: Record<string, unknown>): string {
   const rule = event.rule as Record<string, unknown>;
   const provider = String(event.provider);
+  if (provider === "calendar") {
+    const ev = (event.event ?? {}) as Record<string, unknown>;
+    const summary = escapeHtml(String(ev.summary ?? "Evento"));
+    const whenRaw = String((event.event_time as string) ?? (ev.dtstart as string) ?? (ev.due as string) ?? "");
+    let whenLabel = "";
+    if (whenRaw) {
+      try {
+        const d = new Date(whenRaw);
+        if (!Number.isNaN(d.getTime())) {
+          whenLabel = d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+        }
+      } catch { }
+    }
+    const threshold = Number(rule.threshold);
+    const unit = String((rule as Record<string, unknown>).threshold_unit ?? "minutes");
+    const lead = calendarThresholdLabel(threshold, unit);
+    const calLabel = event.calendar_label ? ` · ${escapeHtml(String(event.calendar_label))}` : "";
+    const lines = [`⏰ <b>Calendário${calLabel}</b>`, "", `📅 <b>${summary}</b>`, `⏳ Em <b>${escapeHtml(lead)}</b>`];
+    if (whenLabel) lines.push(`🕐 <b>${escapeHtml(whenLabel)}</b>`);
+    if (ev.location) lines.push(`📍 ${escapeHtml(String(ev.location))}`);
+    return lines.join("\n");
+  }
   const kind = metricKind(provider, String(rule.metric)) ?? "percent";
   const providerName = escapeHtml(PROVIDER_NAMES[provider] ?? provider);
   const metricName = escapeHtml(metricLabel(provider, String(rule.metric)) ?? String(rule.metric));

@@ -89,7 +89,7 @@ export async function fetchAlarms(): Promise<AlarmsPublic> {
   return res.json() as Promise<AlarmsPublic>;
 }
 
-export async function createAlarm(body: { provider: string; metric: string; threshold: number; enabled?: boolean; label?: string }) {
+export async function createAlarm(body: { provider: string; metric: string; threshold: number; threshold_unit?: string; calendar_id?: string; enabled?: boolean; label?: string }) {
   const res = await fetch("/api/alarms", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -100,7 +100,7 @@ export async function createAlarm(body: { provider: string; metric: string; thre
   return { ok: true, rule: data as AlarmRule };
 }
 
-export async function patchAlarm(id: string, body: { threshold?: number; enabled?: boolean; label?: string }) {
+export async function patchAlarm(id: string, body: { threshold?: number; threshold_unit?: string; calendar_id?: string; enabled?: boolean; label?: string }) {
   const res = await fetch(`/api/alarms/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -197,7 +197,7 @@ export async function fetchWallpaperProviders(): Promise<import("./types").Wallp
   return res.json() as Promise<import("./types").WallpaperProviderStatus>;
 }
 
-export async function patchWallpaperProviders(body: { pexels_key?: string; unsplash_key?: string; wallhaven_key?: string }): Promise<MutateResult> {
+export async function patchWallpaperProviders(body: { pexels_key?: string; unsplash_key?: string; wallhaven_key?: string; giphy_key?: string }): Promise<MutateResult> {
   const res = await fetch("/api/wallpapers/providers", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

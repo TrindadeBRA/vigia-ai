@@ -135,6 +135,7 @@ export type WallpaperProviderStatus = {
   pexels: { configured: boolean; needs_key: boolean };
   wallhaven: { configured: boolean; has_key?: boolean; needs_key: boolean };
   unsplash: { configured: boolean; needs_key: boolean };
+  giphy: { configured: boolean; needs_key: boolean };
 };
 
 export type WeatherConfig = {
@@ -524,7 +525,7 @@ export type DevicePublic = {
   height: number | null;
 };
 
-export type AlarmMetricKind = "percent" | "cents";
+export type AlarmMetricKind = "percent" | "cents" | "calendar";
 
 export type AlarmMetric = { key: string; label: string; kind: AlarmMetricKind };
 
@@ -534,13 +535,18 @@ export type AlarmRule = {
   account_id: string;
   metric: string;
   threshold: number;
+  threshold_unit?: "minutes" | "hours" | "days";
+  calendar_id?: string;
   enabled: boolean;
   label: string;
 };
 
+export type AlarmCalendarRef = { id: string; label: string; url: string; kind: string };
+
 export type AlarmsPublic = {
   rules: AlarmRule[];
   metrics: Record<string, AlarmMetric[]>;
+  calendars?: AlarmCalendarRef[];
 };
 
 export type TelegramChat = {

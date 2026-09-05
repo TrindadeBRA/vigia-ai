@@ -5,11 +5,11 @@ import { cn } from "../cn";
 import { ArrowLeftIcon, ChevronRightIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, barColor, barGlow, clamp, fmtPct } from "../format";
 import { WEEKDAYS, type Lang, type T } from "../i18n";
-import { PALETTES, PROVIDER_ICON, type ThemeName } from "../theme";
+import { PALETTES, PROVIDER_ICON, resolveTheme, type ThemeName } from "../theme";
 import { accentLink, barFill, barTrack, emptyNote, errorText, num } from "../tw";
 
 type Prefs = { theme: ThemeName; accent: number; lang: Lang };
-type Pal = (typeof PALETTES)[ThemeName];
+type Pal = (typeof PALETTES)[ReturnType<typeof resolveTheme>];
 type Metric = { label: string; pct: number | null; sub: string | null; value?: string | null };
 type ProviderMeta = {
   id: string;
@@ -19,7 +19,7 @@ type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "image" | "note";
 };
 
 function Icon({ id }: { id: string }) {
@@ -110,7 +110,7 @@ export default function NowPage({
 }) {
   const navigate = useNavigate();
   const [flash, setFlash] = useState(false);
-  const pal = PALETTES[prefs.theme];
+  const pal = PALETTES[resolveTheme(prefs.theme)];
 
   useEffect(() => {
     setFlash(true);

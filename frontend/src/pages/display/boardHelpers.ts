@@ -39,6 +39,9 @@ export function parseBoardJson(text: string): BoardLayout | null {
   if (!candidate || typeof candidate !== "object") return null;
   const { size, pos } = candidate as Record<string, unknown>;
   if (typeof size !== "object" || size === null || typeof pos !== "object" || pos === null) return null;
+  // bg é opcional; se vier, valida que é objeto
+  const bg = (candidate as Record<string, unknown>).bg;
+  if (bg !== undefined && (typeof bg !== "object" || bg === null)) return null;
   return candidate as BoardLayout;
 }
 
@@ -48,8 +51,8 @@ export function expandProvidersWithClones(base: ProviderMeta[], board: BoardLayo
   if (!board) return base;
   const byId = new Map(base.map((p) => [p.id, p]));
   const out: ProviderMeta[] = [...base];
-  // coleta clones salvos em board.pos/size que começam com baseId + CLONE_SEP
-  for (const key of new Set([...Object.keys(board.pos), ...Object.keys(board.size)])) {
+  // coleta clones salvos em board.pos/size/bg que começam com baseId + CLONE_SEP
+  for (const key of new Set([...Object.keys(board.pos), ...Object.keys(board.size), ...Object.keys(board.bg || {})])) {
     if (!isCloneId(key)) continue;
     const baseId = baseIdFromClone(key);
     const orig = byId.get(baseId);

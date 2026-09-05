@@ -139,7 +139,7 @@ export default function ConfigPage() {
           hiddenKey="opencode_hidden"
           labelKey="opencode_primary_label"
           placeholder={c.ocKeyPh}
-          usesLocalApp={false}
+          usesLocalApp
           {...common}
         />
         <ProviderCard

@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { deleteAlarm, patchAlarm } from "../../../api/client";
 import type { AlarmMetric, AlarmsPublic } from "../../../api/types";
 import { cn } from "../../../cn";
+import { SlidersIcon, TrashIcon } from "../../../components/icons";
 import { useRequest } from "../../../hooks/useRequest";
-import { TrashIcon, SlidersIcon } from "../../../components/icons";
 import { cfgHint, iconBtn } from "../../../tw";
 import type { ALARMS_STR } from "../alarmsCopy";
 import { ActionRow, Button, FieldStatus, SelectField, Switch, TextField } from "../ui";
@@ -120,18 +120,21 @@ function RuleRow({
   const save = useRequest();
   const [editing, setEditing] = useState(false);
   const [editThreshold, setEditThreshold] = useState(rule.threshold);
+  const [editUnit, setEditUnit] = useState<string>((rule as unknown as { threshold_unit?: string }).threshold_unit ?? "minutes");
   const [editLabel, setEditLabel] = useState(rule.label);
 
   const startEdit = () => {
     setEditThreshold(rule.threshold);
+    setEditUnit((rule as unknown as { threshold_unit?: string }).threshold_unit ?? "minutes");
     setEditLabel(rule.label);
     setEditing(true);
   };
 
-  const suggested = suggestLabel(c, rule.provider, metric, rule.threshold);
+  const ruleUnit = (rule as unknown as { threshold_unit?: string }).threshold_unit;
+  const suggested = suggestLabel(c, rule.provider, metric, rule.threshold, ruleUnit);
   const customName = rule.label.trim() && rule.label.trim() !== suggested.trim() ? rule.label.trim() : "";
   const metricLabel = metric?.label || rule.metric;
-  const thresholdLabel = formatThreshold(metric, rule.threshold);
+  const thresholdLabel = formatThreshold(metric, rule.threshold, ruleUnit);
 
   if (editing) {
     return (
@@ -146,20 +149,34 @@ function RuleRow({
           <div className="grid gap-3 sm:grid-cols-2">
             <TextField label={c.label} placeholder={c.labelPh} value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
             <TextField
-              label={c.threshold}
+              label={rule.provider === "calendar" ? c.calendarThreshold : c.threshold}
               type="number"
               value={editThreshold}
               onChange={(e) => setEditThreshold(Number(e.target.value))}
             />
           </div>
-          <p className="m-0 text-[12.5px] leading-[1.45] text-ink3">{ruleHint(c, metric, editThreshold)}</p>
+          {rule.provider === "calendar" ? (
+            <SelectField
+              label={c.calendarUnit}
+              value={editUnit}
+              onChange={(e) => setEditUnit(e.target.value)}
+              options={[
+                { value: "minutes", label: c.calendarUnitMinutes },
+                { value: "hours", label: c.calendarUnitHours },
+                { value: "days", label: c.calendarUnitDays },
+              ]}
+            />
+          ) : null}
+          <p className="m-0 text-[12.5px] leading-[1.45] text-ink3">{ruleHint(c, metric, editThreshold, editUnit)}</p>
           <ActionRow>
             <Button
               loading={save.busy}
               onClick={() =>
                 save.run(
                   async () => {
-                    const res = await patchAlarm(rule.id, { threshold: editThreshold, label: editLabel });
+                    const patch: Record<string, unknown> = { threshold: editThreshold, label: editLabel };
+                    if (rule.provider === "calendar") patch.threshold_unit = editUnit;
+                    const res = await patchAlarm(rule.id, patch as never);
                     if (res.ok) {
                       await onReload();
                       setEditing(false);
@@ -201,7 +218,7 @@ function RuleRow({
             </span>
           </div>
           <p className="m-0 mt-0.5 truncate text-[12px] leading-snug text-ink3">
-            {customName || ruleHint(c, metric, rule.threshold)}
+            {customName || ruleHint(c, metric, rule.threshold, (rule as unknown as { threshold_unit?: string }).threshold_unit)}
           </p>
         </div>
 

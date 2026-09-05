@@ -49,8 +49,10 @@ export type AlarmsCopy = {
   enabledLabel: string;
   triggerHintPercent: (n: number) => string;
   triggerHintCents: (n: number) => string;
+  triggerHintCalendar: (n: number, unit: string) => string;
   suggestUsage: (provider: string, pct: number, metricLabel: string) => string;
   suggestBalance: (provider: string, amount: string, metricLabel: string) => string;
+  suggestCalendar: (n: number, unit: string, metricLabel: string) => string;
   edit: string;
   save: string;
   saving: string;
@@ -61,6 +63,23 @@ export type AlarmsCopy = {
   filterAll: string;
   searchRules: string;
   rulesFilteredEmpty: string;
+  calendarSectionTitle: string;
+  calendarSectionLead: string;
+  calendarKind: string;
+  calendarKindEvent: string;
+  calendarKindTask: string;
+  calendarKindAll: string;
+  calendarThreshold: string;
+  calendarUnit: string;
+  calendarUnitMinutes: string;
+  calendarUnitHours: string;
+  calendarUnitDays: string;
+  calendarTarget: string;
+  calendarTargetAll: string;
+  calendarNoCalendars: string;
+  calendarNoCalendarsHint: string;
+  noProvidersConfigured: string;
+  noProvidersHint: string;
 };
 
 export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
@@ -113,8 +132,16 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     enabledLabel: "Ativo",
     triggerHintPercent: (n) => `dispara quando o uso chegar a ${n}%`,
     triggerHintCents: (n) => `dispara quando o saldo cair a $${(n / 100).toFixed(2)}`,
+    triggerHintCalendar: (n, unit) => {
+      const u = unit === "days" ? (n === 1 ? "1 dia" : `${n} dias`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
+      return `dispara ${u} antes do evento/tarefa`;
+    },
     suggestUsage: (provider, pct, metricLabel) => `${provider} - Uso de ${pct}% da cota ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - Saldo de ${amount} da cota ${metricLabel}`,
+    suggestCalendar: (n, unit, metricLabel) => {
+      const u = unit === "days" ? (n === 1 ? "1 dia" : `${n} dias`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
+      return `Calendário · ${metricLabel} · ${u} antes`;
+    },
     edit: "Editar",
     save: "Salvar",
     saving: "Salvando…",
@@ -125,6 +152,23 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     filterAll: "Todos os provedores",
     searchRules: "Buscar regra…",
     rulesFilteredEmpty: "Nenhuma regra corresponde ao filtro.",
+    calendarSectionTitle: "Calendário — eventos e tarefas",
+    calendarSectionLead: "Receba um aviso X tempo antes de um evento ou tarefa do seu calendário (ICS). Escolha quanto tempo antes e a unidade (minutos, horas ou dias).",
+    calendarKind: "Tipo",
+    calendarKindEvent: "Eventos",
+    calendarKindTask: "Tarefas",
+    calendarKindAll: "Eventos e tarefas",
+    calendarThreshold: "Antecedência",
+    calendarUnit: "Unidade",
+    calendarUnitMinutes: "Minutos",
+    calendarUnitHours: "Horas",
+    calendarUnitDays: "Dias",
+    calendarTarget: "Calendário",
+    calendarTargetAll: "Todos os calendários",
+    calendarNoCalendars: "Nenhum calendário configurado",
+    calendarNoCalendarsHint: "Adicione um calendário em Configurações → Calendário para criar alarmes de eventos/tarefas.",
+    noProvidersConfigured: "Nenhum provedor com conta configurada",
+    noProvidersHint: "Configure ao menos uma conta em Configurações para criar alarmes de cota. Alarmes de calendário continuam disponíveis abaixo.",
   },
   en: {
     title: "Alarms",
@@ -175,8 +219,16 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     enabledLabel: "Enabled",
     triggerHintPercent: (n) => `fires when usage reaches ${n}%`,
     triggerHintCents: (n) => `fires when the balance drops to $${(n / 100).toFixed(2)}`,
+    triggerHintCalendar: (n, unit) => {
+      const u = unit === "days" ? (n === 1 ? "1 day" : `${n} days`) : unit === "hours" ? (n === 1 ? "1 hour" : `${n} hours`) : n === 1 ? "1 minute" : `${n} minutes`;
+      return `fires ${u} before the event/task`;
+    },
     suggestUsage: (provider, pct, metricLabel) => `${provider} - ${pct}% usage of ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - ${metricLabel} balance at ${amount}`,
+    suggestCalendar: (n, unit, metricLabel) => {
+      const u = unit === "days" ? (n === 1 ? "1 day" : `${n} days`) : unit === "hours" ? (n === 1 ? "1 hour" : `${n} hours`) : n === 1 ? "1 minute" : `${n} minutes`;
+      return `Calendar · ${metricLabel} · ${u} before`;
+    },
     edit: "Edit",
     save: "Save",
     saving: "Saving…",
@@ -187,6 +239,23 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     filterAll: "All providers",
     searchRules: "Search rules…",
     rulesFilteredEmpty: "No rules match the filter.",
+    calendarSectionTitle: "Calendar — events & tasks",
+    calendarSectionLead: "Get notified X time before a calendar event or task (ICS). Choose how long before and the unit (minutes, hours or days).",
+    calendarKind: "Type",
+    calendarKindEvent: "Events",
+    calendarKindTask: "Tasks",
+    calendarKindAll: "Events & tasks",
+    calendarThreshold: "Lead time",
+    calendarUnit: "Unit",
+    calendarUnitMinutes: "Minutes",
+    calendarUnitHours: "Hours",
+    calendarUnitDays: "Days",
+    calendarTarget: "Calendar",
+    calendarTargetAll: "All calendars",
+    calendarNoCalendars: "No calendar configured",
+    calendarNoCalendarsHint: "Add a calendar in Settings → Calendar to create event/task alarms.",
+    noProvidersConfigured: "No provider with a configured account",
+    noProvidersHint: "Configure at least one account in Settings to create quota alarms. Calendar alarms remain available below.",
   },
   es: {
     title: "Alarmas",
@@ -237,8 +306,16 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     enabledLabel: "Activa",
     triggerHintPercent: (n) => `dispara cuando el uso llegue a ${n}%`,
     triggerHintCents: (n) => `dispara cuando el saldo baje a $${(n / 100).toFixed(2)}`,
+    triggerHintCalendar: (n, unit) => {
+      const u = unit === "days" ? (n === 1 ? "1 día" : `${n} días`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
+      return `dispara ${u} antes del evento/tarea`;
+    },
     suggestUsage: (provider, pct, metricLabel) => `${provider} - Uso de ${pct}% de la cuota ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - Saldo de ${amount} de la cuota ${metricLabel}`,
+    suggestCalendar: (n, unit, metricLabel) => {
+      const u = unit === "days" ? (n === 1 ? "1 día" : `${n} días`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
+      return `Calendario · ${metricLabel} · ${u} antes`;
+    },
     edit: "Editar",
     save: "Guardar",
     saving: "Guardando…",
@@ -249,5 +326,22 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     filterAll: "Todos los proveedores",
     searchRules: "Buscar regla…",
     rulesFilteredEmpty: "Ninguna regla coincide con el filtro.",
+    calendarSectionTitle: "Calendario — eventos y tareas",
+    calendarSectionLead: "Recibí un aviso X tiempo antes de un evento o tarea de tu calendario (ICS). Elegí cuánto antes y la unidad (minutos, horas o días).",
+    calendarKind: "Tipo",
+    calendarKindEvent: "Eventos",
+    calendarKindTask: "Tareas",
+    calendarKindAll: "Eventos y tareas",
+    calendarThreshold: "Anticipación",
+    calendarUnit: "Unidad",
+    calendarUnitMinutes: "Minutos",
+    calendarUnitHours: "Horas",
+    calendarUnitDays: "Días",
+    calendarTarget: "Calendario",
+    calendarTargetAll: "Todos los calendarios",
+    calendarNoCalendars: "Ningún calendario configurado",
+    calendarNoCalendarsHint: "Agregá un calendario en Configuración → Calendario para crear alarmas de eventos/tareas.",
+    noProvidersConfigured: "Ningún proveedor con cuenta configurada",
+    noProvidersHint: "Configurá al menos una cuenta en Configuración para crear alarmas de cuota. Las alarmas de calendario siguen disponibles abajo.",
   },
 };

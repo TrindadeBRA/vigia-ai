@@ -383,3 +383,34 @@ export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): P
   }
   return list;
 }
+
+export function buildImageProviders(items: Array<{ id: string; src: string; fit: "cover" | "contain"; label?: string }>, t: T): ProviderMeta[] {
+  return items.map((it) => ({
+    id: it.id,
+    provider: "image",
+    kind: "image" as const,
+    ok: true,
+    error: null,
+    title: it.label || t.widgetImage || "Imagem",
+    label: "",
+    metrics: [],
+    imageSrc: it.src,
+    imageFit: it.fit,
+    imageTransform: (it as unknown as { transform?: { x: number; y: number; scale: number } }).transform ?? null,
+  }));
+}
+
+export function buildNoteProviders(notes: Array<{ id: string; text: string; color: string }> | undefined, t: T): ProviderMeta[] {
+  if (!notes?.length) return [];
+  return notes.map((n) => ({
+    id: `note:${n.id}`,
+    provider: "note",
+    kind: "note" as const,
+    ok: true,
+    error: null,
+    title: t.widgetNote || "Nota",
+    label: n.text ? n.text.slice(0, 24) : "",
+    metrics: [],
+    note: n,
+  }));
+}
