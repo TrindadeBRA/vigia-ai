@@ -648,7 +648,11 @@ cmd_cask() {
   fi
 
   work="$(mktemp -d)"
-  trap 'rm -rf "$work"' EXIT
+  # `trap ... EXIT` setado numa função é global ao processo, não escopado a
+  # ela — quando o script inteiro sair, $work (local) já não existe mais;
+  # sem o :-, `set -u` derruba com "unbound variable" mesmo depois de tudo
+  # ter dado certo.
+  trap 'rm -rf "${work:-}"' EXIT
 
   echo "== baixando .dmg de $tag =="
   gh release download "$tag" --repo TrindadeBRA/vigia-ai --dir "$work" \
