@@ -5,7 +5,7 @@ Ponto de entrada para agentes: **[CONTEXTO_IA.md](CONTEXTO_IA.md)**. Como contri
 1. [SETUP.md](SETUP.md) — instalar e rodar (quick start, placa, Wokwi, provedores)
 2. [ARQUITETURA.md](ARQUITETURA.md)
 3. [CONTRATO_JSON.md](CONTRATO_JSON.md)
-4. [BACKEND.md](BACKEND.md) · [FRONTEND.md](FRONTEND.md) · [FIRMWARE.md](FIRMWARE.md)
+4. [BACKEND.md](BACKEND.md) · [FRONTEND.md](FRONTEND.md) · [FIRMWARE.md](FIRMWARE.md) · [DESKTOP.md](DESKTOP.md) · [RELEASE.md](RELEASE.md) — versão + tag
 5. [APIS_CLAUDE.md](APIS_CLAUDE.md) · [APIS_GPT.md](APIS_GPT.md) · [APIS_CURSOR.md](APIS_CURSOR.md) · [APIS_OPENROUTER.md](APIS_OPENROUTER.md) · [APIS_DEEPSEEK.md](APIS_DEEPSEEK.md) · [APIS_OPENCODE_GO.md](APIS_OPENCODE_GO.md) · [APIS_OPENCODE_ZEN.md](APIS_OPENCODE_ZEN.md)
 6. [HARDWARE.md](HARDWARE.md) · [TOUCH.md](TOUCH.md)
 7. [NOTIFICACOES.md](NOTIFICACOES.md) — alarmes e Telegram (`/display/alarms`)

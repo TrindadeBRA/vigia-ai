@@ -23,6 +23,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [TOUCH.md](TOUCH.md)                         | Views, XPT2046, calibração, Wokwi                                 |
 | [BACKEND.md](BACKEND.md)                     | Como rodar o coletor Fastify (Node 22)                            |
 | [DESKTOP.md](DESKTOP.md)                     | App Electron: instalar, pastas, porta, assinatura                 |
+| [RELEASE.md](RELEASE.md)                     | Checklist de versão + tag: quais arquivos mudar, por que desktop manda |
 | [FRONTEND.md](FRONTEND.md)                   | Painel e mostrador React                                          |
 | [FIRMWARE.md](FIRMWARE.md)                   | PlatformIO, Wokwi, `secrets.h`                                    |
 | [DECISOES.md](DECISOES.md)                   | Por que as escolhas atuais                                        |

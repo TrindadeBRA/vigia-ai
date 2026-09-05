@@ -74,7 +74,7 @@ instaladores de cada plataforma.
 
 | SO | Situação |
 | --- | --- |
-| **macOS** | Precisa de Developer ID + notarização. Sem os segredos `MAC_CERT_P12`, `APPLE_ID`, `APPLE_APP_PASSWORD` e `APPLE_TEAM_ID` no repositório, o build sai **sem assinar**: instala, mas o Gatekeeper reclama na primeira abertura (botão direito → Abrir). |
+| **macOS** | Precisa de Developer ID + notarização. Sem os segredos `MAC_CERT_P12`, `APPLE_ID`, `APPLE_APP_PASSWORD` e `APPLE_TEAM_ID` no repositório, o build sai **sem assinar** (ad-hoc): o Gatekeeper mostra **"está danificado"** (não é só o aviso de "desenvolvedor não identificado" — botão direito → Abrir não resolve). O `.dmg` traz um `fix-gatekeeper.command` que tira a flag de quarentena; detalhes em [RELEASE.md](RELEASE.md). |
 | **Windows** | Sem assinatura Authenticode o SmartScreen mostra um aviso na primeira execução. |
 | **Linux** | Não se aplica. |
 
