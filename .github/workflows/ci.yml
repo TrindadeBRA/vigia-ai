@@ -13,12 +13,12 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-      - run: pip install -e ".[dev]"
-      - run: ruff check app tests
-      - run: pytest -q
+          node-version: "22"
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test
 
   frontend:
     runs-on: ubuntu-latest
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
       - run: npm install
       - run: npx tsc --noEmit
       - run: npm run build
@@ -45,10 +45,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+          node-version: "22"
 
       - name: Typecheck do Electron
         working-directory: desktop
@@ -59,11 +56,11 @@ jobs:
       # O handshake do sidecar é o contrato entre o coletor e o Electron
       # (desktop/src/sidecar.ts). Roda nos três SOs porque os caminhos de
       # credencial e o encerramento sem SIGTERM divergem por plataforma.
-      - name: Testes do coletor
+      - name: Testes do coletor (Vitest)
         working-directory: backend
         run: |
-          pip install -e ".[dev]"
-          pytest -q
+          npm install
+          npm test
 
   firmware:
     runs-on: ubuntu-latest

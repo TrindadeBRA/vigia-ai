@@ -15,6 +15,8 @@ files:
 extraResources:
   - from: resources/sidecar
     to: sidecar
+  - from: resources/collector
+    to: collector
   - from: ../frontend/dist
     to: wwwroot
   - from: build/trayTemplate.png
@@ -49,6 +51,9 @@ dmg:
   # nome, o segundo vira "Vigia AI 1.0.1 1" e o `hdiutil detach` do
   # caminho esperado falha, derrubando o build inteiro.
   title: Vigia AI ${version}${arch}
+  # O auto-update do Mac baixa o .zip, não o .dmg — o blockmap do dmg
+  # nunca é lido por ninguém, então não faz sentido gerá-lo.
+  writeUpdateInfo: false
   contents:
     - x: 140
       y: 200

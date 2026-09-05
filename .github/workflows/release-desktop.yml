@@ -33,10 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+          node-version: "22"
 
       - name: Frontend
         working-directory: frontend
@@ -44,11 +41,10 @@ jobs:
           npm install
           npm run build
 
-      - name: Sidecar (PyInstaller)
+      - name: Coletor (Node bundle)
         shell: bash
         run: |
-          python -m venv backend/.venv
-          ./scripts/build-sidecar.sh
+          ./scripts/build-collector.sh
 
       - name: Electron
         working-directory: desktop

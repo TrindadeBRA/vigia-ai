@@ -1,0 +1,33 @@
+{
+  "name": "vigia-ai-collector",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Coletor Vigia AI — Node + Fastify (port do Python)",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^10.1.1",
+    "@fastify/swagger": "^9.4.1",
+    "@fastify/swagger-ui": "^6.1.1",
+    "fastify": "^5.3.2",
+    "jimp": "^0.22.12",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
+    "eslint": "^10.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.5"
+  }
+}

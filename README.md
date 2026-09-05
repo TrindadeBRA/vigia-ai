@@ -9,9 +9,8 @@
 rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-e63931?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](backend)
-[![Node](https://img.shields.io/badge/node-20%2B-339933?style=flat-square&logo=node.js&logoColor=white)](frontend)
-[![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](backend)
+[![Node](https://img.shields.io/badge/node-22%20LTS-339933?style=flat-square&logo=node.js&logoColor=white)](backend)
+[![Fastify](https://img.shields.io/badge/backend-Fastify-000000?style=flat-square&logo=fastify&logoColor=white)](backend)
 [![React](https://img.shields.io/badge/frontend-React%20%2B%20TS-61DAFB?style=flat-square&logo=react&logoColor=0b1220)](frontend)
 [![PlatformIO](https://img.shields.io/badge/firmware-PlatformIO-FF7F00?style=flat-square&logo=platformio&logoColor=white)](firmware)
 [![ESP32](https://img.shields.io/badge/board-ESP32%20%2B%20TFT%203.5%22-e63931?style=flat-square&logo=espressif&logoColor=white)](.agents/HARDWARE.md)
@@ -164,14 +163,14 @@ Monta o fundo, o relógio e os ícones dos provedores livremente num canvas — 
 Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go / OpenCode Zen / fal.ai / Bitcoin / AdSense)
         │  tokens só no host
         ▼
-  backend FastAPI  :8787     GET /events  (SSE, JSON sem Bearer)
-        │                    GET /usage   (consulta na hora)
-        │                    GET /docs    (Swagger)
-        │                    /api/alarms + /api/telegram  (alarmes → Telegram)
+  backend Node + Fastify :8787  GET /events  (SSE, JSON sem Bearer)
+        │                       GET /usage   (consulta na hora)
+        │                       GET /docs    (Swagger)
+        │                       /api/alarms + /api/telegram  (alarmes → Telegram)
         ├──────────────────► ESP32 / Wokwi   (escuta o stream)
         └──────────────────► React            /display          réplica da placa
-                                              /display/config   contas e placa
-                                              /display/alarms   alarmes + Telegram
+                                                  /display/config   contas e placa
+                                                  /display/alarms   alarmes + Telegram
 ```
 
 <div align="center">
@@ -205,7 +204,7 @@ O app é o mesmo produto: continua servindo `/display` na rede local para a ESP3
 
 ### A partir do código
 
-Precisa de **Python ≥ 3.11**, **Node 20+** e, para o firmware, [PlatformIO Core](https://platformio.org/).
+Precisa de **Node 22 LTS** e, para o firmware, [PlatformIO Core](https://platformio.org/) — Python removido do coletor (legado em `backend-python-legacy/`).
 
 ```bash
 ./dev up      # coletor + painel web

@@ -1,6 +1,6 @@
 # Backend (coletor)
 
-FastAPI em `backend/`. Sobe em `0.0.0.0:8787`.
+Node 22 + Fastify em `backend/` (port do Python/FastAPI). Sobe em `0.0.0.0:8787`.
 
 ```bash
 ./dev up                 # + frontend Vite
@@ -21,7 +21,7 @@ Config: `backend/data/config.json` (gitignored, `version: 1`). Tokens nunca volt
 
 Claude/GPT/Cursor: Keychain / `~/.codex/auth.json` / `state.vscdb` primeiro; paste no painel só como plano B. OpenRouter/DeepSeek/OpenCode Go/OpenCode Zen/fal.ai: key no painel. Bitcoin: endereço público. AdSense: OAuth Google (Client ID tipo Web) — o coletor faz o refresh; ver [APIS_ADSENSE.md](APIS_ADSENSE.md).
 
-Rate limit: o hub **não** martela todo terceiro a cada 60 s. Cotas de assinatura acompanham o ciclo; CoinGecko (~5 min, cliente compartilhado), câmbio (~1 h), AdSense (5 min) e clima (10 min) têm TTL próprio — ver `app/refresh_cache.py`. 429 devolve last-good e entra em backoff. Claude ainda pode 429 se o UA não for `claude-code/<ver>`; intervalo seguro da comunidade ~180 s (`USAGE_INTERVAL_S=180`).
+Rate limit: o hub **não** martela todo terceiro a cada 60 s. Cotas de assinatura acompanham o ciclo; CoinGecko (~5 min, cliente compartilhado), câmbio (~1 h), AdSense (5 min) e clima (10 min) têm TTL próprio — ver `src/refreshCache.ts` (port de `app/refresh_cache.py`). 429 devolve last-good e entra em backoff. Claude ainda pode 429 se o UA não for `claude-code/<ver>`; intervalo seguro da comunidade ~180 s (`USAGE_INTERVAL_S=180`).
 
 Linux: Claude em `~/.claude/.credentials.json`; GPT em `~/.codex/auth.json`; Cursor em `~/.config/Cursor/User/globalStorage/state.vscdb`. Windows: cole o token (sem Keychain).
 

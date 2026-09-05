@@ -11,8 +11,8 @@ echo "== 1/4 frontend =="
 (cd "$ROOT_DIR/frontend" && [ -d node_modules ] || npm ci) || true
 (cd "$ROOT_DIR/frontend" && npm run build)
 
-echo "== 2/4 sidecar (PyInstaller) =="
-"$ROOT_DIR/scripts/build-sidecar.sh"
+echo "== 2/4 coletor (Node bundle esbuild) =="
+"$ROOT_DIR/scripts/build-collector.sh"
 
 echo "== 3/4 electron (TypeScript) =="
 (cd "$ROOT_DIR/desktop" && { [ -d node_modules ] || npm ci; } && npm run build)

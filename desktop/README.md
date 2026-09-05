@@ -1,10 +1,10 @@
 # Vigia AI Desktop
 
-App Electron que embarca o coletor FastAPI. A janela carrega
+App Electron que embarca o coletor Node/Fastify. A janela carrega
 `http://127.0.0.1:<porta>/display` — o **mesmo** endereço que o navegador e a
 ESP32 usam. Não há segunda implementação do produto aqui.
 
-Plano e decisões: [`../.agents/PLANO_ELECTRON.md`](../.agents/PLANO_ELECTRON.md).
+Decisões: [`../.agents/DECISOES.md`](../.agents/DECISOES.md).
 
 ## Rodar em desenvolvimento
 

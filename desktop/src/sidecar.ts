@@ -9,7 +9,7 @@ import { EventEmitter } from "node:events";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
-import { dataDir, devPython, frontendDist, pidFile, repoRoot, sidecarBinary } from "./paths";
+import { collectorBundle, dataDir, devCollector, frontendDist, pidFile, repoRoot, sidecarBinary } from "./paths";
 
 /** Espelha os códigos de saída de backend/app/desktop.py. */
 const EXIT_PORT_IN_USE = 3;
@@ -97,8 +97,7 @@ export class Sidecar extends EventEmitter {
       this.emit("failed", {
         code: "missing_runtime",
         detail:
-          "Coletor não encontrado. Em desenvolvimento rode `./dev up` uma vez para criar " +
-          "backend/.venv; no app empacotado o binário deveria estar em resources/sidecar.",
+          "Coletor não encontrado. Em desenvolvimento rode `npm run build` em backend/; no app empacotado o bundle deveria estar em resources/collector.",
       } satisfies SidecarFailure);
       return;
     }
@@ -109,8 +108,11 @@ export class Sidecar extends EventEmitter {
       PORT: String(this.opts.port),
       COLLECTOR_DATA: dataDir(),
       VIGIA_FRONTEND_DIST: frontendDist(),
-      PYTHONUNBUFFERED: "1",
     };
+    // Quando o coletor é um .js rodado via Electron (process.execPath), precisa de ELECTRON_RUN_AS_NODE
+    if (command.exe === process.execPath && command.args[0]?.endsWith(".js")) {
+      env.ELECTRON_RUN_AS_NODE = "1";
+    }
 
     this.opts.log(`iniciando coletor: ${command.exe} ${command.args.join(" ")} (:${this.opts.port})`);
     const child = spawn(command.exe, command.args, {
@@ -272,11 +274,20 @@ function killTree(pid: number): void {
   }, 3000).unref();
 }
 
-/** Binário empacotado quando existir; venv do repo em desenvolvimento. */
+/** Bundle Node quando existir; binário PyInstaller legado; fallback dev. */
 function resolveCommand(): { exe: string; args: string[]; cwd: string } | null {
+  const bundle = collectorBundle();
+  if (bundle) return { exe: process.execPath, args: [bundle], cwd: repoRoot() };
+  const dev = devCollector();
+  if (dev) {
+    // devCollector may be .js bundle or .ts source
+    if (dev.endsWith(".ts")) {
+      // tsx watch path: use npx tsx
+      return { exe: "npx", args: ["tsx", dev], cwd: `${repoRoot()}/backend` };
+    }
+    return { exe: process.execPath, args: [dev], cwd: repoRoot() };
+  }
   const binary = sidecarBinary();
   if (binary) return { exe: binary, args: [], cwd: repoRoot() };
-  const python = devPython();
-  if (python) return { exe: python, args: ["-m", "app.desktop"], cwd: `${repoRoot()}/backend` };
   return null;
 }

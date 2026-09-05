@@ -1,6 +1,6 @@
 import { cn } from "../../cn";
 import type { AdsenseAccount } from "../../api/types";
-import type { Metric } from "../../pages/Display";
+import type { Metric } from "../../pages/display/types";
 import { fmtMoney, fmtWhen } from "../../format";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";

@@ -43,7 +43,7 @@ Não há MCP oficial da lib; o recomendado é o **GitMCP do repositório** ([doc
 
 **Quando usar:** qualquer alteração de arrastar/soltar, `DragOverlay` (pré-visualização do card segurado), `useSortable`, `rectSortingStrategy`, sensores, colisão. Consultar o MCP **antes** de inventar API ou migrar para outra lib.
 
-Código vigente: `frontend/src/pages/Display.tsx` (contexto, overlay, handle) e `frontend/src/board.ts` (ordem e `lg`/`sm` no `localStorage`).
+Código vigente: `frontend/src/pages/display/Overview.tsx` (`DndContext`, `DragOverlay`) e `frontend/src/pages/display/BoardTile.tsx` (`useDraggable`/`useDroppable`, handle) e `frontend/src/board.ts` (ordem e `lg`/`sm` no `localStorage`).
 
 ## Os dois juntos
 

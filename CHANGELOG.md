@@ -6,6 +6,19 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- **Coletor em Node.js** — port completo de `backend/app` (FastAPI/Python, ~8.3k linhas) para **Node 22 LTS + Fastify + Zod + Vitest** (`backend/src/`). Mesma árvore de responsabilidades, mesmo contrato JSON (`CONTRATO_JSON.md`) e mesmo framing SSE (`GET /events`), mas sem PyInstaller: bundle `esbuild` + `node:sqlite` builtin + `jimp` puro JS. Harness `scripts/diff-contract.mjs` compara `GET /usage` byte-a-byte entre `backend-python-legacy/` (8788) e Node (8787) — paridade OK.
+- 83 testes Vitest (`backend/src/*.test.ts`) portados 1:1 de `backend-python-legacy/tests/*.py` (12 arquivos, ~1.1k linhas) — `pytest` → `vitest`, `TestClient` → `app.inject()`.
+- `scripts/build-collector.sh` (esbuild) substitui `scripts/build-sidecar.sh` (PyInstaller `--onedir` ~54 MB por SO).
+
+### Changed
+
+- `Dockerfile` single-stage `node:20-alpine` (build frontend + runtime backend) — remove `python:3.12-slim`.
+- `./dev` — `ensure_python()` → `ensure_backend_node()`, `run_backend()` `node dist/main.js`, `cmd_test` `vitest` + `tsc` (backend/frontend/desktop), `cmd_lint` `tsc --noEmit`.
+- `desktop/src/sidecar.ts` / `paths.ts` — `ELECTRON_RUN_AS_NODE=1` e `collectorBundle()` (`backend/dist/desktop.js`) em vez do binário PyInstaller; `devCollector()` fallback `backend/src/desktop.ts` via `tsx`.
+- `README.md` / `.agents/CONTEXTO_IA.md` / `.agents/BACKEND.md` / `.agents/DECISOES.md` — revertem a decisão anterior de não reescrever o coletor e documentam o port Node.
+
+### Added
+
 - Provedor **GPT** (cota da assinatura ChatGPT / Codex CLI via `~/.codex/auth.json` e `GET /backend-api/wham/usage`). Card no firmware, no mostrador e no painel.
 - Template de issue de feature.
 - **Alarmes + Telegram** (`/display/alarms`): regras de provedor + métrica + limiar, edge-triggered, disparando mensagem no Telegram quando cruzadas. Nome sugerido automaticamente e edição inline das regras — ver `.agents/NOTIFICACOES.md`.
@@ -18,12 +31,14 @@ All notable changes to this project are documented here.
 - Card **AdSense** no mostrador (`/display`), no mesmo padrão dos demais provedores.
 - Layout do board (`/display`) agora também persiste no backend (`/api/board`), além do `localStorage` — sincroniza entre dispositivos na mesma LAN.
 - **Exportar/Importar alarmes** (`/display/alarms`): baixa as regras salvas como JSON e repõe a partir de um arquivo — ver `.agents/NOTIFICACOES.md`.
-- **App desktop (Electron)** para Linux, macOS e Windows, com instaladores (`.dmg`, `.exe` NSIS, `.AppImage`, `.deb`). O app embarca o coletor FastAPI (PyInstaller) e carrega o mesmo `/display` que o navegador e a placa usam — sem exigir Python ou Node instalados. Bandeja, abrir junto com o sistema, toggle de acesso pela LAN, "abrir no navegador", diálogo nativo pro `secrets.h`, e auto-update — ver `.agents/DESKTOP.md` e `.agents/PLANO_ELECTRON.md`.
+- **App desktop (Electron)** para Linux, macOS e Windows, com instaladores (`.dmg`, `.exe` NSIS, `.AppImage`, `.deb`). O app embarca o coletor FastAPI (PyInstaller) e carrega o mesmo `/display` que o navegador e a placa usam — sem exigir Python ou Node instalados. Bandeja, abrir junto com o sistema, toggle de acesso pela LAN, "abrir no navegador", diálogo nativo pro `secrets.h`, e auto-update — ver `.agents/DESKTOP.md`.
 - `backend/app/desktop.py`: entrypoint do coletor como sidecar, com handshake `VIGIA_READY`/`VIGIA_ERROR` e encerramento por fechamento da stdin (Windows não entrega `SIGTERM`).
 - `./dev app` e `./dev app build`; `./dev test` passou a incluir o typecheck do desktop.
 
 ### Fixed
 
+- **`GET /docs` (Swagger) sempre voltava 404 no coletor Node** — `@fastify/swagger`/`@fastify/swagger-ui` estavam instalados mas nunca registrados (só um placeholder estático em `/openapi.json`); o Python original tinha Swagger funcional via FastAPI. Regressão silenciosa: o README, o log de boot e um link clicável no painel (`NetworkCard.tsx`) anunciavam a URL como disponível. Registrados os dois plugins em `backend/src/main.ts`; `/openapi.json` agora devolve o spec real gerado (`fastify.swagger()`), com `paths` de verdade em vez do stub `{openapi, info}`.
+- Dependência `@fastify/static` (não usada em lugar nenhum do código) removida do backend — tinha 2 CVEs (bypass de autorização + path traversal). `@fastify/swagger-ui` atualizado pra `^6.1.1`, que resolve a mesma dependência internamente (usada pra servir os assets estáticos do `/docs`).
 - **Claude no Windows**: `os.uname()` não existe fora de POSIX, e a leitura de credencial quebrava com `AttributeError` antes mesmo de tentar o `~/.claude/.credentials.json`. Trocado por `sys.platform`.
 - **Cursor no Linux/Windows**: os candidatos de `state.vscdb` eram testados sempre na ordem do macOS, então a mensagem de "não encontrei" mostrava um caminho do macOS em qualquer SO. Agora a ordem segue a plataforma atual.
 - Mensagens de provedor que diziam "neste Mac" em caminho de código multiplataforma.

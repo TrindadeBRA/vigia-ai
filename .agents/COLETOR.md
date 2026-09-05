@@ -1,6 +1,6 @@
 # Coletor (histórico)
 
-> **Atual:** [BACKEND.md](BACKEND.md) — FastAPI em `backend/`, suba com `./dev up`.
+> **Atual:** [BACKEND.md](BACKEND.md) — Fastify (Node 22) em `backend/`, suba com `./dev up`.
 > Este arquivo descreve o protótipo em `collector/server.py` (stdlib), já removido.
 
 ## O que era

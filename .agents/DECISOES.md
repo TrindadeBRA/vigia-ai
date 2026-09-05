@@ -4,9 +4,9 @@
 
 Cotas são da conta pessoal. Evita hospedar JWT/OAuth. LAN é suficiente para um painel na mesa.
 
-## FastAPI no host, não stdlib pura
+## Fastify (Node 22) no host, não stdlib pura
 
-O protótipo usava `http.server`. O coletor oficial é **FastAPI + Uvicorn**: OpenAPI em `/docs`, modelos Pydantic = contrato, pytest. Tokens continuam só no host.
+O protótipo usava `http.server`, depois **FastAPI + Uvicorn** (Python). O coletor oficial hoje é **Fastify (Node 22) + Zod** (port do FastAPI/Pydantic): OpenAPI em `/docs`, schemas Zod = contrato, vitest. Tokens continuam só no host.
 
 ## Um app React, duas rotas
 
@@ -14,7 +14,7 @@ Painel (`/display/config`) e mostrador (`/display`) são Vite + React + TypeScri
 
 ## Docker opcional
 
-`./dev up --docker`. O container não lê Keychain. Cursor/Codex: overlay `compose.credentials.yaml` (bind-mount somente leitura). Claude no Mac Docker: Python local ou token colado. No Mac da mesa, `./dev up` (Python + Vite) continua o caminho mais simples.
+`./dev up --docker`. O container não lê Keychain. Cursor/Codex: overlay `compose.credentials.yaml` (bind-mount somente leitura). Claude no Mac Docker: Node local ou token colado. No Mac da mesa, `./dev up` (Node + Vite) continua o caminho mais simples.
 
 ## Endpoints internos, não scraping HTML
 
@@ -28,7 +28,7 @@ Decisão de UI física: a Início cabe até **5 cards**, um por *tipo* de proved
 
 ## Wokwi fala com o coletor de verdade (via `wokwigw`)
 
-Resolvido com o [Wokwi IoT Gateway](https://github.com/wokwi/wokwigw) local (`wokwi.toml` → `ws://localhost:9011`). O simulador usa a mesma Wi-Fi simulada do hardware e fala com o backend FastAPI. Mock de dados é uma flag no painel (`mock`), não um firmware separado.
+Resolvido com o [Wokwi IoT Gateway](https://github.com/wokwi/wokwigw) local (`wokwi.toml` → `ws://localhost:9011`). O simulador usa a mesma Wi-Fi simulada do hardware e fala com o backend Fastify (Node 22). Mock de dados é uma flag no painel (`mock`), não um firmware separado.
 
 ## GPIO 2 sem blink
 
@@ -66,15 +66,13 @@ Firmware e `/display` continuam recebendo o JSON a cada `USAGE_INTERVAL_S`. O co
 
 Web Push exigia HTTPS, service worker e chaves VAPID — frágil em LAN (`127.0.0.1`) e em iOS. **Telegram** funciona em qualquer aparelho com o app, token do bot configurado no painel (`/display/alarms`), long-polling sem webhook público. Um bot por instalação; chats registrados via `/start`. Detalhes: [`NOTIFICACOES.md`](NOTIFICACOES.md).
 
-## App desktop com o coletor embarcado, não reescrito
+## App desktop com o coletor embarcado — reescrito em Node (reverte decisão anterior)
 
-O Electron sobe o **mesmo** coletor FastAPI como processo filho e a janela
-carrega `http://127.0.0.1:<porta>/display` — o endereço que o navegador e a
-placa já usam. Reescrever os provedores em Node teria dado um instalador ~70 MB
-menor e um só runtime, mas custaria reimplementar OAuth do Claude, leitura do
-Keychain, o `state.vscdb` do Cursor e a conversão RGB565, com risco de mudar
-sutilmente o JSON que `firmware/src/net/parse.cpp` parseia. Ver
-[PLANO_ELECTRON.md](PLANO_ELECTRON.md).
+**Reverte** a decisão anterior documentada acima (Opção B: reescrever o coletor em Node havia sido rejeitada no port do Electron).
+
+O Electron continua subindo o coletor como processo filho na mesma porta, mas o coletor deixou de ser Python/FastAPI e virou **Node 22 + Fastify** (`backend/src/`). Motivo: o app já é 100% Node — eliminar o PyInstaller remove binário de ~54 MB por SO, falso-positivo de antivírus e compilação por plataforma, e o hub SSE simplifica para `Promise.all`.
+
+O risco de divergir do JSON que `firmware/src/net/parse.cpp` espera foi mitigado com testes Vitest 1:1 (`backend/src/*.test.ts` vs `backend-python-legacy/tests/*.py`, 83 testes), harness de diff byte-a-byte (`scripts/diff-contract.mjs`) e gates SSE (§6). `sharp` foi evitado em favor de `jimp` puro JS para não reintroduzir módulo nativo por ABI do Electron (§2.3). Escolha original (Python) preservada em `backend-python-legacy/` até Fase 6.
 
 ## A porta do app não é sorteada
 

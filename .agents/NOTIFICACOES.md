@@ -6,8 +6,8 @@ principal (`CONTRATO_JSON.md`) — não mexe em `/usage` nem no firmware.
 
 ## Modelo da regra
 
-`backend/app/alarms.py:METRICS` é o catálogo curado (por provedor, só os
-campos que a API real preenche — ver `USAGE_EXAMPLE` em `schemas.py`). Cada
+`backend/src/alarms/engine.ts:METRICS` é o catálogo curado (por provedor, só os
+campos que a API real preenche — ver `USAGE_EXAMPLE` em `schemas/usage.ts`). Cada
 métrica tem um `kind`:
 
 - `percent` (0–100): dispara quando `valor >= limiar` — "avise quando a cota
@@ -24,24 +24,23 @@ enquanto (`account_id` sempre `"*"`): a maioria tem uma conta por provedor, e
 o campo já existe no modelo pra dar pra adicionar granularidade depois sem
 migração.
 
-O painel sugere um nome pra regra automaticamente (`AlarmsPage.tsx:suggestLabel`)
+O painel sugere um nome pra regra automaticamente (`alarmsPage/helpers.ts:suggestLabel`)
 no formato `[Provedor] - Uso de X% da cota [Métrica]` (ou "Saldo de $X..." pras
 métricas em `cents`), atualizando ao vivo enquanto o campo "Nome" não é editado
 à mão. Regras já criadas têm um botão **Editar** (limiar e nome — provedor e
 métrica não mudam depois de criada; pra isso, remove e cria de novo).
 
-**Exportar/Importar** (`AlarmsPage.tsx:AlarmsIOButtons`, ícones no cabeçalho do
+**Exportar/Importar** (`alarmsPage/AlarmsIOButtons.tsx`, ícones no cabeçalho do
 card "Regras"): exportar baixa um JSON (`{version, exported_at, alarms: [...]}`)
 com `provider/metric/threshold/enabled/label` de cada regra; importar lê o
 arquivo e chama `POST /api/alarms` uma vez por regra válida (o backend já
 rejeita provider/metric desconhecidos). É só client-side — não existe rota de
 export/import no backend.
 
-O engine roda dentro do ciclo do `UsageHub` (`backend/app/hub.py`, hook
+O engine roda dentro do ciclo do `UsageHub` (`backend/src/hub.ts`, hook
 `on_payload`) — mesma cadência do `USAGE_INTERVAL_S`, e também dispara numa
-chamada manual de `GET /usage`. O envio pro Telegram roda em thread separada
-(`asyncio.to_thread`) pra não atrasar a resposta de `/usage` nem o fan-out do
-SSE.
+chamada manual de `GET /usage`. O envio pro Telegram roda de forma assíncrona
+(promise) pra não atrasar a resposta de `/usage` nem o fan-out do SSE.
 
 ## Telegram
 
@@ -100,14 +99,14 @@ provedores. Nunca comitar.
 
 | Peça | Arquivo |
 | --- | --- |
-| Catálogo de métricas + motor de disparo | `backend/app/alarms.py` |
-| Token Telegram + envio + polling unitário | `backend/app/telegram_bot.py` |
-| Long-polling (lifecycle) | `backend/app/telegram_poller.py` |
-| Rotas `/api/alarms/*` | `backend/app/routers/alarms.py` |
-| Rotas `/api/telegram/*` | `backend/app/routers/telegram.py` |
-| Hook no ciclo do hub | `backend/app/hub.py` (`on_payload`) |
+| Catálogo de métricas + motor de disparo | `backend/src/alarms/engine.ts` |
+| Token Telegram + envio + polling unitário | `backend/src/telegram/bot.ts` |
+| Long-polling (lifecycle) | `backend/src/telegram/poller.ts` |
+| Rotas `/api/alarms/*` | `backend/src/alarms/router.ts` |
+| Rotas `/api/telegram/*` | `backend/src/telegram/router.ts` |
+| Hook no ciclo do hub | `backend/src/hub.ts` (`on_payload`) |
 | Hook no painel | `frontend/src/pages/config/useTelegram.ts` |
-| Painel | `frontend/src/pages/config/AlarmsPage.tsx` |
+| Painel | `frontend/src/pages/config/AlarmsPage.tsx` (+ `alarmsPage/` — helpers, lista de regras, painel do Telegram, botões de import/export) |
 
 ## Como testar
 

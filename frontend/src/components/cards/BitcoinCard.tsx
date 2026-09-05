@@ -1,6 +1,6 @@
 import { cn } from "../../cn";
 import type { BitcoinAccount } from "../../api/types";
-import type { Metric } from "../../pages/Display";
+import type { Metric } from "../../pages/display/types";
 import { fmtBrl, fmtBtc, fmtUsd, fmtWhen } from "../../format";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";

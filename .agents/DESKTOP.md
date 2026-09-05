@@ -1,10 +1,10 @@
 # App desktop (Electron)
 
 O Vigia AI roda como aplicativo em Linux, macOS e Windows. É o **mesmo produto**:
-o app embarca o coletor FastAPI e a janela carrega `http://127.0.0.1:<porta>/display`,
+o app embarca o coletor Fastify (Node 22) e a janela carrega `http://127.0.0.1:<porta>/display`,
 o endereço que o navegador e a ESP32 já usavam.
 
-Plano completo: [`PLANO_ELECTRON.md`](PLANO_ELECTRON.md). Decisões: [`DECISOES.md`](DECISOES.md).
+Decisões: [`DECISOES.md`](DECISOES.md).
 
 ## Instalar
 
@@ -16,7 +16,7 @@ Baixe da [página de releases](https://github.com/TrindadeBRA/vigia-ai/releases)
 | Windows | `Vigia AI Setup <versão>.exe` — instala no usuário, sem pedir admin |
 | Linux | `Vigia AI-<versão>.AppImage` (roda direto) ou `.deb` |
 
-Não é preciso ter Python ou Node: o coletor vai dentro do pacote.
+Não é preciso ter Node instalado: o coletor (Node 22) vai dentro do pacote.
 
 ## O que muda em relação ao `./dev up`
 
@@ -60,14 +60,15 @@ A porta padrão continua **8787**, e ela importa: a ESP32 guarda
 ## Desenvolvimento
 
 ```bash
-./dev app          # Electron usando o backend/.venv e o frontend/dist do repo
+./dev app          # Electron usando o bundle Node do coletor (esbuild) e o frontend/dist do repo
 ./dev app build    # instalador da plataforma atual, em dist/
-./dev test         # inclui o typecheck do desktop e o handshake do sidecar
+./dev test         # inclui o typecheck do desktop e o handshake do sidecar (vitest+tsc)
 ```
 
-O sidecar é compilado **no SO de destino** — PyInstaller não faz cross-compile.
-Por isso o release roda numa matriz de quatro runners
-(`.github/workflows/release-desktop.yml`).
+O coletor é empacotado com **esbuild** (bundle JS puro, sem PyInstaller) — sem
+módulo nativo por ABI, não precisa compilar por SO. O release continua numa
+matriz de runners (`.github/workflows/release-desktop.yml`) para gerar os
+instaladores de cada plataforma.
 
 ## Assinatura de código
 
@@ -83,7 +84,7 @@ O provedor Claude lê o OAuth via `security find-generic-password`. Rodando pelo
 Terminal isso funciona porque o Terminal já tem a autorização do item. Dentro de
 um `.app` o macOS pode pedir confirmação na primeira leitura — e se não houver
 janela em primeiro plano, o `security` devolve *"User interaction is not
-allowed"*, tratado em `backend/app/local/claude_oauth.py`.
+allowed"*, tratado em `backend/src/local/claudeOauth.ts`.
 
 Se acontecer, os caminhos alternativos continuam valendo:
 `~/.claude/.credentials.json` ou colar o token no painel.
@@ -93,6 +94,6 @@ Se acontecer, os caminhos alternativos continuam valendo:
 | Sintoma | O que fazer |
 | --- | --- |
 | "A porta 8787 está ocupada" | Feche o `./dev up` ou aceite a porta que o app propõe (e regrave o `secrets.h`) |
-| "Coletor não encontrado" (em dev) | Rode `./dev up` uma vez para criar o `backend/.venv` |
+| "Coletor não encontrado" (em dev) | Rode `./dev up` uma vez para preparar o coletor (`npm install` em `backend/`) |
 | A placa parou de achar o coletor | Confira o toggle **Acesso pela rede local** no card Aplicativo |
 | O app não abre depois de atualizar | Card Aplicativo → **Abrir a pasta de logs** e veja `main.log` |
