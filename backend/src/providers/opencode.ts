@@ -149,25 +149,33 @@ async function fetchOpencodeLocal(cands: Array<[string, string]>): Promise<Recor
 }
 
 export async function fetchOpencodeAccounts(cfg: Record<string, unknown>): Promise<Array<Record<string, unknown>>> {
-  const accounts: Array<Record<string, unknown>> = [];
   const p = providerCfg(cfg, "opencode") as Record<string, unknown>;
+  if (p.hidden) return [];
 
-  if (!p.hidden) {
-    const localCands = opencodeTokenCandidates(cfg);
-    if (localCands.length > 0) {
-      const result = await fetchOpencodeLocal(localCands);
-      accounts.push({ id: "local", label: String(p.local_label ?? ""), ...result });
+  const accounts: Array<Record<string, unknown>> = [];
+  const seenKeys = new Set<string>();
+
+  const localCands = opencodeTokenCandidates(cfg);
+  if (localCands.length > 0) {
+    const result = await fetchOpencodeLocal(localCands);
+    accounts.push({ id: "local", label: String(p.local_label ?? ""), ...result });
+    for (const [, key] of localCands) {
+      const cleaned = cleanOpencodeKey(key);
+      if (cleaned) seenKeys.add(cleaned);
     }
   }
 
   let extra = Array.isArray(p.accounts) ? [...(p.accounts as unknown[])] : [];
-  if (extra.length === 0) {
+  if (extra.length === 0 && accounts.length === 0) {
     const legacy = String(p.paste_secret ?? "").trim();
     if (legacy) extra = [{ id: "legacy", label: String(p.local_label ?? ""), secret: legacy }];
   }
   for (const accRaw of extra) {
     const acc = accRaw as Record<string, unknown>;
     const key = String(acc.secret ?? "").trim();
+    const cleaned = cleanOpencodeKey(key);
+    if (cleaned && seenKeys.has(cleaned)) continue;
+    if (cleaned) seenKeys.add(cleaned);
     const label = String(acc.label ?? "").trim();
     const aid = String(acc.id ?? "extra");
     const result = await fetchOpencodeOne(key);
