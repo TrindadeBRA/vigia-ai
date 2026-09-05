@@ -401,7 +401,8 @@ export function NoteBoardCard({
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
                             onKeyDown={(e) => {
-                                if (e.key === "Escape") { e.preventDefault(); setDraft(text); setEditing(false); return; }
+                                if (e.key === "Escape") { e.preventDefault(); handleBlur(); return; }
+                                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); handleBlur(); return; }
                                 handleKeyDown(e);
                             }}
                             onBlur={handleBlur}
@@ -409,7 +410,7 @@ export function NoteBoardCard({
                             className="min-h-[80px] flex-1 resize-none rounded-lg border border-edge bg-panel p-2.5 text-[13px] leading-relaxed text-ink outline-none placeholder:text-ink3 focus:border-accent"
                             rows={6}
                         />
-                        <div className="text-[10px] leading-none text-ink3">Markdown: **negrito** *itálico* `código` [link](url) # título - lista · - [ ] tarefa · Esc para sair</div>
+                        <div className="text-[10px] leading-none text-ink3">Markdown: **negrito** *itálico* `código` [link](url) # título - lista · - [ ] tarefa · Esc ou ⌘/Ctrl+Enter salva e sai</div>
                     </div>
                 ) : (
                     <div

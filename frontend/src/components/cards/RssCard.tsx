@@ -12,11 +12,11 @@ import { cardLabel, emptyNote, errorText, num } from "../../tw";
 export function rssAllowedSizes(payload?: RssPayload | null): CardSize[] {
     const count = payload?.feeds?.length ?? 0;
     if (count === 0) return ["md"];
-    if (count === 1) return ["sm", "md", "lg", "wl"];
-    return ["md", "lg", "wl", "wxl"];
+    if (count === 1) return ["sm", "md", "lg", "xl", "wl"];
+    return ["md", "lg", "xl", "wl", "wxl"];
 }
 
-export const RSS_ALLOWED_ALL: CardSize[] = ["sm", "md", "lg", "wl", "wxl"];
+export const RSS_ALLOWED_ALL: CardSize[] = ["sm", "md", "lg", "xl", "wl", "wxl"];
 
 export function rssSizeLabel(size: CardSize, t: T, payload?: RssPayload | null): string {
     const s = normalizeSize(size);
@@ -263,7 +263,10 @@ export function RssBoardCard({
         );
     }
 
-    if (ns === "lg") {
+    // xl é o mesmo layout do lg, só que com o dobro da altura (mesmo w, h=4
+    // vs h=2 — ver rectFor em board.ts) — mais itens visíveis sem precisar
+    // rolar tanto.
+    if (ns === "lg" || ns === "xl") {
         const firstFeed = feeds.find((f) => f.ok && f.items.length > 0) || feeds[0];
         const items = firstFeed?.items ?? [];
         return (
