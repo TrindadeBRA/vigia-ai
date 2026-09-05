@@ -35,7 +35,7 @@ Além do fluxo acima, a placa também escuta HTTP na **porta 80**
 pra mandar um tema **direto** (sem passar pelo coletor) e pra depuração
 visual (`GET /theme/screenshot`). O coletor guarda o último IP que falou com
 ele (`GET /usage`/`GET /events`) só pra pré-preencher esse campo de IP no
-painel (`device` em `GET /api/config`, ver `backend/src/schemas.ts:DevicePublic`) —
+painel (`device` em `GET /api/config`, ver `backend/src/schemas/config.ts:DevicePublic`) —
 `GET /events` também é consumido pelo `/display` (SSE do mostrador), então o
 firmware manda um header `X-Vigia-Device: esp32` nesses dois requests
 (`firmware/src/net/client.cpp`) pro coletor não confundir o navegador do
@@ -140,11 +140,13 @@ texto continuam com posição fracionária contra a tela **cheia**
 (`tft.width()`/`height()` direto) — só o fundo usa essa resolução reduzida.
 `GET /theme` (na placa) sempre reporta a tela cheia em `width`/`height` (pra
 não confundir o editor, que usa isso pra posicionar/dimensionar os outros
-elementos) — o `ThemeEditorPage.tsx` divide por 2 sozinho na hora de
-converter a imagem.
+elementos) — o coletor divide por 2 sozinho na hora de converter a imagem
+(resolução alvo decidida a partir do header `X-Vigia-Screen`/query `?w=&h=`,
+não pelo frontend).
 
-Conversão no browser (`ThemeEditorPage.tsx`): `<canvas>` faz o crop/resize
-"cover" pra `width`×`height` (já na metade), e cada pixel RGBA vira
+Conversão no coletor (`backend/src/routers/wallpapers/rgb565.ts`, via Jimp —
+**não** no browser, apesar do nome de arquivo sugerir editor client-side):
+crop/resize "cover" pra `width`×`height` (já na metade), e cada pixel RGBA vira
 
 ```ts
 const v = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
@@ -197,9 +199,9 @@ placa ao aplicar, e o painel ao montar).
 
 Chaves ficam em `config.json` → `wallpapers.providers.{pexels_key,unsplash_key,wallhaven_key}` (gitignored, nunca expostas no `GET /api/config`).
 
-No painel, as chaves têm um card próprio por provedor em **Configurações → Papéis de parede** (`frontend/src/pages/config/WallpaperProvidersConfigCard.tsx`) — o editor de tema (`/display/theme`) só cuida da biblioteca, busca e import (`WallpaperManager.tsx`).
+No painel, as chaves têm um card próprio por provedor em **Configurações → Papéis de parede** (`frontend/src/pages/config/WallpaperProvidersConfigCard.tsx`) — o editor de tema (`/display/theme`) só cuida da biblioteca, busca e import (`frontend/src/pages/config/wallpaperManager/` — `context.tsx` guarda o estado/chamadas de API, `Library.tsx` é a UI).
 
-`_download_image`/`_http_json` (`backend/src/routers/wallpapers.ts`) validam a URL antes de baixar: só `http`/`https`, host precisa resolver pra um IP público (bloqueia loopback/privado/link-local e `file://`), redirects são revalidados a cada hop.
+`downloadImage`/`httpJson` (`backend/src/routers/wallpapers/ssrfGuard.ts`) validam a URL antes de baixar: só `http`/`https`, host precisa resolver pra um IP público (bloqueia loopback/privado/link-local e `file://`), redirects são revalidados a cada hop.
 
 ## Rotas da placa (`firmware/src/net/theme_server.cpp`, porta 80)
 

@@ -55,10 +55,10 @@ backend/src/schemas/          contrato OpenAPI (Zod, port de app/schemas.py), di
 backend/src/providers/        claude, gpt, cursor, openrouter, deepseek, opencode, fal, bitcoin, adsense, currencies, weather
 backend/src/local/            Keychain, credentials, state.vscdb, auth.json (Codex) — port de app/local/
 (Python removido do repo — não há mais backend-python-legacy/)
-frontend/src/pages/Display.tsx         mostrador (SSE GET /events)
+frontend/src/pages/Display.tsx         mostrador (SSE GET /events) — orquestrador; grid/tiles/sidebar/etc. em pages/display/
 frontend/src/pages/config/ConfigPage.tsx  contas, placa, rede
 firmware/src/                  sketch ESP32 (`core/` `net/` `input/` `ui/`)
-frontend/src/pages/config/ThemeEditorPage.tsx  editor de tema (protótipo, ver CONTRATO_TEMA.md)
+frontend/src/pages/config/ThemeEditorPage.tsx  editor de tema (protótipo, ver CONTRATO_TEMA.md) — canvas/toolbar/campos em pages/config/themeEditor/
 backend/src/routers/theme.ts       coletor guarda o tema salvo pelo painel (protótipo)
 firmware/src/net/theme_server.cpp  servidor HTTP :80 do tema, direto/debug (protótipo)
 firmware/src/net/client.cpp        themeClientReload(): placa busca o tema do coletor
@@ -73,7 +73,8 @@ firmware/src/ui/customtheme.cpp    persistência (LittleFS/RAM) + render do tema
 backend/src/routers/wallpapers/router.ts     rotas /api/wallpapers/* — papéis de parede + busca/import Pexels/Wallhaven/Unsplash
 backend/src/routers/wallpapers/ssrfGuard.ts  guard SSRF (SECURITY_REVIEW.md Finding 1) — isolado por ser o trecho mais sensível
 backend/src/routers/wallpapers/rgb565.ts     conversão imagem <-> RAW RGB565 (Jimp)
-frontend/src/pages/config/WallpaperManager.tsx  biblioteca/busca/import de papel de parede (usado em /display/theme)
+frontend/src/pages/config/wallpaperManager/context.tsx  estado + chamadas de API de papel de parede (usado em /display/theme)
+frontend/src/pages/config/wallpaperManager/Library.tsx   UI de biblioteca/busca/import de papel de parede
 frontend/src/pages/config/WallpaperProvidersConfigCard.tsx  chaves de API dos provedores de papel de parede (/display/config)
 backend/src/routers/board.ts       rotas /api/board — layout do board (posição/tamanho dos cards) espelhado do localStorage
 frontend/src/hooks/useGridBoards.ts  hook do layout do board (localStorage + backend)
