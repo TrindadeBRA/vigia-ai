@@ -20,7 +20,7 @@ import { WeatherBoardCard, weatherAllowedSizes, weatherSizeLabel } from "../../c
 import { ntcGenerateReadableColor, useNameToColor } from "../../hooks/useNameToColor";
 import type { T } from "../../i18n";
 import { viewFade } from "../../tw";
-import { TileChrome } from "./SizeMenu";
+import { SizeMenu, TileChrome } from "./SizeMenu";
 import { TileColorPicker } from "./TileColorPicker";
 import type { Pal, ProviderMeta } from "./types";
 
@@ -297,7 +297,7 @@ export function ImageTileCard({ p, size, dragging, lifted, t, grip, bg, readonly
             {onEdit ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title={t.imageEditTitle ?? "Editar"} aria-label={t.imageEditTitle ?? "Editar"} onClick={(e) => { e.stopPropagation(); onEdit(p.id); }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button> : null}
             {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(p.id); }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v3" /></svg></button> : null}
             {onSetBg ? <span className="flex items-center"><span className="mx-0.5 h-4 w-px bg-edge" aria-hidden /><span className="flex size-7 items-center justify-center"><TileColorPicker value={bg ?? null} onChange={(next: string | null) => onSetBg(p.id, next)} /></span></span> : null}
-            <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title={imageSizeLabel(size, t)} aria-label={imageSizeLabel(size, t)} onClick={(e) => { e.stopPropagation(); const order: CardSize[] = ["xs", "sm", "md", "lg", "xl", "wl", "wm", "wxl"]; const idx = order.indexOf(normalizeSize(size) as CardSize); const next = order[(idx + 1) % order.length]; onSetSize(next); }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg></button>
+            <SizeMenu size={size} t={t} onChange={onSetSize} allowed={imageAllowedSizes()} getLabel={(s) => imageSizeLabel(s, t)} />
             {showRemove && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(p.id); }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg></button> : null}
           </div>
         </div>

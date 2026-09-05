@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
@@ -59,9 +59,109 @@ export function ImageBoardCard({
     onTransformChange?: (next: { x: number; y: number; scale: number }) => void;
 }) {
     const [err, setErr] = useState(false);
+    // Tamanho natural da imagem e do container em estado (não só ref) porque
+    // o cálculo de "cover" abaixo precisa deles no render, pra recalcular a
+    // escala assim que a imagem carrega ou o card muda de tamanho.
+    const [natural, setNatural] = useState({ w: 0, h: 0 });
+    const [box, setBox] = useState({ w: 0, h: 0 });
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const dragRef = useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const update = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
     const s = normalizeSize(size);
     const compact = s === "xs" || s === "sm";
     const hasSrc = Boolean(src && src.trim() && !err);
+    const isCover = fit !== "contain";
+    const tx = transform ?? { x: 0, y: 0, scale: 1 };
+    const canPanZoom = !readonly && isCover && Boolean(onTransformChange);
+
+    // contScale: escala em que object-contain mostra a imagem inteira sem
+    // cortar. coverScale: escala mínima pra cobrir o container inteiro (o
+    // que object-fit:cover faria). baseCoverMultiplier é o zoom extra, em
+    // cima do render contido, necessário pra chegar no "cover" — assim
+    // scale=1 do usuário (sem zoom extra) já preenche o card por padrão,
+    // em vez de mostrar a imagem inteira com barras como o "conter".
+    const hasDims = natural.w > 0 && natural.h > 0 && box.w > 0 && box.h > 0;
+    const contScale = hasDims ? Math.min(box.w / natural.w, box.h / natural.h) : 0;
+    const coverScale = hasDims ? Math.max(box.w / natural.w, box.h / natural.h) : 0;
+    const baseCoverMultiplier = contScale > 0 ? coverScale / contScale : 1;
+    const effectiveScale = baseCoverMultiplier * tx.scale;
+
+    function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }
+
+    function getBounds(effScale: number) {
+        if (!hasDims) {
+            const fallback = 40 * effScale + 20;
+            return { maxX: fallback, maxY: fallback };
+        }
+        const renderedW = natural.w * contScale * effScale;
+        const renderedH = natural.h * contScale * effScale;
+        // max translate em % pra borda da imagem alinhar com a borda do container
+        const maxX = renderedW > box.w ? ((renderedW - box.w) / 2 / box.w) * 100 : 0;
+        const maxY = renderedH > box.h ? ((renderedH - box.h) / 2 / box.h) * 100 : 0;
+        return { maxX, maxY };
+    }
+
+    function handlePointerDown(e: React.PointerEvent) {
+        if (!canPanZoom) return;
+        if (e.button !== 0) return;
+        dragRef.current.dragging = true;
+        dragRef.current.startX = e.clientX;
+        dragRef.current.startY = e.clientY;
+        dragRef.current.origX = tx.x;
+        dragRef.current.origY = tx.y;
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    function handlePointerMove(e: React.PointerEvent) {
+        if (!dragRef.current.dragging || !canPanZoom) return;
+        const dx = e.clientX - dragRef.current.startX;
+        const dy = e.clientY - dragRef.current.startY;
+        const cw = box.w || 200;
+        const ch = box.h || cw;
+        // convert px delta to % of container
+        const dxPct = (dx / cw) * 100;
+        const dyPct = (dy / ch) * 100;
+        const { maxX, maxY } = getBounds(effectiveScale);
+        const nx = clamp(dragRef.current.origX + dxPct, -maxX, maxX);
+        const ny = clamp(dragRef.current.origY + dyPct, -maxY, maxY);
+        onTransformChange?.({ x: Number(nx.toFixed(2)), y: Number(ny.toFixed(2)), scale: tx.scale });
+        e.preventDefault();
+    }
+    function handlePointerUp(e: React.PointerEvent) {
+        if (!dragRef.current.dragging) return;
+        dragRef.current.dragging = false;
+        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+    }
+    function handleWheel(e: React.WheelEvent) {
+        if (!canPanZoom) return;
+        if (!e.shiftKey) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const delta = e.deltaY > 0 ? -0.08 : 0.08;
+        const nextScale = clamp(tx.scale + delta, 1, 3);
+        if (nextScale === tx.scale) return;
+        const { maxX, maxY } = getBounds(baseCoverMultiplier * nextScale);
+        const nx = clamp(tx.x, -maxX, maxX);
+        const ny = clamp(tx.y, -maxY, maxY);
+        onTransformChange?.({ x: Number(nx.toFixed(2)), y: Number(ny.toFixed(2)), scale: Number(nextScale.toFixed(2)) });
+    }
+    function handleDoubleClick(e: React.MouseEvent) {
+        if (!canPanZoom) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onTransformChange?.({ x: 0, y: 0, scale: 1 });
+    }
 
     if (!hasSrc) {
         return (
@@ -75,90 +175,6 @@ export function ImageBoardCard({
                 <ImagePlaceholder t={t} compact={compact} />
             </button>
         );
-    }
-
-    const isCover = fit !== "contain";
-    const tx = transform ?? { x: 0, y: 0, scale: 1 };
-    const canPanZoom = !readonly && isCover && Boolean(onTransformChange);
-
-    // drag state
-    const containerRef = useState(() => ({ current: null as HTMLDivElement | null }))[0];
-    const dragRef = useState(() => ({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 }))[0];
-    const imgNaturalRef = useState(() => ({ w: 0, h: 0 }))[0];
-
-    function clamp(v: number, min: number, max: number) { return Math.max(min, Math.min(max, v)); }
-
-    function getBounds(scale: number) {
-        const el = containerRef.current;
-        const iw = imgNaturalRef.w;
-        const ih = imgNaturalRef.h;
-        if (!el || !iw || !ih) {
-            const fallback = 40 * scale + 20;
-            return { maxX: fallback, maxY: fallback };
-        }
-        const cw = el.clientWidth;
-        const ch = el.clientHeight;
-        if (cw <= 0 || ch <= 0) return { maxX: 0, maxY: 0 };
-        // object-contain base scale: image fits inside container
-        const baseScale = Math.min(cw / iw, ch / ih);
-        const renderedW = iw * baseScale * scale;
-        const renderedH = ih * baseScale * scale;
-        // max translate in % so that image edge aligns with container edge
-        const maxX = renderedW > cw ? ((renderedW - cw) / 2 / cw) * 100 : 0;
-        const maxY = renderedH > ch ? ((renderedH - ch) / 2 / ch) * 100 : 0;
-        return { maxX, maxY };
-    }
-
-    function handlePointerDown(e: React.PointerEvent) {
-        if (!canPanZoom) return;
-        if (e.button !== 0) return;
-        dragRef.dragging = true;
-        dragRef.startX = e.clientX;
-        dragRef.startY = e.clientY;
-        dragRef.origX = tx.x;
-        dragRef.origY = tx.y;
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    function handlePointerMove(e: React.PointerEvent) {
-        if (!dragRef.dragging || !canPanZoom) return;
-        const dx = e.clientX - dragRef.startX;
-        const dy = e.clientY - dragRef.startY;
-        const el = containerRef.current;
-        const cw = el?.clientWidth ?? 200;
-        // convert px delta to % of container
-        const dxPct = (dx / cw) * 100;
-        const dyPct = (dy / (el?.clientHeight ?? cw)) * 100;
-        const { maxX, maxY } = getBounds(tx.scale);
-        const nx = clamp(dragRef.origX + dxPct, -maxX, maxX);
-        const ny = clamp(dragRef.origY + dyPct, -maxY, maxY);
-        onTransformChange?.({ x: Number(nx.toFixed(2)), y: Number(ny.toFixed(2)), scale: tx.scale });
-        e.preventDefault();
-    }
-    function handlePointerUp(e: React.PointerEvent) {
-        if (!dragRef.dragging) return;
-        dragRef.dragging = false;
-        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-    }
-    function handleWheel(e: React.WheelEvent) {
-        if (!canPanZoom) return;
-        if (!e.shiftKey) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const delta = e.deltaY > 0 ? -0.08 : 0.08;
-        const nextScale = clamp(tx.scale + delta, 1, 3);
-        if (nextScale === tx.scale) return;
-        const { maxX, maxY } = getBounds(nextScale);
-        const nx = clamp(tx.x, -maxX, maxX);
-        const ny = clamp(tx.y, -maxY, maxY);
-        onTransformChange?.({ x: Number(nx.toFixed(2)), y: Number(ny.toFixed(2)), scale: Number(nextScale.toFixed(2)) });
-    }
-    function handleDoubleClick(e: React.MouseEvent) {
-        if (!canPanZoom) return;
-        e.preventDefault();
-        e.stopPropagation();
-        onTransformChange?.({ x: 0, y: 0, scale: 1 });
     }
 
     // contain: simple object-contain, no transform
@@ -177,11 +193,11 @@ export function ImageBoardCard({
         );
     }
 
-    const transformStyle = `translate(${tx.x}%, ${tx.y}%) scale(${tx.scale})`;
+    const transformStyle = `translate(${tx.x}%, ${tx.y}%) scale(${effectiveScale || 1})`;
 
     return (
         <div
-            ref={(el) => { containerRef.current = el; }}
+            ref={containerRef}
             className={cn("flex h-full min-h-0 w-full flex-1 overflow-hidden rounded-[10px] bg-black/5", canPanZoom && "cursor-grab active:cursor-grabbing touch-none select-none")}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -199,8 +215,7 @@ export function ImageBoardCard({
                 style={{ imageRendering: "auto", transform: transformStyle, transformOrigin: "center center", willChange: "transform" }}
                 onLoad={(e) => {
                     const img = e.currentTarget;
-                    imgNaturalRef.w = img.naturalWidth;
-                    imgNaturalRef.h = img.naturalHeight;
+                    setNatural({ w: img.naturalWidth, h: img.naturalHeight });
                 }}
                 onError={() => setErr(true)}
             />
