@@ -1,0 +1,393 @@
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragOverEvent, type DragStartEvent } from "@dnd-kit/core";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { Link } from "react-router-dom";
+import {
+  CELL_GAP,
+  colsForWidth,
+  displayBoard,
+  dropPreviewCell,
+  dropTarget,
+  duplicateBoard,
+  emptyCells,
+  isCloneId,
+  normalizeSize,
+  packBoard,
+  padRowsForHeight,
+  placeCard,
+  rectCells,
+  rectFor,
+  removeCloneBoard,
+  rowPxFor,
+  setCardSize,
+  slotKey,
+  syncBoard,
+  type BoardLayout,
+  type CardSize,
+  type Cell,
+} from "../../board";
+import { cn } from "../../cn";
+import { DownloadIcon, MaximizeIcon, MinimizeIcon, UploadIcon } from "../../components/icons";
+import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
+import type { T } from "../../i18n";
+import { payloadAgeMs } from "../../format";
+import { accentLink, emptyNote, num, overviewBoard } from "../../tw";
+import { boardCollision, downloadBoardJson, parseBoardJson } from "./boardHelpers";
+import { BoardTile, EmptySlot, ProviderCard } from "./BoardTile";
+import type { Pal, ProviderMeta } from "./types";
+
+/** Largura da sidebar (Sidebar `w-[264px]`) — usada para compensar o cálculo de colunas do grid quando ela some no modo foco. */
+const SIDEBAR_W = 264;
+
+function GridIOButtons({ board, onImport, t }: { board: BoardLayout; onImport: (b: BoardLayout) => void; t: T }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function flash(text: string) {
+    setMsg(text);
+    window.setTimeout(() => setMsg((m) => (m === text ? null : m)), 3000);
+  }
+
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseBoardJson(String(reader.result || ""));
+      if (!parsed) {
+        flash(t.gridImportError);
+        return;
+      }
+      onImport(parsed);
+      flash(t.gridImported);
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button type="button" className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink" title={t.exportGrid} aria-label={t.exportGrid} onClick={() => downloadBoardJson(board)}>
+        <DownloadIcon size={14} />
+      </button>
+      <button type="button" className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink" title={t.importGrid} aria-label={t.importGrid} onClick={() => inputRef.current?.click()}>
+        <UploadIcon size={14} />
+      </button>
+      <input ref={inputRef} type="file" accept="application/json" className="hidden" onChange={handleFile} />
+      {msg ? <span className="text-[11.5px] text-ink3">{msg}</span> : null}
+    </div>
+  );
+}
+
+export function Overview({
+  providers,
+  updatedAt,
+  now,
+  t,
+  pal,
+  board,
+  onBoard,
+  onColsChange,
+  onOpen,
+  focus,
+  onToggleFocus,
+  gridWallpaperId,
+  onOpenWallpaper,
+  onOpenAddWidget,
+}: {
+  providers: ProviderMeta[];
+  updatedAt: string;
+  now: number;
+  t: T;
+  pal: Pal;
+  board: BoardLayout;
+  onBoard: (fn: (b: BoardLayout) => BoardLayout) => void;
+  onColsChange?: (cols: number) => void;
+  onOpen: (id: string) => void;
+  focus: boolean;
+  onToggleFocus: () => void;
+  gridWallpaperId: string | null;
+  onOpenWallpaper: () => void;
+  onOpenAddWidget: () => void;
+}) {
+  const failing = providers.filter((p) => !p.ok).length;
+  const age = payloadAgeMs(updatedAt, now);
+  const agoS = age == null ? null : Math.max(0, Math.round(age / 1000));
+  const byId = new Map(providers.map((p) => [p.id, p]));
+  const ids = providers.map((p) => p.id);
+  const idsKey = ids.join("|");
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(8);
+  const [pad, setPad] = useState(12);
+  const [fillPx, setFillPx] = useState(0);
+  const [cellPx, setCellPx] = useState(104);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
+  const [dropPreview, setDropPreview] = useState<Cell | null>(null);
+  const unitPx = rowPxFor(cellPx);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const layout = displayBoard(ids, board, cols);
+  const holes = emptyCells(ids, layout, cols, pad);
+  const active = activeId ? byId.get(activeId) : null;
+  const activeSize: CardSize = activeId ? normalizeSize(layout.size[activeId]) : "md";
+  const activeRect = rectFor(activeSize, cols);
+  const holeKeys = new Set(holes.map((h) => `${h.r}:${h.c}`));
+  const previewCells = dropPreview && activeId ? rectCells(dropPreview, activeRect) : [];
+  const previewKeys = new Set(previewCells.map((c) => `${c.r}:${c.c}`));
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const measure = () => {
+      if (el.clientWidth < 1) return;
+      // Modo foco esconde a sidebar (só ocupa espaço acima de 860px) e o grid ganha essa
+      // largura de volta — descontamos aqui pra manter a mesma quantidade de colunas do
+      // modo normal, independente do device, e trocar de modo não trocar de "board" salvo.
+      const widthForCols = focus && window.innerWidth > 860 ? Math.max(0, el.clientWidth - SIDEBAR_W) : el.clientWidth;
+      const nextCols = colsForWidth(widthForCols);
+      setCols(nextCols);
+      onColsChange?.(nextCols);
+      const cell = Math.max(80, Math.floor((el.clientWidth - CELL_GAP * Math.max(0, nextCols - 1)) / Math.max(1, nextCols)));
+      setCellPx(cell);
+      const main = el.closest("main");
+      const gridBox = el.getBoundingClientRect();
+      const mainBottom = main ? main.getBoundingClientRect().bottom : window.innerHeight;
+      const tiles = [...el.children].filter((node) => node.querySelector('[aria-label="Arrastar"], [aria-label="Drag"], [aria-label="Arrastrar"]'));
+      const lastBottom = tiles.reduce((max, node) => Math.max(max, node.getBoundingClientRect().bottom), gridBox.top);
+      const leftover = Math.round(mainBottom - lastBottom);
+      setFillPx(Math.max(0, Math.round(mainBottom - gridBox.top)));
+      setPad(padRowsForHeight(leftover, cell));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    if (el.closest("main")) ro.observe(el.closest("main") as Element);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [idsKey, focus]);
+
+  useEffect(() => {
+    onBoard((b) => syncBoard(ids, b, b.layoutCols || cols));
+  }, [idsKey]);
+
+  function onDragStart(e: DragStartEvent) {
+    setActiveId(String(e.active.id));
+    setDropPreview(null);
+    const box = e.active.rect.current.initial;
+    setLiftSize(box ? { w: box.width, h: box.height } : null);
+  }
+
+  function onDragOver(e: DragOverEvent) {
+    const from = String(e.active.id);
+    const over = e.over ? String(e.over.id) : null;
+    if (!over || over === from) {
+      setDropPreview(null);
+      return;
+    }
+    const dest = dropTarget(over, layout);
+    if (!dest) {
+      setDropPreview(null);
+      return;
+    }
+    setDropPreview(dropPreviewCell(dest, layout.size[from], cols));
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    const from = String(e.active.id);
+    const over = e.over ? String(e.over.id) : null;
+    setActiveId(null);
+    setLiftSize(null);
+    setDropPreview(null);
+    if (!over || over === from) return;
+    const dest = dropTarget(over, layout);
+    if (!dest) return;
+    onBoard((b) => {
+      const cur = displayBoard(ids, b, cols);
+      return placeCard(ids, cur, from, dest, cols);
+    });
+  }
+
+  function handleDuplicate(id: string) {
+    onBoard((b) => {
+      const cur = displayBoard(ids, b, cols);
+      return duplicateBoard(ids, cur, id, cols);
+    });
+  }
+
+  function handleRemove(id: string) {
+    onBoard((b) => removeCloneBoard(b, id));
+  }
+
+  const gridBgUrl = gridWallpaperUrl(gridWallpaperId);
+  return (
+    <div className={cn("flex min-h-full flex-col", gridBgUrl && "relative", gridBgUrl && !focus && "overflow-hidden rounded-xl")}>
+      {/* Grid wallpaper: apenas na área do grid; em fullscreen cobre a tela toda */}
+      {gridBgUrl ? (
+        <>
+          <img
+            key={gridWallpaperId}
+            src={gridBgUrl}
+            alt=""
+            draggable={false}
+            className={cn(
+              "pointer-events-none object-cover",
+              focus ? "fixed inset-0 z-0 size-full" : "absolute inset-0 z-0 size-full",
+            )}
+            style={{ imageRendering: "auto" }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <div className={cn("pointer-events-none", focus ? "fixed inset-0 z-0 bg-black/25" : "absolute inset-0 z-0 bg-black/25")} aria-hidden />
+        </>
+      ) : null}
+      <div className={cn("relative z-10 flex flex-col", gridBgUrl && !focus && "p-3", focus && gridBgUrl && "p-4")}>
+      <div className="mb-[18px] flex w-full flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink2">
+          <span className={cn("size-[7px] shrink-0 rounded-full", failing ? "bg-bad shadow-[0_0_5px_var(--bad)]" : "bg-good shadow-[0_0_5px_var(--good)]", "[.flat_&]:shadow-none")} />
+          <span>{failing ? t.errorsCount(failing) : t.allOk}</span>
+          <span className={num}>{agoS != null ? `· ${agoS < 3 ? t.agoNow : t.agoSecs(agoS)}` : ""}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg border border-edge bg-chip px-2.5 py-1 text-[12px] font-medium text-ink2 hover:border-accent hover:text-ink"
+            title={t.resetLayout}
+            onClick={() =>
+              onBoard((b) => {
+                const baseIds = ids.filter((id) => !isCloneId(id));
+                const clean: BoardLayout = { size: {}, pos: {}, layoutCols: b.layoutCols };
+                for (const id of baseIds) {
+                  if (b.size[id]) clean.size[id] = b.size[id];
+                  if (b.pos[id]) clean.pos[id] = b.pos[id];
+                }
+                return packBoard(baseIds, displayBoard(baseIds, clean, cols), cols);
+              })
+            }
+          >
+            {t.resetLayout}
+          </button>
+          <button
+            type="button"
+            className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
+            title={t.addWidget}
+            aria-label={t.addWidget}
+            onClick={onOpenAddWidget}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+          <button
+            type="button"
+            className={cn("flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink", focus && "border-accent text-accent")}
+            title="Wallpaper do grid"
+            aria-label="Wallpaper do grid"
+            onClick={onOpenWallpaper}
+          >
+            {/* ícone simples de imagem */}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink",
+              focus && "border-accent text-accent",
+            )}
+            title={t.focusMode}
+            aria-label={t.focusMode}
+            onClick={onToggleFocus}
+          >
+            {focus ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
+          </button>
+          <GridIOButtons board={board} onImport={(b) => onBoard(() => b)} t={t} />
+        </div>
+      </div>
+      {providers.length === 0 ? (
+        <div className={emptyNote}>
+          {t.noProviders}{" "}
+          <Link to="/display/config" className={accentLink}>
+            {t.configCta}
+          </Link>
+        </div>
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={boardCollision}
+          autoScroll={{ threshold: { x: 0.08, y: 0.12 }, acceleration: 12 }}
+          onDragStart={onDragStart}
+          onDragOver={onDragOver}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => { setActiveId(null); setLiftSize(null); setDropPreview(null); }}
+        >
+          <div
+            ref={gridRef}
+            className={cn(overviewBoard, "min-h-0 flex-1")}
+            style={{
+              gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+              gridAutoRows: unitPx,
+              minHeight: fillPx > 0 ? fillPx : undefined,
+            }}
+          >
+            {holes.map((cell) => (
+              <div
+                key={slotKey(cell.r, cell.c)}
+                style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
+                className="min-h-0 min-w-0 h-full"
+              >
+                <EmptySlot
+                  id={slotKey(cell.r, cell.c)}
+                  active={Boolean(activeId)}
+                  preview={previewKeys.has(`${cell.r}:${cell.c}`)}
+                />
+              </div>
+            ))}
+            {ids.map((id) => {
+              const p = byId.get(id);
+              const pos = layout.pos[id];
+              if (!p || !pos) return null;
+              const size = normalizeSize(layout.size[id]);
+              return (
+                <BoardTile
+                  key={id}
+                  p={p}
+                  pal={pal}
+                  size={size}
+                  t={t}
+                  nowMs={now}
+                  col={pos.c}
+                  row={pos.r}
+                  rect={rectFor(size, cols)}
+                  onOpen={() => onOpen(id)}
+                  onSetSize={(next) => onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols))}
+                  onDuplicate={handleDuplicate}
+                  onRemove={handleRemove}
+                />
+              );
+            })}
+            {previewCells
+              .filter((cell) => !holeKeys.has(`${cell.r}:${cell.c}`))
+              .map((cell) => (
+                <div
+                  key={`drop-preview-${cell.r}:${cell.c}`}
+                  aria-hidden
+                  className="pointer-events-none z-[3] min-h-0 min-w-0 rounded-2xl border border-dashed border-accent bg-chip transition-colors duration-150"
+                  style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
+                />
+              ))}
+          </div>
+          <DragOverlay zIndex={80} dropAnimation={null}>
+            {active ? (
+              <div
+                className="pointer-events-none cursor-grabbing"
+                style={(() => { const r = rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * unitPx + (r.h - 1) * CELL_GAP) }; })()}
+              >
+                <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => { }} onSetSize={() => { }} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,6 @@
 import { cn } from "../../cn";
 import type { CursorAccount } from "../../api/types";
-import type { Metric } from "../../pages/Display";
+import type { Metric } from "../../pages/display/types";
 import { barColor, barGlow, clamp, fmtCountdown, fmtPct, fmtRemain, fmtUsd, fmtWhen } from "../../format";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON, type ThemeName, PALETTES } from "../../theme";
