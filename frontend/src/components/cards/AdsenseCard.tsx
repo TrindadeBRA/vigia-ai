@@ -13,14 +13,12 @@ import { normalizeSize } from "../../board";
 // Claude/GPT/Cursor): ganhos estimados de hoje e saldo não pago na carteira.
 
 export function getAdsenseMetrics(a: AdsenseAccount, t: T): Metric[] {
-  return [
-    { label: t.adsenseToday, pct: null, value: a.today_cents != null ? fmtMoney(a.today_cents, a.currency) : null, sub: null },
-    { label: t.adsenseWallet, pct: null, value: a.unpaid_cents != null ? fmtMoney(a.unpaid_cents, a.currency) : null, sub: null },
-  ];
+  return [{ label: t.adsenseToday, pct: null, value: a.today_cents != null ? fmtMoney(a.today_cents, a.currency) : null, sub: null },
+    { label: t.adsenseWallet, pct: null, value: a.unpaid_cents != null ? fmtMoney(a.unpaid_cents, a.currency) : null, sub: null }];
 }
 
 export function adsenseAllowedSizes(_a?: AdsenseAccount | null, _metrics?: Metric[] | null): CardSize[] {
-  return ["sm", "sw", "md", "lg"];
+  return ["sm", "sw", "md", "lg", "free"];
 }
 
 export const ADSENSE_ALLOWED_ALL: CardSize[] = ["sm", "sw", "md", "lg"];
@@ -33,6 +31,7 @@ export function adsenseSizeLabel(size: CardSize, t: T): string {
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

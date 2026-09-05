@@ -34,7 +34,7 @@ export function getCursorMetrics(c: CursorAccount, t: T): Metric[] {
 }
 
 export function cursorAllowedSizes(_c: CursorAccount | null, _metrics?: Metric[]): CardSize[] {
-  return ["sm", "sw", "sx", "md", "lg"];
+  return ["sm", "sw", "sx", "md", "lg", "free"];
 }
 
 export const CURSOR_ALLOWED_ALL: CardSize[] = ["sm", "sw", "sx", "md", "lg"];
@@ -48,6 +48,7 @@ export function cursorSizeLabel(size: CardSize, t: T): string {
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

@@ -24,7 +24,7 @@ export function currenciesAllowedSizes(items?: CurrencyQuote[] | null): CardSize
   if ((items?.length ?? 0) >= 2) out.push("sw");
   if (cryptos.length >= 1) out.push("sc");
   if (cryptos.length >= 2) out.push("scw");
-  out.push("md", "lg", "wm", "wl");
+  out.push("md", "lg", "wm", "wl", "free");
   return out;
 }
 
@@ -42,6 +42,7 @@ export function currenciesSizeLabel(size: CardSize, t: T, items?: CurrencyQuote[
   if (s === "wm") return t.currenciesConverter;
   if (s === "wl") return t.currenciesConverterLarge;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

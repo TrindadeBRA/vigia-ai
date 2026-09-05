@@ -7,7 +7,7 @@ import type { T } from "../../i18n";
 export type ImageFit = "cover" | "contain";
 
 export function imageAllowedSizes(): CardSize[] {
-    return ["xs", "sm", "md", "lg", "xl", "wl", "wm", "wxl"];
+    return ["xs", "sm", "md", "lg", "xl", "wl", "wm", "wxl", "free"];
 }
 
 export function imageSizeLabel(size: CardSize, t: T): string {
@@ -20,6 +20,7 @@ export function imageSizeLabel(size: CardSize, t: T): string {
     if (s === "wl") return t.cardWl;
     if (s === "wm") return "Médio alto";
     if (s === "wxl") return t.cardWxl;
+    if (s === "free") return t.cardFree;
     return t.cardNormal;
 }
 

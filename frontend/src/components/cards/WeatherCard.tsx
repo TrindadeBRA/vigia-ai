@@ -20,6 +20,7 @@ export function weatherAllowedSizes(weather?: WeatherPayload | null): CardSize[]
   if (hasDaily) out.push("sw");
   out.push("md");
   if (hasDaily) out.push("wm");
+  out.push("free");
   return out;
 }
 
@@ -32,6 +33,7 @@ export function weatherSizeLabel(size: CardSize, t: T): string {
   if (s === "md") return t.cardNormal;
   if (s === "wm") return t.cardLarge;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

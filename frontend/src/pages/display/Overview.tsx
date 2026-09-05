@@ -3,13 +3,14 @@ import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "
 import { Link } from "react-router-dom";
 import {
   cardBg,
+  cardRect,
   CELL_GAP,
   colsForWidth,
   displayBoard,
-  dropPreviewCell,
   dropTarget,
   duplicateBoard,
   emptyCells,
+  getCustomRect,
   isCloneId,
   normalizeSize,
   packBoard,
@@ -21,6 +22,7 @@ import {
   rowPxFor,
   setCardBg,
   setCardSize,
+  setFreeCardSize,
   slotKey,
   syncBoard,
   type BoardLayout,
@@ -34,6 +36,7 @@ import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
 import type { T } from "../../i18n";
 import { accentLink, emptyNote, num, overviewBoard } from "../../tw";
 import { boardCollision, downloadBoardJson, parseBoardJson } from "./boardHelpers";
+import { FreeSizeModal } from "./FreeSizeModal";
 import { BoardTile, EmptySlot, ProviderCard } from "./BoardTile";
 import type { Pal, ProviderMeta } from "./types";
 
@@ -140,6 +143,7 @@ export function Overview({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
   const [dropPreview, setDropPreview] = useState<Cell | null>(null);
+  const [freeTarget, setFreeTarget] = useState<string | null>(null);
   const [bgRect, setBgRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const unitPx = rowPxFor(cellPx);
   const readonly = Boolean(kiosk);
@@ -149,7 +153,7 @@ export function Overview({
   const holes = emptyCells(ids, layout, cols, pad);
   const active = activeId ? byId.get(activeId) : null;
   const activeSize: CardSize = activeId ? normalizeSize(layout.size[activeId]) : "md";
-  const activeRect = rectFor(activeSize, cols);
+  const activeRect = activeId ? cardRect(layout, activeId, cols) : rectFor(activeSize, cols);
   const holeKeys = new Set(holes.map((h) => `${h.r}:${h.c}`));
   const previewCells = dropPreview && activeId ? rectCells(dropPreview, activeRect) : [];
   const previewKeys = new Set(previewCells.map((c) => `${c.r}:${c.c}`));
@@ -217,7 +221,11 @@ export function Overview({
       setDropPreview(null);
       return;
     }
-    setDropPreview(dropPreviewCell(dest, layout.size[from], cols));
+    {
+      const r = cardRect(layout, from, cols);
+      const clamped = { r: dest.r, c: Math.max(0, Math.min(dest.c, Math.max(0, cols - r.w))) };
+      setDropPreview(clamped);
+    }
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -420,7 +428,7 @@ export function Overview({
               return (
                 <div
                   key={id}
-                  style={{ gridColumn: `${pos.c + 1} / span ${rectFor(size, cols).w}`, gridRow: `${pos.r + 1} / span ${rectFor(size, cols).h}` }}
+                  style={{ gridColumn: `${pos.c + 1} / span ${cardRect(layout, id, cols).w}`, gridRow: `${pos.r + 1} / span ${cardRect(layout, id, cols).h}` }}
                   className="min-h-0 min-w-0 h-full"
                 >
                   <ProviderCard
@@ -492,10 +500,14 @@ export function Overview({
                     nowMs={now}
                     col={pos.c}
                     row={pos.r}
-                    rect={rectFor(size, cols)}
+                    rect={cardRect(layout, id, cols)}
                     bg={bg}
                     onOpen={() => onOpen(id)}
-                    onSetSize={(next) => onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols))}
+                    onSetSize={(next) => {
+                      if (next === "free") { setFreeTarget(id); return; }
+                      onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols));
+                    }}
+                    onFree={(fid) => setFreeTarget(fid)}
                     onDuplicate={isImage ? handleDuplicateImage : isNote ? handleDuplicateNote : handleDuplicate}
                     onRemove={handleRemove}
                     onSetBg={(cid, next) => onBoard((b) => setCardBg(ids, displayBoard(ids, b, cols), cid, next))}
@@ -517,7 +529,7 @@ export function Overview({
               {active ? (
                 <div
                   className="pointer-events-none cursor-grabbing"
-                  style={(() => { const r = rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * unitPx + (r.h - 1) * CELL_GAP) }; })()}
+                  style={(() => { const r = activeId ? cardRect(layout, activeId, cols) : rectFor(activeSize, cols); return { width: liftSize?.w || (r.w * cellPx + (r.w - 1) * CELL_GAP), height: liftSize?.h || (r.h * unitPx + (r.h - 1) * CELL_GAP) }; })()}
                 >
                   <ProviderCard p={active} pal={pal} size={activeSize} t={t} nowMs={now} lifted onOpen={() => { }} onSetSize={() => { }} />
                 </div>
@@ -526,6 +538,18 @@ export function Overview({
           </DndContext>
         )}
       </div>
+      <FreeSizeModal
+        open={Boolean(freeTarget)}
+        onClose={() => setFreeTarget(null)}
+        cols={cols}
+        initial={freeTarget ? getCustomRect(layout, freeTarget) : null}
+        t={t}
+        onApply={(rect) => {
+          if (!freeTarget) return;
+          const fid = freeTarget;
+          onBoard((b) => setFreeCardSize(ids, displayBoard(ids, b, cols), fid, rect, cols));
+        }}
+      />
     </div>
   );
 }

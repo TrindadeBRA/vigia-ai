@@ -11,9 +11,9 @@ import { cardLabel, emptyNote, errorText, num } from "../../tw";
 
 export function rssAllowedSizes(payload?: RssPayload | null): CardSize[] {
     const count = payload?.feeds?.length ?? 0;
-    if (count === 0) return ["md"];
-    if (count === 1) return ["sm", "md", "lg", "xl", "wl"];
-    return ["md", "lg", "xl", "wl", "wxl"];
+    if (count === 0) return ["md", "free"];
+    if (count === 1) return ["sm", "md", "lg", "xl", "wl", "free"];
+    return ["md", "lg", "xl", "wl", "wxl", "free"];
 }
 
 export const RSS_ALLOWED_ALL: CardSize[] = ["sm", "md", "lg", "xl", "wl", "wxl"];
@@ -26,6 +26,7 @@ export function rssSizeLabel(size: CardSize, t: T, payload?: RssPayload | null):
     if (s === "lg") return t.cardLarge;
     if (s === "wl") return t.cardWl;
     if (s === "wxl") return t.cardWxl;
+    if (s === "free") return t.cardFree;
     return t.cardXl;
 }
 

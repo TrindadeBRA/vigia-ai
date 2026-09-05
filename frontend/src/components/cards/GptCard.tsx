@@ -26,7 +26,7 @@ export function getGptMetrics(g: GptAccount, t: T, nowMs: number): Metric[] {
 }
 
 export function gptAllowedSizes(_g: GptAccount | null, _metrics?: Metric[]): CardSize[] {
-  return ["sm", "sw", "md", "lg"];
+  return ["sm", "sw", "md", "lg", "free"];
 }
 
 export const GPT_ALLOWED_ALL: CardSize[] = ["sm", "sw", "md", "lg"];
@@ -39,6 +39,7 @@ export function gptSizeLabel(size: CardSize, t: T): string {
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

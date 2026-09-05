@@ -26,7 +26,7 @@ export function noteColorFor(id: string | undefined): NoteColor {
 
 /* ── Tamanhos ─────────────────────────────────────────────────────── */
 export function noteAllowedSizes(): CardSize[] {
-    return ["sm", "md", "lg", "xl", "wl"];
+    return ["sm", "md", "lg", "xl", "wl", "free"];
 }
 
 export function noteSizeLabel(size: CardSize, t: T): string {
@@ -36,6 +36,7 @@ export function noteSizeLabel(size: CardSize, t: T): string {
     if (s === "lg") return t.cardLarge;
     if (s === "xl") return t.cardXl;
     if (s === "wl") return t.cardWl;
+    if (s === "free") return t.cardFree;
     return t.cardNormal;
 }
 

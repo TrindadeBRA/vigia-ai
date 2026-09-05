@@ -6,13 +6,14 @@ import { num } from "../../tw";
 
 /** Widget de relógio — não vem de conta/backend, é só visual. */
 export function clockAllowedSizes(): CardSize[] {
-  return ["sm", "md", "lg"];
+  return ["sm", "md", "lg", "free"];
 }
 
 export function clockSizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
   if (s === "sm") return t.widgetSmall;
   if (s === "md") return t.cardNormal;
+  if (s === "free") return t.cardFree;
   return t.cardLarge;
 }
 

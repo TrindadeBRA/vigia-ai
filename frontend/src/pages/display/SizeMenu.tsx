@@ -6,7 +6,7 @@ import { CheckIcon, CopyIcon, GripIcon, TrashIcon } from "../../components/icons
 import type { T } from "../../i18n";
 import { TileColorPicker } from "./TileColorPicker";
 
-const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl", "wm", "wl", "wxl"];
+const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl", "wm", "wl", "wxl", "free"];
 
 export function sizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
@@ -21,6 +21,7 @@ export function sizeLabel(size: CardSize, t: T): string {
   if (s === "wm") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 
@@ -37,10 +38,11 @@ export function SizeIcon({ size, className }: { size: CardSize; className?: stri
   if (s === "wm") return <span className={cn("flex size-[11px] flex-col gap-px", className)}><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /><span className="flex-1 rounded-[1px] border-[1.4px] border-current" /></span>;
   if (s === "wl") return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
   if (s === "wxl") return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
+  if (s === "free") return <span className={cn("flex size-[11px] items-center justify-center rounded-[2px] border-[1.5px] border-dashed border-current", className)}><span className="text-[7px] leading-none">↔</span></span>;
   return <span className={cn("grid size-[11px] grid-cols-2 gap-px", className)}><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /><span className="rounded-[1px] border-[1.4px] border-current" /></span>;
 }
 
-export function SizeMenu({ size, t, onChange, allowed, getLabel }: { size: CardSize; t: T; onChange: (next: CardSize) => void; allowed?: CardSize[]; getLabel?: (s: CardSize) => string }) {
+export function SizeMenu({ size, t, onChange, allowed, getLabel, onFree }: { size: CardSize; t: T; onChange: (next: CardSize) => void; allowed?: CardSize[]; getLabel?: (s: CardSize) => string; onFree?: () => void }) {
   const cur = normalizeSize(size);
   const order = allowed && allowed.length ? allowed : CARD_ORDER;
   const labelFor = getLabel || ((s: CardSize) => sizeLabel(s, t));
@@ -115,7 +117,7 @@ export function SizeMenu({ size, t, onChange, allowed, getLabel }: { size: CardS
                 role="menuitem"
                 type="button"
                 className={cn("flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-[11px] transition-colors", active ? "bg-accent text-accent-ink" : "text-ink hover:bg-chip")}
-                onClick={(e) => { e.stopPropagation(); onChange(s); setOpen(false); }}
+                onClick={(e) => { e.stopPropagation(); if (s === "free" && onFree) { setOpen(false); onFree(); return; } onChange(s); setOpen(false); }}
               >
                 <span className={cn("flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border", active ? "border-accent-ink/30 bg-accent-ink/15" : "border-edge bg-chip")}><SizeIcon size={s} className={active ? "text-accent-ink" : "text-ink3"} /></span>
                 <span className="flex-1 font-medium leading-none">{labelFor(s)}</span>
@@ -146,6 +148,7 @@ export function TileChrome({
   onRemove,
   bg,
   onSetBg,
+  onFree,
 }: {
   id: string;
   t: T;
@@ -159,6 +162,7 @@ export function TileChrome({
   onRemove?: (id: string) => void;
   bg?: string | null;
   onSetBg?: (id: string, next: string | null) => void;
+  onFree?: (id: string) => void;
 }) {
   // No 1/4 (xs) o card é pequeno demais pros dois grupos caberem lado a lado
   // no topo — o grupo da direita cobria a alça de arrastar. Nesse tamanho ele
@@ -172,7 +176,7 @@ export function TileChrome({
       <div className={cn("absolute right-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", isQuarter ? "bottom-1" : "top-1", TILE_CHROME_CHIP)}>
         {onDuplicate ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title="Duplicar" aria-label="Duplicar" onClick={(e) => { e.stopPropagation(); onDuplicate(id); }}><CopyIcon size={12} /></button> : null}
         {onSetBg ? <TileColorPicker value={bg ?? null} onChange={(next) => onSetBg(id, next)} /> : null}
-        <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={getLabel} />
+        <SizeMenu size={size} t={t} onChange={onSetSize} allowed={allowed} getLabel={getLabel} onFree={onFree ? () => onFree(id) : undefined} />
         {isClone && onRemove ? <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-bad hover:bg-chip" title="Remover" aria-label="Remover" onClick={(e) => { e.stopPropagation(); onRemove(id); }}><TrashIcon size={12} /></button> : null}
       </div>
     </>

@@ -11,15 +11,13 @@ import { normalizeSize } from "../../board";
 /* ── Dados ──────────────────────────────────────────────────────────── */
 
 export function getBitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
-  return [
-    { label: t.bitcoinBalance, pct: null, value: b.balance_btc != null ? fmtBtc(b.balance_btc) : null, sub: null },
+  return [{ label: t.bitcoinBalance, pct: null, value: b.balance_btc != null ? fmtBtc(b.balance_btc) : null, sub: null },
     { label: "USD", pct: null, value: b.value_usd_cents != null ? fmtUsd(b.value_usd_cents) : null, sub: null },
-    { label: "BRL", pct: null, value: b.value_brl_cents != null ? fmtBrl(b.value_brl_cents) : null, sub: null },
-  ];
+    { label: "BRL", pct: null, value: b.value_brl_cents != null ? fmtBrl(b.value_brl_cents) : null, sub: null }];
 }
 
 export function bitcoinAllowedSizes(_b: BitcoinAccount | null, _metrics?: Metric[]): CardSize[] {
-  return ["sm", "sw", "sx", "md", "lg"];
+  return ["sm", "sw", "sx", "md", "lg", "free"];
 }
 
 export const BITCOIN_ALLOWED_ALL: CardSize[] = ["sm", "sw", "sx", "md", "lg"];
@@ -33,6 +31,7 @@ export function bitcoinSizeLabel(size: CardSize, t: T): string {
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

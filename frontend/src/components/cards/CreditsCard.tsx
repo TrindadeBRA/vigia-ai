@@ -51,9 +51,9 @@ export function getOpenCodeMetrics(o: OpenCodeAccount, t: T): Metric[] {
 // o saldo — então ficam sem hero duplo); wl só com 3+ (OpenCode completo).
 export function creditsAllowedSizes(metrics?: Metric[] | null): CardSize[] {
   const n = metrics?.length ?? 1;
-  if (n >= 3) return ["sm", "sw", "md", "lg", "wl"];
-  if (n >= 2) return ["sm", "sw", "md", "lg"];
-  return ["sm", "md", "lg"];
+  if (n >= 3) return ["sm", "sw", "md", "lg", "wl", "free"];
+  if (n >= 2) return ["sm", "sw", "md", "lg", "free"];
+  return ["sm", "md", "lg", "free"];
 }
 
 export const CREDITS_ALLOWED_ALL: CardSize[] = ["sm", "sw", "md", "lg", "wl"];
@@ -68,6 +68,7 @@ export function creditsSizeLabel(size: CardSize, t: T, metrics?: Metric[] | null
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

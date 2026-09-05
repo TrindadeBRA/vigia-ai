@@ -60,8 +60,8 @@ export function hasClaudeExtras(c: ClaudeAccount): boolean {
 export function claudeAllowedSizes(c: ClaudeAccount | null, metrics?: Metric[]): CardSize[] {
   const count = metrics?.length ?? (c ? getClaudeMetrics(c, { session5h: "", weekLimit: "", sonnetWeek: "", opusWeek: "", remainingPrefix: "", noData: "" } as unknown as T).length : 2);
   // dois pequenos: sm = 5h, sw = semana
-  if (count >= 3) return ["sm", "sw", "md", "lg", "wl"];
-  return ["sm", "sw", "md", "lg"];
+  if (count >= 3) return ["sm", "sw", "md", "lg", "wl", "free"];
+  return ["sm", "sw", "md", "lg", "free"];
 }
 
 export const CLAUDE_ALLOWED_ALL: CardSize[] = ["sm", "sw", "md", "lg", "wl"];
@@ -74,6 +74,7 @@ export function claudeSizeLabel(size: CardSize, t: T): string {
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

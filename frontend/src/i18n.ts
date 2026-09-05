@@ -98,6 +98,17 @@ type Strings = {
   cardXl: string;
   cardWl: string;
   cardWxl: string;
+  cardFree: string;
+  cardFreeHint: string;
+  freeSizeTitle: string;
+  freeSizeLead: string;
+  freeSizeWidth: string;
+  freeSizeHeight: string;
+  freeSizeWidthHint: (max: number) => string;
+  freeSizeHeightHint: string;
+  freeSizeCancel: string;
+  freeSizeApply: string;
+  freeSizeInvalid: string;
   currenciesConverter: string;
   currenciesConverterLarge: string;
   dragCard: string;
@@ -305,6 +316,17 @@ export const STR: Record<Lang, Strings> = {
     cardXl: "Card extra grande",
     cardWl: "Card longo (2×4)",
     cardWxl: "Card super largo (2×4)",
+    cardFree: "Livre",
+    cardFreeHint: "Tamanho livre — escolha largura e altura",
+    freeSizeTitle: "Tamanho livre",
+    freeSizeLead: "Escolha a largura e a altura do card em células do grid.",
+    freeSizeWidth: "Largura",
+    freeSizeHeight: "Altura",
+    freeSizeWidthHint: (max) => `1 a ${max} colunas (máx. da largura do dash)`,
+    freeSizeHeightHint: "1 a 10 linhas",
+    freeSizeCancel: "Cancelar",
+    freeSizeApply: "Aplicar",
+    freeSizeInvalid: "Valores inválidos — verifique largura e altura.",
     currenciesConverter: "Conversor",
     currenciesConverterLarge: "Conversor grande",
     dragCard: "Arrastar",
@@ -502,6 +524,17 @@ export const STR: Record<Lang, Strings> = {
     cardXl: "Extra large card",
     cardWl: "Long card (2×4)",
     cardWxl: "Super wide card (2×4)",
+    cardFree: "Free",
+    cardFreeHint: "Free size — pick width and height",
+    freeSizeTitle: "Free size",
+    freeSizeLead: "Pick the card width and height in grid cells.",
+    freeSizeWidth: "Width",
+    freeSizeHeight: "Height",
+    freeSizeWidthHint: (max) => `1 to ${max} columns (dash width)`,
+    freeSizeHeightHint: "1 to 10 rows",
+    freeSizeCancel: "Cancel",
+    freeSizeApply: "Apply",
+    freeSizeInvalid: "Invalid values — check width and height.",
     currenciesConverter: "Converter",
     currenciesConverterLarge: "Large converter",
     dragCard: "Drag",
@@ -699,6 +732,17 @@ export const STR: Record<Lang, Strings> = {
     cardXl: "Card extra grande",
     cardWl: "Card largo (2×4)",
     cardWxl: "Card super largo (2×4)",
+    cardFree: "Libre",
+    cardFreeHint: "Tamaño libre — elige ancho y alto",
+    freeSizeTitle: "Tamaño libre",
+    freeSizeLead: "Elige el ancho y el alto de la tarjeta en celdas de la cuadrícula.",
+    freeSizeWidth: "Ancho",
+    freeSizeHeight: "Alto",
+    freeSizeWidthHint: (max) => `1 a ${max} columnas (ancho del dash)`,
+    freeSizeHeightHint: "1 a 10 filas",
+    freeSizeCancel: "Cancelar",
+    freeSizeApply: "Aplicar",
+    freeSizeInvalid: "Valores inválidos — revisa ancho y alto.",
     currenciesConverter: "Conversor",
     currenciesConverterLarge: "Conversor grande",
     dragCard: "Arrastrar",

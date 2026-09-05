@@ -14,12 +14,12 @@ import { cardLabel, emptyNote, errorText, num } from "../../tw";
 // lg = lista com detalhes; wl/wxl = lista expandida com mais itens.
 export function calendarAllowedSizes(payload?: CalendarPayload | null): CardSize[] {
   const count = payload?.calendars?.length ?? 0;
-  if (count === 0) return ["md"];
+  if (count === 0) return ["md", "free"];
   const hasEvents = payload?.calendars?.some((c) => c.kind === "events");
   const hasTasks = payload?.calendars?.some((c) => c.kind === "tasks");
-  if (hasEvents && hasTasks) return ["sm", "md", "lg", "wl", "wxl"];
-  if (hasEvents || hasTasks) return ["sm", "md", "lg", "wl"];
-  return ["md", "lg"];
+  if (hasEvents && hasTasks) return ["sm", "md", "lg", "wl", "wxl", "free"];
+  if (hasEvents || hasTasks) return ["sm", "md", "lg", "wl", "free"];
+  return ["md", "lg", "free"];
 }
 
 export const CALENDAR_ALLOWED_ALL: CardSize[] = ["sm", "md", "lg", "wl", "wxl"];
@@ -33,6 +33,7 @@ export function calendarSizeLabel(size: CardSize, t: T, payload?: CalendarPayloa
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
+  if (s === "free") return t.cardFree;
   return t.cardXl;
 }
 

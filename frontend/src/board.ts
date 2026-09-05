@@ -1,4 +1,4 @@
-export type CardSize = "xs" | "sm" | "sw" | "sx" | "sc" | "scw" | "md" | "lg" | "xl" | "wl" | "wm" | "wxl";
+export type CardSize = "xs" | "sm" | "sw" | "sx" | "sc" | "scw" | "md" | "lg" | "xl" | "wl" | "wm" | "wxl" | "free";
 
 export type Cell = { r: number; c: number };
 
@@ -9,11 +9,66 @@ export type BoardLayout = {
   pos: Record<string, Cell>;
   /** Cor de fundo por card (hex #rrggbb). Texto é derivado via generateReadableColor. */
   bg?: Record<string, string>;
+  /** Tamanho livre por card: retângulo custom quando size === "free". */
+  custom?: Record<string, Rect>;
   /** Colunas no momento em que o usuário posicionou os cards. Resize não altera isso. */
   layoutCols?: number;
   /** Layout antigo (lista). Lido só na migração. */
   order?: string[];
 };
+
+export const FREE_MIN_W = 1;
+export const FREE_MAX_H = 10;
+export const FREE_MIN_H = 1;
+
+export function normalizeCustomRect(v: unknown): Rect | null {
+  if (!v || typeof v !== "object") return null;
+  const r = v as Record<string, unknown>;
+  const w = Number((r as Record<string, unknown>).w);
+  const h = Number((r as Record<string, unknown>).h);
+  if (!Number.isFinite(w) || !Number.isFinite(h)) return null;
+  const wi = Math.floor(w);
+  const hi = Math.floor(h);
+  if (wi < 1 || hi < 1) return null;
+  return { w: wi, h: hi };
+}
+
+export function clampFreeRect(rect: Rect, cols: number): Rect {
+  return {
+    w: Math.max(FREE_MIN_W, Math.min(Math.floor(rect.w), Math.max(1, cols))),
+    h: Math.max(FREE_MIN_H, Math.min(Math.floor(rect.h), FREE_MAX_H)),
+  };
+}
+
+export function getCustomRect(board: BoardLayout | undefined, id: string): Rect | null {
+  const raw = (board?.custom as Record<string, unknown> | undefined)?.[id];
+  return normalizeCustomRect(raw);
+}
+
+export function cardRect(board: BoardLayout | undefined, id: string, cols: number): Rect {
+  const size = board?.size?.[id];
+  if (normalizeSize(size) === "free") {
+    const custom = getCustomRect(board, id);
+    if (custom) return clampFreeRect(custom, cols);
+    return { w: Math.min(2, Math.max(1, cols)), h: 2 };
+  }
+  return rectFor(size, cols);
+}
+
+export function setFreeCardSize(ids: string[], board: BoardLayout, id: string, rect: Rect, cols: number): BoardLayout {
+  if (!ids.includes(id) && !board.pos[id] && !board.size[id]) return board;
+  const clamped = clampFreeRect(rect, cols);
+  const next: BoardLayout = {
+    ...board,
+    size: { ...board.size, [id]: "free" as CardSize },
+    custom: { ...(board.custom || {}), [id]: clamped },
+  };
+  const pos = board.pos[id];
+  if (!pos) return next;
+  const dest = clampCell(pos, clamped, cols);
+  if (clamped.w <= 2 && clamped.h <= 2) return withLayoutCols({ ...next, pos: { ...board.pos, [id]: dest } }, cols);
+  return placeCard(ids, next, id, dest, cols);
+}
 
 export const CELL_MIN = 168;
 export const CELL_GAP = 14;
@@ -79,7 +134,7 @@ export function colsForWidth(width: number): number {
 }
 
 export function normalizeSize(s: string | undefined): CardSize {
-  if (s === "xs" || s === "sm" || s === "sw" || s === "sx" || s === "sc" || s === "scw" || s === "md" || s === "lg" || s === "xl" || s === "wl" || s === "wm" || s === "wxl") return s;
+  if (s === "xs" || s === "sm" || s === "sw" || s === "sx" || s === "sc" || s === "scw" || s === "md" || s === "lg" || s === "xl" || s === "wl" || s === "wm" || s === "wxl" || s === "free") return s;
   // migração: "lg" antigo (2×2) vira "xl" (extra grande), resto vira "md" (normal)
   if (s === "lg") return "xl";
   return "md";
@@ -96,6 +151,7 @@ export function rectFor(size: CardSize | undefined, cols: number): Rect {
   if (s === "wl") return { w: Math.min(4, Math.max(2, cols)), h: 8 };
   if (s === "wm") return { w: 2, h: 3 };
   if (s === "wxl") return { w: Math.min(4, Math.max(2, cols)), h: 8 };
+  if (s === "free") return { w: Math.min(2, Math.max(1, cols)), h: 2 };
   return { w: Math.min(4, Math.max(2, cols)), h: 4 };
 }
 
@@ -145,7 +201,7 @@ export function occupancy(ids: string[], board: BoardLayout, cols: number): Map<
   for (const id of ids) {
     const pos = board.pos[id];
     if (!pos) continue;
-    const rect = rectFor(board.size[id], cols);
+    const rect = cardRect(board, id, cols);
     visitRect(pos, rect, (r, c) => occ.set(`${r}:${c}`, id));
   }
   return occ;
@@ -166,7 +222,7 @@ function maxRowOf(ids: string[], board: BoardLayout, cols: number): number {
   for (const id of ids) {
     const pos = board.pos[id];
     if (!pos) continue;
-    max = Math.max(max, pos.r + rectFor(board.size[id], cols).h - 1);
+    max = Math.max(max, pos.r + cardRect(board, id, cols).h - 1);
   }
   return max;
 }
@@ -207,15 +263,34 @@ function packRowMajor(ids: string[], size: Record<string, CardSize>, cols: numbe
   return pos;
 }
 
+function packRowMajorBoard(ids: string[], board: BoardLayout, cols: number): Record<string, Cell> {
+  const occ = new Map<string, string>();
+  const pos: Record<string, Cell> = {};
+  for (const id of ids) {
+    const rect = cardRect(board, id, cols);
+    const cell = firstFree(occ, rect, cols, 64);
+    pos[id] = cell;
+    visitRect(cell, rect, (r, c) => occ.set(`${r}:${c}`, id));
+  }
+  return pos;
+}
+
 export function packBoard(ids: string[], board: BoardLayout, cols: number): BoardLayout {
   const size: Record<string, CardSize> = {};
   const bg: Record<string, string> = {};
+  const custom: Record<string, Rect> = {};
   for (const id of ids) {
     size[id] = normalizeSize(board.size[id]);
     const norm = normalizeCardBg(board.bg?.[id] ?? null);
     if (norm) bg[id] = norm;
+    if (size[id] === "free") {
+      const cr = getCustomRect(board, id);
+      if (cr) custom[id] = clampFreeRect(cr, cols);
+      else custom[id] = { w: Math.min(2, Math.max(1, cols)), h: 2 };
+    }
   }
-  return { size, pos: packRowMajor(ids, size, cols), bg, layoutCols: cols };
+  const tmpBoard: BoardLayout = { size, pos: {}, bg, custom, layoutCols: cols };
+  return { size, pos: packRowMajorBoard(ids, tmpBoard, cols), bg, custom: Object.keys(custom).length ? custom : undefined, layoutCols: cols };
 }
 
 function migrateOrder(ids: string[], prev: BoardLayout, cols: number): Record<string, Cell> {
@@ -230,6 +305,28 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
   const size: Record<string, CardSize> = {};
   for (const id of ids) size[id] = normalizeSize(prev.size[id]);
 
+  // preserva bg só para ids existentes, normalizado (precisa vir antes do uso em tmpForOcc)
+  const bg: Record<string, string> = {};
+  for (const id of ids) {
+    const raw = (prev.bg as Record<string, string> | undefined)?.[id];
+    const norm = normalizeCardBg(raw);
+    if (norm) bg[id] = norm;
+  }
+  const custom: Record<string, Rect> = {};
+  for (const id of ids) {
+    if (normalizeSize(prev.size[id]) === "free") {
+      const cr = getCustomRect(prev, id);
+      if (cr) custom[id] = clampFreeRect(cr, cols);
+    }
+  }
+  // também preserva custom de ids que já eram free mas ainda não tinham pos
+  for (const id of Object.keys(prev.custom || {})) {
+    if (ids.includes(id) && !custom[id]) {
+      const cr = normalizeCustomRect((prev.custom as Record<string, Rect>)[id]);
+      if (cr) custom[id] = clampFreeRect(cr, cols);
+    }
+  }
+
   let pos: Record<string, Cell> = {};
   const hasPos = ids.some((id) => prev.pos?.[id]);
   if (!hasPos && (prev.order?.length || 0) > 0) {
@@ -240,9 +337,10 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
     }
     const missing = ids.filter((id) => !pos[id]);
     if (missing.length) {
-      const occ = occupancy(ids.filter((id) => pos[id]), { size, pos }, cols);
+      const tmpForOcc: BoardLayout = { size, pos, bg, custom, layoutCols: prev.layoutCols };
+      const occ = occupancy(ids.filter((id) => pos[id]), tmpForOcc, cols);
       for (const id of missing) {
-        const rect = rectFor(size[id], cols);
+        const rect = cardRect(tmpForOcc, id, cols);
         const cell = firstFree(occ, rect, cols, 64);
         pos[id] = cell;
         visitRect(cell, rect, (r, c) => occ.set(`${r}:${c}`, id));
@@ -253,14 +351,7 @@ export function syncBoard(ids: string[], board: BoardLayout | undefined, cols = 
   for (const id of Object.keys(pos)) {
     if (!seen.has(id)) delete pos[id];
   }
-  // preserva bg só para ids existentes, normalizado
-  const bg: Record<string, string> = {};
-  for (const id of ids) {
-    const raw = (prev.bg as Record<string, string> | undefined)?.[id];
-    const norm = normalizeCardBg(raw);
-    if (norm) bg[id] = norm;
-  }
-  return { size, pos, bg, layoutCols: prev.layoutCols };
+  return { size, pos, bg, custom: Object.keys(custom).length ? custom : undefined, layoutCols: prev.layoutCols };
 }
 
 function overlaps(ids: string[], board: BoardLayout, cols: number): boolean {
@@ -268,7 +359,7 @@ function overlaps(ids: string[], board: BoardLayout, cols: number): boolean {
   for (const id of ids) {
     const pos = board.pos[id];
     if (!pos) return true;
-    const rect = rectFor(board.size[id], cols);
+    const rect = cardRect(board, id, cols);
     let hit = false;
     visitRect(pos, rect, (r, c) => {
       const key = `${r}:${c}`;
@@ -292,7 +383,7 @@ function cardsFit(ids: string[], board: BoardLayout, cols: number): boolean {
   return ids.every((id) => {
     const pos = board.pos[id];
     if (!pos) return false;
-    return pos.c + rectFor(board.size[id], cols).w <= cols;
+    return pos.c + cardRect(board, id, cols).w <= cols;
   });
 }
 
@@ -303,7 +394,7 @@ export function displayBoard(ids: string[], board: BoardLayout, cols: number): B
   const sameCols = savedCols == null || savedCols === cols;
   if (sameCols && cardsFit(ids, synced, cols) && !overlaps(ids, synced, cols)) return synced;
   const ordered = readingOrder(ids, synced);
-  return { size: synced.size, pos: packRowMajor(ordered, synced.size, cols), bg: synced.bg, layoutCols: savedCols };
+  return { size: synced.size, pos: packRowMajorBoard(ordered, synced, cols), bg: synced.bg, custom: synced.custom, layoutCols: savedCols };
 }
 
 export function withLayoutCols(board: BoardLayout, cols: number): BoardLayout {
@@ -316,7 +407,7 @@ export function fitBoard(ids: string[], board: BoardLayout, cols: number): Board
   for (const id of ids) {
     const cur = pos[id];
     if (!cur) continue;
-    pos[id] = clampCell(cur, rectFor(next.size[id], cols), cols);
+    pos[id] = clampCell(cur, cardRect(next, id, cols), cols);
   }
   const owners = new Map<string, string[]>();
   occupancy(ids, { ...next, pos }, cols).forEach((id, key) => {
@@ -336,7 +427,7 @@ export function fitBoard(ids: string[], board: BoardLayout, cols: number): Board
     );
     for (const id of ids) {
       if (!conflicted.has(id)) continue;
-      const rect = rectFor(next.size[id], cols);
+      const rect = cardRect(next, id, cols);
       const cell = firstFree(fresh, rect, cols, 64);
       pos[id] = cell;
       visitRect(cell, rect, (r, c) => fresh.set(`${r}:${c}`, id));
@@ -351,6 +442,9 @@ export function sameBoard(a: BoardLayout | undefined, b: BoardLayout, ids: strin
   for (const id of ids) {
     if ((a.size[id] || "lg") !== (b.size[id] || "lg")) return false;
     if ((normalizeCardBg(a.bg?.[id] ?? null) || "") !== (normalizeCardBg(b.bg?.[id] ?? null) || "")) return false;
+    const ca = a.custom?.[id] ? `${a.custom[id].w}x${a.custom[id].h}` : "";
+    const cb = b.custom?.[id] ? `${b.custom[id].w}x${b.custom[id].h}` : "";
+    if (ca !== cb) return false;
     const pa = a.pos?.[id];
     const pb = b.pos?.[id];
     if (!pa || !pb || pa.r !== pb.r || pa.c !== pb.c) return false;
@@ -371,7 +465,7 @@ export function sameBoard(a: BoardLayout | undefined, b: BoardLayout, ids: strin
 
 export function placeCard(ids: string[], board: BoardLayout, id: string, target: Cell, cols: number): BoardLayout {
   if (!ids.includes(id)) return board;
-  const rect = rectFor(board.size[id], cols);
+  const rect = cardRect(board, id, cols);
   const dest = clampCell(target, rect, cols);
   const from = board.pos[id] || dest;
   const others = ids.filter((x) => x !== id);
@@ -385,7 +479,7 @@ export function placeCard(ids: string[], board: BoardLayout, id: string, target:
 
   const pos: Record<string, Cell> = { ...board.pos, [id]: dest };
   for (const other of hit) {
-    const oRect = rectFor(board.size[other], cols);
+    const oRect = cardRect(board, other, cols);
     const ignoreOcc = occupancy(
       ids.filter((x) => x !== other),
       { ...board, pos },
@@ -402,10 +496,17 @@ export function placeCard(ids: string[], board: BoardLayout, id: string, target:
 }
 
 export function setCardSize(ids: string[], board: BoardLayout, id: string, size: CardSize, cols: number): BoardLayout {
-  const next = { ...board, size: { ...board.size, [id]: size } };
+  const custom = { ...(board.custom || {}) };
+  if (size === "free") {
+    // free sem rect explícito mantém o anterior ou usa 2x2
+    if (!custom[id]) custom[id] = { w: Math.min(2, Math.max(1, cols)), h: 2 };
+  } else {
+    delete custom[id];
+  }
+  const next: BoardLayout = { ...board, size: { ...board.size, [id]: size }, custom: Object.keys(custom).length ? custom : undefined };
   const pos = board.pos[id];
   if (!pos) return next;
-  const rect = rectFor(size, cols);
+  const rect = size === "free" ? clampFreeRect(custom[id] || { w: 2, h: 2 }, cols) : rectFor(size, cols);
   const dest = clampCell(pos, rect, cols);
   if (rect.w <= 2 && rect.h <= 2) return withLayoutCols({ ...next, pos: { ...board.pos, [id]: dest } }, cols);
   return placeCard(ids, next, id, dest, cols);
@@ -468,10 +569,14 @@ export function duplicateBoard(ids: string[], board: BoardLayout, id: string, co
   const newId = nextCloneId(baseId, board);
   const size = board.size[id] || board.size[baseId] || "md";
   const bgSrc = normalizeCardBg(board.bg?.[id] ?? board.bg?.[baseId] ?? null);
-  const next: BoardLayout = { size: { ...board.size, [newId]: size as CardSize }, pos: { ...board.pos }, bg: { ...(board.bg || {}), ...(bgSrc ? { [newId]: bgSrc } : {}) }, layoutCols: board.layoutCols };
+  const customSrc = (board.custom?.[id] || board.custom?.[baseId]) as Rect | undefined;
+  const nextCustom = { ...(board.custom || {}) } as Record<string, Rect>;
+  if (size === "free" && customSrc) nextCustom[newId] = clampFreeRect(customSrc, cols);
+  else if (size === "free" && !customSrc) nextCustom[newId] = { w: Math.min(2, Math.max(1, cols)), h: 2 };
+  const next: BoardLayout = { size: { ...board.size, [newId]: size as CardSize }, pos: { ...board.pos }, bg: { ...(board.bg || {}), ...(bgSrc ? { [newId]: bgSrc } : {}) }, custom: Object.keys(nextCustom).length ? nextCustom : undefined, layoutCols: board.layoutCols };
   const occ = occupancy([...ids, newId], { ...board, size: next.size, pos: next.pos }, cols);
   // place new clone at first free
-  const rect = rectFor(size as CardSize, cols);
+  const rect = size === "free" ? clampFreeRect((next.custom?.[newId] as Rect) || { w: 2, h: 2 }, cols) : rectFor(size as CardSize, cols);
   const free = firstFree(occ, rect, cols, 64);
   // firstFree was computed with newId already in occupancy? recalc without newId
   const occ2 = occupancy(ids, board, cols);
@@ -486,8 +591,10 @@ export function removeCloneBoard(board: BoardLayout, id: string): BoardLayout {
   const size = { ...board.size };
   const pos = { ...board.pos };
   const bg = { ...(board.bg || {}) };
+  const custom = { ...(board.custom || {}) } as Record<string, Rect>;
   delete size[id];
   delete pos[id];
   delete bg[id];
-  return { ...board, size, pos, bg };
+  delete custom[id];
+  return { ...board, size, pos, bg, custom: Object.keys(custom).length ? custom : undefined };
 }

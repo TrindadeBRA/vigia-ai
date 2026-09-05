@@ -5,7 +5,7 @@ import { EyeMark } from "../Logo";
 
 /** Widget do nosso olho/logo — não vem de conta/backend, é só visual. */
 export function eyeAllowedSizes(): CardSize[] {
-  return ["xs", "sm", "md", "lg"];
+  return ["xs", "sm", "md", "lg", "free"];
 }
 
 export function eyeSizeLabel(size: CardSize, t: T): string {
@@ -13,6 +13,7 @@ export function eyeSizeLabel(size: CardSize, t: T): string {
   if (s === "xs") return t.widgetQuarter;
   if (s === "sm") return t.widgetSmall;
   if (s === "md") return t.cardNormal;
+  if (s === "free") return t.cardFree;
   return t.cardLarge;
 }
 

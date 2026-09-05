@@ -11,9 +11,9 @@ import { cardLabel, emptyNote, errorText, num } from "../../tw";
 
 export function gitAllowedSizes(repo?: GitRepo | null): CardSize[] {
     const count = repo?.commits?.length ?? 0;
-    if (count <= 1) return ["sm", "md"];
-    if (count <= 3) return ["sm", "md", "lg"];
-    return ["sm", "md", "lg", "wl", "wxl"];
+    if (count <= 1) return ["sm", "md", "free"];
+    if (count <= 3) return ["sm", "md", "lg", "free"];
+    return ["sm", "md", "lg", "wl", "wxl", "free"];
 }
 
 export const GIT_ALLOWED_ALL: CardSize[] = ["sm", "md", "lg", "wl", "wxl"];
@@ -26,6 +26,7 @@ export function gitSizeLabel(size: CardSize, t: T, repo?: GitRepo | null): strin
     if (s === "lg") return count <= 3 ? t.cardLarge : `${t.cardLarge} · ${count} commits`;
     if (s === "wl") return t.cardWl;
     if (s === "wxl") return t.cardWxl;
+    if (s === "free") return t.cardFree;
     return t.cardXl;
 }
 
