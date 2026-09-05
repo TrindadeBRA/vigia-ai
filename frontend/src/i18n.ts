@@ -93,6 +93,8 @@ type Strings = {
   cardXl: string;
   cardWl: string;
   cardWxl: string;
+  currenciesConverter: string;
+  currenciesConverterLarge: string;
   dragCard: string;
   resetLayout: string;
   focusMode: string;
@@ -293,6 +295,8 @@ export const STR: Record<Lang, Strings> = {
     cardXl: "Card extra grande",
     cardWl: "Card longo (2×4)",
     cardWxl: "Card super largo (2×4)",
+    currenciesConverter: "Conversor",
+    currenciesConverterLarge: "Conversor grande",
     dragCard: "Arrastar",
     resetLayout: "Redefinir grade",
     focusMode: "Modo foco",
@@ -483,6 +487,8 @@ export const STR: Record<Lang, Strings> = {
     cardXl: "Extra large card",
     cardWl: "Long card (2×4)",
     cardWxl: "Super wide card (2×4)",
+    currenciesConverter: "Converter",
+    currenciesConverterLarge: "Large converter",
     dragCard: "Drag",
     resetLayout: "Reset layout",
     focusMode: "Focus mode",
@@ -673,6 +679,8 @@ export const STR: Record<Lang, Strings> = {
     cardXl: "Card extra grande",
     cardWl: "Card largo (2×4)",
     cardWxl: "Card super largo (2×4)",
+    currenciesConverter: "Conversor",
+    currenciesConverterLarge: "Conversor grande",
     dragCard: "Arrastrar",
     resetLayout: "Restablecer cuadrícula",
     focusMode: "Modo enfoque",

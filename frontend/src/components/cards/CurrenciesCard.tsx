@@ -3,13 +3,16 @@ import type { CurrenciesPayload, CurrencyQuote } from "../../api/types";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
-import { fmtCurrencyAmount as _fmtCurrencyAmount } from "../../format";
-void _fmtCurrencyAmount;
+import { fmtCurrencyAmount } from "../../format";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { cardLabel, errorText, num } from "../../tw";
 
 /* ── Tamanhos ───────────────────────────────────────────────────────── */
+// sm/sw/sc/scw/md/lg mostram cotações prontas (só leitura, sem input — o
+// conversor ali dentro de um card 1/4 ou 2×2 não cabia direito e virou
+// ruído em todas as variações). wm/wl são os dois tamanhos com espaço de
+// sobra pro campo "1 BASE = ___" e as linhas viram inputs editáveis.
 
 function cryptoItems(items?: CurrencyQuote[] | null): CurrencyQuote[] {
   return (items ?? []).filter((it) => it.kind === "crypto");
@@ -21,11 +24,11 @@ export function currenciesAllowedSizes(items?: CurrencyQuote[] | null): CardSize
   if ((items?.length ?? 0) >= 2) out.push("sw");
   if (cryptos.length >= 1) out.push("sc");
   if (cryptos.length >= 2) out.push("scw");
-  out.push("md", "lg", "wl");
+  out.push("md", "lg", "wm", "wl");
   return out;
 }
 
-export const CURRENCIES_ALLOWED_ALL: CardSize[] = ["sm", "sw", "sc", "scw", "md", "lg", "wl"];
+export const CURRENCIES_ALLOWED_ALL: CardSize[] = ["sm", "sw", "sc", "scw", "md", "lg", "wm", "wl"];
 
 export function currenciesSizeLabel(size: CardSize, t: T, items?: CurrencyQuote[] | null): string {
   const s = normalizeSize(size);
@@ -36,7 +39,8 @@ export function currenciesSizeLabel(size: CardSize, t: T, items?: CurrencyQuote[
   if (s === "scw") return `${t.cardSmallPrefix} ${cryptos[1]?.code || cryptos[0]?.code || "cripto 2"}`;
   if (s === "md") return t.cardNormal;
   if (s === "lg") return t.cardLarge;
-  if (s === "wl") return t.cardWl;
+  if (s === "wm") return t.currenciesConverter;
+  if (s === "wl") return t.currenciesConverterLarge;
   if (s === "wxl") return t.cardWxl;
   return t.cardXl;
 }
@@ -116,6 +120,30 @@ function CurrenciesHeader({ base, t, compact, ok, onOpen }: { base: string; t: T
   return <div className={cn("flex min-w-0 shrink-0 items-center", compact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")}>{inner}</div>;
 }
 
+function QuoteRow({ it, base, big }: { it: CurrencyQuote; base: string; big?: boolean }) {
+  const value = it.ok && it.price != null ? fmtCurrencyAmount(it.price, base) : null;
+  return (
+    <div className={cn("flex min-w-0 items-center justify-between gap-2", big ? "text-[13.5px]" : "text-[12px]")}>
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink2">{it.label || it.code}</span>
+      {value ? (
+        <span className={cn(num, "shrink-0 font-bold text-ink")}>{value}</span>
+      ) : (
+        <span className="shrink-0 text-[11px] text-bad">{it.error || "--"}</span>
+      )}
+    </div>
+  );
+}
+
+function HeroQuote({ it, base }: { it: CurrencyQuote | undefined; base: string }) {
+  const value = it && it.ok && it.price != null ? fmtCurrencyAmount(it.price, base) : null;
+  return (
+    <>
+      <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-semibold leading-none text-ink3">{it ? it.label || it.code : "--"}</div>
+      <div className={cn(num, "mt-1 text-[13px] font-[800] leading-tight py-0.5 [overflow-wrap:anywhere]")}>{value || it?.error || "--"}</div>
+    </>
+  );
+}
+
 function EditableQuoteRow({
   it,
   base,
@@ -184,70 +212,6 @@ function EditableQuoteRow({
         aria-label={`${it.label || it.code} em ${base}`}
       />
     </div>
-  );
-}
-
-function EditableHeroQuote({
-  it,
-  base,
-  factor,
-  onFactorChange,
-}: {
-  it: CurrencyQuote | undefined;
-  base: string;
-  factor: number;
-  onFactorChange: (newFactor: number) => void;
-}) {
-  const original = it?.price;
-  const displayPrice = it && it.ok && original != null ? original * factor : null;
-  const [editing, setEditing] = useState(false);
-  const [editStr, setEditStr] = useState("");
-
-  if (!it || !it.ok || original == null) {
-    return (
-      <>
-        <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-semibold leading-none text-ink3">{it ? it.label || it.code : "--"}</div>
-        <div className={cn(num, "mt-1 text-[13px] font-[800] leading-tight py-0.5 [overflow-wrap:anywhere]")}>{it?.error || "--"}</div>
-      </>
-    );
-  }
-
-  const inputValue = editing ? editStr : displayPrice != null ? formatForInput(displayPrice) : "";
-
-  return (
-    <>
-      <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-semibold leading-none text-ink3">{it.label || it.code}</div>
-      <input
-        type="text"
-        inputMode="decimal"
-        value={inputValue}
-        onFocus={() => {
-          setEditing(true);
-          setEditStr(displayPrice != null ? formatForInput(displayPrice) : "");
-        }}
-        onBlur={() => {
-          setEditing(false);
-          const n = parsePtNumber(editStr);
-          if (n != null && n > 0 && original !== 0) {
-            const newFactor = n / original;
-            if (Number.isFinite(newFactor) && newFactor > 0) onFactorChange(newFactor);
-          }
-        }}
-        onChange={(e) => {
-          const v = e.target.value.replace(/[^0-9.,]/g, "");
-          setEditStr(v);
-          const n = parsePtNumber(v);
-          if (n != null && n > 0 && original !== 0) {
-            const newFactor = n / original;
-            if (Number.isFinite(newFactor) && newFactor > 0) onFactorChange(newFactor);
-          }
-        }}
-        onClick={(e) => e.stopPropagation()}
-        className={cn(num, "mt-1 h-7 w-full max-w-[140px] rounded-[8px] border border-edge bg-canvas px-2 text-left text-[13px] font-[800] leading-tight text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent")}
-        aria-label={`${it.label || it.code} em ${base}`}
-      />
-      <div className="mt-1 text-[10px] text-ink3">{base}</div>
-    </>
   );
 }
 
@@ -320,17 +284,14 @@ export function CurrenciesBoardCard({
       : ns === "scw" ? cryptos[1] || cryptos[0]
       : items[0];
     return (
-      <div className="flex h-full min-h-0 w-full flex-col gap-2 overflow-hidden">
-        <div className="flex w-full items-center gap-2.5 overflow-hidden">
-          <div className="relative shrink-0">
-            <Icon />
-            <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", ok ? "bg-good" : "bg-bad")} />
-          </div>
-          <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-visible border-0 bg-transparent p-0 text-left" onClick={onOpen}>
-            <EditableHeroQuote it={item} base={base} factor={factor} onFactorChange={handleFactorChange} />
-          </button>
+      <div className="flex h-full min-h-0 w-full items-center gap-2.5 overflow-hidden">
+        <div className="relative shrink-0">
+          <Icon />
+          <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", ok ? "bg-good" : "bg-bad")} />
         </div>
-        <BaseValueField base={base} value={factorStr} onChange={handleBaseChange} />
+        <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-visible border-0 bg-transparent p-0 text-left" onClick={onOpen}>
+          <HeroQuote it={item} base={base} />
+        </button>
       </div>
     );
   }
@@ -339,13 +300,11 @@ export function CurrenciesBoardCard({
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <CurrenciesHeader base={base} t={t} ok={ok} onOpen={onOpen} />
-        <BaseValueField base={base} value={factorStr} onChange={handleBaseChange} />
-        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5 overflow-hidden">
+        <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
           {items.slice(0, 4).map((it) => (
-            <EditableQuoteRow key={it.id} it={it} base={base} factor={factor} onFactorChange={handleFactorChange} />
+            <QuoteRow key={it.id} it={it} base={base} />
           ))}
-        </div>
-        <button type="button" className="mt-1 text-left text-[11px] font-medium text-ink3 hover:text-ink" onClick={onOpen}>ver detalhes →</button>
+        </button>
       </div>
     );
   }
@@ -354,10 +313,25 @@ export function CurrenciesBoardCard({
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
         <CurrenciesHeader base={base} t={t} ok={ok} onOpen={onOpen} />
-        <BaseValueField base={base} value={factorStr} onChange={handleBaseChange} />
-        <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-3 gap-y-2 overflow-hidden content-center">
+        <button type="button" className="grid min-h-0 flex-1 cursor-pointer auto-rows-min grid-cols-2 gap-x-3 gap-y-2 overflow-hidden border-0 bg-transparent p-0 text-left content-center" onClick={onOpen}>
           {items.slice(0, 8).map((it) => (
-            <EditableQuoteRow key={it.id} it={it} base={base} big factor={factor} onFactorChange={handleFactorChange} />
+            <QuoteRow key={it.id} it={it} base={base} big />
+          ))}
+        </button>
+      </div>
+    );
+  }
+
+  // wm/wl: as duas variações "conversor" — únicas com o campo "1 BASE = ___"
+  // editável, porque só nesses tamanhos ele cabe sem apertar o resto.
+  if (ns === "wm") {
+    return (
+      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+        <CurrenciesHeader base={base} t={t} ok={ok} onOpen={onOpen} />
+        <BaseValueField base={base} value={factorStr} onChange={handleBaseChange} />
+        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5 overflow-hidden">
+          {items.slice(0, 4).map((it) => (
+            <EditableQuoteRow key={it.id} it={it} base={base} factor={factor} onFactorChange={handleFactorChange} />
           ))}
         </div>
         <button type="button" className="mt-1 text-left text-[11px] font-medium text-ink3 hover:text-ink" onClick={onOpen}>ver detalhes →</button>
@@ -383,13 +357,11 @@ export function CurrenciesBoardCard({
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
       <CurrenciesHeader base={base} t={t} ok={ok} onOpen={onOpen} />
-      <BaseValueField base={base} value={factorStr} onChange={handleBaseChange} />
-      <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-2.5 overflow-hidden content-center">
+      <button type="button" className="grid min-h-0 flex-1 cursor-pointer auto-rows-min grid-cols-2 gap-x-4 gap-y-2.5 overflow-hidden border-0 bg-transparent p-0 text-left content-center" onClick={onOpen}>
         {items.slice(0, 10).map((it) => (
-          <EditableQuoteRow key={it.id} it={it} base={base} big factor={factor} onFactorChange={handleFactorChange} />
+          <QuoteRow key={it.id} it={it} base={base} big />
         ))}
-      </div>
-      <button type="button" className="mt-1 text-left text-[11px] font-medium text-ink3 hover:text-ink" onClick={onOpen}>ver detalhes →</button>
+      </button>
     </div>
   );
 }

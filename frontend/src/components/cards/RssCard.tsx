@@ -159,7 +159,7 @@ function FeedBlock({ feed, t, compact }: { feed: RssFeed; t: T; compact?: boolea
                 <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-bold uppercase tracking-wide text-ink3">{feedLabel(feed)}</span>
                 <span className="shrink-0 text-[10px] text-ink3">{feed.items.length} itens</span>
             </div>
-            {feed.items.slice(0, compact ? 2 : 5).map((item, idx) => (
+            {feed.items.map((item, idx) => (
                 <RssItemRow key={item.guid || `${item.title}-${idx}`} item={item} compact={compact} />
             ))}
         </div>
@@ -253,7 +253,11 @@ export function RssBoardCard({
                             );
                         })
                     )}
-                    {feeds.length > 1 ? <div className="px-1 text-[11px] text-ink3">+{feeds.length - 1} feed{feeds.length > 2 ? "s" : ""} · toque para ver todos</div> : null}
+                    {feeds.length > 1 ? (
+                        <div className="px-1 text-[11px] text-ink3">+{feeds.length - 1} feed{feeds.length > 2 ? "s" : ""} · toque para ver todos</div>
+                    ) : items.length > 3 ? (
+                        <div className="px-1 text-[11px] text-ink3">+{items.length - 3} itens · toque para ver todos</div>
+                    ) : null}
                 </div>
             </div>
         );
@@ -271,7 +275,7 @@ export function RssBoardCard({
                     ) : items.length === 0 ? (
                         <div className={emptyNote}>Nenhum item no feed.</div>
                     ) : (
-                        items.slice(0, 6).map((item, idx) => (
+                        items.map((item, idx) => (
                             <RssItemRow key={item.guid || `${item.title}-${idx}`} item={item} />
                         ))
                     )}

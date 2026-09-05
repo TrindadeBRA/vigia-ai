@@ -86,14 +86,29 @@ run_pio() {
   (cd "$ROOT_DIR/firmware" && "$pio" "$@")
 }
 
+# node_modules existir não basta: depois de um `git pull` que mexeu em
+# package-lock.json, um node_modules velho fica lá parado e ninguém percebe
+# até um require() sumido ou uma versão nativa (Electron etc) desalinhada
+# quebrar algo em silêncio. npm grava node_modules/.package-lock.json com o
+# que foi de fato instalado — comparamos com o lockfile do repo.
+node_modules_stale() {
+  local dir="$1"
+  [ -d "$dir/node_modules" ] || return 0
+  local lock="$dir/package-lock.json"
+  [ -f "$lock" ] || return 1
+  local marker="$dir/node_modules/.package-lock.json"
+  [ -f "$marker" ] || return 0
+  [ "$lock" -nt "$marker" ]
+}
+
 ensure_backend_node() {
-  if [ ! -d "$ROOT_DIR/backend/node_modules" ]; then
+  if node_modules_stale "$ROOT_DIR/backend"; then
     (cd "$ROOT_DIR/backend" && npm install)
   fi
 }
 
 ensure_node() {
-  if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
+  if node_modules_stale "$ROOT_DIR/frontend"; then
     (cd "$ROOT_DIR/frontend" && npm install)
   fi
 }
@@ -201,10 +216,11 @@ cleanup() {
 run_backend() {
   ensure_backend_node
   ensure_frontend_dist
-  # Build backend if dist missing
-  if [ ! -f "$ROOT_DIR/backend/dist/main.js" ]; then
-    (cd "$ROOT_DIR/backend" && npm run build)
-  fi
+  # Sempre rebuilda: como no frontend, pular quando o dist já existe deixava
+  # rotas/campos novos faltando depois de um pull (ex.: git/calendar/notes
+  # ausentes do dist enquanto o frontend já esperava por eles).
+  echo "== build backend =="
+  (cd "$ROOT_DIR/backend" && npm run build)
   echo "== backend Node :${BACKEND_PORT} (Swagger em /docs) =="
   (
     cd "$ROOT_DIR/backend"
@@ -386,18 +402,63 @@ cmd_lint() {
   fi
 }
 
+electron_binary_path() {
+  local dir="$1"
+  case "$(uname -s)" in
+    Darwin) echo "$dir/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron" ;;
+    Linux)  echo "$dir/node_modules/electron/dist/electron" ;;
+    *)      echo "$dir/node_modules/electron/dist/electron.exe" ;;
+  esac
+}
+
+# O instalador do pacote `electron` (extract-zip) já foi visto saindo com
+# código 0 tendo extraído só o primeiro arquivo do zip — node_modules/electron
+# fica sem o binário nativo (path.txt ausente) e o app sobe com um Electron
+# de outra instalação, ou nem sobe. O zip baixado já teve o checksum validado
+# pelo instalador, então extrair de novo na mão é seguro.
+fix_electron_binary() {
+  local dir="$1"
+  [ -d "$dir/node_modules/electron" ] || return 0
+  local bin
+  bin="$(electron_binary_path "$dir")"
+  [ -x "$bin" ] && return 0
+
+  echo "== electron instalou sem o binário nativo — extraindo de novo =="
+  local ver cache_dir zip
+  ver="$(node -e "console.log(require('$dir/node_modules/electron/package.json').version)" 2>/dev/null || true)"
+  case "$(uname -s)" in
+    Darwin) cache_dir="$HOME/Library/Caches/electron" ;;
+    Linux)  cache_dir="$HOME/.cache/electron" ;;
+    *)      cache_dir="" ;;
+  esac
+  if [ -n "$cache_dir" ] && [ -n "$ver" ] && command -v unzip >/dev/null 2>&1; then
+    zip="$(find "$cache_dir" -iname "electron-v${ver}-*.zip" 2>/dev/null | head -1)"
+    if [ -n "$zip" ]; then
+      rm -rf "$dir/node_modules/electron/dist"
+      mkdir -p "$dir/node_modules/electron/dist"
+      unzip -qo "$zip" -d "$dir/node_modules/electron/dist"
+      printf '%s' "${bin#"$dir/node_modules/electron/dist/"}" > "$dir/node_modules/electron/path.txt"
+      chmod +x "$bin" 2>/dev/null || true
+    fi
+  fi
+  if [ ! -x "$bin" ]; then
+    echo "erro: não consegui extrair o binário do electron (esperado em $bin)." >&2
+    echo "      rode: cd desktop && rm -rf node_modules/electron && npm install electron --no-save" >&2
+    exit 1
+  fi
+}
+
 ensure_desktop_node() {
-  if [ ! -d "$ROOT_DIR/desktop/node_modules" ]; then
+  if node_modules_stale "$ROOT_DIR/desktop"; then
     (cd "$ROOT_DIR/desktop" && npm install)
   fi
+  fix_electron_binary "$ROOT_DIR/desktop"
 }
 
 cmd_app() {
   ensure_backend_node
-  # build backend bundle for Electron
-  if [ ! -f "$ROOT_DIR/backend/dist/desktop.js" ]; then
-    (cd "$ROOT_DIR/backend" && npm run build)
-  fi
+  echo "== build backend (bundle pro Electron) =="
+  (cd "$ROOT_DIR/backend" && npm run build)
   ensure_frontend_dist
   ensure_desktop_node
   echo "== app desktop (Electron) =="
@@ -407,9 +468,8 @@ cmd_app() {
 
 cmd_app_build() {
   ensure_backend_node
-  if [ ! -f "$ROOT_DIR/backend/dist/desktop.js" ]; then
-    (cd "$ROOT_DIR/backend" && npm run build)
-  fi
+  echo "== build backend (bundle pro Electron) =="
+  (cd "$ROOT_DIR/backend" && npm run build)
   ensure_desktop_node
   echo "== instalador do app desktop =="
   echo "   (o coletor Node é empacotado como JS — sem binário nativo por SO)"
