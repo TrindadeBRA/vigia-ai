@@ -13,13 +13,27 @@ Decisões: [`DECISOES.md`](DECISOES.md).
 código"). Fórmula em [`TrindadeBRA/homebrew-vigia-ai`](https://github.com/TrindadeBRA/homebrew-vigia-ai),
 atualizada por `./dev cask` a cada release ([RELEASE.md](RELEASE.md)).
 
+**Linux — um comando (recomendado):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash
+```
+
+Baixa o `.tar.gz` do [latest release](https://github.com/TrindadeBRA/vigia-ai/releases/latest), pergunta se instala só para você (`~/.local/share/vigia-ai`, sem sudo) ou para todos (`/opt/vigia-ai`, pede sudo), cria o atalho `.desktop` com o ícone de olho e o comando `vigia-ai`.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash -s -- --user      # só para você
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash -s -- --system    # para todos
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash -s -- --uninstall # remover
+```
+
 Ou baixe da [página de releases](https://github.com/TrindadeBRA/vigia-ai/releases):
 
-| SO | Arquivo |
-| --- | --- |
-| macOS | `Vigia AI-<versão>-arm64.dmg` (Apple Silicon) ou `Vigia AI-<versão>.dmg` (Intel) |
-| Windows | `Vigia AI Setup <versão>.exe` — instala no usuário, sem pedir admin |
-| Linux | `Vigia AI-<versão>.AppImage` (roda direto) ou `.deb` |
+| SO      | Arquivo                                                                            |
+| ------- | ---------------------------------------------------------------------------------- |
+| macOS   | `Vigia AI-<versão>-arm64.dmg` (Apple Silicon) ou `Vigia AI-<versão>.dmg` (Intel)   |
+| Windows | `Vigia AI Setup <versão>.exe` — instala no usuário, sem pedir admin                |
+| Linux   | `Vigia AI-<versão>.AppImage` (roda direto), `.deb` ou `.tar.gz` (via `install.sh`) |
 
 Não é preciso ter Node instalado: o coletor (Node 22) vai dentro do pacote.
 
@@ -42,11 +56,11 @@ dentro do app.
 `backend/data/` só é usado quando você roda a partir do código. No app
 instalado os dados vão para a pasta do usuário:
 
-| SO | Pasta |
-| --- | --- |
-| macOS | `~/Library/Application Support/vigia-ai-desktop/data` |
-| Windows | `%APPDATA%\vigia-ai-desktop\data` |
-| Linux | `~/.config/vigia-ai-desktop/data` |
+| SO      | Pasta                                                 |
+| ------- | ----------------------------------------------------- |
+| macOS   | `~/Library/Application Support/vigia-ai-desktop/data` |
+| Windows | `%APPDATA%\vigia-ai-desktop\data`                     |
+| Linux   | `~/.config/vigia-ai-desktop/data`                     |
 
 Na primeira execução o app **copia** o `backend/data/` do repositório, se
 existir — quem já usava `./dev up` não abre o app com as contas em branco.
@@ -77,11 +91,11 @@ instaladores de cada plataforma.
 
 ## Assinatura de código
 
-| SO | Situação |
-| --- | --- |
-| **macOS** | Precisa de Developer ID + notarização. Sem os segredos `MAC_CERT_P12`, `APPLE_ID`, `APPLE_APP_PASSWORD` e `APPLE_TEAM_ID` no repositório, o build sai **sem assinar** (ad-hoc): o Gatekeeper mostra **"está danificado"** (não é só o aviso de "desenvolvedor não identificado" — botão direito → Abrir não resolve). O `.dmg` traz um `fix-gatekeeper.command` que tira a flag de quarentena; detalhes em [RELEASE.md](RELEASE.md). |
-| **Windows** | Sem assinatura Authenticode o SmartScreen mostra um aviso na primeira execução. |
-| **Linux** | Não se aplica. |
+| SO          | Situação                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **macOS**   | Precisa de Developer ID + notarização. Sem os segredos `MAC_CERT_P12`, `APPLE_ID`, `APPLE_APP_PASSWORD` e `APPLE_TEAM_ID` no repositório, o build sai **sem assinar** (ad-hoc): o Gatekeeper mostra **"está danificado"** (não é só o aviso de "desenvolvedor não identificado" — botão direito → Abrir não resolve). O `.dmg` traz um `fix-gatekeeper.command` que tira a flag de quarentena; detalhes em [RELEASE.md](RELEASE.md). |
+| **Windows** | Sem assinatura Authenticode o SmartScreen mostra um aviso na primeira execução.                                                                                                                                                                                                                                                                                                                                                      |
+| **Linux**   | Não se aplica.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ### Keychain no macOS
 
@@ -96,9 +110,9 @@ Se acontecer, os caminhos alternativos continuam valendo:
 
 ## Solução de problemas
 
-| Sintoma | O que fazer |
-| --- | --- |
-| "A porta 8787 está ocupada" | Feche o `./dev up` ou aceite a porta que o app propõe (e regrave o `secrets.h`) |
-| "Coletor não encontrado" (em dev) | Rode `./dev up` uma vez para preparar o coletor (`npm install` em `backend/`) |
-| A placa parou de achar o coletor | Confira o toggle **Acesso pela rede local** no card Aplicativo |
-| O app não abre depois de atualizar | Card Aplicativo → **Abrir a pasta de logs** e veja `main.log` |
+| Sintoma                            | O que fazer                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| "A porta 8787 está ocupada"        | Feche o `./dev up` ou aceite a porta que o app propõe (e regrave o `secrets.h`) |
+| "Coletor não encontrado" (em dev)  | Rode `./dev up` uma vez para preparar o coletor (`npm install` em `backend/`)   |
+| A placa parou de achar o coletor   | Confira o toggle **Acesso pela rede local** no card Aplicativo                  |
+| O app não abre depois de atualizar | Card Aplicativo → **Abrir a pasta de logs** e veja `main.log`                   |

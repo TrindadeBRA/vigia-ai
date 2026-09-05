@@ -1,6 +1,7 @@
 import { logNotification } from "../httpClient.js";
 import { createNote } from "../notes.js";
 import { load, updateSync as update } from "../store.js";
+import { handleInfoQuery, parseInfoCommand } from "./info.js";
 
 export const TELEGRAM_API = "https://api.telegram.org";
 export const TELEGRAM_LOG_MESSAGE = `${TELEGRAM_API}/bot/sendMessage`;
@@ -42,12 +43,19 @@ function buildTasklistMarkdown(raw: string): string {
   return parts.map((item) => `- [ ] ${item}`).join("\n");
 }
 
-async function sendTelegramMessage(token: string, chatId: string, text: string): Promise<void> {
+async function sendTelegramMessage(
+  token: string,
+  chatId: string,
+  text: string,
+  opts: { parseMode?: string | null } = {},
+): Promise<void> {
   try {
+    const payload: Record<string, unknown> = { chat_id: chatId, text };
+    if (opts.parseMode) payload.parse_mode = opts.parseMode;
     await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15_000),
     });
   } catch (exc) {
@@ -239,6 +247,29 @@ export async function pollOnce(token: string, offset: number, signal?: AbortSign
     const label = parts.join(" ") || (username ? `@${username}` : chatId);
     const isNew = addChat(chatId, label);
     const textRaw = typeof msg.text === "string" ? msg.text : "";
+    // /info tem prioridade sobre /note e /tasklist
+    const infoParsed = parseInfoCommand(textRaw);
+    if (infoParsed !== null) {
+      // "/info" sem argumento ou com texto vazio → lista todos os cards disponíveis
+      if (infoParsed === undefined || !infoParsed) {
+        try {
+          const reply = await handleInfoQuery("");
+          await sendTelegramMessage(token, chatId, reply, { parseMode: "HTML" });
+        } catch (exc) {
+          console.log(`[telegram] falha no /info (lista): ${exc}`);
+          await sendTelegramMessage(token, chatId, "❌ Falha ao buscar contas. Tente novamente.");
+        }
+      } else {
+        try {
+          const reply = await handleInfoQuery(infoParsed);
+          await sendTelegramMessage(token, chatId, reply, { parseMode: "HTML" });
+        } catch (exc) {
+          console.log(`[telegram] falha no /info "${infoParsed}": ${exc}`);
+          await sendTelegramMessage(token, chatId, "❌ Falha ao buscar dados. Tente novamente.");
+        }
+      }
+      continue;
+    }
     const noteParsed = parseNoteCommand(textRaw);
     const tasklistParsed = parseTasklistCommand(textRaw);
     const isNoteCommand = noteParsed !== null;

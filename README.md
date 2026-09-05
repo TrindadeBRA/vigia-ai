@@ -40,12 +40,12 @@ O **Vigia AI** tira essa pergunta da cabeça: um mostrador sempre ligado na mesa
 
 Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é **opcional**: o mesmo painel roda como página web, então dá pra usar num monitor extra, no celular, ou sem ter a placa em mãos.
 
-|                |                                                                                                        |
-| -------------- | ------------------------------------------------------------------------------------------------------ |
-| 🖥️ **Físico**   | ESP32 Dev Module + TFT SPI **3,5"** touch (XPT2046), tela sempre ligada na mesa                        |
-| 🌐 **Web**      | [`/display`](.agents/SETUP.md), mesmo layout, responsivo (desktop e mobile), tema/cor salvos no navegador |
+|                |                                                                                                                             |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 🖥️ **Físico**   | ESP32 Dev Module + TFT SPI **3,5"** touch (XPT2046), tela sempre ligada na mesa                                             |
+| 🌐 **Web**      | [`/display`](.agents/SETUP.md), mesmo layout, responsivo (desktop e mobile), tema/cor salvos no navegador                   |
 | 💻 **App**      | Instalador para **Linux, macOS e Windows** — não precisa de Python nem de Node ([`.agents/DESKTOP.md`](.agents/DESKTOP.md)) |
-| 🧪 **Simulado** | [Wokwi](https://wokwi.com/) no VS Code — testa o firmware sem soldar nada                              |
+| 🧪 **Simulado** | [Wokwi](https://wokwi.com/) no VS Code — testa o firmware sem soldar nada                                                   |
 
 > [!WARNING]
 > **LAN only.** Os endpoints de cota do Claude, do GPT e do Cursor **não são API pública** — são os mesmos que o CLI/IDE já usam neste computador. **Não exponha a porta 8787 na internet.** A placa **nunca** guarda tokens — só percentuais e datas. Detalhes em [Privacidade e segurança](#privacidade-e-segurança).
@@ -205,7 +205,21 @@ brew tap TrindadeBRA/vigia-ai
 brew install --cask vigia-ai
 ```
 
-**Ou baixe direto**: instalador da sua plataforma nos [releases](https://github.com/TrindadeBRA/vigia-ai/releases) — `.dmg` (macOS), `.exe` (Windows), `.AppImage` ou `.deb` (Linux). **Não precisa instalar Python nem Node**: o coletor vai embarcado.
+**Linux — um comando (recomendado):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash
+```
+
+Baixa o `.tar.gz` do [latest release](https://github.com/TrindadeBRA/vigia-ai/releases/latest), pergunta se instala só para você (`~/.local/share/vigia-ai`, sem sudo) ou para todos (`/opt/vigia-ai`, pede senha do sudo), extrai, cria o atalho `.desktop` com o ícone de olho e o comando `vigia-ai` no PATH. Variações:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash -s -- --user      # só para você
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash -s -- --system    # para todos (sudo)
+curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash -s -- --uninstall # remover
+```
+
+**Ou baixe direto**: instalador da sua plataforma nos [releases](https://github.com/TrindadeBRA/vigia-ai/releases) — `.dmg` (macOS), `.exe` (Windows), `.AppImage`, `.deb` ou `.tar.gz` (Linux). **Não precisa instalar Python nem Node**: o coletor vai embarcado.
 
 O app é o mesmo produto: continua servindo `/display` na rede local para a ESP32 e para o navegador, e o menu tem **Abrir no navegador** quando você preferir uma aba. Detalhes em [`.agents/DESKTOP.md`](.agents/DESKTOP.md).
 

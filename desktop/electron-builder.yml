@@ -89,6 +89,7 @@ nsis:
 
 linux:
   icon: build/icon.png
+  executableName: vigia-ai
   category: Utility
   synopsis: Painel de cotas de IA — Claude, GPT, Cursor e outros
   description: >
@@ -97,6 +98,7 @@ linux:
   target:
     - AppImage
     - deb
+    - tar.gz
   desktop:
     entry:
       Name: Vigia AI
