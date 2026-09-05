@@ -107,3 +107,7 @@ publish:
   provider: github
   owner: TrindadeBRA
   repo: vigia-ai
+  # Sem isso o electron-builder cria o release como rascunho — precisa de
+  # alguém clicar "Publish release" na mão. Direto: publicado assim que os
+  # 4 jobs da matriz terminam de subir os assets (RELEASE.md).
+  releaseType: release
