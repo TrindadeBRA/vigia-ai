@@ -24,7 +24,10 @@ jobs:
       matrix:
         include:
           - { os: macos-14, name: "macOS (arm64)", args: "--mac --arm64" }
-          - { os: macos-13, name: "macOS (x64)", args: "--mac --x64" }
+          # macos-13 (Intel) tem fila de runner enorme — GitHub vem reduzindo
+          # essa frota. Cross-build do x64 direto no runner arm64 (padrão
+          # recomendado pelo próprio electron-builder) evita a espera.
+          - { os: macos-14, name: "macOS (x64)", args: "--mac --x64" }
           - { os: windows-latest, name: "Windows (x64)", args: "--win" }
           - { os: ubuntu-latest, name: "Linux (x64)", args: "--linux" }
 

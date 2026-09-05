@@ -55,12 +55,19 @@ dmg:
   # nunca é lido por ninguém, então não faz sentido gerá-lo.
   writeUpdateInfo: false
   contents:
-    - x: 140
-      y: 200
-    - x: 400
-      y: 200
+    - x: 120
+      y: 180
+    - x: 380
+      y: 180
       type: link
       path: /Applications
+    # Sem certificado pago da Apple, o download vem com a flag de quarentena
+    # e o Gatekeeper mostra "app danificado" mesmo sem nada quebrado — este
+    # script tira só essa flag. Ver README (seção macOS) para o passo a passo.
+    - x: 250
+      y: 320
+      type: file
+      path: build/fix-gatekeeper.command
 
 win:
   icon: build/icon.png

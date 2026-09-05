@@ -202,6 +202,9 @@ Baixe o instalador da sua plataforma nos [releases](https://github.com/TrindadeB
 
 O app é o mesmo produto: continua servindo `/display` na rede local para a ESP32 e para o navegador, e o menu tem **Abrir no navegador** quando você preferir uma aba. Detalhes em [`.agents/DESKTOP.md`](.agents/DESKTOP.md).
 
+> [!IMPORTANT]
+> **macOS: "Vigia AI está danificado e não pode ser aberto"** — o app não está corrompido. Não temos certificado pago da Apple (Developer ID) pra assinar/notarizar o build, e o macOS marca todo download da internet sem essa assinatura como "danificado", mesmo íntegro. O `.dmg` já vem com um `fix-gatekeeper.command` — dê dois cliques nele (depois de arrastar o app pra Applications) e abra o Vigia AI normalmente. Se preferir via Terminal: `xattr -cr "/Applications/Vigia AI.app"`.
+
 ### A partir do código
 
 Precisa de **Node 22 LTS** e, para o firmware, [PlatformIO Core](https://platformio.org/) — Python removido do coletor (legado em `backend-python-legacy/`).
