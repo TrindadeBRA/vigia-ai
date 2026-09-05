@@ -119,7 +119,7 @@ CardRect cardRectFor(CardSize s, int cols)
   if (s == CARD_LG)
     return {(uint8_t)min(2, max(1, cols)), 1};
   if (s == CARD_WL)
-    return {1, 4};
+    return {(uint8_t)min(2, max(1, cols)), 4};
   if (s == CARD_WXL)
     return {(uint8_t)min(2, max(1, cols)), 4};
   return {(uint8_t)min(2, max(1, cols)), 2};

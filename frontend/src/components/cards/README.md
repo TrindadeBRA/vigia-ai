@@ -12,15 +12,15 @@ Documento de referência para criar novos cards componentizados no mostrador. Ba
 - `CardSize = "sm" | "sw" | "md" | "lg" | "xl" | "wl" | "wxl"` `board.ts:1`
   - `sm` = Pequeno · 5h (sessão) `i18n.ts:179`
   - `sw` = Pequeno · semana (weekly) — segunda variação pequena, 1 contador cada
-  - `md` normal, `lg` grande 2×1, `xl` extra grande 2×2, `wl` 1×4, `wxl` 2×4
+  - `md` normal, `lg` grande 2×1, `xl` extra grande 2×2, `wl` 2×4 longo, `wxl` 2×4 super largo
 - `rectFor(size, cols): Rect` `board.ts:54`
   ```ts
   sm/sw → {w:2,h:1} ≈188×83 retângulo largo
   md    → {w:2,h:2} ≈188×180 quadrado (normal)
   lg    → {w:4,h:2} largo
   xl    → {w:4,h:4} 2×2
-  wl    → {w:2,h:8} alto fino
-  wxl   → {w:4,h:8} super largo
+  wl    → {w:4,h:8} longo 2×4
+  wxl   → {w:4,h:8} super largo 2×4
   ```
   2× `sm` empilham = 1× `md`. Grid usa `unitPx=rowPxFor(cellPx)` com `cellPx` quarter (≈87×83 quadrado).
 - `MIN_PAD_ROWS=12` (quarter) `board.ts:34`, `padRowsForHeight` e `firstFree/packRowMajor 64` para densidade.
@@ -71,14 +71,14 @@ type ProviderMeta = {id, provider, ok, error, title, label, metrics:Metric[], ki
 
 ## 5. Layouts por tamanho (Claude modelo)
 
-| Tamanho | Rect | Conteúdo |
-|---------|------|----------|
-| `sm` 2×1 | sessão só | ícone 42 esquerda + 1 hero `label 10px` `pct 18px` `bar 4px` `Reset em` |
-| `sw` 2×1 | semana só | idem com `metrics[1]` |
-| `md` 2×2 | 2 métricas | `ClaudeHeader` + 2× `CompactRow` `justify-center` + `+N` |
-| `lg` 4×2 | 2 + pills | `grid-cols-2` `Row` + pills sonnet/opus |
-| `wl` 2×8 | 4 métricas pilha | `justify-evenly gap-2` `Row` |
-| `xl/wxl` ocultos | 4 métricas grade | `xl` 2×2, `wxl` 2 colunas |
+| Tamanho          | Rect             | Conteúdo                                                                |
+| ---------------- | ---------------- | ----------------------------------------------------------------------- |
+| `sm` 2×1         | sessão só        | ícone 42 esquerda + 1 hero `label 10px` `pct 18px` `bar 4px` `Reset em` |
+| `sw` 2×1         | semana só        | idem com `metrics[1]`                                                   |
+| `md` 2×2         | 2 métricas       | `ClaudeHeader` + 2× `CompactRow` `justify-center` + `+N`                |
+| `lg` 4×2         | 2 + pills        | `grid-cols-2` `Row` + pills sonnet/opus                                 |
+| `wl` 2×8         | 4 métricas pilha | `justify-evenly gap-2` `Row`                                            |
+| `xl/wxl` ocultos | 4 métricas grade | `xl` 2×2, `wxl` 2 colunas                                               |
 
 `sm/sw` ultra-compactos cabem em ½ altura (73px + gap).
 

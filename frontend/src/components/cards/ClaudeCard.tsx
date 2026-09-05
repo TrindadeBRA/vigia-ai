@@ -1,12 +1,12 @@
-import { cn } from "../../cn";
 import type { ClaudeAccount } from "../../api/types";
-import type { Metric } from "../../pages/display/types";
-import { barColor, barGlow, clamp, fmtCountdown, fmtPct, fmtRemain, fmtWhen } from "../../format";
-import type { T } from "../../i18n";
-import { PROVIDER_ICON, type ResolvedThemeName, PALETTES } from "../../theme";
-import { barFill, barTrack, cardLabel, errorText, metricCard, metricsGrid, num } from "../../tw";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
+import { cn } from "../../cn";
+import { barColor, barGlow, clamp, fmtCountdown, fmtPct, fmtRemain, fmtWhen } from "../../format";
+import type { T } from "../../i18n";
+import type { Metric } from "../../pages/display/types";
+import { PALETTES, PROVIDER_ICON, type ResolvedThemeName } from "../../theme";
+import { barFill, barTrack, cardLabel, errorText, metricCard, metricsGrid, num } from "../../tw";
 
 /* ── Dados ──────────────────────────────────────────────────────────── */
 
@@ -56,7 +56,7 @@ export function hasClaudeExtras(c: ClaudeAccount): boolean {
 
 // Quais tamanhos fazem sentido para esta conta?
 // - sem Sonnet/Opus (2 janelas): sm/sw/md/lg bastam; xl/wl/wxl ficam com muito vazio
-// - com Sonnet/Opus (3-4 janelas): wl é útil (1×4 alto mostra as 4); xl (2×2 extra grande) e wxl (2×4) não fazem sentido pro Claude
+// - com Sonnet/Opus (3-4 janelas): wl é útil (2×4 longo mostra as 4); xl (2×2 extra grande) e wxl (2×4) não fazem sentido pro Claude
 export function claudeAllowedSizes(c: ClaudeAccount | null, metrics?: Metric[]): CardSize[] {
   const count = metrics?.length ?? (c ? getClaudeMetrics(c, { session5h: "", weekLimit: "", sonnetWeek: "", opusWeek: "", remainingPrefix: "", noData: "" } as unknown as T).length : 2);
   // dois pequenos: sm = 5h, sw = semana
@@ -322,7 +322,7 @@ export function ClaudeBoardCard({
     );
   }
 
-  // wl: 1×4 alto estreito — pilha vertical espaçada, cada barra maior
+  // wl: 2×4 longo — pilha vertical espaçada, cada barra maior
   if (ns === "wl") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
