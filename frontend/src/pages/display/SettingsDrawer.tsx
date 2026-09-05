@@ -8,6 +8,7 @@ import { ACCENTS, inverseOn, resolveTheme, type ThemeName } from "../../theme";
 import { iconBtn } from "../../tw";
 import { Kv } from "./AccountPage";
 import { ntcGenerateColor, useNameToColor } from "../../hooks/useNameToColor";
+import { APP_VERSION } from "../../version";
 import type { Prefs } from "./usePrefs";
 
 function normalizeHexInput(v: string): string | null {
@@ -19,7 +20,7 @@ function normalizeHexInput(v: string): string | null {
   return null;
 }
 
-export function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed, onClose }: { prefs: Prefs; setPrefs: (fn: (p: Prefs) => Prefs) => void; t: T; onRefresh: () => void; data: UsagePayload | null; refreshing: boolean; fetchFailed: boolean; onClose: () => void }) {
+export function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing, fetchFailed, onClose, backendVersion, firmwareVersion }: { prefs: Prefs; setPrefs: (fn: (p: Prefs) => Prefs) => void; t: T; onRefresh: () => void; data: UsagePayload | null; refreshing: boolean; fetchFailed: boolean; onClose: () => void; backendVersion?: string | null; firmwareVersion?: string | null }) {
   const effectiveTheme = resolveTheme(prefs.theme);
   const accents = ACCENTS[effectiveTheme];
   const { ready: ntcReady } = useNameToColor();
@@ -158,6 +159,12 @@ export function SettingsDrawer({ prefs, setPrefs, t, onRefresh, data, refreshing
         <button className="w-full cursor-pointer rounded-xl border-0 bg-accent p-[13px] text-[14.5px] font-bold text-accent-ink shadow-btn transition-[transform,box-shadow,opacity] duration-100 hover:-translate-y-px active:translate-y-0 active:opacity-90 [.flat_&]:shadow-none" onClick={onRefresh}>{refreshing ? "…" : t.refreshNow}</button>
         <div className="mt-3 text-xs leading-[1.55] text-ink3">{t.autoNote()}</div>
         {fetchFailed ? <div className="mt-1.5 text-xs text-bad">{t.fetchFail}</div> : null}
+        <div className="mb-[9px] mt-5 text-[11.5px] font-[650] uppercase tracking-[.6px] text-ink3">{t.versionSection}</div>
+        <div className="flex flex-col">
+          <Kv k={t.versionFrontend} v={APP_VERSION} />
+          <Kv k={t.versionBackend} v={backendVersion || t.versionUnknown} />
+          <Kv k={t.versionFirmware} v={firmwareVersion || t.versionUnknown} />
+        </div>
       </div>
     </>
   );

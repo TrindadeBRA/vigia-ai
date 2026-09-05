@@ -436,7 +436,7 @@ export default function Display() {
           )}
         </main>
       </div>
-      {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} /> : null}
+      {!isCanvas && settingsOpen ? <SettingsDrawer prefs={prefs} setPrefs={setPrefs} t={t} onRefresh={() => void loadUsage()} data={data} refreshing={refreshing} fetchFailed={fetchFailed} onClose={() => setSettingsOpen(false)} backendVersion={backendVersion} firmwareVersion={firmwareVersion} /> : null}
       <GridWallpaperModal
         open={gridWallpaperOpen}
         onClose={() => setGridWallpaperOpen(false)}
