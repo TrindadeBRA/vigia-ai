@@ -1,27 +1,31 @@
-import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
+import Fastify from "fastify";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { STATUS_CODES } from "node:http";
-import { VERSION } from "./version.js";
-import { lanIPv4 } from "./netutil.js";
-import { load } from "./store.js";
-import { createUsageRoutes } from "./routers/usage.js";
-import { createConfigRoutes } from "./routers/config.js";
-import { createAdsenseRoutes } from "./routers/adsense.js";
-import { createThemeRoutes } from "./routers/theme.js";
-import { createBoardRoutes } from "./routers/board.js";
-import { createAlarmsRoutes } from "./alarms/router.js";
-import { createTelegramRoutes } from "./telegram/router.js";
-import { createWallpapersRoutes } from "./routers/wallpapers/router.js";
-import { createWeatherRoutes } from "./routers/weather.js";
-import { createCurrenciesRoutes } from "./routers/currencies.js";
-import { UsageHub } from "./hub.js";
-import { AlarmEngine } from "./alarms/engine.js";
-import { TelegramPoller } from "./telegram/poller.js";
-import { existsSync, statSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { AlarmEngine } from "./alarms/engine.js";
+import { createAlarmsRoutes } from "./alarms/router.js";
+import { UsageHub } from "./hub.js";
+import { lanIPv4 } from "./netutil.js";
+import { createAdsenseRoutes } from "./routers/adsense.js";
+import { createBoardRoutes } from "./routers/board.js";
+import { createCalendarRoutes } from "./routers/calendar.js";
+import { createConfigRoutes } from "./routers/config.js";
+import { createCurrenciesRoutes } from "./routers/currencies.js";
+import { createGitRoutes } from "./routers/git.js";
+import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
+import { createRssRoutes } from "./routers/rss.js";
+import { createThemeRoutes } from "./routers/theme.js";
+import { createUsageRoutes } from "./routers/usage.js";
+import { createWallpapersRoutes } from "./routers/wallpapers/router.js";
+import { createWeatherRoutes } from "./routers/weather.js";
+import { load } from "./store.js";
+import { TelegramPoller } from "./telegram/poller.js";
+import { createTelegramRoutes } from "./telegram/router.js";
+import { VERSION } from "./version.js";
 
 function frontendDist(): string | null {
   const override = (process.env.VIGIA_FRONTEND_DIST || "").trim();
@@ -152,6 +156,10 @@ export async function createApp() {
   await fastify.register(createWallpapersRoutes, { prefix: "" });
   await fastify.register(createWeatherRoutes, { prefix: "" });
   await fastify.register(createCurrenciesRoutes, { prefix: "" });
+  await fastify.register(createGitRoutes, { prefix: "" });
+  await fastify.register(createRetroachievementsRoutes, { prefix: "" });
+  await fastify.register(createCalendarRoutes, { prefix: "" });
+  await fastify.register(createRssRoutes, { prefix: "" });
 
   const dist = frontendDist();
   if (dist) {
@@ -262,9 +270,9 @@ if (isMain) {
     for (const sig of signals) {
       process.on(sig, async () => {
         const timeout = setTimeout(() => {
-          for (const s of sockets) try { s.destroy(); } catch {}
+          for (const s of sockets) try { s.destroy(); } catch { }
         }, 3000);
-        try { await app.close(); } finally { clearTimeout(timeout); for (const s of sockets) try { s.destroy(); } catch {} process.exit(0); }
+        try { await app.close(); } finally { clearTimeout(timeout); for (const s of sockets) try { s.destroy(); } catch { } process.exit(0); }
       });
     }
   }

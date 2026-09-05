@@ -37,6 +37,10 @@ function logFailures(payload: Record<string, unknown>): void {
   if (cu !== null && typeof cu === "object" && !Array.isArray(cu) && !(cu as Record<string, unknown>).ok && (cu as Record<string, unknown>).error) {
     console.log(`[${utcNow()}] ERRO currencies: ${(cu as Record<string, unknown>).error}`);
   }
+  const rss = payload.rss as unknown;
+  if (rss !== null && typeof rss === "object" && !Array.isArray(rss) && !(rss as Record<string, unknown>).ok && (rss as Record<string, unknown>).error) {
+    console.log(`[${utcNow()}] ERRO rss: ${(rss as Record<string, unknown>).error}`);
+  }
 }
 
 class HubQueue {
@@ -53,7 +57,7 @@ class HubQueue {
       // mimic Python: try put, if full get_nowait then try put again, else discard
       try {
         this.items.shift();
-      } catch {}
+      } catch { }
     }
     if (this.items.length < this.maxSize) {
       this.items.push(payload);
@@ -136,16 +140,16 @@ export class UsageHub {
         this.deviceHeight = parseInt(hS, 10);
         if (Number.isNaN(this.deviceWidth)) this.deviceWidth = null;
         if (Number.isNaN(this.deviceHeight)) this.deviceHeight = null;
-      } catch {}
+      } catch { }
     }
   }
 
   async start(): Promise<void> {
     if (this._task !== null) return;
     // background initial refresh (not blocking startup)
-    void this.refresh().catch(() => {});
+    void this.refresh().catch(() => { });
     this._task = setInterval(() => {
-      void this.refresh().catch(() => {});
+      void this.refresh().catch(() => { });
     }, this.seconds * 1000);
     // allow Node to not keep process alive only for this timer? not needed
     if (this._task && typeof (this._task as unknown as { unref?: () => void }).unref === "function") {
@@ -161,7 +165,7 @@ export class UsageHub {
     for (const q of [...this._queues]) {
       try {
         q.put(null);
-      } catch {}
+      } catch { }
     }
   }
 

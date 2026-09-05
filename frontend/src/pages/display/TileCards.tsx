@@ -8,7 +8,10 @@ import { CreditsBoardCard, creditsAllowedSizes, creditsSizeLabel } from "../../c
 import { CurrenciesBoardCard, currenciesAllowedSizes, currenciesSizeLabel } from "../../components/cards/CurrenciesCard";
 import { CursorBoardCard, cursorAllowedSizes, cursorSizeLabel } from "../../components/cards/CursorCard";
 import { EyeBoardCard, eyeAllowedSizes, eyeSizeLabel } from "../../components/cards/EyeCard";
+import { GitBoardCard, gitAllowedSizes, gitSizeLabel } from "../../components/cards/GitCard";
 import { GptBoardCard, gptAllowedSizes, gptSizeLabel } from "../../components/cards/GptCard";
+import { RetroAchievementsBoardCard, retroAllowedSizes, retroSizeLabel } from "../../components/cards/RetroAchievementsCard";
+import { RssBoardCard, rssAllowedSizes, rssSizeLabel } from "../../components/cards/RssCard";
 import { WeatherBoardCard, weatherAllowedSizes, weatherSizeLabel } from "../../components/cards/WeatherCard";
 import type { T } from "../../i18n";
 import { viewFade } from "../../tw";
@@ -155,6 +158,45 @@ export function AdsenseTileCard({ p, size, dragging, lifted, t, grip, onOpen, on
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => adsenseSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
       ) : null}
       <AdsenseBoardCard metrics={p.metrics} label={p.label} ok={p.ok} error={p.error} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+export function GitTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const allowed = gitAllowedSizes(p.gitRepo ?? null);
+  const isClone = isCloneId(p.id);
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)}>
+      {!lifted ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => gitSizeLabel(s, t, p.gitRepo ?? null)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
+      ) : null}
+      <GitBoardCard repo={p.gitRepo ?? null} git={p.git} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+export function RetroAchievementsTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const allowed = retroAllowedSizes(p.retroachievements ?? null);
+  const isClone = isCloneId(p.id);
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)}>
+      {!lifted ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => retroSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
+      ) : null}
+      <RetroAchievementsBoardCard account={p.retroachievements!} metrics={p.metrics} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
+export function RssTileCard({ p, size, dragging, lifted, t, grip, onOpen, onSetSize, onDuplicate, onRemove }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void }) {
+  const allowed = rssAllowedSizes(p.rss);
+  const isClone = isCloneId(p.id);
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)}>
+      {!lifted ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => rssSizeLabel(s, t, p.rss)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} />
+      ) : null}
+      <RssBoardCard rss={p.rss} t={t} size={size} onOpen={onOpen} />
     </div>
   );
 }

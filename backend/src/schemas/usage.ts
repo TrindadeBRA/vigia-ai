@@ -1,6 +1,10 @@
 import { z } from "zod";
-import { WeatherPayloadSchema } from "./weather.js";
+import { CalendarPayloadSchema } from "./calendar.js";
 import { CurrenciesPayloadSchema } from "./currencies.js";
+import { GitPayloadSchema } from "./git.js";
+import { RetroAchievementsAccountSchema } from "./retroachievements.js";
+import { RssPayloadSchema } from "./rss.js";
+import { WeatherPayloadSchema } from "./weather.js";
 
 export const ProviderIdSchema = z.enum([
   "claude",
@@ -12,6 +16,7 @@ export const ProviderIdSchema = z.enum([
   "fal",
   "bitcoin",
   "adsense",
+  "retroachievements",
 ]);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
 
@@ -248,8 +253,12 @@ export const UsagePayloadSchema = z.object({
   fal: z.array(CreditsAccountSchema),
   bitcoin: z.array(BitcoinAccountSchema),
   adsense: z.array(AdsenseAccountSchema),
+  retroachievements: z.array(RetroAchievementsAccountSchema).default([]),
   weather: WeatherPayloadSchema.nullable().default(null),
   currencies: CurrenciesPayloadSchema.nullable().default(null),
+  git: GitPayloadSchema.nullable().default(null),
+  calendar: CalendarPayloadSchema.nullable().default(null),
+  rss: RssPayloadSchema.nullable().default(null),
 });
 export type UsagePayload = z.infer<typeof UsagePayloadSchema>;
 

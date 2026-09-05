@@ -2,8 +2,8 @@
  * Cotação de moedas: lista livre do usuário, fiat (câmbio) + cripto (CoinGecko).
  * Port of backend-python-legacy/app/providers/currencies.py
  */
-import { httpJson } from "../httpClient.js";
 import { utcNow } from "../formatting.js";
+import { httpJson } from "../httpClient.js";
 import { fetchSimplePrice } from "./coingecko.js";
 
 const FIAT_RE = /^[A-Za-z]{3}$/;

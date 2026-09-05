@@ -130,6 +130,42 @@ type Strings = {
   widgetRemove: string;
   widgetSmall: string;
   widgetQuarter: string;
+  // Git
+  git: string;
+  gitEmpty: string;
+  gitCommits: string;
+  gitCommit: string;
+  gitBranch: string;
+  gitNoCommits: string;
+  gitLastCommit: string;
+  gitAuthor: string;
+  gitDate: string;
+  gitMessage: string;
+  gitDetails: string;
+  gitCopyHash: string;
+  gitCopied: string;
+  gitOpenRepo: string;
+  // RetroAchievements
+  retro: string;
+  retroPoints: string;
+  retroRank: string;
+  retroLastGame: string;
+  retroRecentGames: string;
+  retroRecentAchievements: string;
+  retroMastery: string;
+  retroBeaten: string;
+  retroTruePoints: string;
+  // Calendário
+  calendar: string;
+  calendarEvents: string;
+  calendarTasks: string;
+  calendarEmpty: string;
+  calendarNoEvents: string;
+  // RSS
+  rss: string;
+  rssEmpty: string;
+  rssNoItems: string;
+  rssLatest: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -253,6 +289,38 @@ export const STR: Record<Lang, Strings> = {
     widgetRemove: "Remover",
     widgetSmall: "Pequeno",
     widgetQuarter: "1/4",
+    git: "Git",
+    gitEmpty: "Nenhum repositório configurado.",
+    gitCommits: "commits",
+    gitCommit: "commit",
+    gitBranch: "branch",
+    gitNoCommits: "Nenhum commit encontrado.",
+    gitLastCommit: "Último commit",
+    gitAuthor: "Autor",
+    gitDate: "Data",
+    gitMessage: "Mensagem",
+    gitDetails: "Detalhes",
+    gitCopyHash: "Copiar hash",
+    gitCopied: "Copiado!",
+    gitOpenRepo: "Abrir repositório",
+    retro: "RetroAchievements",
+    retroPoints: "Pontos",
+    retroRank: "Ranking",
+    retroLastGame: "Último jogo",
+    retroRecentGames: "Jogos recentes",
+    retroRecentAchievements: "Conquistas recentes",
+    retroMastery: "Mastery",
+    retroBeaten: "Beaten",
+    retroTruePoints: "True points",
+    calendar: "Calendário",
+    calendarEvents: "Eventos",
+    calendarTasks: "Tarefas",
+    calendarEmpty: "Nenhum calendário configurado.",
+    calendarNoEvents: "Nenhum evento próximo.",
+    rss: "RSS",
+    rssEmpty: "Nenhum feed configurado.",
+    rssNoItems: "Nenhuma notícia no feed.",
+    rssLatest: "Última notícia",
   },
   en: {
     overview: "Overview",
@@ -374,6 +442,38 @@ export const STR: Record<Lang, Strings> = {
     widgetRemove: "Remove",
     widgetSmall: "Small",
     widgetQuarter: "1/4",
+    git: "Git",
+    gitEmpty: "No repository configured.",
+    gitCommits: "commits",
+    gitCommit: "commit",
+    gitBranch: "branch",
+    gitNoCommits: "No commits found.",
+    gitLastCommit: "Last commit",
+    gitAuthor: "Author",
+    gitDate: "Date",
+    gitMessage: "Message",
+    gitDetails: "Details",
+    gitCopyHash: "Copy hash",
+    gitCopied: "Copied!",
+    gitOpenRepo: "Open repository",
+    retro: "RetroAchievements",
+    retroPoints: "Points",
+    retroRank: "Rank",
+    retroLastGame: "Last game",
+    retroRecentGames: "Recent games",
+    retroRecentAchievements: "Recent achievements",
+    retroMastery: "Mastery",
+    retroBeaten: "Beaten",
+    retroTruePoints: "True points",
+    calendar: "Calendar",
+    calendarEvents: "Events",
+    calendarTasks: "Tasks",
+    calendarEmpty: "No calendar configured.",
+    calendarNoEvents: "No upcoming events.",
+    rss: "RSS",
+    rssEmpty: "No feed configured.",
+    rssNoItems: "No items in feed.",
+    rssLatest: "Latest",
   },
   es: {
     overview: "Resumen",
@@ -495,6 +595,38 @@ export const STR: Record<Lang, Strings> = {
     widgetRemove: "Quitar",
     widgetSmall: "Pequeño",
     widgetQuarter: "1/4",
+    git: "Git",
+    gitEmpty: "Ningún repositorio configurado.",
+    gitCommits: "commits",
+    gitCommit: "commit",
+    gitBranch: "rama",
+    gitNoCommits: "No se encontraron commits.",
+    gitLastCommit: "Último commit",
+    gitAuthor: "Autor",
+    gitDate: "Fecha",
+    gitMessage: "Mensaje",
+    gitDetails: "Detalles",
+    gitCopyHash: "Copiar hash",
+    gitCopied: "¡Copiado!",
+    gitOpenRepo: "Abrir repositorio",
+    retro: "RetroAchievements",
+    retroPoints: "Puntos",
+    retroRank: "Ranking",
+    retroLastGame: "Último juego",
+    retroRecentGames: "Juegos recientes",
+    retroRecentAchievements: "Logros recientes",
+    retroMastery: "Maestría",
+    retroBeaten: "Completado",
+    retroTruePoints: "True points",
+    calendar: "Calendario",
+    calendarEvents: "Eventos",
+    calendarTasks: "Tareas",
+    calendarEmpty: "Ningún calendario configurado.",
+    calendarNoEvents: "Ningún evento próximo.",
+    rss: "RSS",
+    rssEmpty: "Ningún feed configurado.",
+    rssNoItems: "Ningún artículo en el feed.",
+    rssLatest: "Último",
   },
 };
 

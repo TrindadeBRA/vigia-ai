@@ -226,6 +226,90 @@ export type ConfigCopy = {
   currenciesSearch: string;
   currenciesSearching: string;
   currenciesNoResults: string;
+  currenciesNativeTitle: string;
+  currenciesNativeLead: string;
+  currenciesNativeCodeLabel: string;
+  currenciesNativeCodePh: string;
+  currenciesNativeValueLabel: string;
+  currenciesNativeValuePh: string;
+  currenciesNativeHint: string;
+  currenciesNativeClear: string;
+  gitTitle: string;
+  gitLead: string;
+  gitSourceLabel: string;
+  gitSourcePh: string;
+  gitSourceHint: string;
+  gitLabelLabel: string;
+  gitLabelPh: string;
+  gitLimitLabel: string;
+  gitBranchLabel: string;
+  gitBranchPh: string;
+  gitBranchHint: string;
+  gitAdd: string;
+  gitPreview: string;
+  gitPreviewing: string;
+  gitListLabel: string;
+  gitEmpty: string;
+  gitNoPreview: string;
+  gitPreviewOk: string;
+  gitPreviewFail: string;
+  // RetroAchievements
+  retroTitle: string;
+  retroLead: string;
+  retroNotConfigured: string;
+  retroAddTitle: string;
+  retroUserLabel: string;
+  retroUserPh: string;
+  retroUserHint: string;
+  retroSecretLabel: string;
+  retroSecretPh: string;
+  retroSecretHint: string;
+  retroPreview: string;
+  retroPreviewing: string;
+  retroPreviewOk: string;
+  retroPreviewFail: string;
+  retroAdd: string;
+  retroListLabel: string;
+  retroNeedSecret: string;
+  // Calendário
+  calendarTitle: string;
+  calendarLead: string;
+  calendarUrlLabel: string;
+  calendarUrlPh: string;
+  calendarUrlHint: string;
+  calendarLabelLabel: string;
+  calendarLabelPh: string;
+  calendarKindLabel: string;
+  calendarKindEvents: string;
+  calendarKindTasks: string;
+  calendarLimitLabel: string;
+  calendarLimitHint: string;
+  calendarAdd: string;
+  calendarPreview: string;
+  calendarPreviewing: string;
+  calendarListLabel: string;
+  calendarEmpty: string;
+  calendarNoPreview: string;
+  calendarPreviewOk: string;
+  calendarPreviewFail: string;
+  // RSS
+  rssTitle: string;
+  rssLead: string;
+  rssUrlLabel: string;
+  rssUrlPh: string;
+  rssUrlHint: string;
+  rssLabelLabel: string;
+  rssLabelPh: string;
+  rssLimitLabel: string;
+  rssLimitHint: string;
+  rssAdd: string;
+  rssPreview: string;
+  rssPreviewing: string;
+  rssListLabel: string;
+  rssEmpty: string;
+  rssNoPreview: string;
+  rssPreviewOk: string;
+  rssPreviewFail: string;
 };
 
 export const CONFIG_STR: Record<Lang, ConfigCopy> = {
@@ -449,6 +533,87 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     currenciesSearch: "Buscar",
     currenciesSearching: "Buscando…",
     currenciesNoResults: "Nenhuma criptomoeda encontrada.",
+    currenciesNativeTitle: "Sua moeda",
+    currenciesNativeLead: "Informe o código e quanto vale 1 unidade na moeda base. As cotações passam a ser exibidas convertidas para a sua moeda.",
+    currenciesNativeCodeLabel: "Código da sua moeda",
+    currenciesNativeCodePh: "ex.: VIGIA, MEUCOIN",
+    currenciesNativeValueLabel: "Valor de 1 unidade (em",
+    currenciesNativeValuePh: "ex.: 2,50",
+    currenciesNativeHint: "Ex.: se 1 VIGIA = 2,50 BRL e o dólar está 5,00 BRL, o card mostra 2 VIGIA por dólar.",
+    currenciesNativeClear: "Limpar conversão",
+    gitTitle: "Git — repositórios",
+    gitLead: "Cole a URL de qualquer repositório (GitHub, GitLab, Bitbucket…) ou aponte para uma pasta local com um .git válido. O card mostra os últimos commits.",
+    gitSourceLabel: "URL ou caminho local",
+    gitSourcePh: "https://github.com/org/repo ou /home/user/projetos/repo",
+    gitSourceHint: "URLs https/ssh e caminhos absolutos são aceitos. Repositórios privados precisam estar acessíveis sem senha ou já clonados localmente.",
+    gitLabelLabel: "Nome (opcional)",
+    gitLabelPh: "ex.: vigia-ai",
+    gitLimitLabel: "Quantos commits mostrar",
+    gitBranchLabel: "Branch (opcional)",
+    gitBranchPh: "ex.: main",
+    gitBranchHint: "Deixe vazio para usar o HEAD atual.",
+    gitAdd: "Adicionar repositório",
+    gitPreview: "Testar",
+    gitPreviewing: "Testando…",
+    gitListLabel: "Repositórios monitorados",
+    gitEmpty: "Nenhum repositório adicionado ainda.",
+    gitNoPreview: "Cole uma URL ou caminho para testar.",
+    gitPreviewOk: "Repositório acessível.",
+    gitPreviewFail: "Não foi possível acessar.",
+    retroTitle: "RetroAchievements",
+    retroLead: "Veja seu perfil de conquistas retrô no painel — pontos, ranking, jogos recentes e últimas conquistas desbloqueadas.",
+    retroNotConfigured: "Nenhuma conta RetroAchievements configurada.",
+    retroAddTitle: "Adicionar conta",
+    retroUserLabel: "Usuário (opcional se já estiver no formato usuario:apikey)",
+    retroUserPh: "ex.: MeuUser",
+    retroUserHint: "Se colar no formato usuario:apikey, este campo é ignorado. Senão, preencha o usuário aqui e cole só a API key abaixo.",
+    retroSecretLabel: "Usuário e API key",
+    retroSecretPh: "MeuUser:abc123... ou só a API key",
+    retroSecretHint: "Cole no formato usuario:apikey (ex.: MeuUser:abc123...). A API key você gera em retroachievements.org/controlpanel.php. Também aceita usuario|apikey ou JSON.",
+    retroPreview: "Testar",
+    retroPreviewing: "Testando…",
+    retroPreviewOk: "Conta válida.",
+    retroPreviewFail: "Não foi possível validar.",
+    retroAdd: "Adicionar conta",
+    retroListLabel: "Contas RetroAchievements",
+    retroNeedSecret: "Cole o usuário e a API key antes de adicionar.",
+    calendarTitle: "Calendário — eventos e tarefas",
+    calendarLead: "Cole o link público do seu calendário (Google Calendar, Outlook ou iCloud) e veja os próximos eventos no painel. Cada calendário pode ser de eventos ou de tarefas, com limite configurável.",
+    calendarUrlLabel: "Link público (ICS)",
+    calendarUrlPh: "https://calendar.google.com/calendar/ical/.../public/basic.ics",
+    calendarUrlHint: "Google: Configurações do calendário → Integrar calendário → Endereço secreto em formato iCal. Outlook: Compartilhar → Publicar → link ICS. iCloud: Compartilhar calendário → Público → Copiar link. Também aceita webcal://.",
+    calendarLabelLabel: "Nome (opcional)",
+    calendarLabelPh: "ex.: Trabalho, Pessoal",
+    calendarKindLabel: "Tipo",
+    calendarKindEvents: "Eventos",
+    calendarKindTasks: "Tarefas",
+    calendarLimitLabel: "Quantos itens mostrar",
+    calendarLimitHint: "Quantos próximos eventos/tarefas exibir no card. O card pequeno mostra só o próximo; os maiores mostram a lista.",
+    calendarAdd: "Adicionar calendário",
+    calendarPreview: "Testar",
+    calendarPreviewing: "Testando…",
+    calendarListLabel: "Calendários",
+    calendarEmpty: "Nenhum calendário adicionado ainda.",
+    calendarNoPreview: "Cole um link para testar.",
+    calendarPreviewOk: "Calendário acessível.",
+    calendarPreviewFail: "Não foi possível acessar.",
+    rssTitle: "RSS — notícias e feeds",
+    rssLead: "Cole a URL de qualquer feed RSS ou Atom (notícias, blogs, podcasts…) e veja as últimas manchetes no painel. Cada feed tem limite configurável.",
+    rssUrlLabel: "URL do feed",
+    rssUrlPh: "https://exemplo.com/rss.xml ou https://exemplo.com/feed.atom",
+    rssUrlHint: "Qualquer URL que retorne RSS 2.0 ou Atom. Dica: no site que você quer acompanhar, procure por ícone laranja de RSS ou /rss, /feed, /atom.xml.",
+    rssLabelLabel: "Nome (opcional)",
+    rssLabelPh: "ex.: G1, Tecnoblog, Meu blog",
+    rssLimitLabel: "Quantas notícias mostrar",
+    rssLimitHint: "Quantas manchetes exibir por feed. O card pequeno mostra só a última; os maiores mostram a lista.",
+    rssAdd: "Adicionar feed",
+    rssPreview: "Testar",
+    rssPreviewing: "Testando…",
+    rssListLabel: "Feeds",
+    rssEmpty: "Nenhum feed adicionado ainda.",
+    rssNoPreview: "Cole uma URL para testar.",
+    rssPreviewOk: "Feed acessível.",
+    rssPreviewFail: "Não foi possível acessar.",
   },
   en: {
     title: "Settings",
@@ -670,6 +835,87 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     currenciesSearch: "Search",
     currenciesSearching: "Searching…",
     currenciesNoResults: "No cryptocurrency found.",
+    currenciesNativeTitle: "Your currency",
+    currenciesNativeLead: "Enter the code and how much 1 unit is worth in the base currency. Quotes will be shown converted to your currency.",
+    currenciesNativeCodeLabel: "Your currency code",
+    currenciesNativeCodePh: "e.g. VIGIA, MYCOIN",
+    currenciesNativeValueLabel: "Value of 1 unit (in",
+    currenciesNativeValuePh: "e.g. 2.50",
+    currenciesNativeHint: "E.g. if 1 VIGIA = 2.50 BRL and USD is 5.00 BRL, the card shows 2 VIGIA per USD.",
+    currenciesNativeClear: "Clear conversion",
+    gitTitle: "Git — repositories",
+    gitLead: "Paste any repository URL (GitHub, GitLab, Bitbucket…) or point to a local folder with a valid .git. The card shows the latest commits.",
+    gitSourceLabel: "URL or local path",
+    gitSourcePh: "https://github.com/org/repo or /home/user/projects/repo",
+    gitSourceHint: "https/ssh URLs and absolute paths are accepted. Private repos must be accessible without a password or already cloned locally.",
+    gitLabelLabel: "Name (optional)",
+    gitLabelPh: "e.g. vigia-ai",
+    gitLimitLabel: "How many commits to show",
+    gitBranchLabel: "Branch (optional)",
+    gitBranchPh: "e.g. main",
+    gitBranchHint: "Leave empty to use the current HEAD.",
+    gitAdd: "Add repository",
+    gitPreview: "Test",
+    gitPreviewing: "Testing…",
+    gitListLabel: "Monitored repositories",
+    gitEmpty: "No repository added yet.",
+    gitNoPreview: "Paste a URL or path to test.",
+    gitPreviewOk: "Repository reachable.",
+    gitPreviewFail: "Could not reach repository.",
+    retroTitle: "RetroAchievements",
+    retroLead: "See your retro achievement profile on the board — points, rank, recent games and latest unlocks.",
+    retroNotConfigured: "No RetroAchievements account configured.",
+    retroAddTitle: "Add account",
+    retroUserLabel: "Username (optional if pasting as user:apikey)",
+    retroUserPh: "e.g. MyUser",
+    retroUserHint: "If you paste as user:apikey, this field is ignored. Otherwise, fill the username here and paste only the API key below.",
+    retroSecretLabel: "Username and API key",
+    retroSecretPh: "MyUser:abc123... or just the API key",
+    retroSecretHint: "Paste as user:apikey (e.g. MyUser:abc123...). Generate the API key at retroachievements.org/controlpanel.php. Also accepts user|apikey or JSON.",
+    retroPreview: "Test",
+    retroPreviewing: "Testing…",
+    retroPreviewOk: "Account valid.",
+    retroPreviewFail: "Could not validate.",
+    retroAdd: "Add account",
+    retroListLabel: "RetroAchievements accounts",
+    retroNeedSecret: "Paste the username and API key before adding.",
+    calendarTitle: "Calendar — events & tasks",
+    calendarLead: "Paste your calendar's public link (Google Calendar, Outlook or iCloud) and see upcoming events on the board. Each calendar can be events or tasks, with a configurable limit.",
+    calendarUrlLabel: "Public link (ICS)",
+    calendarUrlPh: "https://calendar.google.com/calendar/ical/.../public/basic.ics",
+    calendarUrlHint: "Google: Calendar settings → Integrate calendar → Secret address in iCal format. Outlook: Share → Publish → ICS link. iCloud: Share calendar → Public → Copy link. Also accepts webcal://.",
+    calendarLabelLabel: "Name (optional)",
+    calendarLabelPh: "e.g. Work, Personal",
+    calendarKindLabel: "Type",
+    calendarKindEvents: "Events",
+    calendarKindTasks: "Tasks",
+    calendarLimitLabel: "How many items to show",
+    calendarLimitHint: "How many upcoming events/tasks to show on the card. The small card shows only the next one; larger cards show the list.",
+    calendarAdd: "Add calendar",
+    calendarPreview: "Test",
+    calendarPreviewing: "Testing…",
+    calendarListLabel: "Calendars",
+    calendarEmpty: "No calendar added yet.",
+    calendarNoPreview: "Paste a link to test.",
+    calendarPreviewOk: "Calendar reachable.",
+    calendarPreviewFail: "Could not reach calendar.",
+    rssTitle: "RSS — news & feeds",
+    rssLead: "Paste any RSS or Atom feed URL (news, blogs, podcasts…) and see the latest headlines on the board. Each feed has a configurable limit.",
+    rssUrlLabel: "Feed URL",
+    rssUrlPh: "https://example.com/rss.xml or https://example.com/feed.atom",
+    rssUrlHint: "Any URL that returns RSS 2.0 or Atom. Tip: look for the orange RSS icon or /rss, /feed, /atom.xml on the site you want to follow.",
+    rssLabelLabel: "Name (optional)",
+    rssLabelPh: "e.g. BBC, TechCrunch, My blog",
+    rssLimitLabel: "How many items to show",
+    rssLimitHint: "How many headlines per feed. The small card shows only the latest; larger cards show the list.",
+    rssAdd: "Add feed",
+    rssPreview: "Test",
+    rssPreviewing: "Testing…",
+    rssListLabel: "Feeds",
+    rssEmpty: "No feed added yet.",
+    rssNoPreview: "Paste a URL to test.",
+    rssPreviewOk: "Feed reachable.",
+    rssPreviewFail: "Could not reach feed.",
   },
   es: {
     title: "Configuración",
@@ -891,6 +1137,87 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     currenciesSearch: "Buscar",
     currenciesSearching: "Buscando…",
     currenciesNoResults: "Ninguna criptomoneda encontrada.",
+    currenciesNativeTitle: "Tu moneda",
+    currenciesNativeLead: "Ingresa el código y cuánto vale 1 unidad en la moneda base. Las cotizaciones se mostrarán convertidas a tu moneda.",
+    currenciesNativeCodeLabel: "Código de tu moneda",
+    currenciesNativeCodePh: "ej.: VIGIA, MIMONEDA",
+    currenciesNativeValueLabel: "Valor de 1 unidad (en",
+    currenciesNativeValuePh: "ej.: 2,50",
+    currenciesNativeHint: "Ej.: si 1 VIGIA = 2,50 BRL y el dólar está 5,00 BRL, el card muestra 2 VIGIA por dólar.",
+    currenciesNativeClear: "Limpiar conversión",
+    gitTitle: "Git — repositorios",
+    gitLead: "Pega cualquier URL de repositorio (GitHub, GitLab, Bitbucket…) o apunta a una carpeta local con un .git válido. El card muestra los últimos commits.",
+    gitSourceLabel: "URL o ruta local",
+    gitSourcePh: "https://github.com/org/repo o /home/user/proyectos/repo",
+    gitSourceHint: "Se aceptan URLs https/ssh y rutas absolutas. Los repos privados deben ser accesibles sin contraseña o ya clonados localmente.",
+    gitLabelLabel: "Nombre (opcional)",
+    gitLabelPh: "ej.: vigia-ai",
+    gitLimitLabel: "Cuántos commits mostrar",
+    gitBranchLabel: "Rama (opcional)",
+    gitBranchPh: "ej.: main",
+    gitBranchHint: "Deja vacío para usar el HEAD actual.",
+    gitAdd: "Añadir repositorio",
+    gitPreview: "Probar",
+    gitPreviewing: "Probando…",
+    gitListLabel: "Repositorios monitoreados",
+    gitEmpty: "Ningún repositorio añadido aún.",
+    gitNoPreview: "Pega una URL o ruta para probar.",
+    gitPreviewOk: "Repositorio accesible.",
+    gitPreviewFail: "No se pudo acceder.",
+    retroTitle: "RetroAchievements",
+    retroLead: "Mira tu perfil de logros retro en el panel — puntos, ranking, juegos recientes y últimos desbloqueos.",
+    retroNotConfigured: "Ninguna cuenta de RetroAchievements configurada.",
+    retroAddTitle: "Añadir cuenta",
+    retroUserLabel: "Usuario (opcional si pegas como usuario:apikey)",
+    retroUserPh: "ej.: MiUsuario",
+    retroUserHint: "Si pegas como usuario:apikey, este campo se ignora. Si no, completa el usuario aquí y pega solo la API key abajo.",
+    retroSecretLabel: "Usuario y API key",
+    retroSecretPh: "MiUsuario:abc123... o solo la API key",
+    retroSecretHint: "Pega como usuario:apikey (ej.: MiUsuario:abc123...). Genera la API key en retroachievements.org/controlpanel.php. También acepta usuario|apikey o JSON.",
+    retroPreview: "Probar",
+    retroPreviewing: "Probando…",
+    retroPreviewOk: "Cuenta válida.",
+    retroPreviewFail: "No se pudo validar.",
+    retroAdd: "Añadir cuenta",
+    retroListLabel: "Cuentas de RetroAchievements",
+    retroNeedSecret: "Pega el usuario y la API key antes de añadir.",
+    calendarTitle: "Calendario — eventos y tareas",
+    calendarLead: "Pega el enlace público de tu calendario (Google Calendar, Outlook o iCloud) y ve los próximos eventos en el panel. Cada calendario puede ser de eventos o de tareas, con límite configurable.",
+    calendarUrlLabel: "Enlace público (ICS)",
+    calendarUrlPh: "https://calendar.google.com/calendar/ical/.../public/basic.ics",
+    calendarUrlHint: "Google: Ajustes del calendario → Integrar calendario → Dirección secreta en formato iCal. Outlook: Compartir → Publicar → enlace ICS. iCloud: Compartir calendario → Público → Copiar enlace. También acepta webcal://.",
+    calendarLabelLabel: "Nombre (opcional)",
+    calendarLabelPh: "ej.: Trabajo, Personal",
+    calendarKindLabel: "Tipo",
+    calendarKindEvents: "Eventos",
+    calendarKindTasks: "Tareas",
+    calendarLimitLabel: "Cuántos elementos mostrar",
+    calendarLimitHint: "Cuántos próximos eventos/tareas mostrar en la tarjeta. La tarjeta pequeña muestra solo el próximo; las más grandes muestran la lista.",
+    calendarAdd: "Añadir calendario",
+    calendarPreview: "Probar",
+    calendarPreviewing: "Probando…",
+    calendarListLabel: "Calendarios",
+    calendarEmpty: "Ningún calendario añadido aún.",
+    calendarNoPreview: "Pega un enlace para probar.",
+    calendarPreviewOk: "Calendario accesible.",
+    calendarPreviewFail: "No se pudo acceder.",
+    rssTitle: "RSS — noticias y feeds",
+    rssLead: "Pega la URL de cualquier feed RSS o Atom (noticias, blogs, podcasts…) y ve los últimos titulares en el panel. Cada feed tiene límite configurable.",
+    rssUrlLabel: "URL del feed",
+    rssUrlPh: "https://ejemplo.com/rss.xml o https://ejemplo.com/feed.atom",
+    rssUrlHint: "Cualquier URL que devuelva RSS 2.0 o Atom. Consejo: busca el icono naranja de RSS o /rss, /feed, /atom.xml en el sitio que quieres seguir.",
+    rssLabelLabel: "Nombre (opcional)",
+    rssLabelPh: "ej.: El País, Xataka, Mi blog",
+    rssLimitLabel: "Cuántos titulares mostrar",
+    rssLimitHint: "Cuántos titulares por feed. La tarjeta pequeña muestra solo el último; las más grandes muestran la lista.",
+    rssAdd: "Añadir feed",
+    rssPreview: "Probar",
+    rssPreviewing: "Probando…",
+    rssListLabel: "Feeds",
+    rssEmpty: "Ningún feed añadido aún.",
+    rssNoPreview: "Pega una URL para probar.",
+    rssPreviewOk: "Feed accesible.",
+    rssPreviewFail: "No se pudo acceder.",
   },
 };
 

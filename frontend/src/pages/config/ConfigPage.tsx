@@ -1,12 +1,16 @@
 import { Link } from "react-router-dom";
 import { Skeleton } from "../../components/Skeleton";
+import { isDesktop } from "../../desktop";
 import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
 import { AdSenseConfigCard } from "./AdSenseConfigCard";
+import { CalendarConfigCard } from "./CalendarConfigCard";
 import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
 import { DesktopCard } from "./DesktopCard";
+import { GitConfigCard } from "./GitConfigCard";
 import { ProviderCard } from "./ProviderCard";
+import { RetroAchievementsConfigCard } from "./RetroAchievementsConfigCard";
+import { RssConfigCard } from "./RssConfigCard";
 import { Button, Fold } from "./ui";
-import { isDesktop } from "../../desktop";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
 import { WeatherConfigCard } from "./WeatherConfigCard";
@@ -179,6 +183,10 @@ export default function ConfigPage() {
       </div>
       <div className={cfgGrid}>
         <WeatherConfigCard weather={cfg.weather} c={c} onReload={reload} />
+        <GitConfigCard git={cfg.git} c={c} onReload={reload} />
+        <RetroAchievementsConfigCard c={c} onReload={reload} provider={cfg.providers.retroachievements as unknown as { configured: boolean; hidden: boolean; label: string; suffix: string | null; mode: string; accounts: Array<{ id: string; label: string; suffix: string | null }> }} />
+        <CalendarConfigCard calendar={cfg.calendar} c={c} onReload={reload} />
+        <RssConfigCard rss={cfg.rss} c={c} onReload={reload} />
       </div>
 
       <div className="mt-2 w-full">

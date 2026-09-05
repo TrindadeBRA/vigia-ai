@@ -253,3 +253,85 @@ export async function fetchCurrencies(): Promise<import("./types").CurrenciesPay
   if (!res.ok) throw new Error(`currencies HTTP ${res.status}`);
   return res.json() as Promise<import("./types").CurrenciesPayload>;
 }
+
+// ── Git ──────────────────────────────────────────────────────────────
+
+export async function fetchGitConfig(): Promise<import("./types").GitConfig> {
+  const res = await fetch("/api/git/config", { cache: "no-store" });
+  if (!res.ok) throw new Error(`git config HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").GitConfig>;
+}
+
+export async function patchGitConfig(body: { enabled?: boolean; hidden?: boolean }): Promise<MutateResult> {
+  const res = await fetch("/api/git/config", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as MutateResult & { detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data, res.status) };
+  return { ok: true };
+}
+
+export async function addGitRepo(body: { source: string; label?: string; limit?: number; branch?: string | null }): Promise<MutateResult & { id?: string }> {
+  const res = await fetch("/api/git/repos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as MutateResult & { id?: string; detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data, res.status) };
+  return { ok: true, id: data.id };
+}
+
+export async function patchGitRepo(id: string, body: { source?: string; label?: string; limit?: number; branch?: string | null }): Promise<MutateResult> {
+  const res = await fetch(`/api/git/repos/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as MutateResult & { detail?: unknown };
+  if (!res.ok) return { ok: false, error: errorFromBody(data, res.status) };
+  return { ok: true };
+}
+
+export async function deleteGitRepo(id: string): Promise<MutateResult> {
+  const res = await fetch(`/api/git/repos/${id}`, { method: "DELETE" });
+  return readMutate(res);
+}
+
+export async function previewGitRepo(body: { source: string; label?: string; limit?: number; branch?: string | null }): Promise<import("./types").GitRepo> {
+  const res = await fetch("/api/git/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as import("./types").GitRepo & { detail?: unknown; error?: string };
+  if (!res.ok) throw new Error((data as { error?: string }).error || (data as { detail?: unknown }).detail as string || `HTTP ${res.status}`);
+  return data as import("./types").GitRepo;
+}
+
+export async function fetchGit(): Promise<import("./types").GitPayload> {
+  const res = await fetch("/api/git", { cache: "no-store" });
+  if (!res.ok) throw new Error(`git HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").GitPayload>;
+}
+
+// ── RetroAchievements ────────────────────────────────────────────────
+
+export async function previewRetroAchievements(body: { secret: string; label?: string }): Promise<import("./types").RetroAchievementsAccount> {
+  const res = await fetch("/api/retroachievements/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as import("./types").RetroAchievementsAccount & { detail?: unknown; error?: string };
+  if (!res.ok) throw new Error((data as { error?: string }).error || (data as { detail?: unknown }).detail as string || `HTTP ${res.status}`);
+  return data as import("./types").RetroAchievementsAccount;
+}
+
+export async function fetchRetroachievements(): Promise<import("./types").RetroAchievementsAccount> {
+  const res = await fetch("/api/retroachievements", { cache: "no-store" });
+  if (!res.ok) throw new Error(`retroachievements HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").RetroAchievementsAccount>;
+}

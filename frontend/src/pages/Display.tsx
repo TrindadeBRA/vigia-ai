@@ -6,10 +6,10 @@ import { colsForWidth, sameBoard } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
+import { MenuIcon, SettingsIcon } from "../components/icons";
 import { Logo } from "../components/Logo";
 import { PixDonateModal } from "../components/PixDonateModal";
 import { Skeleton } from "../components/Skeleton";
-import { MenuIcon, SettingsIcon } from "../components/icons";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, countdownSecs, fmtClock, nextFetchAtMs, payloadAgeMs } from "../format";
 import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
@@ -18,7 +18,7 @@ import { ACCENTS, PALETTES, applyThemeVars } from "../theme";
 import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
-import { boardForCols, baseIdForProvider, expandProvidersWithClones } from "./display/boardHelpers";
+import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
 import { buildProviders, buildWidgetProviders } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
@@ -175,7 +175,7 @@ export default function Display() {
     // clones usam id "base::clone:N" — resolve para base para buscar ProviderMeta e conta
     const baseSelected = selectedId ? baseIdForProvider(selectedId) : null;
     meta = (baseSelected ? displayProviders.find((p) => p.id === selectedId) || providers.find((p) => p.id === baseSelected) : null) || null;
-    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies") {
+    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss") {
       const baseId = baseIdForProvider(meta.id);
       const idx = baseId.indexOf(":");
       const accountId = baseId.slice(idx + 1);
@@ -256,22 +256,22 @@ export default function Display() {
           )}
         >
           {!isCanvas ? (
-          <Sidebar
-            providers={providers}
-            section={section}
-            selectedId={selectedId}
-            open={sidebarOpen}
-            t={t}
-            nowActive={isNow}
-            configActive={isConfig}
-            setupActive={isSetup}
-            themeActive={isTheme}
-            alarmsActive={isAlarms}
-            onOverview={goOverview}
-            onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
-            onClose={() => setSidebarOpen(false)}
-            onOpenPix={() => setPixModalOpen(true)}
-          />
+            <Sidebar
+              providers={providers}
+              section={section}
+              selectedId={selectedId}
+              open={sidebarOpen}
+              t={t}
+              nowActive={isNow}
+              configActive={isConfig}
+              setupActive={isSetup}
+              themeActive={isTheme}
+              alarmsActive={isAlarms}
+              onOverview={goOverview}
+              onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
+              onClose={() => setSidebarOpen(false)}
+              onOpenPix={() => setPixModalOpen(true)}
+            />
           ) : null}
         </div>
         <main

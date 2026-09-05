@@ -19,7 +19,7 @@ type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss";
 };
 
 function Icon({ id }: { id: string }) {
@@ -36,7 +36,7 @@ function barFillStyle(pct: number, pal: Pal) {
 }
 
 function ProviderCard({ p, pal, t, onNavigate }: { p: ProviderMeta; pal: Pal; t: T; onNavigate: () => void }) {
-  if (p.provider === "weather" || p.kind === "weather" || p.provider === "currencies" || p.kind === "currencies") {
+  if (p.provider === "weather" || p.kind === "weather" || p.provider === "currencies" || p.kind === "currencies" || p.provider === "git" || p.kind === "git" || p.provider === "retroachievements" || p.kind === "retroachievements") {
     return null;
   }
 
@@ -125,7 +125,7 @@ export default function NowPage({
   const dateStr = `${weekday}, ${pad2(clockNow.getDate())}/${pad2(clockNow.getMonth() + 1)}/${clockNow.getFullYear()}`;
 
   const accountProviders = providers.filter(
-    (p) => p.provider !== "weather" && p.kind !== "weather" && p.provider !== "currencies" && p.kind !== "currencies",
+    (p) => p.provider !== "weather" && p.kind !== "weather" && p.provider !== "currencies" && p.kind !== "currencies" && p.provider !== "git" && p.kind !== "git",
   );
   const failing = accountProviders.filter((p) => !p.ok).length;
   const working = accountProviders.length - failing;
@@ -147,7 +147,7 @@ export default function NowPage({
           {timeStr}
         </div>
         <div className="mb-6 text-base capitalize tracking-[.3px] text-ink2 max-[860px]:text-sm">{dateStr}</div>
-        
+
         <div className="flex flex-wrap items-center justify-center gap-4 max-[860px]:gap-3">
           <div className="flex items-center gap-2 rounded-xl border border-edge bg-chip/50 px-4 py-2.5 backdrop-blur-sm max-[860px]:px-3 max-[860px]:py-2">
             <span className={cn("size-2 shrink-0 rounded-full", failing === 0 ? "bg-good shadow-[0_0_8px_var(--good)]" : "bg-bad shadow-[0_0_8px_var(--bad)]", "[.flat_&]:shadow-none")} />

@@ -2,6 +2,7 @@ import type { BitcoinAccount, GptAccount, UsagePayload } from "../../api/types";
 import type { WidgetKind } from "../../components/AddWidgetModal";
 import { getAdsenseMetrics } from "../../components/cards/AdsenseCard";
 import { getCreditsMetrics, getOpenCodeMetrics } from "../../components/cards/CreditsCard";
+import { getRetroMetrics } from "../../components/cards/RetroAchievementsCard";
 import { fmtBrl, fmtBtc, fmtCountdown, fmtCurrencyAmount, fmtRemain, fmtUsd } from "../../format";
 import type { T } from "../../i18n";
 import type { Metric, ProviderMeta } from "./types";
@@ -259,6 +260,113 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       })),
       kind: "currencies",
       currencies: cu,
+    });
+  }
+  // RetroAchievements — um card por conta
+  for (const ra of data.retroachievements || []) {
+    list.push({
+      id: `retroachievements:${ra.id}`,
+      provider: "retroachievements",
+      ok: ra.ok,
+      error: ra.error,
+      title: ra.username ? `RetroAchievements · ${ra.username}` : "RetroAchievements",
+      label: ra.motto || ra.status || ra.label || "",
+      metrics: getRetroMetrics(ra, t),
+      retroachievements: ra,
+    });
+  }
+  // Calendário — um card por payload, lista próximos eventos/tarefas
+  const cal = data.calendar;
+  if (cal && (((cal.calendars?.length) ?? 0) > 0 || (!cal.ok && cal.error))) {
+    const totalEvents = (cal.calendars ?? []).reduce((acc, c) => acc + (c.events?.length ?? 0), 0);
+    const first = cal.calendars[0];
+    const kindLabel = first?.kind === "tasks" ? t.calendarTasks : t.calendarEvents;
+    list.push({
+      id: "calendar:main",
+      provider: "calendar",
+      ok: cal.ok,
+      error: cal.error,
+      title: cal.calendars.length === 1 ? (first.label || kindLabel) : `${t.calendar} · ${cal.calendars.length}`,
+      label: `${totalEvents} ${totalEvents === 1 ? "item" : "itens"}`,
+      metrics: (cal.calendars ?? []).slice(0, 2).flatMap((c) =>
+        (c.events ?? []).slice(0, 2).map((ev) => ({
+          label: ev.summary.slice(0, 32),
+          pct: null,
+          value: ev.dtstart ? new Date(ev.dtstart).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : ev.due ? new Date(ev.due).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : null,
+          sub: ev.location || (ev.allDay ? "dia todo" : null),
+        })),
+      ),
+      kind: "calendar",
+      calendar: cal,
+    });
+  }
+  // Git — um card por repositório (igual às contas de IA)
+  const git = data.git;
+  if (git && git.repos) {
+    for (const repo of git.repos) {
+      const repoName = repo.label || repo.source.split("/").pop()?.replace(/\.git$/, "") || repo.source.slice(0, 24);
+      const metrics: Metric[] = repo.ok
+        ? repo.commits.slice(0, 6).map((c) => ({
+          label: c.short_hash,
+          pct: null,
+          value: c.subject.slice(0, 40),
+          sub: `${c.author_name} · ${new Date(c.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`,
+        }))
+        : [];
+      if (metrics.length === 0 && !repo.ok) {
+        metrics.push({ label: repoName, pct: null, value: null, sub: repo.error ?? t.gitNoCommits });
+      } else if (metrics.length === 0) {
+        metrics.push({ label: repoName, pct: null, value: null, sub: t.gitNoCommits });
+      }
+      list.push({
+        id: `git:${repo.id}`,
+        provider: "git",
+        ok: repo.ok,
+        error: repo.error,
+        title: repoName,
+        label: repo.branch ? `${repo.branch} · ${repo.commits.length} ${repo.commits.length === 1 ? t.gitCommit : t.gitCommits}` : `${repo.commits.length} ${repo.commits.length === 1 ? t.gitCommit : t.gitCommits}`,
+        metrics,
+        kind: "git",
+        git,
+        gitRepo: repo,
+      });
+    }
+    // Se não há repos mas há erro no payload, mostra um card de erro
+    if (git.repos.length === 0 && !git.ok && git.error) {
+      list.push({
+        id: "git:main",
+        provider: "git",
+        ok: false,
+        error: git.error,
+        title: t.git,
+        label: "",
+        metrics: [{ label: t.git, pct: null, value: null, sub: git.error }],
+        kind: "git",
+        git,
+      });
+    }
+  }
+  // RSS — um card com todos os feeds (o backend já filtra hidden/enabled)
+  const rss = data.rss;
+  if (rss && (((rss.feeds?.length) ?? 0) > 0 || (!rss.ok && rss.error))) {
+    const feedCount = rss.feeds?.length ?? 0;
+    list.push({
+      id: "rss:main",
+      provider: "rss",
+      ok: rss.ok,
+      error: rss.error,
+      title: t.rss,
+      label: feedCount === 1 ? "1 feed" : `${feedCount} feeds`,
+      metrics: (rss.feeds ?? []).slice(0, 2).flatMap((f) =>
+        f.items.slice(0, 2).map((it) => ({
+          label: it.title.slice(0, 32),
+          pct: null,
+          value: it.title.slice(0, 40),
+          sub: it.pubDate ? new Date(it.pubDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : null,
+        })),
+      ),
+      kind: "rss",
+      rss,
     });
   }
   return list;

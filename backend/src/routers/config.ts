@@ -1,16 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { inDocker, dataDir } from "../config.js";
+import { inDocker } from "../config.js";
 import { credentialsPath, missingLoginHint } from "../local/claudeOauth.js";
-import { authPath as gptAuthPath, gptMissingHint, gptTokenCandidates, gptTokenExpired } from "../local/gptOauth.js";
 import { cursorMissingHint, cursorTokenCandidates, jwtExpired } from "../local/cursorState.js";
+import { authPath as gptAuthPath, gptMissingHint, gptTokenCandidates, gptTokenExpired } from "../local/gptOauth.js";
 import { lanIPv4 } from "../netutil.js";
 import { cleanBitcoinAddress } from "../providers/bitcoin.js";
 import { cleanDeepseekKey } from "../providers/deepseek.js";
 import { cleanFalKey } from "../providers/fal.js";
 import { cleanOpencodeKey } from "../providers/opencode.js";
 import { cleanOpenrouterKey } from "../providers/openrouter.js";
-import { load, updateSync as update, provider as providerCfg } from "../store.js";
+import { cleanRaApiKey, cleanRaUsername, parseRaSecret } from "../providers/retroachievements.js";
+import { load, provider as providerCfg, updateSync as update } from "../store.js";
 
 function suffix(token: string): string | null {
   token = token.trim();
@@ -177,6 +178,9 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
   const storedPort = Number(((cfg.listen as Record<string, unknown>) ?? {}).port ?? 8787);
   const weatherRaw = (cfg.weather ?? {}) as Record<string, unknown>;
   const currenciesRaw = (cfg.currencies ?? {}) as Record<string, unknown>;
+  const gitRaw = (cfg.git ?? {}) as Record<string, unknown>;
+  const calendarRaw = (cfg.calendar ?? { enabled: false, hidden: false, calendars: [] }) as Record<string, unknown>;
+  const rssRaw = (cfg.rss ?? { enabled: false, hidden: false, feeds: [] }) as Record<string, unknown>;
   return {
     in_docker: inDocker(),
     mock: Boolean(cfg.mock),
@@ -202,9 +206,13 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
       fal: _keyCard(cfg, "fal"),
       bitcoin: _keyCard(cfg, "bitcoin"),
       adsense: _adsenseCard(cfg),
+      retroachievements: _keyCard(cfg, "retroachievements"),
     },
     weather: weatherRaw,
     currencies: currenciesRaw,
+    git: gitRaw,
+    calendar: calendarRaw,
+    rss: rssRaw,
     device: devicePublic(hub),
   };
 }
@@ -244,6 +252,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
           fal: [body.fal_hidden, body.fal_primary_label, body.fal_paste, "fal"],
           bitcoin: [body.bitcoin_hidden, body.bitcoin_primary_label, body.bitcoin_paste, "bitcoin"],
           adsense: [body.adsense_hidden, body.adsense_primary_label, null, null],
+          retroachievements: [body.retroachievements_hidden, body.retroachievements_primary_label, body.retroachievements_paste, "retroachievements"],
         };
         for (const [name, [hidden, label, paste, kind]] of Object.entries(mapping)) {
           const providers = (cfg.providers ?? {}) as Record<string, Record<string, unknown>>;
@@ -272,6 +281,15 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
               const cleaned = cleanBitcoinAddress(secret);
               if (!cleaned) throw Object.assign(new Error("Endereço Bitcoin inválido; cole o endereço público da carteira"), { statusCode: 400 });
               secret = cleaned;
+            } else if (kind === "retroachievements") {
+              // aceita "usuario:apikey" ou só apikey (com label como usuario)
+              const parsed = parseRaSecret(secret, String(label ?? ""));
+              if (!parsed) throw Object.assign(new Error("RetroAchievements: cole no formato usuario:apikey (ex.: MeuUser:abc123...) ou preencha o nome e cole só a API key"), { statusCode: 400 });
+              // valida partes
+              if (!cleanRaUsername(parsed.username) || !cleanRaApiKey(parsed.apiKey)) {
+                throw Object.assign(new Error("RetroAchievements: usuário ou API key inválidos"), { statusCode: 400 });
+              }
+              secret = `${parsed.username}:${parsed.apiKey}`;
             }
             p.paste_secret = secret;
           }
@@ -320,6 +338,13 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
       const c = cleanBitcoinAddress(secret);
       if (!c) return reply.code(400).send({ ok: false, error: "Endereço Bitcoin inválido; cole o endereço público da carteira" });
       secret = c;
+    } else if (provider === "retroachievements") {
+      const parsed = parseRaSecret(secret, label);
+      if (!parsed) return reply.code(400).send({ ok: false, error: "RetroAchievements: cole no formato usuario:apikey (ex.: MeuUser:abc123...)" });
+      if (!cleanRaUsername(parsed.username) || !cleanRaApiKey(parsed.apiKey)) {
+        return reply.code(400).send({ ok: false, error: "RetroAchievements: usuário ou API key inválidos" });
+      }
+      secret = `${parsed.username}:${parsed.apiKey}`;
     } else if (!secret) {
       return reply.code(400).send({ ok: false, error: "token vazio" });
     }
@@ -338,7 +363,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
 
   app.delete("/api/config/account/:provider/:account_id", async (request) => {
     const { provider, account_id } = request.params as { provider: string; account_id: string };
-    const valid = ["claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin", "adsense"];
+    const valid = ["claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin", "adsense", "retroachievements"];
     if (!valid.includes(provider)) return { ok: false, error: "provider inválido" };
     if (!account_id) return { ok: false, error: "id vazio" };
     update((cfg: Record<string, unknown>) => {
@@ -363,6 +388,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
       opencode: "opencode", opencode_paste: "opencode", OPENCODE_API_KEY: "opencode",
       fal: "fal", fal_paste: "fal", FAL_API_KEY: "fal",
       bitcoin: "bitcoin", bitcoin_paste: "bitcoin", BITCOIN_ADDRESS: "bitcoin",
+      retroachievements: "retroachievements", retroachievements_paste: "retroachievements",
       adsense_client_secret: "adsense", adsense_client_id: "adsense",
     };
     const provider = mapping[name];

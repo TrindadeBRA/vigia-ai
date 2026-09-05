@@ -1,15 +1,19 @@
-import { utcNow, isoBrt } from "./formatting.js";
-import { fetchClaudeAccounts, claudeFail } from "./providers/claude.js";
-import { fetchGptAccounts, gptFail } from "./providers/gpt.js";
-import { fetchCursorAccounts, cursorFail } from "./providers/cursor.js";
-import { fetchOpenrouterAccounts, openrouterFail } from "./providers/openrouter.js";
-import { fetchDeepseekAccounts, deepseekFail } from "./providers/deepseek.js";
-import { fetchOpencodeAccounts, opencodeFail } from "./providers/opencode.js";
-import { fetchFalAccounts, falFail } from "./providers/fal.js";
-import { fetchBitcoinAccounts, bitcoinFail } from "./providers/bitcoin.js";
-import { fetchAdsenseAccounts, adsenseFail } from "./providers/adsense.js";
-import { fetchWeatherData, mockWeatherPayload } from "./providers/weather.js";
+import { isoBrt, utcNow } from "./formatting.js";
+import { adsenseFail, fetchAdsenseAccounts } from "./providers/adsense.js";
+import { bitcoinFail, fetchBitcoinAccounts } from "./providers/bitcoin.js";
+import { fetchCalendarSources, mockCalendarPayload } from "./providers/calendar.js";
+import { claudeFail, fetchClaudeAccounts } from "./providers/claude.js";
 import { fetchCurrencyQuotes, mockCurrenciesPayload } from "./providers/currencies.js";
+import { cursorFail, fetchCursorAccounts } from "./providers/cursor.js";
+import { deepseekFail, fetchDeepseekAccounts } from "./providers/deepseek.js";
+import { falFail, fetchFalAccounts } from "./providers/fal.js";
+import { fetchGitRepos, mockGitPayload } from "./providers/git.js";
+import { fetchGptAccounts, gptFail } from "./providers/gpt.js";
+import { fetchOpencodeAccounts, opencodeFail } from "./providers/opencode.js";
+import { fetchOpenrouterAccounts, openrouterFail } from "./providers/openrouter.js";
+import { fetchRetroachievementsAccounts, mockRetroPayload, retroFail } from "./providers/retroachievements.js";
+import { fetchRssFeeds, mockRssPayload } from "./providers/rss.js";
+import { fetchWeatherData, mockWeatherPayload } from "./providers/weather.js";
 import { cache, fingerprint } from "./refreshCache.js";
 import { load, provider as providerCfg } from "./store.js";
 
@@ -148,8 +152,12 @@ export function mockPayload(): Record<string, unknown> {
         account_name: "pub-1234",
       },
     ],
+    retroachievements: [{ id: "legacy", label: "", ...(mockRetroPayload() as Record<string, unknown>) }],
     weather: mockWeatherPayload(),
     currencies: mockCurrenciesPayload(),
+    git: mockGitPayload(),
+    calendar: mockCalendarPayload(),
+    rss: mockRssPayload(),
   };
 }
 
@@ -165,6 +173,7 @@ const PROVIDER_JOBS: ProviderJob[] = [
   ["fal", fetchFalAccounts as unknown as (cfg: Record<string, unknown>) => Promise<unknown[]>, falFail as unknown as (msg: string) => Record<string, unknown>, "legacy"],
   ["bitcoin", fetchBitcoinAccounts as unknown as (cfg: Record<string, unknown>) => Promise<unknown[]>, bitcoinFail as unknown as (msg: string) => Record<string, unknown>, "legacy"],
   ["adsense", fetchAdsenseAccounts as unknown as (cfg: Record<string, unknown>) => Promise<unknown[]>, adsenseFail as unknown as (msg: string) => Record<string, unknown>, "legacy"],
+  ["retroachievements", fetchRetroachievementsAccounts as unknown as (cfg: Record<string, unknown>) => Promise<unknown[]>, retroFail as unknown as (msg: string) => Record<string, unknown>, "legacy"],
 ];
 
 async function fetchOne(
@@ -217,6 +226,71 @@ async function fetchWeather(cfg: Record<string, unknown>, force: boolean): Promi
   }
 }
 
+async function fetchGit(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
+  const gcfg = (cfg.git ?? {}) as Record<string, unknown>;
+  if (gcfg.hidden || !gcfg.enabled) return null;
+  const repos = Array.isArray(gcfg.repos) ? gcfg.repos as unknown[] : [];
+  if (repos.length === 0) return { ok: true, error: null, updated_at: utcNow(), repos: [] };
+  if (cfg.mock) return mockGitPayload() as Record<string, unknown>;
+  const fp = fingerprint(cfg, "git");
+  if (!cache.due("git", { fingerprint: fp, force })) {
+    const hit = cache.get("git");
+    if (hit !== null && hit !== undefined) return hit as Record<string, unknown>;
+  }
+  try {
+    const reposData = await fetchGitRepos(cfg);
+    const value = { ok: true, error: null, updated_at: utcNow(), repos: reposData };
+    return cache.take("git", value, { fingerprint: fp }) as Record<string, unknown>;
+  } catch (exc) {
+    const value = { ok: false, error: String(exc), updated_at: utcNow(), repos: [] };
+    return cache.take("git", value, { fingerprint: fp, error: exc }) as Record<string, unknown>;
+  }
+}
+
+async function fetchRss(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
+  const rssCfg = (cfg.rss ?? {}) as Record<string, unknown>;
+  if (rssCfg.hidden || !rssCfg.enabled) return null;
+  const feeds = Array.isArray(rssCfg.feeds) ? rssCfg.feeds as unknown[] : [];
+  if (feeds.length === 0) return { ok: true, error: null, updated_at: utcNow(), feeds: [] };
+  if (cfg.mock) return mockRssPayload() as Record<string, unknown>;
+  const fp = fingerprint(cfg, "rss");
+  if (!cache.due("rss", { fingerprint: fp, force })) {
+    const hit = cache.get("rss");
+    if (hit !== null && hit !== undefined) return hit as Record<string, unknown>;
+  }
+  try {
+    const rssFeeds = await fetchRssFeeds(cfg) as Array<{ ok: boolean; error: string | null }>;
+    const ok = rssFeeds.every((c: { ok: boolean }) => c.ok);
+    const value = { ok, error: ok ? null : rssFeeds.find((c: { ok: boolean; error: string | null }) => !c.ok)?.error || null, updated_at: utcNow(), feeds: rssFeeds };
+    return cache.take("rss", value, { fingerprint: fp }) as Record<string, unknown>;
+  } catch (exc) {
+    const value = { ok: false, error: String(exc), updated_at: utcNow(), feeds: [] };
+    return cache.take("rss", value, { fingerprint: fp, error: exc }) as Record<string, unknown>;
+  }
+}
+
+async function fetchCalendar(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
+  const calCfg = (cfg.calendar ?? {}) as Record<string, unknown>;
+  if (calCfg.hidden || !calCfg.enabled) return null;
+  const cals = Array.isArray(calCfg.calendars) ? calCfg.calendars as unknown[] : [];
+  if (cals.length === 0) return { ok: true, error: null, updated_at: utcNow(), calendars: [] };
+  if (cfg.mock) return mockCalendarPayload() as Record<string, unknown>;
+  const fp = fingerprint(cfg, "calendar");
+  if (!cache.due("calendar", { fingerprint: fp, force })) {
+    const hit = cache.get("calendar");
+    if (hit !== null && hit !== undefined) return hit as Record<string, unknown>;
+  }
+  try {
+    const calendars = await fetchCalendarSources(cfg) as Array<{ ok: boolean; error: string | null }>;
+    const ok = calendars.every((c: { ok: boolean }) => c.ok);
+    const value = { ok, error: ok ? null : calendars.find((c: { ok: boolean; error: string | null }) => !c.ok)?.error || null, updated_at: utcNow(), calendars };
+    return cache.take("calendar", value, { fingerprint: fp }) as Record<string, unknown>;
+  } catch (exc) {
+    const value = { ok: false, error: String(exc), updated_at: utcNow(), calendars: [] };
+    return cache.take("calendar", value, { fingerprint: fp, error: exc }) as Record<string, unknown>;
+  }
+}
+
 async function fetchCurrencies(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
   const ccfg = (cfg.currencies ?? {}) as Record<string, unknown>;
   const base = String(ccfg.base ?? "BRL");
@@ -249,6 +323,19 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     if (wcfg.hidden || !wcfg.enabled) payload.weather = null;
     const ccfg = (cfg.currencies ?? {}) as Record<string, unknown>;
     if (ccfg.hidden || !ccfg.enabled) payload.currencies = null;
+    const gcfg = (cfg.git ?? {}) as Record<string, unknown>;
+    if (gcfg.hidden || !gcfg.enabled || (Array.isArray(gcfg.repos) && (gcfg.repos as unknown[]).length === 0)) {
+      // em mock, mantém git se tiver repos; senão null
+      if (!gcfg.enabled || (Array.isArray(gcfg.repos) && (gcfg.repos as unknown[]).length === 0)) payload.git = null;
+    }
+    const calCfg = (cfg.calendar ?? {}) as Record<string, unknown>;
+    if (calCfg.hidden || !calCfg.enabled || (Array.isArray(calCfg.calendars) && (calCfg.calendars as unknown[]).length === 0)) {
+      if (!calCfg.enabled || (Array.isArray(calCfg.calendars) && (calCfg.calendars as unknown[]).length === 0)) payload.calendar = null;
+    }
+    const rssCfg = (cfg.rss ?? {}) as Record<string, unknown>;
+    if (rssCfg.hidden || !rssCfg.enabled || (Array.isArray(rssCfg.feeds) && (rssCfg.feeds as unknown[]).length === 0)) {
+      if (!rssCfg.enabled || (Array.isArray(rssCfg.feeds) && (rssCfg.feeds as unknown[]).length === 0)) payload.rss = null;
+    }
     return payload;
   }
 
@@ -271,6 +358,24 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     base: String(((cfg.currencies as Record<string, unknown>) ?? {}).base ?? "BRL"),
     items: [],
   }));
+  const gitPromise = fetchGit(cfg, forceQuota).catch((exc) => ({
+    ok: false,
+    error: String(exc),
+    updated_at: utcNow(),
+    repos: [],
+  }));
+  const calendarPromise = fetchCalendar(cfg, forceQuota).catch((exc) => ({
+    ok: false,
+    error: String(exc),
+    updated_at: utcNow(),
+    calendars: [],
+  }));
+  const rssPromise = fetchRss(cfg, forceQuota).catch((exc) => ({
+    ok: false,
+    error: String(exc),
+    updated_at: utcNow(),
+    feeds: [],
+  }));
 
   const resultsArray = await Promise.all(providerPromises);
   const results: Record<string, unknown> = {};
@@ -291,6 +396,21 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
       base: String(((cfg.currencies as Record<string, unknown>) ?? {}).base ?? "BRL"),
       items: [],
     };
+  }
+  try {
+    results.git = await gitPromise;
+  } catch (exc) {
+    results.git = { ok: false, error: String(exc), updated_at: utcNow(), repos: [] };
+  }
+  try {
+    results.calendar = await calendarPromise;
+  } catch (exc) {
+    results.calendar = { ok: false, error: String(exc), updated_at: utcNow(), calendars: [] };
+  }
+  try {
+    results.rss = await rssPromise;
+  } catch (exc) {
+    results.rss = { ok: false, error: String(exc), updated_at: utcNow(), feeds: [] };
   }
 
   return { updated_at: utcNow(), ...results };

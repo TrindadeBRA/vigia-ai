@@ -14,7 +14,10 @@ import {
   CurrenciesTileCard,
   CursorTileCard,
   EyeTileCard,
+  GitTileCard,
   GptTileCard,
+  RetroAchievementsTileCard,
+  RssTileCard,
   WeatherTileCard,
 } from "./TileCards";
 import type { Pal, ProviderMeta } from "./types";
@@ -70,6 +73,15 @@ export function ProviderCard({
   }
   if (p.provider === "currencies" || p.kind === "currencies") {
     return <CurrenciesTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "git" || p.kind === "git") {
+    return <GitTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "retroachievements" || p.kind === "retroachievements") {
+    return <RetroAchievementsTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
+  }
+  if (p.provider === "rss" || p.kind === "rss") {
+    return <RssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} />;
   }
   // Widgets extras: sem "conta"/dados de backend, só visuais
   if (p.provider === "clock") {

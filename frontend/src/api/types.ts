@@ -301,6 +301,189 @@ export type CurrenciesPayload = {
 
 export type CurrencySearchResult = { id: string; symbol: string; name: string };
 
+export type GitCommit = {
+  hash: string;
+  short_hash: string;
+  author_name: string;
+  author_email: string;
+  date: string;
+  subject: string;
+  body: string;
+};
+
+export type GitRepo = {
+  id: string;
+  label: string;
+  source: string;
+  branch: string | null;
+  limit: number;
+  ok: boolean;
+  error: string | null;
+  commits: GitCommit[];
+  updated_at: string | null;
+  head: string | null;
+  remote_url: string | null;
+};
+
+export type GitPayload = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  repos: GitRepo[];
+};
+
+export type GitConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  repos: Array<{ id: string; source: string; label: string; limit: number; branch: string | null }>;
+};
+
+export type RetroRecentlyPlayed = {
+  game_id: number | null;
+  title: string | null;
+  console_name: string | null;
+  image_icon: string | null;
+  last_played: string | null;
+  achievements_total: number | null;
+  num_achieved: number | null;
+  score_achieved: number | null;
+};
+
+export type RetroRecentAchievement = {
+  id: number | null;
+  game_id: number | null;
+  game_title: string | null;
+  title: string | null;
+  description: string | null;
+  points: number | null;
+  badge_name: string | null;
+  badge_url: string | null;
+  date_awarded: string | null;
+  hardcore: boolean | null;
+};
+
+export type RetroAwards = {
+  total_awards_count: number | null;
+  mastery_awards_count: number | null;
+  completion_awards_count: number | null;
+  beaten_hardcore_awards_count: number | null;
+  beaten_softcore_awards_count: number | null;
+  event_awards_count: number | null;
+  site_awards_count: number | null;
+};
+
+export type RetroCompletionProgress = {
+  total: number | null;
+  count: number | null;
+};
+
+export type RetroAchievementsAccount = {
+  id: string;
+  label: string;
+  ok: boolean;
+  error: string | null;
+  username: string | null;
+  ulid: string | null;
+  user_pic: string | null;
+  member_since: string | null;
+  motto: string | null;
+  total_points: number | null;
+  total_softcore_points: number | null;
+  total_true_points: number | null;
+  rank: number | null;
+  total_ranked: number | null;
+  status: string | null;
+  rich_presence_msg: string | null;
+  rich_presence_msg_date: string | null;
+  last_game_id: number | null;
+  last_game_title: string | null;
+  last_game_console: string | null;
+  last_game_image_icon: string | null;
+  recently_played: RetroRecentlyPlayed[];
+  recent_achievements: RetroRecentAchievement[];
+  awards: RetroAwards | null;
+  completion_progress: RetroCompletionProgress | null;
+  updated_at: string | null;
+};
+
+export type CalendarKind = "events" | "tasks";
+
+export type CalendarEvent = {
+  uid: string | null;
+  summary: string;
+  description: string | null;
+  location: string | null;
+  dtstart: string | null;
+  dtend: string | null;
+  due: string | null;
+  status: string | null;
+  allDay: boolean;
+  kind: CalendarKind;
+};
+
+export type CalendarSource = {
+  id: string;
+  label: string;
+  url: string;
+  kind: CalendarKind;
+  limit: number;
+  ok: boolean;
+  error: string | null;
+  events: CalendarEvent[];
+  updated_at: string | null;
+};
+
+export type CalendarPayload = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  calendars: CalendarSource[];
+};
+
+export type CalendarConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  calendars: Array<{ id: string; url: string; label: string; kind: CalendarKind; limit: number }>;
+};
+
+export type RssItem = {
+  title: string;
+  link: string | null;
+  description: string | null;
+  pubDate: string | null;
+  author: string | null;
+  categories: string[];
+  guid: string | null;
+  enclosure: string | null;
+};
+
+export type RssFeed = {
+  id: string;
+  label: string;
+  url: string;
+  limit: number;
+  ok: boolean;
+  error: string | null;
+  title: string | null;
+  description: string | null;
+  link: string | null;
+  items: RssItem[];
+  updated_at: string | null;
+};
+
+export type RssPayload = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  feeds: RssFeed[];
+};
+
+export type RssConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  feeds: Array<{ id: string; url: string; label: string; limit: number }>;
+};
+
 export type UsagePayload = {
   updated_at: string;
   claude: ClaudeAccount[];
@@ -312,8 +495,12 @@ export type UsagePayload = {
   fal: CreditsAccount[];
   bitcoin: BitcoinAccount[];
   adsense: AdsenseAccount[];
+  retroachievements: RetroAchievementsAccount[];
   weather?: WeatherPayload | null;
   currencies?: CurrenciesPayload | null;
+  git?: GitPayload | null;
+  calendar?: CalendarPayload | null;
+  rss?: RssPayload | null;
 };
 
 export type AccountPublic = { id: string; label: string; suffix: string | null };
@@ -387,5 +574,8 @@ export type ConfigPublic = {
   providers: Record<string, ProviderCardPublic>;
   weather: WeatherConfig;
   currencies: CurrenciesConfig;
+  git: GitConfig;
+  calendar: CalendarConfig;
+  rss: RssConfig;
   device: DevicePublic;
 };

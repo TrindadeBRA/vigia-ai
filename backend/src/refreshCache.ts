@@ -1,4 +1,4 @@
-import { isRateLimit, retryAfterS, resultIsRateLimited } from "./httpClient.js";
+import { isRateLimit, resultIsRateLimited, retryAfterS } from "./httpClient.js";
 import { provider as providerCfg } from "./store.js";
 
 export const TTL_S: Record<string, number> = {
@@ -11,8 +11,12 @@ export const TTL_S: Record<string, number> = {
   fal: 60,
   bitcoin: 60,
   adsense: 300,
+  retroachievements: 300,
   weather: 600,
   currencies: 60,
+  git: 60,
+  calendar: 300,
+  rss: 300,
 };
 
 export const FORCEABLE: ReadonlySet<string> = new Set([
@@ -23,6 +27,7 @@ export const FORCEABLE: ReadonlySet<string> = new Set([
   "deepseek",
   "opencode",
   "fal",
+  "retroachievements",
 ]);
 
 const DEFAULT_TTL_S = 60;

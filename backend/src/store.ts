@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync, renameSync, chmodSync, mkdirSync } from "node:fs";
-import { dataDir as configDataDir, configPath as configConfigPath } from "./config.js";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { configPath as configConfigPath, dataDir as configDataDir } from "./config.js";
 
 export const PROVIDERS = [
   "claude",
@@ -11,6 +11,7 @@ export const PROVIDERS = [
   "fal",
   "bitcoin",
   "adsense",
+  "retroachievements",
 ] as const;
 export type ProviderName = typeof PROVIDERS[number];
 
@@ -99,6 +100,24 @@ const _WALLPAPER_PROVIDERS_DEFAULT: Record<string, unknown> = {
   wallhaven_key: "",
 };
 
+const _GIT_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+  repos: [],
+};
+
+const _CALENDAR_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+  calendars: [],
+};
+
+const _RSS_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+  feeds: [],
+};
+
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -118,6 +137,9 @@ export function defaultConfig(): Record<string, unknown> {
       providers: deepClone(_WALLPAPER_PROVIDERS_DEFAULT),
       selected_id: "",
     },
+    git: deepClone(_GIT_DEFAULT),
+    calendar: deepClone(_CALENDAR_DEFAULT),
+    rss: deepClone(_RSS_DEFAULT),
   };
   const providers = cfg.providers as Record<string, unknown>;
   for (const name of PROVIDERS) {
@@ -362,11 +384,11 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   try {
     const fd = parseInt(String(rawWeather.forecast_days ?? weather.forecast_days), 10);
     if (!Number.isNaN(fd)) weather.forecast_days = Math.max(1, Math.min(16, fd));
-  } catch {}
+  } catch { }
   try {
     const pd = parseInt(String(rawWeather.past_days ?? weather.past_days), 10);
     if (!Number.isNaN(pd)) weather.past_days = Math.max(0, Math.min(2, pd));
-  } catch {}
+  } catch { }
   if (typeof rawWeather.timezone === "string" && rawWeather.timezone.trim()) {
     weather.timezone = String(rawWeather.timezone).trim();
   }
@@ -390,7 +412,7 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
           if (k === "hourly_count") disp[k] = Math.max(1, Math.min(48, v));
           else disp[k] = Math.max(1, Math.min(16, v));
         }
-      } catch {}
+      } catch { }
     }
   }
   const rawFields = (typeof rawDisplay.fields === "object" && rawDisplay.fields !== null ? rawDisplay.fields : {}) as Record<string, unknown>;
@@ -447,6 +469,84 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   if (typeof rawWp.grid_selected_id === "string") {
     wp.grid_selected_id = String(rawWp.grid_selected_id).trim();
   }
+
+  // git
+  const rawGit = (typeof raw.git === "object" && raw.git !== null ? raw.git : {}) as Record<string, unknown>;
+  const git = cfg.git as Record<string, unknown>;
+  git.enabled = Boolean(rawGit.enabled ?? git.enabled);
+  git.hidden = Boolean(rawGit.hidden ?? git.hidden);
+  const rawRepos = rawGit.repos;
+  if (Array.isArray(rawRepos)) {
+    const cleaned: Array<Record<string, unknown>> = [];
+    for (const it of rawRepos) {
+      if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
+      const r = it as Record<string, unknown>;
+      const source = String(r.source ?? "").trim();
+      if (!source) continue;
+      let limit = 5;
+      try { const v = parseInt(String(r.limit ?? 5), 10); if (!Number.isNaN(v)) limit = Math.max(1, Math.min(50, v)); } catch { }
+      cleaned.push({
+        id: String(r.id),
+        source,
+        label: String(r.label ?? ""),
+        limit,
+        branch: r.branch != null && String(r.branch).trim() ? String(r.branch).trim() : null,
+      });
+    }
+    git.repos = cleaned;
+  }
+
+  // calendar
+  const rawCal = (typeof raw.calendar === "object" && raw.calendar !== null ? raw.calendar : {}) as Record<string, unknown>;
+  const cal = cfg.calendar as Record<string, unknown>;
+  cal.enabled = Boolean(rawCal.enabled ?? cal.enabled);
+  cal.hidden = Boolean(rawCal.hidden ?? cal.hidden);
+  const rawCals = rawCal.calendars;
+  if (Array.isArray(rawCals)) {
+    const cleaned: Array<Record<string, unknown>> = [];
+    for (const it of rawCals) {
+      if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
+      const r = it as Record<string, unknown>;
+      const url = String(r.url ?? "").trim();
+      if (!url) continue;
+      let limit = 5;
+      try { const v = parseInt(String(r.limit ?? 5), 10); if (!Number.isNaN(v)) limit = Math.max(1, Math.min(50, v)); } catch { }
+      const kind = r.kind === "tasks" ? "tasks" : "events";
+      cleaned.push({
+        id: String(r.id),
+        url,
+        label: String(r.label ?? ""),
+        kind,
+        limit,
+      });
+    }
+    cal.calendars = cleaned;
+  }
+
+  // rss
+  const rawRss = (typeof raw.rss === "object" && raw.rss !== null ? raw.rss : {}) as Record<string, unknown>;
+  const rss = cfg.rss as Record<string, unknown>;
+  rss.enabled = Boolean(rawRss.enabled ?? rss.enabled);
+  rss.hidden = Boolean(rawRss.hidden ?? rss.hidden);
+  const rawFeeds = rawRss.feeds;
+  if (Array.isArray(rawFeeds)) {
+    const cleaned: Array<Record<string, unknown>> = [];
+    for (const it of rawFeeds) {
+      if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
+      const r = it as Record<string, unknown>;
+      const url = String(r.url ?? "").trim();
+      if (!url) continue;
+      let limit = 10;
+      try { const v = parseInt(String(r.limit ?? 10), 10); if (!Number.isNaN(v)) limit = Math.max(1, Math.min(50, v)); } catch { }
+      cleaned.push({
+        id: String(r.id),
+        url,
+        label: String(r.label ?? ""),
+        limit,
+      });
+    }
+    rss.feeds = cleaned;
+  }
   return cfg;
 }
 
@@ -455,7 +555,7 @@ function _write(path: string, cfg: Record<string, unknown>): void {
   const dir = configDataDir();
   try {
     mkdirSync(dir, { recursive: true });
-  } catch {}
+  } catch { }
   // atomic write tmp + rename + chmod 0600
   const tmp = path + ".tmp";
   writeFileSync(tmp, JSON.stringify(cfg, null, 2) + "\n", { encoding: "utf-8" });
@@ -463,7 +563,7 @@ function _write(path: string, cfg: Record<string, unknown>): void {
   renameSync(tmp, path);
   try {
     chmodSync(path, 0o600);
-  } catch {}
+  } catch { }
 }
 
 // simple async mutex queue
@@ -471,7 +571,7 @@ let _queue: Promise<void> = Promise.resolve();
 function _enqueue<T>(fn: () => T | Promise<T>): Promise<T> {
   const next = _queue.then(() => fn());
   // keep queue alive even if fails
-  _queue = next.then(() => {}, () => {});
+  _queue = next.then(() => { }, () => { });
   return next;
 }
 

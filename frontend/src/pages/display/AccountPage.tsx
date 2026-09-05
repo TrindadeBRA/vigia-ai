@@ -1,12 +1,16 @@
 import type { ReactNode } from "react";
-import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload, WeatherConfig } from "../../api/types";
+import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, RetroAchievementsAccount, UsagePayload, WeatherConfig } from "../../api/types";
 import { AdsenseDetail } from "../../components/cards/AdsenseCard";
 import { BitcoinDetail } from "../../components/cards/BitcoinCard";
+import { CalendarDetail } from "../../components/cards/CalendarCard";
 import { ClaudeDetail } from "../../components/cards/ClaudeCard";
 import { CreditsDetail } from "../../components/cards/CreditsCard";
 import { CurrenciesDetail } from "../../components/cards/CurrenciesCard";
 import { CursorDetail } from "../../components/cards/CursorCard";
+import { GitDetail } from "../../components/cards/GitCard";
 import { GptDetail } from "../../components/cards/GptCard";
+import { RetroAchievementsDetail } from "../../components/cards/RetroAchievementsCard";
+import { RssDetail } from "../../components/cards/RssCard";
 import { WeatherDetail } from "../../components/cards/WeatherCard";
 import { ExternalLinkIcon } from "../../components/icons";
 import type { T } from "../../i18n";
@@ -77,13 +81,91 @@ function CurrenciesAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   );
 }
 
-export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
-  // Weather e Moedas têm página própria (sem "conta" única)
+function GitAccountPage({ meta, t }: { meta: ProviderMeta; t: T }) {
+  const repo = meta.gitRepo ?? meta.git?.repos?.find((r) => `git:${r.id}` === meta.id) ?? meta.git?.repos?.[0] ?? null;
+  const name = repo ? (repo.label || repo.source.split("/").pop()?.replace(/\.git$/, "") || repo.source.slice(0, 24)) : t.git;
+  return (
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <Icon id="git" large />
+        <div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{name}</div>
+          {repo?.source ? <div className={cardLabel}>{repo.source}{repo.branch ? ` · ${repo.branch}` : ""}</div> : null}
+        </div>
+      </div>
+      <GitDetail repo={repo} git={meta.git} t={t} />
+    </div>
+  );
+}
+
+function RetroAccountPage({ meta, t }: { meta: ProviderMeta; t: T }) {
+  const ra = meta.retroachievements;
+  if (!ra) return <div className={metricCard}><div className={errorText}>{t.noData}</div></div>;
+  return (
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <Icon id="retroachievements" large />
+        <div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{ra.username ? `RetroAchievements · ${ra.username}` : "RetroAchievements"}</div>
+          {ra.motto ? <div className={cardLabel}>{ra.motto}</div> : null}
+        </div>
+      </div>
+      <div className="flex w-full flex-col gap-[14px]">
+        {!ra.ok ? <div className={metricCard}><div className={errorText}>{ra.error || t.noData}</div></div> : <RetroAchievementsDetail account={ra} t={t} />}
+      </div>
+    </div>
+  );
+}
+
+function CalendarAccountPage({ data, t }: { data: UsagePayload; t: T }) {
+  return (
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <Icon id="calendar" large />
+        <div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.calendar}</div>
+          {data.calendar?.calendars?.length ? <div className={cardLabel}>{data.calendar.calendars.length} calendário{data.calendar.calendars.length === 1 ? "" : "s"}</div> : null}
+        </div>
+      </div>
+      <CalendarDetail calendar={data.calendar} t={t} />
+    </div>
+  );
+}
+
+function RssAccountPage({ data, t }: { data: UsagePayload; t: T }) {
+  return (
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <Icon id="rss" large />
+        <div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.rss}</div>
+          {data.rss?.feeds?.length ? <div className={cardLabel}>{data.rss.feeds.length} feed{data.rss.feeds.length === 1 ? "" : "s"}</div> : null}
+        </div>
+      </div>
+      <RssDetail rss={data.rss} t={t} />
+    </div>
+  );
+}
+
+export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | RetroAchievementsAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
+  // Weather, Moedas, Git e RetroAchievements têm página própria
   if (meta.provider === "weather" || meta.kind === "weather") {
     return <WeatherAccountPage data={data} t={t} />;
   }
   if (meta.provider === "currencies" || meta.kind === "currencies") {
     return <CurrenciesAccountPage data={data} t={t} />;
+  }
+  if (meta.provider === "git" || meta.kind === "git") {
+    return <GitAccountPage meta={meta} t={t} />;
+  }
+  if (meta.provider === "retroachievements" || meta.kind === "retroachievements") {
+    return <RetroAccountPage meta={meta} t={t} />;
+  }
+  if (meta.provider === "calendar" || meta.kind === "calendar") {
+    return <CalendarAccountPage data={data} t={t} />;
+  }
+  if (meta.provider === "rss" || meta.kind === "rss") {
+    return <RssAccountPage data={data} t={t} />;
   }
   let body: ReactNode = null;
   if (meta.ok && account) {

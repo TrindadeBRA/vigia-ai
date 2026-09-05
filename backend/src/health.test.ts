@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "./main.js";
-import { load, save, defaultConfig } from "./store.js";
+import { defaultConfig, save } from "./store.js";
 
 let tmp: string;
 let app: Awaited<ReturnType<typeof createApp>>;
@@ -19,8 +19,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  try { await app.close(); } catch {}
-  try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+  try { await app.close(); } catch { }
+  try { rmSync(tmp, { recursive: true, force: true }); } catch { }
   delete process.env.COLLECTOR_DATA;
 });
 
@@ -45,7 +45,7 @@ describe("GET /usage mock schema", () => {
     expect(r.statusCode).toBe(200);
     const body = JSON.parse(r.payload);
     expect(body.updated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    for (const k of ["claude","gpt","cursor","openrouter","deepseek","opencode","fal","bitcoin","adsense"]) {
+    for (const k of ["claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin", "adsense"]) {
       expect(Array.isArray(body[k]), k).toBe(true);
     }
     expect(body.claude[0].ok).toBe(true);
@@ -73,7 +73,7 @@ describe("SSE framing (§6.1)", () => {
     const first = await gen.next();
     expect(first.value).toBe(": connected\n\n");
     // payload mock
-    const payload = { updated_at: "2026-09-04T18:00:00-03:00", claude: [], gpt: [], cursor: [], openrouter: [], deepseek: [], opencode: [], fal: [], bitcoin: [], adsense: [], weather: null, currencies: null } as any;
+    const payload = { updated_at: "2026-09-04T18:00:00-03:00", claude: [], gpt: [], cursor: [], openrouter: [], deepseek: [], opencode: [], fal: [], bitcoin: [], adsense: [], retroachievements: [], weather: null, currencies: null, git: null, calendar: null, rss: null } as any;
     expect(formatSse(payload)).toBe(`event: usage\ndata: ${JSON.stringify(payload)}\n\n`);
     // com snapshot, próximo yield deve ser event: usage
     hub["snapshot"] = () => payload; // monkey patch private for test

@@ -140,16 +140,20 @@ export function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t
 }
 
 export function Icon({ id, large, compact }: { id: string; large?: boolean; compact?: boolean }) {
+  const src = PROVIDER_ICON[id];
+  const fallback = id === "git" ? "🌿" : null;
   if (compact) {
     return (
       <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
-        <img className="size-3.5 object-contain" src={PROVIDER_ICON[id]} alt={id} draggable={false} />
+        {src ? <img className="size-3.5 object-contain" src={src} alt={id} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : null}
+        {!src && fallback ? <span className="text-[13px]">{fallback}</span> : null}
       </div>
     );
   }
   return (
     <div className={large ? "flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]" : iconChip}>
-      <img className={large ? "size-[23px] object-contain" : iconImg} src={PROVIDER_ICON[id]} alt={id} draggable={false} />
+      {src ? <img className={large ? "size-[23px] object-contain" : iconImg} src={src} alt={id} draggable={false} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : null}
+      {!src && fallback ? <span className={large ? "text-[20px]" : "text-[14px]"}>{fallback}</span> : null}
     </div>
   );
 }

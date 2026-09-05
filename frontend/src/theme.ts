@@ -77,8 +77,13 @@ export const PROVIDER_ICON: Record<string, string> = {
   fal: "/icons/fal.png",
   bitcoin: "/icons/bitcoin.png?v=20260901",
   adsense: "/icons/adsense.png?v=20260901",
+  retroachievements: "/icons/retroachievements.png",
   weather: "/icons/weather.png?v=20260901",
   currencies: "/icons/currencies.png",
+  git: "/icons/git.png",
+  calendar: "/icons/calendar.png",
+  calendarTasks: "/icons/calendar.png",
+  rss: "/icons/rss.png",
 };
 
 // URL da página oficial de plano/uso de cada provider de IA (usado para o atalho "ver site oficial").
@@ -90,6 +95,7 @@ export const PROVIDER_SITE_URL: Record<string, string> = {
   deepseek: "https://platform.deepseek.com/usage",
   opencode: "https://opencode.ai",
   fal: "https://fal.ai/dashboard/billing",
+  retroachievements: "https://retroachievements.org/controlpanel.php",
 };
 
 export function hexToRgba(hex: string, a: number): string {
