@@ -180,6 +180,32 @@ processo sandboxed que executa o step, via template literal `{{appdir}}`
 na própria string (mecanismo genérico do Homebrew, funciona em qualquer
 campo `args`/`command`/etc., não só nos dedicados a path).
 
+**Testar a atualização localmente logo depois do `./dev cask`**: o `brew`
+deste Mac tem o clone da tap em cache — `./dev cask` empurra o commit novo
+pro `origin` da tap, mas isso não invalida esse cache local. Rodar
+`brew upgrade --cask vigia-ai` direto depois do `./dev cask` dá
+`Warning: Not upgrading vigia-ai, the latest version is already installed`
+mesmo com a tap já atualizada no GitHub. **Rode `brew update` antes** (ele
+resincroniza todas as taps, inclusive a nossa) — só depois disso o
+`brew upgrade --cask vigia-ai` (ou `brew outdated`) enxerga a versão nova.
+Aconteceu subindo a v2.4.0.
+
+Nesse mesmo teste, um `brew upgrade --cask vigia-ai` chegou a falhar com
+`hdiutil: attach failed - Recurso ocupado` (duas tentativas, exit 1,
+"Download failed for vigia-ai") logo após o `brew update` — com o app
+antigo ainda aberto. Rodar o comando de novo (ou fechar o app antes)
+completou a instalação normalmente; `brew list --cask vigia-ai --versions`
+confirmou a versão nova depois. Não foi confirmado exatamente quem segurava
+o `.dmg` recém-baixado (suspeita: Gatekeeper/`syspolicyd` escaneando o
+arquivo, ou o próprio app antigo travando um handle) — mas é um erro
+transitório conhecido do `hdiutil`/Homebrew Cask, não indica corrupção do
+`.dmg`. Se acontecer: feche o Vigia AI antes de atualizar, ou simplesmente
+rode o `brew upgrade` de novo.
+
+**Onde conferir a versão instalada**: `brew list --cask vigia-ai --versions`,
+ou dentro do próprio app em Configurações → Aparência → Versões
+(`SettingsDrawer.tsx`, mostra versão do app **e** do coletor).
+
 **Atualizar a fórmula a cada release**: `./dev cask` (depois que a matriz
 de 4 runners do `./dev release` terminar) — baixa os `.dmg` arm64/intel do
 release, recalcula os `sha256`, e dá push na tap usando o `gh`/git já

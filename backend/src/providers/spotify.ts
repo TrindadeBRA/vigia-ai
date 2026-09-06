@@ -23,6 +23,10 @@ export function authUrl(clientId: string, port: number, state: string): string {
     redirect_uri: redirectUri(port),
     scope: SPOTIFY_SCOPES,
     state,
+    // Sem isso, o Spotify pula a tela de login/consentimento quando esse
+    // client_id já tem autorização prévia na conta — o navegador volta
+    // direto pro callback e parece "só um refresh" em vez de abrir o Spotify.
+    show_dialog: "true",
   };
   return SPOTIFY_AUTH_URL + "?" + new URLSearchParams(params).toString();
 }

@@ -165,6 +165,20 @@ export async function createApp() {
   await fastify.register(createRssRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
 
+  const IMAGE_CONTENT_TYPES: Record<string, string> = {
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".ico": "image/x-icon",
+  };
+  const imageContentType = (path: string): string | undefined => {
+    const dot = path.lastIndexOf(".");
+    return dot === -1 ? undefined : IMAGE_CONTENT_TYPES[path.slice(dot).toLowerCase()];
+  };
+
   const dist = frontendDist();
   if (dist) {
     const sendFile = (reply: any, file: string, ct?: string) => {
@@ -202,6 +216,10 @@ export async function createApp() {
       const data = readFileSync(p);
       if (path.endsWith(".js")) reply.header("Content-Type", "application/javascript");
       else if (path.endsWith(".css")) reply.header("Content-Type", "text/css");
+      else {
+        const ct = imageContentType(path);
+        if (ct) reply.header("Content-Type", ct);
+      }
       return reply.send(data);
     });
     fastify.get("/icons/*", async (req: any, reply: any) => {
@@ -209,6 +227,8 @@ export async function createApp() {
       const p = resolve(join(dist, path));
       const root = resolve(dist);
       if (!p.startsWith(root) || !existsSync(p) || !statSync(p).isFile()) return reply.code(404).send({ ok: false, error: "not found" });
+      const ct = imageContentType(path);
+      if (ct) reply.header("Content-Type", ct);
       return reply.send(readFileSync(p));
     });
     fastify.get("/fonts/*", async (req: any, reply: any) => {
@@ -232,7 +252,7 @@ export async function createApp() {
       if (!p.startsWith(root) || !existsSync(p) || !statSync(p).isFile()) {
         return reply.code(404).send({ ok: false, error: "not found" });
       }
-      const ct = name.endsWith(".webmanifest") ? "application/manifest+json" : undefined;
+      const ct = name.endsWith(".webmanifest") ? "application/manifest+json" : imageContentType(name);
       const data = readFileSync(p);
       if (ct) reply.header("Content-Type", ct);
       return reply.send(data);
