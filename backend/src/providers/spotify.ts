@@ -16,6 +16,14 @@ export function redirectUri(port: number): string {
   return `http://127.0.0.1:${Number(port)}/api/oauth/spotify/callback`;
 }
 
+export function redirectUris(port: number): string[] {
+  const p = Number(port) || 8787;
+  return [
+    `http://127.0.0.1:${p}/api/oauth/spotify/callback`,
+    `http://localhost:${p}/api/oauth/spotify/callback`,
+  ];
+}
+
 export function authUrl(clientId: string, port: number, state: string): string {
   const params = {
     client_id: clientId,

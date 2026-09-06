@@ -20,6 +20,7 @@ import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
 import { createSpotifyRoutes } from "./routers/spotify.js";
+import { createYoutubeMusicRoutes } from "./routers/youtubemusic.js";
 import { createSystemRoutes } from "./routers/system.js";
 import { createThemeRoutes } from "./routers/theme.js";
 import { createUsageRoutes } from "./routers/usage.js";
@@ -153,6 +154,7 @@ export async function createApp() {
   await fastify.register(createConfigRoutes, { prefix: "" });
   await fastify.register(createAdsenseRoutes, { prefix: "" });
   await fastify.register(createSpotifyRoutes, { prefix: "" });
+  await fastify.register(createYoutubeMusicRoutes, { prefix: "" });
   await fastify.register(createThemeRoutes, { prefix: "" });
   await fastify.register(createBoardRoutes, { prefix: "" });
   await fastify.register(createAlarmsRoutes, { prefix: "" });

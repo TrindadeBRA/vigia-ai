@@ -154,6 +154,20 @@ function _spotifyCard(cfg: Record<string, unknown>): Record<string, unknown> {
   return { source: "missing", label: "Cole o Client ID e o Client Secret do app Spotify", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] };
 }
 
+function _youtubemusicCard(cfg: Record<string, unknown>): Record<string, unknown> {
+  const p = providerCfg(cfg, "youtubemusic") as Record<string, unknown>;
+  const clientId = String(p.client_id ?? "").trim();
+  const clientSecret = String(p.client_secret ?? "").trim();
+  const refresh = String(p.refresh_token ?? "").trim();
+  if (refresh) {
+    return { source: "youtubemusic", label: "Login YouTube Music gravado neste coletor", configured: true, suffix: clientId ? suffix(clientId) : null, mode: "oauth", hidden: false, local_label: "", primary_label: "", accounts: [] };
+  }
+  if (clientId && clientSecret) {
+    return { source: "youtubemusic_client", label: "Credenciais do Google salvas — entre com o YouTube Music", configured: false, suffix: suffix(clientId), mode: "need_oauth", hidden: false, local_label: "", primary_label: "", accounts: [] };
+  }
+  return { source: "missing", label: "Cole o Client ID e o Client Secret do Google Cloud (tipo Web) para YouTube Music", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] };
+}
+
 function _opencodeCard(cfg: Record<string, unknown>): Record<string, unknown> {
   const p = providerCfg(cfg, "opencode") as Record<string, unknown>;
   const cands = opencodeTokenCandidates(cfg);
@@ -248,6 +262,7 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
       adsense: _adsenseCard(cfg),
       retroachievements: _keyCard(cfg, "retroachievements"),
       spotify: _spotifyCard(cfg),
+      youtubemusic: _youtubemusicCard(cfg),
     },
     weather: weatherRaw,
     currencies: currenciesRaw,
@@ -353,6 +368,15 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
           spotify.client_secret = String(body.spotify_client_secret).trim();
         }
         (cfg.providers as Record<string, unknown>).spotify = spotify;
+
+        const youtubemusic = ((cfg.providers as Record<string, unknown>).youtubemusic ?? {}) as Record<string, unknown>;
+        if (body.youtubemusic_client_id !== undefined && body.youtubemusic_client_id !== null && body.youtubemusic_client_id !== "" && body.youtubemusic_client_id !== "********") {
+          youtubemusic.client_id = String(body.youtubemusic_client_id).trim();
+        }
+        if (body.youtubemusic_client_secret !== undefined && body.youtubemusic_client_secret !== null && body.youtubemusic_client_secret !== "" && body.youtubemusic_client_secret !== "********") {
+          youtubemusic.client_secret = String(body.youtubemusic_client_secret).trim();
+        }
+        (cfg.providers as Record<string, unknown>).youtubemusic = youtubemusic;
       });
     } catch (e: unknown) {
       const err = e as { statusCode?: number; message?: string };
@@ -441,6 +465,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
       retroachievements: "retroachievements", retroachievements_paste: "retroachievements",
       adsense_client_secret: "adsense", adsense_client_id: "adsense",
       spotify_client_secret: "spotify", spotify_client_id: "spotify",
+      youtubemusic_client_secret: "youtubemusic", youtubemusic_client_id: "youtubemusic",
     };
     const provider = mapping[name];
     if (!provider) return { ok: false, error: "chave não é segredo gerenciável" };
@@ -459,6 +484,12 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
         sp.client_secret = "";
         sp.refresh_token = "";
         providers.spotify = sp;
+      } else if (provider === "youtubemusic") {
+        const ym = providers.youtubemusic ?? {};
+        ym.client_id = "";
+        ym.client_secret = "";
+        ym.refresh_token = "";
+        providers.youtubemusic = ym;
       } else {
         const p = providers[provider] ?? {};
         p.paste_secret = "";

@@ -13,6 +13,7 @@ export const PROVIDERS = [
   "adsense",
   "retroachievements",
   "spotify",
+  "youtubemusic",
 ] as const;
 export type ProviderName = typeof PROVIDERS[number];
 
@@ -156,6 +157,10 @@ export function defaultConfig(): Record<string, unknown> {
   spotify.client_id = "";
   spotify.client_secret = "";
   spotify.refresh_token = "";
+  const youtubemusic = providers.youtubemusic as Record<string, unknown>;
+  youtubemusic.client_id = "";
+  youtubemusic.client_secret = "";
+  youtubemusic.refresh_token = "";
   (cfg.wallpapers as Record<string, unknown>).grid_selected_id = "";
   return cfg;
 }
@@ -358,6 +363,11 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
       dest.account_name = String(src.account_name ?? "");
     }
     if (name === "spotify") {
+      dest.client_id = String(src.client_id ?? "");
+      dest.client_secret = String(src.client_secret ?? "");
+      dest.refresh_token = String(src.refresh_token ?? "");
+    }
+    if (name === "youtubemusic") {
       dest.client_id = String(src.client_id ?? "");
       dest.client_secret = String(src.client_secret ?? "");
       dest.refresh_token = String(src.refresh_token ?? "");

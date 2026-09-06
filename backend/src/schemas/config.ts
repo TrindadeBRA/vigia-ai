@@ -97,6 +97,8 @@ export const ConfigPatchSchema = z.object({
   adsense_client_secret: z.string().nullable().default(null),
   spotify_client_id: z.string().nullable().default(null),
   spotify_client_secret: z.string().nullable().default(null),
+  youtubemusic_client_id: z.string().nullable().default(null),
+  youtubemusic_client_secret: z.string().nullable().default(null),
 });
 export type ConfigPatch = z.infer<typeof ConfigPatchSchema>;
 

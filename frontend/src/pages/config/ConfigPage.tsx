@@ -9,8 +9,10 @@ import { DesktopCard } from "./DesktopCard";
 import { GitConfigCard } from "./GitConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { RetroAchievementsConfigCard } from "./RetroAchievementsConfigCard";
+import type { ProviderCardPublic } from "../../api/types";
 import { RssConfigCard } from "./RssConfigCard";
 import { SpotifyConfigCard } from "./SpotifyConfigCard";
+import { YoutubeMusicConfigCard } from "./YoutubeMusicConfigCard";
 import { Button, Fold } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
@@ -189,6 +191,7 @@ export default function ConfigPage() {
         <CalendarConfigCard calendar={cfg.calendar} c={c} onReload={reload} />
         <RssConfigCard rss={cfg.rss} c={c} onReload={reload} />
         <SpotifyConfigCard p={cfg.providers.spotify} listenPort={cfg.listen.port} {...common} />
+        <YoutubeMusicConfigCard p={(cfg.providers as Record<string, unknown>).youtubemusic as ProviderCardPublic ?? { source: "missing", label: "", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] } as unknown as ProviderCardPublic} listenPort={cfg.listen.port} {...common} />
       </div>
 
       <div className="mt-2 w-full">

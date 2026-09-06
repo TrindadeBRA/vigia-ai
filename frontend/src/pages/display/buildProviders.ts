@@ -384,6 +384,9 @@ export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): P
   if (enabled?.includes("spotify")) {
     list.push({ id: "widget:spotify", provider: "spotify", ok: true, error: null, title: t.widgetSpotify, label: "", metrics: [] });
   }
+  if (enabled?.includes("youtubemusic")) {
+    list.push({ id: "widget:youtubemusic", provider: "youtubemusic", ok: true, error: null, title: t.widgetYoutubeMusic, label: "", metrics: [] });
+  }
   if (enabled?.includes("system")) {
     list.push({ id: "widget:system", provider: "system", ok: true, error: null, title: t.widgetSystem, label: "", metrics: [] });
   }

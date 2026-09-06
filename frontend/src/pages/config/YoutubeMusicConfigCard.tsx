@@ -17,7 +17,7 @@ type Props = {
   onReload: () => Promise<void>;
 };
 
-export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Props) {
+export function YoutubeMusicConfigCard({ p, listenPort, inDocker, c, onReload }: Props) {
   const b = badgeOf(p, c);
   const hasClient = p.mode === "oauth" || p.mode === "need_oauth";
   const [clientId, setClientId] = useState(hasClient ? MASK : "");
@@ -34,28 +34,28 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    const status = q.get("spotify");
+    const status = q.get("youtubemusic");
     if (!status) return;
     const reason = q.get("reason");
-    q.delete("spotify");
+    q.delete("youtubemusic");
     q.delete("reason");
     const next = `${window.location.pathname}${q.toString() ? `?${q}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", next);
     if (status === "ok") {
-      setOauthFlash({ status: "success", message: c.spotifyOauthOk });
+      setOauthFlash({ status: "success", message: c.ytmusicOauthOk });
       void onReload();
     } else if (status === "denied") {
-      setOauthFlash({ status: "error", message: reason ? `${c.spotifyOauthDenied} — ${reason.slice(0, 280)}` : c.spotifyOauthDenied });
+      setOauthFlash({ status: "error", message: reason ? `${c.ytmusicOauthDenied} — ${reason.slice(0, 280)}` : c.ytmusicOauthDenied });
     } else {
-      const msg = reason ? `${c.spotifyOauthError} — ${reason.slice(0, 320)}` : c.spotifyOauthError;
+      const msg = reason ? `${c.ytmusicOauthError} — ${reason.slice(0, 320)}` : c.ytmusicOauthError;
       setOauthFlash({ status: "error", message: msg });
     }
-  }, [onReload, c.spotifyOauthOk, c.spotifyOauthDenied, c.spotifyOauthError]);
+  }, [onReload, c.ytmusicOauthOk, c.ytmusicOauthDenied, c.ytmusicOauthError]);
 
   const credsReady = Boolean(clientId.trim()) && clientId !== MASK && Boolean(clientSecret.trim()) && clientSecret !== MASK;
   const hint = p.mode === "need_paste" ? p.label : connectionHint(p, c, inDocker, false);
-  const redirect = `http://127.0.0.1:${listenPort}/api/oauth/spotify/callback`;
-  const redirectAlt = `http://localhost:${listenPort}/api/oauth/spotify/callback`;
+  const redirect = `http://127.0.0.1:${listenPort}/api/oauth/youtubemusic/callback`;
+  const redirectAlt = `http://localhost:${listenPort}/api/oauth/youtubemusic/callback`;
   const [copied, setCopied] = useState<string | null>(null);
   const copy = async (text: string) => {
     try {
@@ -63,7 +63,6 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
       setCopied(text);
       window.setTimeout(() => setCopied(null), 1500);
     } catch {
-      // fallback: seleciona via prompt
       window.prompt("Copie o Redirect URI:", text);
     }
   };
@@ -80,11 +79,11 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div className={iconChip}>
-            <img className={iconImg} src={PROVIDER_ICON.spotify} alt="" draggable={false} />
+            <img className={iconImg} src={PROVIDER_ICON.youtubemusic} alt="" draggable={false} />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="m-0 text-[15.5px] font-bold">Spotify</h3>
+              <h3 className="m-0 text-[15.5px] font-bold">YouTube Music</h3>
               <StatusPill state={b.state} label={b.text} />
             </div>
             <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
@@ -92,18 +91,18 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
         </div>
       </div>
 
-      {!p.configured ? <p className={cfgHint}>{c.spotifyBlurb}</p> : null}
+      {!p.configured ? <p className={cfgHint}>{c.ytmusicBlurb}</p> : null}
 
-      <Fold summary={c.spotifyCredsFold}>
+      <Fold summary={c.ytmusicCredsFold}>
         <p className={cfgHint}>
-          {c.spotifyCredsIntro}{" "}
-          <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer" className="text-accent hover:underline">
-            {c.spotifyDashboardCta} ↗
+          {c.ytmusicCredsIntro}{" "}
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+            {c.ytmusicDashboardCta} ↗
           </a>
         </p>
-        <p className={cfgHint}>{c.spotifyRedirectHint(redirect)}</p>
+        <p className={cfgHint}>{c.ytmusicRedirectHint(redirect)}</p>
         <div className="flex flex-col gap-1.5 rounded-xl border border-edge bg-chip px-3 py-2.5">
-          <div className="text-[12px] font-semibold text-ink2">Redirect URIs — cadastre as duas no Spotify Dashboard → Settings → Redirect URIs → Save</div>
+          <div className="text-[12px] font-semibold text-ink2">Redirect URIs — cadastre as duas em Google Cloud → Credentials → OAuth Client → Authorized redirect URIs → Save</div>
           <div className="flex flex-col gap-1.5">
             {[redirect, redirectAlt].map((u) => (
               <div key={u} className="flex items-center gap-2">
@@ -112,13 +111,14 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
               </div>
             ))}
           </div>
-          <p className="m-0 text-[12px] leading-snug text-ink3">O Spotify valida a URI exata — <span className="font-semibold">127.0.0.1 ≠ localhost</span>. O erro mais comum é <code>redirect_uri_mismatch / INVALID_CLIENT</code>. Se aparecer, confira porta ({listenPort}) e salve as duas URIs.</p>
+          <p className="m-0 text-[12px] leading-snug text-ink3">O Google valida a URI exata — <span className="font-semibold">127.0.0.1 ≠ localhost</span>. O erro mais comum é <code>redirect_uri_mismatch</code>. Se aparecer, confira porta ({listenPort}) e salve as duas URIs.</p>
         </div>
+        <p className={cfgHint}>Ative também a <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noreferrer" className="text-accent hover:underline">YouTube Data API v3</a> no mesmo projeto.</p>
         <ActionRow>
           <TextField
-            label={c.spotifyClientId}
+            label={c.ytmusicClientId}
             autoComplete="off"
-            placeholder={c.spotifyClientIdPh}
+            placeholder={c.ytmusicClientIdPh}
             value={clientId}
             onFocus={() => {
               if (clientId === MASK) setClientId("");
@@ -126,10 +126,10 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
             onChange={(e) => setClientId(e.target.value)}
           />
           <TextField
-            label={c.spotifyClientSecret}
+            label={c.ytmusicClientSecret}
             type="password"
             autoComplete="off"
-            placeholder={c.spotifyClientSecretPh}
+            placeholder={c.ytmusicClientSecretPh}
             value={clientSecret}
             onFocus={() => {
               if (clientSecret === MASK) setClientSecret("");
@@ -142,7 +142,7 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
             onClick={async () => {
               const out = await saveCreds.run(
                 async () => {
-                  const res = await patchConfig({ spotify_client_id: clientId.trim(), spotify_client_secret: clientSecret.trim() });
+                  const res = await patchConfig({ youtubemusic_client_id: clientId.trim(), youtubemusic_client_secret: clientSecret.trim() });
                   if (res.ok) await onReload();
                   return res;
                 },
@@ -167,11 +167,11 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
             login.run(
               async () => {
                 if (credsReady) {
-                  const saved = await patchConfig({ spotify_client_id: clientId.trim(), spotify_client_secret: clientSecret.trim() });
+                  const saved = await patchConfig({ youtubemusic_client_id: clientId.trim(), youtubemusic_client_secret: clientSecret.trim() });
                   if (!saved.ok) return saved;
                 }
                 const returnTo = `${window.location.origin}/display/config`;
-                const res = await fetch(`/api/oauth/spotify/start?return_to=${encodeURIComponent(returnTo)}`);
+                const res = await fetch(`/api/oauth/youtubemusic/start?return_to=${encodeURIComponent(returnTo)}`);
                 const data = (await res.json().catch(() => ({}))) as { url?: string; detail?: string; error?: string };
                 const detail = typeof data.detail === "string" ? data.detail : null;
                 if (!res.ok || !data.url) {
@@ -180,11 +180,11 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
                 window.location.href = data.url;
                 return { ok: true };
               },
-              { success: c.spotifyLogin, error: c.offline },
+              { success: c.ytmusicLogin, error: c.offline },
             )
           }
         >
-          {login.busy ? c.saving : c.spotifyLogin}
+          {login.busy ? c.saving : c.ytmusicLogin}
         </Button>
         <Button
           variant="ghost"
@@ -193,21 +193,21 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
           onClick={() =>
             logout.run(
               async () => {
-                const res = await fetch("/api/oauth/spotify/disconnect", { method: "POST" });
+                const res = await fetch("/api/oauth/youtubemusic/disconnect", { method: "POST" });
                 const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
                 if (res.ok && data.ok) await onReload();
                 return { ok: Boolean(res.ok && data.ok), error: data.error };
               },
-              { success: c.spotifyLogoutOk, error: c.offline },
+              { success: c.ytmusicLogoutOk, error: c.offline },
             )
           }
         >
-          {logout.busy ? c.removing : c.spotifyLogout}
+          {logout.busy ? c.removing : c.ytmusicLogout}
         </Button>
       </ActionRow>
 
-      {!hasClient && !credsReady ? <p className={cfgHint}>{c.spotifyNeedCreds}</p> : null}
-      {p.configured ? <p className={cfgHint}>{c.spotifyAddCardHint}</p> : null}
+      {!hasClient && !credsReady ? <p className={cfgHint}>{c.ytmusicNeedCreds}</p> : null}
+      {p.configured ? <p className={cfgHint}>{c.ytmusicAddCardHint}</p> : null}
 
       {lastMsg ? <FieldStatus status={lastMsg.status} message={lastMsg.message} /> : null}
     </article>

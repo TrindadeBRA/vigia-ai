@@ -113,6 +113,23 @@ export type ConfigCopy = {
   spotifyOauthDenied: string;
   spotifyOauthError: string;
   spotifyAddCardHint: string;
+  ytmusicBlurb: string;
+  ytmusicCredsFold: string;
+  ytmusicCredsIntro: string;
+  ytmusicDashboardCta: string;
+  ytmusicClientId: string;
+  ytmusicClientSecret: string;
+  ytmusicClientIdPh: string;
+  ytmusicClientSecretPh: string;
+  ytmusicRedirectHint: (url: string) => string;
+  ytmusicLogin: string;
+  ytmusicNeedCreds: string;
+  ytmusicLogout: string;
+  ytmusicLogoutOk: string;
+  ytmusicOauthOk: string;
+  ytmusicOauthDenied: string;
+  ytmusicOauthError: string;
+  ytmusicAddCardHint: string;
   cursorHint: string;
   cursorAdvanced: string;
   modeLocal: string;
@@ -442,6 +459,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     spotifyOauthDenied: "Login Spotify cancelado.",
     spotifyOauthError: "Não deu para conectar o Spotify.",
     spotifyAddCardHint: "Conectado! Agora adicione o card em /display pelo botão \"Adicionar widget\" → Spotify.",
+    ytmusicBlurb: "Mostra o que está tocando no YouTube Music. Exige um OAuth Client (tipo Web) no Google Cloud com a API YouTube Data v3 ativada e o login Google neste computador. O controle remoto (play/pause/next) ainda depende da API oficial do Google — por enquanto use o app do YouTube Music para controlar.",
+    ytmusicCredsFold: "Credenciais do Google (YouTube Music)",
+    ytmusicCredsIntro: "Crie um OAuth Client (Web) e copie o Client ID e o Client Secret em",
+    ytmusicDashboardCta: "console.cloud.google.com/apis/credentials",
+    ytmusicClientId: "CLIENT ID",
+    ytmusicClientSecret: "CLIENT SECRET",
+    ytmusicClientIdPh: "ex.: 123...apps.googleusercontent.com",
+    ytmusicClientSecretPh: "ex.: GOCSPX-...",
+    ytmusicRedirectHint: (url) => `Redirect URI (cadastrar no OAuth Client Web): ${url}`,
+    ytmusicLogin: "Entrar com YouTube Music",
+    ytmusicNeedCreds: "Cole o Client ID e o Client Secret reais no fold acima. Depois o botão liga.",
+    ytmusicLogout: "Sair do YouTube Music",
+    ytmusicLogoutOk: "Login YouTube Music apagado.",
+    ytmusicOauthOk: "YouTube Music conectado.",
+    ytmusicOauthDenied: "Login YouTube Music cancelado.",
+    ytmusicOauthError: "Não deu para conectar o YouTube Music.",
+    ytmusicAddCardHint: "Conectado! Agora adicione o card em /display pelo botão \"Adicionar widget\" → YouTube Music.",
     cursorHint: "Se não aparecer sozinho: no Cursor, abra a conta, saia e entre de novo.",
     cursorAdvanced: "Opção avançada (Terminal)",
     modeLocal: "Encontramos o login neste computador.",
@@ -761,6 +795,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     spotifyOauthDenied: "Spotify sign-in cancelled.",
     spotifyOauthError: "Could not connect Spotify.",
     spotifyAddCardHint: "Connected! Now add the card on /display via the \"Add widget\" button → Spotify.",
+    ytmusicBlurb: "Shows what's playing on YouTube Music. Needs a Google Cloud OAuth Web client with YouTube Data API v3 enabled and a Google login on this computer. Remote control (play/pause/next) is not yet exposed by Google's official API — use the YouTube Music app to control playback for now.",
+    ytmusicCredsFold: "Google credentials (YouTube Music)",
+    ytmusicCredsIntro: "Create a Web OAuth client and copy the Client ID and Client Secret at",
+    ytmusicDashboardCta: "console.cloud.google.com/apis/credentials",
+    ytmusicClientId: "CLIENT ID",
+    ytmusicClientSecret: "CLIENT SECRET",
+    ytmusicClientIdPh: "e.g. 123...apps.googleusercontent.com",
+    ytmusicClientSecretPh: "e.g. GOCSPX-...",
+    ytmusicRedirectHint: (url) => `Redirect URI (register it on the Web OAuth client): ${url}`,
+    ytmusicLogin: "Sign in with YouTube Music",
+    ytmusicNeedCreds: "Paste the real Client ID and Client Secret in the fold above. Then the button turns on.",
+    ytmusicLogout: "Sign out of YouTube Music",
+    ytmusicLogoutOk: "YouTube Music login cleared.",
+    ytmusicOauthOk: "YouTube Music connected.",
+    ytmusicOauthDenied: "YouTube Music sign-in cancelled.",
+    ytmusicOauthError: "Could not connect YouTube Music.",
+    ytmusicAddCardHint: "Connected! Now add the card on /display via the \"Add widget\" button → YouTube Music.",
     cursorHint: "If it doesn't show up: in Cursor, open the account, sign out, and sign back in.",
     cursorAdvanced: "Advanced (Terminal)",
     modeLocal: "We found the sign-in on this computer.",
@@ -1080,6 +1131,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     spotifyOauthDenied: "Inicio de sesión de Spotify cancelado.",
     spotifyOauthError: "No se pudo conectar Spotify.",
     spotifyAddCardHint: "¡Conectado! Ahora agrega la card en /display con el botón \"Agregar widget\" → Spotify.",
+    ytmusicBlurb: "Muestra lo que suena en YouTube Music. Requiere un OAuth Client (tipo Web) en Google Cloud con la YouTube Data API v3 activada y el login de Google en este equipo. El control remoto (play/pause/next) aún depende de la API oficial de Google — por ahora usa la app de YouTube Music para controlar.",
+    ytmusicCredsFold: "Credenciales de Google (YouTube Music)",
+    ytmusicCredsIntro: "Crea un OAuth Client (Web) y copia el Client ID y el Client Secret en",
+    ytmusicDashboardCta: "console.cloud.google.com/apis/credentials",
+    ytmusicClientId: "CLIENT ID",
+    ytmusicClientSecret: "CLIENT SECRET",
+    ytmusicClientIdPh: "ej.: 123...apps.googleusercontent.com",
+    ytmusicClientSecretPh: "ej.: GOCSPX-...",
+    ytmusicRedirectHint: (url) => `URI de redirección (registrar en el OAuth Client Web): ${url}`,
+    ytmusicLogin: "Entrar con YouTube Music",
+    ytmusicNeedCreds: "Pega el Client ID y el Client Secret reales en el fold de arriba. Después se activa el botón.",
+    ytmusicLogout: "Salir de YouTube Music",
+    ytmusicLogoutOk: "Login de YouTube Music borrado.",
+    ytmusicOauthOk: "YouTube Music conectado.",
+    ytmusicOauthDenied: "Inicio de sesión de YouTube Music cancelado.",
+    ytmusicOauthError: "No se pudo conectar YouTube Music.",
+    ytmusicAddCardHint: "¡Conectado! Ahora agrega la card en /display con el botón \"Agregar widget\" → YouTube Music.",
     cursorHint: "Si no aparece solo: en Cursor, abre la cuenta, cierra sesión y vuelve a entrar.",
     cursorAdvanced: "Opción avanzada (Terminal)",
     modeLocal: "Encontramos el inicio de sesión en este computador.",

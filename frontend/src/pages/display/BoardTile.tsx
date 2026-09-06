@@ -25,6 +25,7 @@ import {
   SpotifyTileCard,
   SystemTileCard,
   WeatherTileCard,
+  YoutubeMusicTileCard,
 } from "./TileCards";
 import type { Pal, ProviderMeta } from "./types";
 
@@ -106,6 +107,9 @@ export function ProviderCard({
   }
   if (p.provider === "spotify") {
     return <SpotifyTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "youtubemusic") {
+    return <YoutubeMusicTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "system") {
     return <SystemTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;

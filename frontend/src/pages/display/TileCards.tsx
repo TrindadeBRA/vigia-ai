@@ -18,6 +18,7 @@ import { RetroAchievementsBoardCard, retroAllowedSizes, retroSizeLabel } from ".
 import { RssBoardCard, rssAllowedSizes, rssSizeLabel } from "../../components/cards/RssCard";
 import { SpotifyBoardCard, spotifyAllowedSizes, spotifySizeLabel } from "../../components/cards/SpotifyCard";
 import { SystemBoardCard, systemAllowedSizes, systemSizeLabel } from "../../components/cards/SystemCard";
+import { YoutubeMusicBoardCard, youtubemusicAllowedSizes, youtubemusicSizeLabel } from "../../components/cards/YoutubeMusicCard";
 import { WeatherBoardCard, weatherAllowedSizes, weatherSizeLabel } from "../../components/cards/WeatherCard";
 import { ntcGenerateReadableColor, useNameToColor } from "../../hooks/useNameToColor";
 import type { T } from "../../i18n";
@@ -145,6 +146,20 @@ export function SpotifyTileCard({ p, size, dragging, lifted, t, grip, bg, readon
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => spotifySizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <SpotifyBoardCard t={t} size={size} />
+    </div>
+  );
+}
+
+export function YoutubeMusicTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = youtubemusicAllowedSizes();
+  const isClone = isCloneId(p.id);
+  const style = useTileStyle(bg);
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => youtubemusicSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <YoutubeMusicBoardCard t={t} size={size} />
     </div>
   );
 }

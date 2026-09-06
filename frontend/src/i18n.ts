@@ -158,6 +158,13 @@ type Strings = {
   spotifyPause: string;
   spotifyNext: string;
   spotifyPrevious: string;
+  widgetYoutubeMusic: string;
+  ytmusicNothingPlaying: string;
+  ytmusicConnectHint: string;
+  ytmusicPlay: string;
+  ytmusicPause: string;
+  ytmusicNext: string;
+  ytmusicPrevious: string;
   widgetSystem: string;
   systemUptime: string;
   systemMemory: string;
@@ -392,6 +399,13 @@ export const STR: Record<Lang, Strings> = {
     spotifyPause: "Pausar",
     spotifyNext: "Próxima faixa",
     spotifyPrevious: "Faixa anterior",
+    widgetYoutubeMusic: "YouTube Music",
+    ytmusicNothingPlaying: "Nada tocando",
+    ytmusicConnectHint: "Conecte sua conta do YouTube Music em Configurações",
+    ytmusicPlay: "Tocar",
+    ytmusicPause: "Pausar",
+    ytmusicNext: "Próxima faixa",
+    ytmusicPrevious: "Faixa anterior",
     widgetSystem: "Sistema",
     systemUptime: "Uptime",
     systemMemory: "Memória",
@@ -620,6 +634,13 @@ export const STR: Record<Lang, Strings> = {
     spotifyPause: "Pause",
     spotifyNext: "Next track",
     spotifyPrevious: "Previous track",
+    widgetYoutubeMusic: "YouTube Music",
+    ytmusicNothingPlaying: "Nothing playing",
+    ytmusicConnectHint: "Connect your YouTube Music account in Settings",
+    ytmusicPlay: "Play",
+    ytmusicPause: "Pause",
+    ytmusicNext: "Next track",
+    ytmusicPrevious: "Previous track",
     widgetSystem: "System",
     systemUptime: "Uptime",
     systemMemory: "Memory",
@@ -848,6 +869,13 @@ export const STR: Record<Lang, Strings> = {
     spotifyPause: "Pausar",
     spotifyNext: "Pista siguiente",
     spotifyPrevious: "Pista anterior",
+    widgetYoutubeMusic: "YouTube Music",
+    ytmusicNothingPlaying: "Nada sonando",
+    ytmusicConnectHint: "Conecta tu cuenta de YouTube Music en Configuración",
+    ytmusicPlay: "Reproducir",
+    ytmusicPause: "Pausar",
+    ytmusicNext: "Pista siguiente",
+    ytmusicPrevious: "Pista anterior",
     widgetSystem: "Sistema",
     systemUptime: "Uptime",
     systemMemory: "Memoria",
