@@ -132,7 +132,10 @@ export function SizeMenu({ size, t, onChange, allowed, getLabel, onFree }: { siz
   );
 }
 
-const TILE_CHROME_CHIP = "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100 max-[860px]:pointer-events-auto max-[860px]:opacity-100";
+// No touch (sem hover), o chrome só aparece depois que o próprio tile marca
+// a classe "is-revealed" (primeiro toque nele — ver BoardTile.tsx), em vez de
+// ficar sempre visível em telas pequenas.
+const TILE_CHROME_CHIP = "opacity-0 pointer-events-none transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100 [.is-revealed_&]:pointer-events-auto [.is-revealed_&]:opacity-100";
 
 /** Chrome flutuante do tile: alça de arrastar isolada à esquerda (evita clique acidental nos outros botões) + duplicar/cor/tamanho/remover à direita. */
 export function TileChrome({

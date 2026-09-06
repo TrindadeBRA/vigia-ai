@@ -6,7 +6,7 @@ import { colsForWidth, sameBoard } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
-import { MenuIcon, SettingsIcon } from "../components/icons";
+import { ArrowLeftIcon, ChevronRightIcon, MenuIcon, SettingsIcon } from "../components/icons";
 import { ImageWidgetModal } from "../components/ImageWidgetModal";
 import { Logo } from "../components/Logo";
 import { PixDonateModal } from "../components/PixDonateModal";
@@ -430,6 +430,19 @@ export default function Display() {
                     else noteWidgets.update(raw, patch as never);
                   }}
                 />
+              ) : null}
+              {section === "account" && meta && !hideChrome ? (
+                <div className="mb-3 flex min-w-0 items-center gap-1.5 text-[12.5px]">
+                  <button
+                    type="button"
+                    className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent px-1 py-0.5 font-medium text-ink2 hover:text-accent"
+                    onClick={goOverview}
+                  >
+                    <ArrowLeftIcon size={13} /> {t.overview}
+                  </button>
+                  <ChevronRightIcon size={13} className="shrink-0 text-ink3" />
+                  <span className="truncate text-ink3">{meta.title}</span>
+                </div>
               ) : null}
               {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
             </>

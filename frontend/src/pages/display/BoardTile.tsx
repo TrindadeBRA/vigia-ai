@@ -1,4 +1,5 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useEffect, useRef, useState } from "react";
 import { isCloneId, normalizeSize, type CardSize } from "../../board";
 import { cn } from "../../cn";
 import { ntcGenerateReadableColor, useNameToColor } from "../../hooks/useNameToColor";
@@ -243,14 +244,37 @@ export function BoardTile({
   // injeta bg/onSetBg via props extras para ProviderCard genérico
   if (bg !== undefined) (p as unknown as Record<string, unknown>)._bg = bg;
   if (onSetBg) (p as unknown as Record<string, unknown>)._onSetBg = onSetBg;
+
+  // Sem hover (touch), o chrome (arrastar/duplicar/tamanho/remover) fica
+  // escondido até o primeiro toque no card — em vez de sempre visível, o que
+  // poluía a tela em telas pequenas. O primeiro toque só revela (via classe
+  // "is-revealed", lida pelo TILE_CHROME_CHIP); um segundo toque age normal.
+  const [revealed, setRevealed] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!revealed) return;
+    const onOutside = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setRevealed(false);
+    };
+    document.addEventListener("pointerdown", onOutside, true);
+    return () => document.removeEventListener("pointerdown", onOutside, true);
+  }, [revealed]);
+
   return (
     <div
       ref={(node) => {
         setDragRef(node);
         setDropRef(node);
+        rootRef.current = node;
       }}
       style={{ gridColumn: `${col + 1} / span ${rect.w}`, gridRow: `${row + 1} / span ${rect.h}`, zIndex: isDragging ? 2 : 1 }}
-      className="min-h-0 min-w-0 h-full"
+      className={cn("min-h-0 min-w-0 h-full", revealed && "is-revealed")}
+      onClickCapture={(e) => {
+        if (revealed || !window.matchMedia("(hover: none)").matches) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setRevealed(true);
+      }}
     >
       <ProviderCard
         p={p}
