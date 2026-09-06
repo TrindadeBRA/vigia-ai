@@ -63,6 +63,9 @@ function useSpotifyState(): { state: SpotifyState | null; refresh: () => void } 
   useEffect(() => {
     let alive = true;
     async function load() {
+      // aba em background não precisa saber o que tá tocando agora —
+      // visibilitychange abaixo refresca assim que volta a ficar visível
+      if (document.hidden) return;
       try {
         const res = await fetch("/api/spotify", { cache: "no-store" });
         const data = (await res.json()) as SpotifyState;
@@ -79,7 +82,13 @@ function useSpotifyState(): { state: SpotifyState | null; refresh: () => void } 
     }
     void load();
     const timer = window.setInterval(() => { void load(); }, POLL_MS);
-    return () => { alive = false; window.clearInterval(timer); };
+    const onVisible = () => { if (!document.hidden) void load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const refresh = () => {

@@ -9,7 +9,11 @@ export type ServerNote = {
     createdBy?: string | null;
 };
 
-const POLL_MS = 5000;
+// Notas mudam pouco — 5s de poll de fundo era exagero. O refresh no
+// foco/visibilitychange abaixo já cobre o caso "voltei pra aba, quero ver
+// na hora"; o intervalo aqui é só a rede de segurança pra outra aba/aparelho
+// editando enquanto esta fica parada olhando.
+const POLL_MS = 15000;
 
 async function fetchServerNotes(): Promise<ServerNote[]> {
     try {
@@ -41,10 +45,14 @@ export function useServerNotes() {
         let timer: number | null = null;
 
         async function tick() {
-            const notes = await fetchServerNotes();
-            if (cancelled) return;
-            setItems(notes);
-            setReady(true);
+            // aba em background não precisa de dado fresco — só reagenda,
+            // sem gastar request; visibilitychange abaixo já refresca na volta
+            if (!document.hidden) {
+                const notes = await fetchServerNotes();
+                if (cancelled) return;
+                setItems(notes);
+                setReady(true);
+            }
             timer = window.setTimeout(tick, POLL_MS);
         }
 
