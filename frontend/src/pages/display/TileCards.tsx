@@ -16,6 +16,7 @@ import { ImageBoardCard, imageAllowedSizes, imageSizeLabel } from "../../compone
 import { NoteBoardCard, noteAllowedSizes, noteSizeLabel } from "../../components/cards/NoteCard";
 import { RetroAchievementsBoardCard, retroAllowedSizes, retroSizeLabel } from "../../components/cards/RetroAchievementsCard";
 import { RssBoardCard, rssAllowedSizes, rssSizeLabel } from "../../components/cards/RssCard";
+import { SpotifyBoardCard, spotifyAllowedSizes, spotifySizeLabel } from "../../components/cards/SpotifyCard";
 import { WeatherBoardCard, weatherAllowedSizes, weatherSizeLabel } from "../../components/cards/WeatherCard";
 import { ntcGenerateReadableColor, useNameToColor } from "../../hooks/useNameToColor";
 import type { T } from "../../i18n";
@@ -129,6 +130,20 @@ export function EyeTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, 
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => eyeSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <EyeBoardCard size={size} />
+    </div>
+  );
+}
+
+export function SpotifyTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = spotifyAllowedSizes();
+  const isClone = isCloneId(p.id);
+  const style = useTileStyle(bg);
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => spotifySizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <SpotifyBoardCard t={t} size={size} />
     </div>
   );
 }

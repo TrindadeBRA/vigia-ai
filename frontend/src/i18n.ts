@@ -151,6 +151,13 @@ type Strings = {
   addWidgetHint: string;
   widgetClock: string;
   widgetEye: string;
+  widgetSpotify: string;
+  spotifyNothingPlaying: string;
+  spotifyConnectHint: string;
+  spotifyPlay: string;
+  spotifyPause: string;
+  spotifyNext: string;
+  spotifyPrevious: string;
   widgetNote: string;
   widgetNoteDesc: string;
   widgetImage: string;
@@ -365,6 +372,13 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Widgets extras não usam dados de conta — são só visuais.",
     widgetClock: "Relógio",
     widgetEye: "Olho",
+    widgetSpotify: "Spotify",
+    spotifyNothingPlaying: "Nada tocando",
+    spotifyConnectHint: "Conecte sua conta Spotify em Configurações",
+    spotifyPlay: "Tocar",
+    spotifyPause: "Pausar",
+    spotifyNext: "Próxima faixa",
+    spotifyPrevious: "Faixa anterior",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it com Markdown e cor personalizável.",
     widgetImage: "Imagem",
@@ -573,6 +587,13 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Extra widgets don't use account data — they're just visual.",
     widgetClock: "Clock",
     widgetEye: "Eye",
+    widgetSpotify: "Spotify",
+    spotifyNothingPlaying: "Nothing playing",
+    spotifyConnectHint: "Connect your Spotify account in Settings",
+    spotifyPlay: "Play",
+    spotifyPause: "Pause",
+    spotifyNext: "Next track",
+    spotifyPrevious: "Previous track",
     widgetNote: "Note",
     widgetNoteDesc: "Post-it with Markdown and custom color.",
     widgetImage: "Image",
@@ -781,6 +802,13 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Los widgets extra no usan datos de cuenta — son solo visuales.",
     widgetClock: "Reloj",
     widgetEye: "Ojo",
+    widgetSpotify: "Spotify",
+    spotifyNothingPlaying: "Nada sonando",
+    spotifyConnectHint: "Conecta tu cuenta de Spotify en Configuración",
+    spotifyPlay: "Reproducir",
+    spotifyPause: "Pausar",
+    spotifyNext: "Pista siguiente",
+    spotifyPrevious: "Pista anterior",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it con Markdown y color personalizable.",
     widgetImage: "Imagen",

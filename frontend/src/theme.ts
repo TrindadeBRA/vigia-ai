@@ -96,6 +96,7 @@ export const PROVIDER_ICON: Record<string, string> = {
   calendar: "/icons/calendar.png",
   calendarTasks: "/icons/calendar.png",
   rss: "/icons/rss.png",
+  spotify: "/icons/spotify.svg",
 };
 
 // URL da página oficial de plano/uso de cada provider de IA (usado para o atalho "ver site oficial").
@@ -108,6 +109,7 @@ export const PROVIDER_SITE_URL: Record<string, string> = {
   opencode: "https://opencode.ai",
   fal: "https://fal.ai/dashboard/billing",
   retroachievements: "https://retroachievements.org/controlpanel.php",
+  spotify: "https://open.spotify.com",
 };
 
 export function hexToRgba(hex: string, a: number): string {

@@ -12,6 +12,7 @@ export const PROVIDERS = [
   "bitcoin",
   "adsense",
   "retroachievements",
+  "spotify",
 ] as const;
 export type ProviderName = typeof PROVIDERS[number];
 
@@ -151,6 +152,10 @@ export function defaultConfig(): Record<string, unknown> {
   adsense.client_secret = "";
   adsense.refresh_token = "";
   adsense.account_name = "";
+  const spotify = providers.spotify as Record<string, unknown>;
+  spotify.client_id = "";
+  spotify.client_secret = "";
+  spotify.refresh_token = "";
   (cfg.wallpapers as Record<string, unknown>).grid_selected_id = "";
   return cfg;
 }
@@ -351,6 +356,11 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
       dest.client_secret = String(src.client_secret ?? "");
       dest.refresh_token = String(src.refresh_token ?? "");
       dest.account_name = String(src.account_name ?? "");
+    }
+    if (name === "spotify") {
+      dest.client_id = String(src.client_id ?? "");
+      dest.client_secret = String(src.client_secret ?? "");
+      dest.refresh_token = String(src.refresh_token ?? "");
     }
   }
   // Migration opencode_go/zen -> opencode

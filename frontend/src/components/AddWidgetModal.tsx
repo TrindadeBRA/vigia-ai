@@ -1,11 +1,12 @@
 import { cn } from "../cn";
 import type { T } from "../i18n";
 import { Modal } from "../pages/config/ui";
+import { PROVIDER_ICON } from "../theme";
 import { EyeMark } from "./Logo";
 
-export type WidgetKind = "clock" | "eye";
+export type WidgetKind = "clock" | "eye" | "spotify";
 
-export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye"];
+export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "spotify"];
 
 function ClockIcon() {
   return (
@@ -27,11 +28,15 @@ function ImageIcon() {
 }
 
 function widgetLabel(kind: WidgetKind, t: T): string {
-  return kind === "clock" ? t.widgetClock : t.widgetEye;
+  if (kind === "clock") return t.widgetClock;
+  if (kind === "spotify") return t.widgetSpotify;
+  return t.widgetEye;
 }
 
 function widgetIcon(kind: WidgetKind) {
-  return kind === "clock" ? <ClockIcon /> : <EyeMark size={20} follow={false} />;
+  if (kind === "clock") return <ClockIcon />;
+  if (kind === "spotify") return <img className="size-5 object-contain" src={PROVIDER_ICON.spotify} alt="" draggable={false} />;
+  return <EyeMark size={20} follow={false} />;
 }
 
 

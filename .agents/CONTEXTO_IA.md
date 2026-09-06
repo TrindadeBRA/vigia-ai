@@ -19,6 +19,7 @@ Leia este arquivo **antes** de alterar o repositório. Complementos:
 | [APIS_FAL.md](APIS_FAL.md)                   | Saldo de créditos fal.ai                                          |
 | [APIS_BITCOIN.md](APIS_BITCOIN.md)           | Saldo de carteira Bitcoin + cotação                               |
 | [APIS_ADSENSE.md](APIS_ADSENSE.md)           | Ganhos AdSense (OAuth Google)                                     |
+| [APIS_SPOTIFY.md](APIS_SPOTIFY.md)           | Player Spotify: tocar/pausar/avançar/retroceder (OAuth)           |
 | [HARDWARE.md](HARDWARE.md)                   | Placa, pinos, drivers TFT                                         |
 | [TOUCH.md](TOUCH.md)                         | Views, XPT2046, calibração, Wokwi                                 |
 | [BACKEND.md](BACKEND.md)                     | Como rodar o coletor Fastify (Node 22)                            |
@@ -79,6 +80,10 @@ frontend/src/pages/config/wallpaperManager/Library.tsx   UI de biblioteca/busca/
 frontend/src/pages/config/WallpaperProvidersConfigCard.tsx  chaves de API dos provedores de papel de parede (/display/config)
 backend/src/routers/board.ts       rotas /api/board — layout do board (posição/tamanho dos cards) espelhado do localStorage
 frontend/src/hooks/useGridBoards.ts  hook do layout do board (localStorage + backend)
+backend/src/providers/spotify.ts   OAuth Spotify + chamadas ao player (play/pause/next/previous) — ver APIS_SPOTIFY.md
+backend/src/routers/spotify.ts     rotas /api/oauth/spotify/* + /api/spotify* (estado + comandos do player) — protótipo, fora do contrato JSON
+frontend/src/components/cards/SpotifyCard.tsx  widget "Spotify" do board (/display) — poll próprio de 5s, não usa o hub de usage
+frontend/src/pages/config/SpotifyConfigCard.tsx  credenciais + login/logout OAuth do Spotify (/display/config)
 firmware/platformio.ini
 backend/src/desktop.ts             entrypoint do coletor como sidecar do Electron (port de app/desktop.py)
 desktop/src/main.ts                processo principal do app (janela, bandeja, menu)

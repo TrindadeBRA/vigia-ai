@@ -96,6 +96,23 @@ export type ConfigCopy = {
   adsenseOauthOk: string;
   adsenseOauthDenied: string;
   adsenseOauthError: string;
+  spotifyBlurb: string;
+  spotifyCredsFold: string;
+  spotifyCredsIntro: string;
+  spotifyDashboardCta: string;
+  spotifyClientId: string;
+  spotifyClientSecret: string;
+  spotifyClientIdPh: string;
+  spotifyClientSecretPh: string;
+  spotifyRedirectHint: (url: string) => string;
+  spotifyLogin: string;
+  spotifyNeedCreds: string;
+  spotifyLogout: string;
+  spotifyLogoutOk: string;
+  spotifyOauthOk: string;
+  spotifyOauthDenied: string;
+  spotifyOauthError: string;
+  spotifyAddCardHint: string;
   cursorHint: string;
   cursorAdvanced: string;
   modeLocal: string;
@@ -408,6 +425,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     adsenseOauthOk: "AdSense conectado.",
     adsenseOauthDenied: "Login Google cancelado.",
     adsenseOauthError: "Não deu para conectar o AdSense.",
+    spotifyBlurb: "Toque/pause/avance/retroceda a música tocando na sua conta Spotify. Exige um app OAuth criado no Spotify Developer Dashboard e o login Spotify neste computador.",
+    spotifyCredsFold: "Credenciais do Spotify",
+    spotifyCredsIntro: "Crie um app (Web API) e copie o Client ID e o Client Secret em",
+    spotifyDashboardCta: "developer.spotify.com/dashboard",
+    spotifyClientId: "CLIENT ID",
+    spotifyClientSecret: "CLIENT SECRET",
+    spotifyClientIdPh: "ex.: 6b1a9c...",
+    spotifyClientSecretPh: "ex.: 3f8d2e...",
+    spotifyRedirectHint: (url) => `Redirect URI (cadastrar no app do Spotify Developer Dashboard): ${url}`,
+    spotifyLogin: "Entrar com Spotify",
+    spotifyNeedCreds: "Cole o Client ID e o Client Secret reais no fold acima. Depois o botão liga.",
+    spotifyLogout: "Sair do Spotify",
+    spotifyLogoutOk: "Login Spotify apagado.",
+    spotifyOauthOk: "Spotify conectado.",
+    spotifyOauthDenied: "Login Spotify cancelado.",
+    spotifyOauthError: "Não deu para conectar o Spotify.",
+    spotifyAddCardHint: "Conectado! Agora adicione o card em /display pelo botão \"Adicionar widget\" → Spotify.",
     cursorHint: "Se não aparecer sozinho: no Cursor, abra a conta, saia e entre de novo.",
     cursorAdvanced: "Opção avançada (Terminal)",
     modeLocal: "Encontramos o login neste computador.",
@@ -710,6 +744,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     adsenseOauthOk: "AdSense connected.",
     adsenseOauthDenied: "Google sign-in cancelled.",
     adsenseOauthError: "Could not connect AdSense.",
+    spotifyBlurb: "Play/pause/skip the music playing on your Spotify account. Needs an OAuth app created on the Spotify Developer Dashboard and a Spotify login on this computer.",
+    spotifyCredsFold: "Spotify credentials",
+    spotifyCredsIntro: "Create an app (Web API) and copy the Client ID and Client Secret at",
+    spotifyDashboardCta: "developer.spotify.com/dashboard",
+    spotifyClientId: "CLIENT ID",
+    spotifyClientSecret: "CLIENT SECRET",
+    spotifyClientIdPh: "e.g. 6b1a9c...",
+    spotifyClientSecretPh: "e.g. 3f8d2e...",
+    spotifyRedirectHint: (url) => `Redirect URI (register it on your Spotify Developer Dashboard app): ${url}`,
+    spotifyLogin: "Sign in with Spotify",
+    spotifyNeedCreds: "Paste the real Client ID and Client Secret in the fold above. Then the button turns on.",
+    spotifyLogout: "Sign out of Spotify",
+    spotifyLogoutOk: "Spotify login cleared.",
+    spotifyOauthOk: "Spotify connected.",
+    spotifyOauthDenied: "Spotify sign-in cancelled.",
+    spotifyOauthError: "Could not connect Spotify.",
+    spotifyAddCardHint: "Connected! Now add the card on /display via the \"Add widget\" button → Spotify.",
     cursorHint: "If it doesn't show up: in Cursor, open the account, sign out, and sign back in.",
     cursorAdvanced: "Advanced (Terminal)",
     modeLocal: "We found the sign-in on this computer.",
@@ -1012,6 +1063,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     adsenseOauthOk: "AdSense conectado.",
     adsenseOauthDenied: "Inicio de sesión de Google cancelado.",
     adsenseOauthError: "No se pudo conectar AdSense.",
+    spotifyBlurb: "Reproduce/pausa/avanza/retrocede la música de tu cuenta Spotify. Requiere una app OAuth creada en el Spotify Developer Dashboard y el login de Spotify en este equipo.",
+    spotifyCredsFold: "Credenciales de Spotify",
+    spotifyCredsIntro: "Crea una app (Web API) y copia el Client ID y el Client Secret en",
+    spotifyDashboardCta: "developer.spotify.com/dashboard",
+    spotifyClientId: "CLIENT ID",
+    spotifyClientSecret: "CLIENT SECRET",
+    spotifyClientIdPh: "ej.: 6b1a9c...",
+    spotifyClientSecretPh: "ej.: 3f8d2e...",
+    spotifyRedirectHint: (url) => `URI de redirección (registrar en la app del Spotify Developer Dashboard): ${url}`,
+    spotifyLogin: "Entrar con Spotify",
+    spotifyNeedCreds: "Pega el Client ID y el Client Secret reales en el fold de arriba. Después se activa el botón.",
+    spotifyLogout: "Salir de Spotify",
+    spotifyLogoutOk: "Login de Spotify borrado.",
+    spotifyOauthOk: "Spotify conectado.",
+    spotifyOauthDenied: "Inicio de sesión de Spotify cancelado.",
+    spotifyOauthError: "No se pudo conectar Spotify.",
+    spotifyAddCardHint: "¡Conectado! Ahora agrega la card en /display con el botón \"Agregar widget\" → Spotify.",
     cursorHint: "Si no aparece solo: en Cursor, abre la cuenta, cierra sesión y vuelve a entrar.",
     cursorAdvanced: "Opción avanzada (Terminal)",
     modeLocal: "Encontramos el inicio de sesión en este computador.",

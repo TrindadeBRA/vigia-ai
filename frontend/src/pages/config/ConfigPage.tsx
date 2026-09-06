@@ -10,6 +10,7 @@ import { GitConfigCard } from "./GitConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { RetroAchievementsConfigCard } from "./RetroAchievementsConfigCard";
 import { RssConfigCard } from "./RssConfigCard";
+import { SpotifyConfigCard } from "./SpotifyConfigCard";
 import { Button, Fold } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
@@ -187,6 +188,7 @@ export default function ConfigPage() {
         <RetroAchievementsConfigCard c={c} onReload={reload} provider={cfg.providers.retroachievements as unknown as { configured: boolean; hidden: boolean; label: string; suffix: string | null; mode: string; accounts: Array<{ id: string; label: string; suffix: string | null }> }} />
         <CalendarConfigCard calendar={cfg.calendar} c={c} onReload={reload} />
         <RssConfigCard rss={cfg.rss} c={c} onReload={reload} />
+        <SpotifyConfigCard p={cfg.providers.spotify} listenPort={cfg.listen.port} {...common} />
       </div>
 
       <div className="mt-2 w-full">
