@@ -30,7 +30,7 @@ coletor no ar (`./dev up`), o app **se conecta a ele** em vez de subir outro.
 
 ## Contrato com o coletor
 
-`backend/app/desktop.py` imprime **uma linha** na stdout:
+`backend/src/desktop.ts` imprime **uma linha** na stdout:
 
 - `VIGIA_READY {"host":…,"port":…,"lan":[…],"pid":…}` — pronto
 - `VIGIA_ERROR {"code":"port_in_use"|…,"detail":…}` — falhou
@@ -41,7 +41,7 @@ que não tem `SIGTERM`.
 ## Empacotar
 
 ```bash
-./dev app build      # frontend + sidecar (PyInstaller) + electron-builder
+./dev app build      # frontend + sidecar (esbuild) + electron-builder
 ```
 
 O sidecar precisa ser gerado **no SO de destino** — não há cross-compile.

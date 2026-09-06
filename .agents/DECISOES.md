@@ -72,7 +72,7 @@ Web Push exigia HTTPS, service worker e chaves VAPID — frágil em LAN (`127.0.
 
 O Electron continua subindo o coletor como processo filho na mesma porta, mas o coletor deixou de ser Python/FastAPI e virou **Node 22 + Fastify** (`backend/src/`). Motivo: o app já é 100% Node — eliminar o PyInstaller remove binário de ~54 MB por SO, falso-positivo de antivírus e compilação por plataforma, e o hub SSE simplifica para `Promise.all`.
 
-O risco de divergir do JSON que `firmware/src/net/parse.cpp` espera foi mitigado com testes Vitest 1:1 (`backend/src/*.test.ts` vs `backend-python-legacy/tests/*.py`, 83 testes), harness de diff byte-a-byte (`scripts/diff-contract.mjs`) e gates SSE (§6). `sharp` foi evitado em favor de `jimp` puro JS para não reintroduzir módulo nativo por ABI do Electron (§2.3). Escolha original (Python) preservada em `backend-python-legacy/` até Fase 6.
+O risco de divergir do JSON que `firmware/src/net/parse.cpp` espera foi mitigado com testes Vitest 1:1 (`backend/src/*.test.ts` vs os antigos `backend-python-legacy/tests/*.py`, 83 testes), harness de diff byte-a-byte (`scripts/diff-contract.mjs`) e gates SSE (§6). `sharp` foi evitado em favor de `jimp` puro JS para não reintroduzir módulo nativo por ABI do Electron (§2.3). Escolha original (Python) mantida em `backend-python-legacy/` até a validação (Gate 2, Wokwi) e depois removida do repo.
 
 ## A porta do app não é sorteada
 

@@ -228,7 +228,7 @@ O app é o mesmo produto: continua servindo `/display` na rede local para a ESP3
 
 ### A partir do código
 
-Precisa de **Node 22 LTS** e, para o firmware, [PlatformIO Core](https://platformio.org/) — Python removido do coletor (legado em `backend-python-legacy/`).
+Precisa de **Node 22 LTS** e, para o firmware, [PlatformIO Core](https://platformio.org/).
 
 ```bash
 ./dev up      # coletor + painel web

@@ -52,7 +52,7 @@ type ProviderMeta = {id, provider, ok, error, title, label, metrics:Metric[], ki
 
 ## 3. Dados — API → métricas
 
-**Backend:** `backend/app/providers/claude.py:38` `parse_claude_payload` normaliza `five_hour/seven_day/seven_day_sonnet/seven_day_opus` ou `limits[].kind` para `session/weekly/sonnet/opus` 0–100 + `resets_at` ISO. `schemas.py:159` `ClaudeAccount`.
+**Backend:** `backend/src/providers/claude.ts:33` `parseClaudePayload` normaliza `five_hour/seven_day/seven_day_sonnet/seven_day_opus` ou `limits[].kind` para `session/weekly/sonnet/opus` 0–100 + `resets_at` ISO. `backend/src/schemas/usage.ts:169` `ClaudeAccountSchema`.
 
 **Frontend:** `getClaudeMetrics(c,t)` `ClaudeCard.tsx:15` mapeia `ClaudeAccount` → `Metric[]` (4 janelas opcionais, fallback `noData`). `buildProviders` `Display.tsx:263` usa mesma lógica para `ProviderMeta.metrics`.
 
@@ -89,7 +89,7 @@ type ProviderMeta = {id, provider, ok, error, title, label, metrics:Metric[], ki
 
 ## 7. Como criar um novo card (ex: GPT)
 
-1. **Mapear API** `backend/app/providers/<novo>.py` + `schemas.py` + `api/types.ts`.
+1. **Mapear API** `backend/src/providers/<novo>.ts` + `backend/src/schemas/usage.ts` + `api/types.ts`.
 2. **Criar** `frontend/src/components/cards/<Novo>Card.tsx` com:
    ```ts
    export function get<Novo>Metrics(acc: <Acc>, t:T): Metric[]
