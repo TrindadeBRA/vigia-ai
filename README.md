@@ -205,6 +205,13 @@ brew tap TrindadeBRA/vigia-ai
 brew install --cask vigia-ai
 ```
 
+Pra atualizar depois (o `brew update` é necessário pra buscar a versão nova da tap — sem ele o `upgrade` acha que já está tudo atualizado):
+
+```bash
+brew update
+brew upgrade --cask vigia-ai
+```
+
 **Linux — um comando (recomendado):**
 
 ```bash

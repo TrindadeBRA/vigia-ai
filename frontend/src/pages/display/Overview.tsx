@@ -30,6 +30,7 @@ import {
   type Cell
 } from "../../board";
 import { cn } from "../../cn";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { DownloadIcon, MaximizeIcon, MinimizeIcon, UploadIcon } from "../../components/icons";
 import { payloadAgeMs } from "../../format";
 import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
@@ -144,6 +145,7 @@ export function Overview({
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
   const [dropPreview, setDropPreview] = useState<Cell | null>(null);
   const [freeTarget, setFreeTarget] = useState<string | null>(null);
+  const [noteToRemove, setNoteToRemove] = useState<string | null>(null);
   const [bgRect, setBgRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const unitPx = rowPxFor(cellPx);
   const readonly = Boolean(kiosk);
@@ -266,19 +268,26 @@ export function Overview({
       return;
     }
     if (id.startsWith("note:")) {
-      onRemoveNote?.(id);
-      onBoard((b) => {
-        const size = { ...b.size };
-        const pos = { ...b.pos };
-        const bg = { ...(b.bg || {}) };
-        delete size[id];
-        delete pos[id];
-        delete bg[id];
-        return { ...b, size, pos, bg };
-      });
+      setNoteToRemove(id);
       return;
     }
     onBoard((b) => removeCloneBoard(b, id));
+  }
+
+  function removeNoteConfirmed() {
+    const id = noteToRemove;
+    setNoteToRemove(null);
+    if (!id) return;
+    onRemoveNote?.(id);
+    onBoard((b) => {
+      const size = { ...b.size };
+      const pos = { ...b.pos };
+      const bg = { ...(b.bg || {}) };
+      delete size[id];
+      delete pos[id];
+      delete bg[id];
+      return { ...b, size, pos, bg };
+    });
   }
 
   function handleDuplicateImage(id: string) {
@@ -549,6 +558,15 @@ export function Overview({
           const fid = freeTarget;
           onBoard((b) => setFreeCardSize(ids, displayBoard(ids, b, cols), fid, rect, cols));
         }}
+      />
+      <ConfirmModal
+        open={Boolean(noteToRemove)}
+        title={t.noteRemoveConfirmTitle}
+        body={t.noteRemoveConfirmBody}
+        confirmLabel={t.noteRemoveConfirmAction}
+        cancelLabel={t.widgetNoteCancel}
+        onCancel={() => setNoteToRemove(null)}
+        onConfirm={removeNoteConfirmed}
       />
     </div>
   );

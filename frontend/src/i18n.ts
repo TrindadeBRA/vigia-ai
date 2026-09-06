@@ -172,6 +172,9 @@ type Strings = {
   widgetNotePlaceholder: string;
   widgetNoteEmpty: string;
   widgetNoteAdd: string;
+  noteRemoveConfirmTitle: string;
+  noteRemoveConfirmBody: string;
+  noteRemoveConfirmAction: string;
   widgetNoteCount: (n: number) => string;
   imageEmpty: string;
   imageEmptyHint: string;
@@ -393,6 +396,9 @@ export const STR: Record<Lang, Strings> = {
     widgetNotePlaceholder: "Escreva sua nota... (Markdown suportado)",
     widgetNoteEmpty: "Toque para escrever...",
     widgetNoteAdd: "Adicionar nota",
+    noteRemoveConfirmTitle: "Remover nota?",
+    noteRemoveConfirmBody: "O texto dessa anotação vai ser perdido — não dá pra desfazer.",
+    noteRemoveConfirmAction: "Remover nota",
     widgetNoteCount: (n) => (n === 1 ? "1 nota" : `${n} notas`),
     imageEmpty: "Sem imagem",
     imageEmptyHint: "Clique para configurar",
@@ -608,6 +614,9 @@ export const STR: Record<Lang, Strings> = {
     widgetNotePlaceholder: "Write your note... (Markdown supported)",
     widgetNoteEmpty: "Tap to write...",
     widgetNoteAdd: "Add note",
+    noteRemoveConfirmTitle: "Remove note?",
+    noteRemoveConfirmBody: "This note's text will be lost — this can't be undone.",
+    noteRemoveConfirmAction: "Remove note",
     widgetNoteCount: (n) => (n === 1 ? "1 note" : `${n} notes`),
     imageEmpty: "No image",
     imageEmptyHint: "Click to configure",
@@ -823,6 +832,9 @@ export const STR: Record<Lang, Strings> = {
     widgetNotePlaceholder: "Escribe tu nota... (Markdown soportado)",
     widgetNoteEmpty: "Toca para escribir...",
     widgetNoteAdd: "Agregar nota",
+    noteRemoveConfirmTitle: "¿Quitar nota?",
+    noteRemoveConfirmBody: "El texto de esta nota se va a perder — no se puede deshacer.",
+    noteRemoveConfirmAction: "Quitar nota",
     widgetNoteCount: (n) => (n === 1 ? "1 nota" : `${n} notas`),
     imageEmpty: "Sin imagen",
     imageEmptyHint: "Toca para configurar",
