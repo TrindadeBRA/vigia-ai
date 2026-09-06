@@ -4,8 +4,15 @@ import type { BoardsMap } from "../../hooks/useGridBoards";
 import type { ProviderMeta } from "./types";
 
 export const boardCollision: CollisionDetection = (args: Parameters<CollisionDetection>[0]) => {
-  const hits = pointerWithin(args);
-  return hits.length ? hits : closestCorners(args);
+  // O card arrastado continua no DOM na posição antiga (só o DragOverlay segue o
+  // cursor) e também é um droppable — sem excluir ele mesmo, passar o ponteiro
+  // sobre a própria área antiga resolve "over" pro próprio card, e o caller trata
+  // isso como "não moveu" (over === from). Isso travava mover o card pra qualquer
+  // posição que ainda se sobrepusesse ao retângulo antigo dele.
+  const droppableContainers = args.droppableContainers.filter((c) => c.id !== args.active.id);
+  const filteredArgs = { ...args, droppableContainers };
+  const hits = pointerWithin(filteredArgs);
+  return hits.length ? hits : closestCorners(filteredArgs);
 };
 
 /** Layout salvo para a quantidade exata de colunas visíveis (o "breakpoint" é o número de colunas, não um bucket fixo). */
