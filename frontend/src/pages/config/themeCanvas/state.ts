@@ -58,8 +58,8 @@ export const DEFAULT_THEME: ThemeState = {
   texts: [],
 };
 
-const STORAGE_KEY = "vigia_theme_draft_v2";
-const STORAGE_KEY_V1 = "vigia_theme_draft_v1";
+const LEGACY_STORAGE_KEY = "vigia_theme_draft_v2";
+const LEGACY_STORAGE_KEY_V1 = "vigia_theme_draft_v1";
 
 export function formatThemeClock(d: Date, format24h: boolean): string {
   let h = d.getHours();
@@ -99,12 +99,39 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
   return merged;
 }
 
-export function loadThemeDraft(): ThemeState {
+/** Migração única do rascunho de tema que só existia no localStorage deste navegador. */
+function readLegacyThemeDraft(): ThemeState | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY_V1);
-    if (raw) return migrateTheme(JSON.parse(raw) as Partial<ThemeState>);
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY_V1);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY_V1);
+    if (!raw) return null;
+    return migrateTheme(JSON.parse(raw) as Partial<ThemeState>);
   } catch {
-    /* ignore */
+    return null;
+  }
+}
+
+/** Rascunho do editor de tema, persistido no coletor (/api/theme-draft) — assim
+ * o /display/canvas espelha o que está sendo editado em qualquer dispositivo. */
+export async function loadThemeDraft(): Promise<ThemeState> {
+  try {
+    const res = await fetch("/api/theme-draft", { cache: "no-store" });
+    if (res.ok) {
+      const j = (await res.json()) as Partial<ThemeState>;
+      if (j && typeof j === "object" && Object.keys(j).length) return migrateTheme(j);
+    }
+  } catch {
+    /* offline: cai pro rascunho legado */
+  }
+  const legacy = readLegacyThemeDraft();
+  if (legacy) {
+    void fetch("/api/theme-draft", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(legacy),
+    }).catch(() => { /* ignore */ });
+    return legacy;
   }
   return DEFAULT_THEME;
 }

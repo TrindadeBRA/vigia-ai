@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ThemeIconStyle } from "../ThemeCanvasView";
 import type { ThemeProvider } from "../themeMetrics";
 import { defaultMetric } from "../themeMetrics";
@@ -29,8 +29,9 @@ export const DEFAULT_THEME: ThemeState = {
   texts: [],
 };
 
-const STORAGE_KEY = "vigia_theme_draft_v2";
-const STORAGE_KEY_V1 = "vigia_theme_draft_v1";
+const LEGACY_STORAGE_KEY = "vigia_theme_draft_v2";
+const LEGACY_STORAGE_KEY_V1 = "vigia_theme_draft_v1";
+const SAVE_DEBOUNCE_MS = 500;
 export const MAX_ICONS = 8;
 export const MAX_TEXTS = 4;
 
@@ -86,24 +87,73 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
   return merged;
 }
 
+/** Migração única do rascunho de tema que só existia no localStorage deste navegador. */
+function readLegacyThemeDraft(): ThemeState | null {
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY_V1);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY_V1);
+    if (!raw) return null;
+    return migrateTheme(JSON.parse(raw) as Partial<ThemeState>);
+  } catch {
+    return null;
+  }
+}
+
+/** Rascunho do editor de tema, persistido no coletor (/api/theme-draft) —
+ * sem localStorage como fonte de verdade, e o /display/canvas (loadThemeDraft
+ * em themeCanvas/state.ts) passa a enxergar o mesmo rascunho em qualquer
+ * dispositivo, não só o navegador onde o editor está aberto. */
 export function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState) => void] {
-  const [theme, setTheme] = useState<ThemeState>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY_V1);
-      if (raw) return migrateTheme(JSON.parse(raw) as Partial<ThemeState>);
-    } catch {
-      /* ignore */
-    }
-    return DEFAULT_THEME;
-  });
+  const [theme, setThemeState] = useState<ThemeState>(DEFAULT_THEME);
+  const saveTimer = useRef<number | null>(null);
+
+  const persist = useCallback((next: ThemeState) => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      void fetch("/api/theme-draft", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      }).catch(() => { /* offline: tenta de novo na próxima mudança */ });
+    }, SAVE_DEBOUNCE_MS);
+  }, []);
+
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(theme));
-    } catch {
-      /* ignore */
-    }
-  }, [theme]);
-  return [theme, (fn) => setTheme(fn)];
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/theme-draft", { cache: "no-store" });
+        if (res.ok) {
+          const j = (await res.json()) as Partial<ThemeState>;
+          if (cancelled) return;
+          if (j && typeof j === "object" && Object.keys(j).length) {
+            setThemeState(migrateTheme(j));
+            return;
+          }
+        }
+      } catch {
+        /* offline: cai pro rascunho legado */
+      }
+      if (cancelled) return;
+      const legacy = readLegacyThemeDraft();
+      if (legacy) {
+        setThemeState(legacy);
+        persist(legacy);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [persist]);
+
+  const setTheme = useCallback((fn: (t: ThemeState) => ThemeState) => {
+    setThemeState((prev) => {
+      const next = fn(prev);
+      persist(next);
+      return next;
+    });
+  }, [persist]);
+
+  return [theme, setTheme];
 }
 
 export function themeToJson(t: ThemeState, hasWallpaper: boolean) {

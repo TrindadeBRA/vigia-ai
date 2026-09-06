@@ -13,10 +13,12 @@ import { lanIPv4 } from "./netutil.js";
 import { createAdsenseRoutes } from "./routers/adsense.js";
 import { createBoardRoutes } from "./routers/board.js";
 import { createCalendarRoutes } from "./routers/calendar.js";
+import { createClientStateRoutes } from "./routers/clientState.js";
 import { createConfigRoutes } from "./routers/config.js";
 import { createCurrenciesRoutes } from "./routers/currencies.js";
 import { createGitRoutes } from "./routers/git.js";
 import { createGithubRoutes } from "./routers/github.js";
+import { createImagesRoutes } from "./routers/images.js";
 import { createIssRoutes } from "./routers/iss.js";
 import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
@@ -171,6 +173,8 @@ export async function createApp() {
   await fastify.register(createGithubRoutes, { prefix: "" });
   await fastify.register(createIssRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
+  await fastify.register(createImagesRoutes, { prefix: "" });
+  await fastify.register(createClientStateRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });
 
   const IMAGE_CONTENT_TYPES: Record<string, string> = {

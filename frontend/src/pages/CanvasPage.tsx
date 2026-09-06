@@ -72,11 +72,12 @@ export default function CanvasPage() {
         if (themeRes?.active && themeRes.theme) {
           next = parseSavedThemeJson(themeRes.theme);
         }
-        if (!next) next = loadThemeDraft();
+        if (!next) next = await loadThemeDraft();
+        if (cancelled) return;
         setTheme(next);
         setWallpaperId(themeRes?.background_id || null);
       } catch {
-        if (!cancelled) setTheme(loadThemeDraft());
+        if (!cancelled) setTheme(await loadThemeDraft());
       } finally {
         if (!cancelled) setLoading(false);
       }

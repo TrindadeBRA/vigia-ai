@@ -1,8 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 
 const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"] as const;
-const STORAGE_KEY = "vigia-konami";
+const LEGACY_LS_KEY = "vigia-konami";
 const CLASS = "konami-mode";
+
+async function fetchRetroActive(): Promise<boolean> {
+    try {
+        const res = await fetch("/api/retro", { cache: "no-store" });
+        if (!res.ok) return false;
+        const j = (await res.json()) as { active?: boolean };
+        return Boolean(j.active);
+    } catch {
+        return false;
+    }
+}
+
+function saveRetroActive(active: boolean) {
+    void fetch("/api/retro", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active }),
+    }).catch(() => { /* ignore */ });
+}
 
 function isKonamiKey(key: string, expected: string): boolean {
     if (expected === "b" || expected === "a") return key.toLowerCase() === expected;
@@ -14,21 +33,31 @@ export function useKonamiCode() {
     const [active, setActive] = useState(false);
 
     useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY) === "1";
-        if (stored) {
-            document.documentElement.classList.add(CLASS);
-            setActive(true);
-        }
+        let cancelled = false;
+        let legacy = false;
+        try {
+            legacy = localStorage.getItem(LEGACY_LS_KEY) === "1";
+            localStorage.removeItem(LEGACY_LS_KEY);
+        } catch { /* ignore */ }
+
+        void fetchRetroActive().then((stored) => {
+            if (cancelled) return;
+            const on = stored || legacy;
+            if (on) {
+                document.documentElement.classList.add(CLASS);
+                setActive(true);
+                if (legacy && !stored) saveRetroActive(true);
+            }
+        });
 
         function toggle(next: boolean) {
             setActive(next);
             if (next) {
                 document.documentElement.classList.add(CLASS);
-                localStorage.setItem(STORAGE_KEY, "1");
             } else {
                 document.documentElement.classList.remove(CLASS);
-                localStorage.removeItem(STORAGE_KEY);
             }
+            saveRetroActive(next);
             // feedback visual discreto
             const msg = next ? "🎮 MODO RETRÔ ATIVADO — Press Start 2P!" : "↩︎ modo retrô desativado";
             // usa um toast nativo simples sem dependência
@@ -105,7 +134,10 @@ export function useKonamiCode() {
         }
 
         window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
+        return () => {
+            cancelled = true;
+            window.removeEventListener("keydown", onKeyDown);
+        };
     }, []);
 
     return active;

@@ -78,8 +78,16 @@ backend/src/routers/wallpapers/rgb565.ts     conversão imagem <-> RAW RGB565 (J
 frontend/src/pages/config/wallpaperManager/context.tsx  estado + chamadas de API de papel de parede (usado em /display/theme)
 frontend/src/pages/config/wallpaperManager/Library.tsx   UI de biblioteca/busca/import de papel de parede
 frontend/src/pages/config/WallpaperProvidersConfigCard.tsx  chaves de API dos provedores de papel de parede (/display/config)
-backend/src/routers/board.ts       rotas /api/board — layout do board (posição/tamanho dos cards) espelhado do localStorage
-frontend/src/hooks/useGridBoards.ts  hook do layout do board (localStorage + backend)
+backend/src/routers/board.ts       rotas /api/board — layout do board (posição/tamanho dos cards), backend/data/board.json
+frontend/src/hooks/useGridBoards.ts  hook do layout do board (só backend, sem localStorage)
+backend/src/notes.ts               CRUD de notas (post-its do board) — backend/data/notes.json
+backend/src/routers/notes.ts       rotas /api/notes — GET/POST + PATCH/DELETE por id
+frontend/src/hooks/useServerNotes.ts  hook das notas (só backend, migra localStorage antigo uma vez)
+backend/src/images.ts              CRUD de imagens (cards de imagem do board) — backend/data/images.json, src em base64 ou URL
+backend/src/routers/images.ts      rotas /api/images — GET/POST + PATCH/DELETE por id, bodyLimit maior (base64)
+frontend/src/hooks/useImageWidgets.ts  hook das imagens (só backend, migra localStorage antigo uma vez)
+backend/src/routers/clientState.ts  rotas /api/prefs, /api/theme-draft, /api/retro — blobs JSON simples (GET/PUT), sem CRUD por item
+frontend/src/pages/display/usePrefs.ts  hook das preferências de exibição (tema/cor/idioma/foco/widgets) — só backend (/api/prefs)
 backend/src/providers/spotify.ts   OAuth Spotify + chamadas ao player (play/pause/next/previous) — ver APIS_SPOTIFY.md
 backend/src/routers/spotify.ts     rotas /api/oauth/spotify/* + /api/spotify* (estado + comandos do player) — protótipo, fora do contrato JSON
 frontend/src/components/cards/SpotifyCard.tsx  widget "Spotify" do board (/display) — poll próprio de 5s, não usa o hub de usage

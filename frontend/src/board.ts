@@ -387,7 +387,7 @@ function cardsFit(ids: string[], board: BoardLayout, cols: number): boolean {
   });
 }
 
-/** Layout só para desenhar: se a largura mudou, reempilha sem gravar o localStorage. */
+/** Layout só para desenhar: se a largura mudou, reempilha sem persistir a mudança. */
 export function displayBoard(ids: string[], board: BoardLayout, cols: number): BoardLayout {
   const synced = syncBoard(ids, board, cols);
   const savedCols = board.layoutCols;

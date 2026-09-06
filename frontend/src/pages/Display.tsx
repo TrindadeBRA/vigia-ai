@@ -194,7 +194,7 @@ export default function Display() {
   const providers = data ? buildProviders(data, t, now) : [];
   const imageProvidersRaw = buildImageProviders(imageWidgets.items, t);
   const imageProviders = imageProvidersRaw.map((p) => Object.assign(p, {
-    _onImageTransform: (id: string, next: { x: number; y: number; scale: number }) => imageWidgets.update(id, { transform: next }),
+    _onImageTransform: (id: string, next: { x: number; y: number; scale: number }) => void imageWidgets.update(id, { transform: next }),
   }));
   // Notas: uma única fonte, no backend (/api/notes) — compartilhadas entre
   // qualquer navegador/dispositivo/app que aponte pro mesmo servidor.
@@ -387,11 +387,11 @@ export default function Display() {
                   onOpenWallpaper={() => setGridWallpaperOpen(true)}
                   onOpenAddWidget={() => setAddWidgetOpen(true)}
                   kiosk={isKiosk}
-                  onRemoveImage={(id) => imageWidgets.remove(id)}
+                  onRemoveImage={(id) => void imageWidgets.remove(id)}
                   onDuplicateImage={(id) => {
                     const src = imageWidgets.items.find((x) => x.id === id);
                     if (!src) return;
-                    imageWidgets.add(src.src, src.fit, src.label);
+                    void imageWidgets.add(src.src, src.fit, src.label ?? undefined);
                   }}
                   onRemoveNote={(id) => void serverNotes.remove(id.replace(/^note:/, ""))}
                   onDuplicateNote={(id) => void serverNotes.duplicate(id.replace(/^note:/, ""))}
@@ -433,8 +433,8 @@ export default function Display() {
         mode={editingImageId ? "edit" : "add"}
         editSrc={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.src ?? null : null}
         editLabel={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.label ?? null : null}
-        onAdd={(src, fit, label) => { imageWidgets.add(src, fit, label); }}
-        onSaveEdit={(src, fit, label) => { if (editingImageId) imageWidgets.update(editingImageId, { src, fit, label }); }}
+        onAdd={(src, fit, label) => { void imageWidgets.add(src, fit, label); }}
+        onSaveEdit={(src, fit, label) => { if (editingImageId) void imageWidgets.update(editingImageId, { src, fit, label }); }}
       />
       <PixDonateModal open={pixModalOpen} onClose={() => setPixModalOpen(false)} />
     </div>

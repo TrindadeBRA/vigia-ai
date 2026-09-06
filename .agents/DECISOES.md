@@ -90,9 +90,9 @@ EOF significa que o Electron morreu. Só quando ela é de fato um pipe do pai �
 num terminal é TTY e em background é `/dev/null`, e vigiar esses dois faria o
 coletor encerrar assim que subisse.
 
-## Notas do board: só backend, sem cópia em localStorage
+## Zero localStorage como fonte de verdade — tudo em JSON no backend
 
-Diferente do board (posição/tamanho, que vive no `localStorage` **e** em `/api/board`), as notas passaram a viver **só** em `backend/data/notes.json` (`/api/notes`). Existiam dois armazenamentos de nota em paralelo — um 100% local por navegador (único jeito de criar nota pela UI) e outro no servidor (só alimentado pelo `/note` do Telegram) — sem indicação visual de qual era qual. Resultado: toda nota criada pela UI só existia naquele navegador/app específico e "sumia" ao abrir o painel em outra tela/dispositivo. Unificado em `useServerNotes` (`frontend/src/hooks/useServerNotes.ts`), com migração única das notas que ainda estejam no `localStorage` antigo (`vigia_note_widgets`) pro backend na primeira carga.
+Notas, imagens, board, preferências de exibição, rascunho do editor de tema e o easter egg retrô passaram a viver **só** em `backend/data/*.json` (`/api/notes`, `/api/images`, `/api/board`, `/api/prefs`, `/api/theme-draft`, `/api/retro`). Antes cada um tinha seu próprio armazenamento em `localStorage`, por navegador — resultado: conteúdo criado num navegador/app específico "sumia" ao abrir o painel em outra tela/dispositivo (o caso mais visível era o de notas e imagens, criadas só pela UI). Cada hook faz uma migração única do `localStorage` antigo pro backend na primeira carga (o que falhar por rede fica salvo pra tentar de novo na próxima). Efeito colateral bom: o rascunho do editor de tema agora é compartilhado, então `/display/canvas` passa a espelhar de verdade uma edição feita em outro dispositivo, não só na mesma aba.
 
 ## Um build do frontend para web e desktop
 

@@ -3,30 +3,11 @@ import type { BoardLayout } from "../board";
 
 export type BoardsMap = Record<string, BoardLayout>;
 
-const LS_KEY = "vigia_grid_boards";
 const LEGACY_PREFS_KEY = "vigia_display_prefs";
 const SAVE_DEBOUNCE_MS = 600;
 // migração única do sistema antigo de 3 buckets (mobile/tablet/desktop) para
 // colunas exatas — valor representativo de cada bucket antigo
 const LEGACY_BP_COLS: Record<string, string> = { mobile: "4", tablet: "8", desktop: "12" };
-
-function readCache(): BoardsMap {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (raw) return JSON.parse(raw) as BoardsMap;
-  } catch {
-    /* ignore */
-  }
-  return {};
-}
-
-function writeCache(boards: BoardsMap) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(boards));
-  } catch {
-    /* ignore */
-  }
-}
 
 /** Lê o `boards`/`board` (3 buckets) que ficavam dentro de vigia_display_prefs, uma vez. */
 function migrateLegacyBoards(): BoardsMap {
@@ -53,23 +34,18 @@ function migrateLegacyBoards(): BoardsMap {
  * localStorage de um navegador só.
  */
 export function useGridBoards(): [BoardsMap, (fn: (b: BoardsMap) => BoardsMap) => void, boolean] {
-  const [boards, setBoardsState] = useState<BoardsMap>(() => {
-    const cached = readCache();
-    if (Object.keys(cached).length) return cached;
-    return migrateLegacyBoards();
-  });
+  const [boards, setBoardsState] = useState<BoardsMap>({});
   const [ready, setReady] = useState(false);
   const saveTimer = useRef<number | null>(null);
 
   const persist = useCallback((next: BoardsMap) => {
-    writeCache(next);
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => {
       void fetch("/api/board", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ boards: next }),
-      }).catch(() => { /* offline: fica só no cache local até a próxima tentativa */ });
+      }).catch(() => { /* offline: tenta de novo na próxima mudança */ });
     }, SAVE_DEBOUNCE_MS);
   }, []);
 
@@ -83,17 +59,17 @@ export function useGridBoards(): [BoardsMap, (fn: (b: BoardsMap) => BoardsMap) =
         if (cancelled) return;
         if (j.boards && Object.keys(j.boards).length) {
           setBoardsState(j.boards);
-          writeCache(j.boards);
         } else {
-          // servidor ainda não tem nada salvo: usa o que já temos (cache local
-          // ou migração antiga) como semente inicial pro servidor.
-          setBoardsState((cur) => {
-            if (Object.keys(cur).length) persist(cur);
-            return cur;
-          });
+          // servidor ainda não tem nada salvo: usa a migração do sistema
+          // antigo (localStorage de vigia_display_prefs) como semente inicial.
+          const legacy = migrateLegacyBoards();
+          if (Object.keys(legacy).length) {
+            setBoardsState(legacy);
+            persist(legacy);
+          }
         }
       } catch {
-        /* offline: segue com o cache local */
+        /* offline: fica vazio até a próxima tentativa */
       } finally {
         if (!cancelled) setReady(true);
       }

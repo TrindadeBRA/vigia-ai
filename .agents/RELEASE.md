@@ -10,8 +10,10 @@ em qual GitHub Release publicar (ver "Por que a versão do desktop manda").
 | Arquivo | O que tem |
 | --- | --- |
 | `backend/package.json` | campo `version` |
+| `backend/package-lock.json` | `npm version` (via `bump_all_versions()`) já atualiza sozinho — só precisa existir no commit |
 | `backend/src/version.ts` | `export const VERSION = "x.y.z"` — aparece em `/health`, no Swagger (`/docs`), no `User-Agent` de saída e no status do desktop |
 | `frontend/package.json` | campo `version` — `vite.config.ts` injeta como `__APP_VERSION__` em build time, `frontend/src/version.ts` exporta `APP_VERSION`, mostrado no rodapé de `SettingsDrawer.tsx` (Aparência → Versões) |
+| `frontend/package-lock.json` | idem — `npm version` atualiza sozinho |
 | `desktop/package.json` | campo `version` — é o que o `electron-builder` usa pro nome dos instaladores **e** pra decidir a release do GitHub |
 | `desktop/package-lock.json` | roda `npm install --package-lock-only` dentro de `desktop/` depois de editar o `package.json`, senão o lockfile fica com a versão velha |
 
