@@ -23,6 +23,7 @@ import {
   RetroAchievementsTileCard,
   RssTileCard,
   SpotifyTileCard,
+  SystemTileCard,
   WeatherTileCard,
 } from "./TileCards";
 import type { Pal, ProviderMeta } from "./types";
@@ -105,6 +106,9 @@ export function ProviderCard({
   }
   if (p.provider === "spotify") {
     return <SpotifyTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "system") {
+    return <SystemTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "note" || p.kind === "note") {
     return <NoteTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onUpdate={(id, patch) => (p as unknown as { _onNoteUpdate?: (id: string, patch: { text?: string; color?: string }) => void })._onNoteUpdate?.(id, patch)} />;

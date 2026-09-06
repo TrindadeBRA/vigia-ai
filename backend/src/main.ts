@@ -20,6 +20,7 @@ import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
 import { createSpotifyRoutes } from "./routers/spotify.js";
+import { createSystemRoutes } from "./routers/system.js";
 import { createThemeRoutes } from "./routers/theme.js";
 import { createUsageRoutes } from "./routers/usage.js";
 import { createWallpapersRoutes } from "./routers/wallpapers/router.js";
@@ -164,6 +165,7 @@ export async function createApp() {
   await fastify.register(createCalendarRoutes, { prefix: "" });
   await fastify.register(createRssRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
+  await fastify.register(createSystemRoutes, { prefix: "" });
 
   const IMAGE_CONTENT_TYPES: Record<string, string> = {
     ".svg": "image/svg+xml",

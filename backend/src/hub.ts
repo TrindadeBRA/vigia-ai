@@ -120,6 +120,11 @@ export class UsageHub {
   deviceWidth: number | null = null;
   deviceHeight: number | null = null;
   deviceFirmwareVersion: string | null = null;
+  /** Métricas do último ciclo de refresh (card "Sistema" no /display). */
+  lastCycleAt: string | null = null;
+  lastCycleMs: number | null = null;
+  lastCycleOk: boolean | null = null;
+  lastCycleError: string | null = null;
   private _lock: Promise<void> = Promise.resolve();
   private _lockRelease: (() => void) | null = null;
 
@@ -173,7 +178,20 @@ export class UsageHub {
 
   async refresh(opts: { forceQuota?: boolean } = {}): Promise<Record<string, unknown>> {
     return this.withLock(async () => {
-      const payload = await buildPayload({ forceQuota: opts.forceQuota ?? false });
+      const startedAt = performance.now();
+      let payload: Record<string, unknown>;
+      try {
+        payload = await buildPayload({ forceQuota: opts.forceQuota ?? false }) as Record<string, unknown>;
+        this.lastCycleOk = true;
+        this.lastCycleError = null;
+      } catch (exc) {
+        this.lastCycleOk = false;
+        this.lastCycleError = String(exc);
+        throw exc;
+      } finally {
+        this.lastCycleAt = utcNow();
+        this.lastCycleMs = Math.round(performance.now() - startedAt);
+      }
       this._latest = payload;
       logFailures(payload as Record<string, unknown>);
       this.broadcast(payload as Record<string, unknown>);

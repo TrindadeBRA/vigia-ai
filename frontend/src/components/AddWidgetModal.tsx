@@ -4,9 +4,9 @@ import { Modal } from "../pages/config/ui";
 import { PROVIDER_ICON } from "../theme";
 import { EyeMark } from "./Logo";
 
-export type WidgetKind = "clock" | "eye" | "spotify";
+export type WidgetKind = "clock" | "eye" | "spotify" | "system";
 
-export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "spotify"];
+export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "spotify", "system"];
 
 function ClockIcon() {
   return (
@@ -30,12 +30,24 @@ function ImageIcon() {
 function widgetLabel(kind: WidgetKind, t: T): string {
   if (kind === "clock") return t.widgetClock;
   if (kind === "spotify") return t.widgetSpotify;
+  if (kind === "system") return t.widgetSystem;
   return t.widgetEye;
+}
+
+function SystemIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
+      <path d="M7 9l2 2-2 2M13 13h4" />
+    </svg>
+  );
 }
 
 function widgetIcon(kind: WidgetKind) {
   if (kind === "clock") return <ClockIcon />;
   if (kind === "spotify") return <img className="size-5 object-contain" src={PROVIDER_ICON.spotify} alt="" draggable={false} />;
+  if (kind === "system") return <SystemIcon />;
   return <EyeMark size={20} follow={false} />;
 }
 

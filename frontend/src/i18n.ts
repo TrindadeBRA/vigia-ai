@@ -158,6 +158,16 @@ type Strings = {
   spotifyPause: string;
   spotifyNext: string;
   spotifyPrevious: string;
+  widgetSystem: string;
+  systemUptime: string;
+  systemMemory: string;
+  systemCpuLoad: string;
+  systemLastCycle: string;
+  systemNever: string;
+  systemVersion: string;
+  systemPlatform: string;
+  systemCores: string;
+  systemOffline: string;
   widgetNote: string;
   widgetNoteDesc: string;
   widgetImage: string;
@@ -382,6 +392,16 @@ export const STR: Record<Lang, Strings> = {
     spotifyPause: "Pausar",
     spotifyNext: "Próxima faixa",
     spotifyPrevious: "Faixa anterior",
+    widgetSystem: "Sistema",
+    systemUptime: "Uptime",
+    systemMemory: "Memória",
+    systemCpuLoad: "Carga CPU",
+    systemLastCycle: "Último ciclo",
+    systemNever: "nunca",
+    systemVersion: "Versão",
+    systemPlatform: "Plataforma",
+    systemCores: "núcleos",
+    systemOffline: "Coletor offline",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it com Markdown e cor personalizável.",
     widgetImage: "Imagem",
@@ -600,6 +620,16 @@ export const STR: Record<Lang, Strings> = {
     spotifyPause: "Pause",
     spotifyNext: "Next track",
     spotifyPrevious: "Previous track",
+    widgetSystem: "System",
+    systemUptime: "Uptime",
+    systemMemory: "Memory",
+    systemCpuLoad: "CPU load",
+    systemLastCycle: "Last cycle",
+    systemNever: "never",
+    systemVersion: "Version",
+    systemPlatform: "Platform",
+    systemCores: "cores",
+    systemOffline: "Collector offline",
     widgetNote: "Note",
     widgetNoteDesc: "Post-it with Markdown and custom color.",
     widgetImage: "Image",
@@ -818,6 +848,16 @@ export const STR: Record<Lang, Strings> = {
     spotifyPause: "Pausar",
     spotifyNext: "Pista siguiente",
     spotifyPrevious: "Pista anterior",
+    widgetSystem: "Sistema",
+    systemUptime: "Uptime",
+    systemMemory: "Memoria",
+    systemCpuLoad: "Carga CPU",
+    systemLastCycle: "Último ciclo",
+    systemNever: "nunca",
+    systemVersion: "Versión",
+    systemPlatform: "Plataforma",
+    systemCores: "núcleos",
+    systemOffline: "Colector fuera de línea",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it con Markdown y color personalizable.",
     widgetImage: "Imagen",
