@@ -13,6 +13,7 @@ Node 22 + Fastify em `backend/` (port do Python/FastAPI). Sobe em `0.0.0.0:8787`
 - Alarmes e Telegram: `/display/alarms` (painel) + `GET/POST /api/alarms`, `PATCH/DELETE /api/alarms/{id}`, `GET/POST /api/telegram/*` — ver [NOTIFICACOES.md](NOTIFICACOES.md)
 - Papéis de parede: `/display/config` (chaves dos provedores) + `/display/theme` (biblioteca/busca/import) + `/api/wallpapers/*` — ver [CONTRATO_TEMA.md](CONTRATO_TEMA.md#papel-de-parede)
 - Board (`/display`): layout (posição/tamanho dos cards) espelhado em `/api/board`, além do `localStorage`
+- Notas (post-its do `/display`): `GET/POST /api/notes`, `PATCH/DELETE /api/notes/{id}` — única fonte de verdade em `backend/data/notes.json` (`backend/src/notes.ts`), sem cópia em `localStorage`; criadas pelo painel ou pelo Telegram (`/note {texto}`, `backend/src/telegram/bot.ts`)
 - Swagger: http://127.0.0.1:8787/docs — OpenAPI vivo (`/openapi.json`), incluindo SSE (`GET /events`)
 - Contrato JSON: `GET /usage` — consulta as APIs na hora e avisa o SSE
 - Stream: `GET /events` — `text/event-stream`, snapshot a cada `USAGE_INTERVAL_S` (padrão 60 s) para todos os clientes

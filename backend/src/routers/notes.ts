@@ -9,8 +9,7 @@ export async function createNotesRoutes(app: FastifyInstance): Promise<void> {
 
     app.post("/api/notes", async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
-        const text = String(body?.text ?? "").trim();
-        if (!text) return reply.code(400).send({ ok: false, error: "texto vazio" });
+        const text = String(body?.text ?? "");
         if (text.length > 10000) return reply.code(400).send({ ok: false, error: "texto muito longo (máx 10000)" });
         const colorRaw = body?.color != null ? String(body.color) : "yellow";
         const color = (NOTE_COLORS as string[]).includes(colorRaw) ? colorRaw : "yellow";
@@ -30,7 +29,6 @@ export async function createNotesRoutes(app: FastifyInstance): Promise<void> {
         const patch: Record<string, unknown> = {};
         if (body.text !== undefined) {
             const t = String(body.text);
-            if (!t.trim()) return reply.code(400).send({ ok: false, error: "texto vazio" });
             if (t.length > 10000) return reply.code(400).send({ ok: false, error: "texto muito longo" });
             patch.text = t;
         }

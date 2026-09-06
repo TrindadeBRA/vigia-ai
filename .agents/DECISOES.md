@@ -90,6 +90,10 @@ EOF significa que o Electron morreu. Só quando ela é de fato um pipe do pai �
 num terminal é TTY e em background é `/dev/null`, e vigiar esses dois faria o
 coletor encerrar assim que subisse.
 
+## Notas do board: só backend, sem cópia em localStorage
+
+Diferente do board (posição/tamanho, que vive no `localStorage` **e** em `/api/board`), as notas passaram a viver **só** em `backend/data/notes.json` (`/api/notes`). Existiam dois armazenamentos de nota em paralelo — um 100% local por navegador (único jeito de criar nota pela UI) e outro no servidor (só alimentado pelo `/note` do Telegram) — sem indicação visual de qual era qual. Resultado: toda nota criada pela UI só existia naquele navegador/app específico e "sumia" ao abrir o painel em outra tela/dispositivo. Unificado em `useServerNotes` (`frontend/src/hooks/useServerNotes.ts`), com migração única das notas que ainda estejam no `localStorage` antigo (`vigia_note_widgets`) pro backend na primeira carga.
+
 ## Um build do frontend para web e desktop
 
 O painel não sabe se está num navegador ou no app: ele testa `window.vigia` em

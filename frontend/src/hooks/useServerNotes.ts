@@ -29,6 +29,56 @@ async function fetchServerNotes(): Promise<ServerNote[]> {
     }
 }
 
+// Migração única de notas que só existiam no localStorage deste navegador
+// (versão anterior, sem backend). Reenvia pro servidor pra passar a valer
+// em qualquer tela/dispositivo; o que falhar (ex.: offline) fica guardado
+// pra tentar de novo na próxima carga.
+const LEGACY_LS_KEY = "vigia_note_widgets";
+
+async function migrateLegacyLocalNotes(): Promise<boolean> {
+    let raw: string | null;
+    try {
+        raw = localStorage.getItem(LEGACY_LS_KEY);
+    } catch {
+        return false;
+    }
+    if (!raw) return false;
+
+    let list: Array<{ text?: unknown; color?: unknown }>;
+    try {
+        const j = JSON.parse(raw);
+        list = Array.isArray(j) ? j : [];
+    } catch {
+        list = [];
+    }
+    const pending = list.filter((x) => x && typeof x === "object" && String(x.text ?? "").trim());
+    if (pending.length === 0) {
+        try { localStorage.removeItem(LEGACY_LS_KEY); } catch { /* ignore */ }
+        return false;
+    }
+
+    const remaining: typeof pending = [];
+    let migratedAny = false;
+    for (const item of pending) {
+        try {
+            const res = await fetch("/api/notes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: String(item.text ?? ""), color: String(item.color ?? "yellow") }),
+            });
+            if (res.ok) migratedAny = true;
+            else remaining.push(item);
+        } catch {
+            remaining.push(item);
+        }
+    }
+    try {
+        if (remaining.length > 0) localStorage.setItem(LEGACY_LS_KEY, JSON.stringify(remaining));
+        else localStorage.removeItem(LEGACY_LS_KEY);
+    } catch { /* ignore */ }
+    return migratedAny;
+}
+
 export function useServerNotes() {
     const [items, setItems] = useState<ServerNote[]>([]);
     const [ready, setReady] = useState(false);
@@ -39,6 +89,12 @@ export function useServerNotes() {
         setReady(true);
         return notes;
     }, []);
+
+    useEffect(() => {
+        void migrateLegacyLocalNotes().then((didMigrate) => {
+            if (didMigrate) void refresh();
+        });
+    }, [refresh]);
 
     useEffect(() => {
         let cancelled = false;
@@ -73,6 +129,25 @@ export function useServerNotes() {
             window.removeEventListener("focus", onFocus);
             document.removeEventListener("visibilitychange", onVisible);
         };
+    }, [refresh]);
+
+    const add = useCallback(async (text = "", color: NoteColorId = "yellow") => {
+        let note: ServerNote | null = null;
+        try {
+            const res = await fetch("/api/notes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text, color }),
+            });
+            if (res.ok) {
+                const data = (await res.json()) as { note?: ServerNote };
+                note = data.note ?? null;
+            }
+        } catch {
+            /* ignore */
+        }
+        await refresh();
+        return note;
     }, [refresh]);
 
     const remove = useCallback(async (id: string) => {
@@ -112,5 +187,5 @@ export function useServerNotes() {
         await refresh();
     }, [items, refresh]);
 
-    return { items, ready, refresh, remove, update, duplicate };
+    return { items, ready, refresh, add, remove, update, duplicate };
 }

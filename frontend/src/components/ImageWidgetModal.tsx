@@ -356,7 +356,7 @@ function ImageWidgetContent({
                     {searchResults.length > 0 ? (
                         <>
                             <p className="text-xs text-ink3">{searchResults.length} resultados</p>
-                            <div className="grid max-h-[280px] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {searchResults.map((r) => (
                                     <div key={`${r.provider}-${r.id}`} className="overflow-hidden rounded-[12px] border border-edge bg-canvas">
                                         <button type="button" className="aspect-[16/10] w-full overflow-hidden border-0 bg-black/10 p-0" onClick={() => handlePickSearch(r)} disabled={importReq.busy}>

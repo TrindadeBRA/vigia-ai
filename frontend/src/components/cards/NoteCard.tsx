@@ -194,13 +194,46 @@ export function NoteBoardCard({
     void colorId;
     void size;
     const [editing, setEditing] = useState(false);
-    useEffect(() => { if (readonly && editing) setEditing(false); }, [readonly, editing]);
-    useEffect(() => { onEditingChange?.(editing); }, [editing, onEditingChange]);
     const [draft, setDraft] = useState(text);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const html = renderMarkdownToHtml(text);
 
-    useEffect(() => { setDraft(text); }, [text]);
+    // refs para o flush poder ler sempre o valor mais recente sem precisar
+    // reagendar o efeito de desmontagem a cada render (onUpdate muda de
+    // identidade a cada render do pai, que rerenderiza a cada segundo)
+    const draftRef = useRef(draft);
+    draftRef.current = draft;
+    const textRef = useRef(text);
+    textRef.current = text;
+    const onUpdateRef = useRef(onUpdate);
+    onUpdateRef.current = onUpdate;
+    const flushDraft = () => {
+        if (draftRef.current !== textRef.current) onUpdateRef.current({ text: draftRef.current });
+    };
+
+    useEffect(() => {
+        if (readonly && editing) {
+            // fecha a edição (ex.: troca de layout) sem descartar o que
+            // ainda não tinha sido salvo pelo debounce
+            flushDraft();
+            setEditing(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [readonly, editing]);
+    useEffect(() => { onEditingChange?.(editing); }, [editing, onEditingChange]);
+
+    // sincroniza com atualizações externas (poll do servidor, outro cliente
+    // editando a mesma nota) só quando não está editando — do contrário um
+    // refresh de fundo apaga o que o usuário está digitando no meio da nota
+    useEffect(() => { if (!editing) setDraft(text); }, [text, editing]);
+
+    // se o card sumir (navegação, troca de câmera/dimensão, resize do grid)
+    // com uma edição ainda não salva pelo debounce, salva antes de desmontar
+    useEffect(() => {
+        return () => flushDraft();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     useEffect(() => {
         if (editing) {
             requestAnimationFrame(() => {
@@ -220,7 +253,7 @@ export function NoteBoardCard({
     }, [draft, editing, text, onUpdate]);
 
     const handleBlur = () => {
-        if (draft !== text) onUpdate({ text: draft });
+        flushDraft();
         setEditing(false);
     };
 

@@ -15,7 +15,6 @@ import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, countdownSecs, fmtClock, 
 import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useImageWidgets } from "../hooks/useImageWidgets";
-import { useNoteWidgets } from "../hooks/useNoteWidgets";
 import { useServerNotes } from "../hooks/useServerNotes";
 import { STR } from "../i18n";
 import { ACCENTS, PALETTES, applyThemeVars, getSystemTheme, resolveTheme } from "../theme";
@@ -70,7 +69,6 @@ export default function Display() {
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const { gridId: gridWallpaperId } = useGridWallpaper();
   const imageWidgets = useImageWidgets();
-  const noteWidgets = useNoteWidgets();
   const serverNotes = useServerNotes();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
@@ -198,24 +196,9 @@ export default function Display() {
   const imageProviders = imageProvidersRaw.map((p) => Object.assign(p, {
     _onImageTransform: (id: string, next: { x: number; y: number; scale: number }) => imageWidgets.update(id, { transform: next }),
   }));
-  // Notas: locais (localStorage) + servidor (criadas via Telegram /note)
-  const localNoteProvidersRaw = buildNoteProviders(noteWidgets.items, t);
-  const serverNoteProvidersRaw = buildNoteProviders(serverNotes.items as unknown as Array<{ id: string; text: string; color: string }>, t);
-  const localNoteProviders = localNoteProvidersRaw.map((p) => Object.assign(p, {
-    _onNoteUpdate: (id: string, patch: { text?: string; color?: string }) => {
-      const noteId = id.replace(/^note:/, "");
-      noteWidgets.update(noteId, patch as never);
-    },
-    _noteSource: "local" as const,
-  }));
-  const serverNoteProviders = serverNoteProvidersRaw.map((p) => Object.assign(p, {
-    _onNoteUpdate: (id: string, patch: { text?: string; color?: string }) => {
-      const noteId = id.replace(/^note:/, "");
-      void serverNotes.update(noteId, patch as never);
-    },
-    _noteSource: "server" as const,
-  }));
-  const noteProviders = [...localNoteProviders, ...serverNoteProviders];
+  // Notas: uma única fonte, no backend (/api/notes) — compartilhadas entre
+  // qualquer navegador/dispositivo/app que aponte pro mesmo servidor.
+  const noteProviders = buildNoteProviders(serverNotes.items as unknown as Array<{ id: string; text: string; color: string }>, t);
   const bpBoard = boardForCols(boards, currentCols);
   const boardProviders = data ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders] : [...imageProviders, ...noteProviders, ...buildWidgetProviders(prefs.widgets, t)];
   const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
@@ -231,7 +214,7 @@ export default function Display() {
     // clones usam id "base::clone:N" — resolve para base para buscar ProviderMeta e conta
     const baseSelected = selectedId ? baseIdForProvider(selectedId) : null;
     meta = (baseSelected ? displayProviders.find((p) => p.id === selectedId) || providers.find((p) => p.id === baseSelected) : null) || null;
-    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss") {
+    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss" && meta.provider !== "github" && meta.kind !== "github" && meta.provider !== "iss" && meta.kind !== "iss") {
       const baseId = baseIdForProvider(meta.id);
       const idx = baseId.indexOf(":");
       const accountId = baseId.slice(idx + 1);
@@ -410,25 +393,9 @@ export default function Display() {
                     if (!src) return;
                     imageWidgets.add(src.src, src.fit, src.label);
                   }}
-                  onRemoveNote={(id) => {
-                    const raw = id.replace(/^note:/, "");
-                    // tenta remover do servidor primeiro; se não existir lá, remove local
-                    const isServer = serverNotes.items.some((n) => n.id === raw);
-                    if (isServer) void serverNotes.remove(raw);
-                    else noteWidgets.remove(raw);
-                  }}
-                  onDuplicateNote={(id) => {
-                    const raw = id.replace(/^note:/, "");
-                    const isServer = serverNotes.items.some((n) => n.id === raw);
-                    if (isServer) void serverNotes.duplicate(raw);
-                    else noteWidgets.duplicate(raw);
-                  }}
-                  onUpdateNote={(id, patch) => {
-                    const raw = id.replace(/^note:/, "");
-                    const isServer = serverNotes.items.some((n) => n.id === raw);
-                    if (isServer) void serverNotes.update(raw, patch as never);
-                    else noteWidgets.update(raw, patch as never);
-                  }}
+                  onRemoveNote={(id) => void serverNotes.remove(id.replace(/^note:/, ""))}
+                  onDuplicateNote={(id) => void serverNotes.duplicate(id.replace(/^note:/, ""))}
+                  onUpdateNote={(id, patch) => void serverNotes.update(id.replace(/^note:/, ""), patch as never)}
                 />
               ) : null}
               {section === "account" && meta && !hideChrome ? (
@@ -457,7 +424,7 @@ export default function Display() {
         parallax={prefs.wallpaperParallax !== false}
         onToggleParallax={(v) => setPrefs((p) => ({ ...p, wallpaperParallax: v }))}
       />
-      <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} onAddImage={() => { setEditingImageId(null); setImageModalOpen(true); }} onAddNote={() => noteWidgets.add("", "yellow")} />
+      <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} onAddImage={() => { setEditingImageId(null); setImageModalOpen(true); }} onAddNote={() => void serverNotes.add("", "yellow")} />
       <ImageWidgetModal
         open={imageModalOpen}
         onClose={() => { setImageModalOpen(false); setEditingImageId(null); }}
