@@ -5,13 +5,25 @@ import { handleInfoQuery, parseInfoCommand } from "./info.js";
 
 export const TELEGRAM_API = "https://api.telegram.org";
 export const TELEGRAM_LOG_MESSAGE = `${TELEGRAM_API}/bot/sendMessage`;
-export const CONFIRMATION_MSG = "✅ Vigia AI conectado — você vai receber os alarmes aqui.";
+export const CONFIRMATION_MSG = "✅ Vigia AI conectado — você vai receber os alarmes aqui.\nUse /help para ver os comandos disponíveis.";
 export const NOTE_HELP_MSG = "📝 Use /note {texto} para criar uma Nota no dashboard.\nExemplo: /note Comprar pão amanhã 8h";
 export const NOTE_CREATED_MSG = "📝 Nota criada no dashboard!";
 export const NOTE_EMPTY_MSG = "⚠️ Texto vazio. Use: /note {seu texto}\nExemplo: /note Reunião amanhã 14h";
 export const TASKLIST_HELP_MSG = "✅ Use /tasklist {itens} para criar uma checklist no dashboard.\nSepare por quebra de linha ou ;\nExemplo: /tasklist comprar pão; pagar conta; ligar pra mãe";
 export const TASKLIST_CREATED_MSG = "✅ Tasklist criada no dashboard!";
 export const TASKLIST_EMPTY_MSG = "⚠️ Lista vazia. Use: /tasklist {itens}\nSepare por ; ou quebra de linha\nExemplo: /tasklist comprar pão; pagar conta";
+export const HELP_MSG =
+  "🤖 <b>Vigia AI — Comandos disponíveis</b>\n\n" +
+  "▶️ <code>/start</code> — conecta este chat para receber os alarmes configurados no painel.\n\n" +
+  "📋 <code>/info</code> — lista todas as contas/cards configurados (Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai, Bitcoin, AdSense, clima, moedas, git, calendário, RSS…).\n" +
+  "📋 <code>/info {nome}</code> — mostra os detalhes de uma conta específica. Tolera até 2 erros de digitação.\n" +
+  "   Exemplo: <code>/info claude</code>\n\n" +
+  "📝 <code>/note {texto}</code> — cria uma nota no dashboard.\n" +
+  "   Exemplo: <code>/note Comprar pão amanhã 8h</code>\n\n" +
+  "✅ <code>/tasklist {itens}</code> — cria uma checklist no dashboard. Separe os itens por quebra de linha ou <code>;</code>.\n" +
+  "   Exemplo: <code>/tasklist comprar pão; pagar conta; ligar pra mãe</code>\n\n" +
+  "❓ <code>/help</code> — mostra esta mensagem.\n\n" +
+  "💡 Os alarmes em si são configurados no painel (<code>/display/alarms</code>) — este bot só entrega as notificações e os comandos acima.";
 
 function parseNoteCommand(text: string): string | null | undefined {
   const trimmed = String(text ?? "").trim();
@@ -22,6 +34,12 @@ function parseNoteCommand(text: string): string | null | undefined {
   // m[1] é o texto após /note (pode ser undefined se só "/note")
   if (m[1] === undefined) return undefined; // comando sem texto
   return m[1].trim();
+}
+
+function parseHelpCommand(text: string): boolean {
+  const trimmed = String(text ?? "").trim();
+  if (!trimmed) return false;
+  return /^\/help(?:@\w+)?\s*$/i.test(trimmed);
 }
 
 function parseTasklistCommand(text: string): string | null | undefined {
@@ -247,6 +265,10 @@ export async function pollOnce(token: string, offset: number, signal?: AbortSign
     const label = parts.join(" ") || (username ? `@${username}` : chatId);
     const isNew = addChat(chatId, label);
     const textRaw = typeof msg.text === "string" ? msg.text : "";
+    if (parseHelpCommand(textRaw)) {
+      await sendTelegramMessage(token, chatId, HELP_MSG, { parseMode: "HTML" });
+      continue;
+    }
     // /info tem prioridade sobre /note e /tasklist
     const infoParsed = parseInfoCommand(textRaw);
     if (infoParsed !== null) {
