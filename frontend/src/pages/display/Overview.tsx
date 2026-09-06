@@ -34,9 +34,10 @@ import { ConfirmModal } from "../../components/ConfirmModal";
 import { DownloadIcon, MaximizeIcon, MinimizeIcon, UploadIcon } from "../../components/icons";
 import { payloadAgeMs } from "../../format";
 import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
+import type { BoardsMap } from "../../hooks/useGridBoards";
 import type { T } from "../../i18n";
 import { accentLink, emptyNote, num, overviewBoard } from "../../tw";
-import { boardCollision, downloadBoardJson, parseBoardJson } from "./boardHelpers";
+import { boardCollision, downloadBoardJson, parseBoardsJson } from "./boardHelpers";
 import { FreeSizeModal } from "./FreeSizeModal";
 import { BoardTile, EmptySlot, ProviderCard } from "./BoardTile";
 import type { Pal, ProviderMeta } from "./types";
@@ -44,7 +45,7 @@ import type { Pal, ProviderMeta } from "./types";
 /** Largura da sidebar (Sidebar `w-[264px]`) — usada para compensar o cálculo de colunas do grid quando ela some no modo foco. */
 const SIDEBAR_W = 264;
 
-function GridIOButtons({ board, onImport, t }: { board: BoardLayout; onImport: (b: BoardLayout) => void; t: T }) {
+function GridIOButtons({ boards, cols, onImport, t }: { boards: BoardsMap; cols: number; onImport: (b: BoardsMap) => void; t: T }) {
   const [msg, setMsg] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,7 +60,7 @@ function GridIOButtons({ board, onImport, t }: { board: BoardLayout; onImport: (
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const parsed = parseBoardJson(String(reader.result || ""));
+      const parsed = parseBoardsJson(String(reader.result || ""), cols);
       if (!parsed) {
         flash(t.gridImportError);
         return;
@@ -72,7 +73,7 @@ function GridIOButtons({ board, onImport, t }: { board: BoardLayout; onImport: (
 
   return (
     <div className="flex items-center gap-1">
-      <button type="button" className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink" title={t.exportGrid} aria-label={t.exportGrid} onClick={() => downloadBoardJson(board)}>
+      <button type="button" className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink" title={t.exportGrid} aria-label={t.exportGrid} onClick={() => downloadBoardJson(boards)}>
         <DownloadIcon size={14} />
       </button>
       <button type="button" className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink" title={t.importGrid} aria-label={t.importGrid} onClick={() => inputRef.current?.click()}>
@@ -92,6 +93,8 @@ export function Overview({
   pal,
   board,
   onBoard,
+  boards,
+  onImportBoards,
   onColsChange,
   onOpen,
   focus,
@@ -114,6 +117,8 @@ export function Overview({
   pal: Pal;
   board: BoardLayout;
   onBoard: (fn: (b: BoardLayout) => BoardLayout) => void;
+  boards: BoardsMap;
+  onImportBoards: (b: BoardsMap) => void;
   onColsChange?: (cols: number) => void;
   onOpen: (id: string) => void;
   focus: boolean;
@@ -403,7 +408,7 @@ export function Overview({
               >
                 {focus ? <MinimizeIcon size={14} /> : <MaximizeIcon size={14} />}
               </button>
-              <GridIOButtons board={board} onImport={(b) => onBoard(() => b)} t={t} />
+              <GridIOButtons boards={boards} cols={cols} onImport={onImportBoards} t={t} />
             </div>
           )}
         </div>

@@ -20,10 +20,15 @@ export function boardForCols(boards: BoardsMap, cols: number): BoardLayout {
   return boards[cols] || emptyBoard();
 }
 
-// ── Exportar/importar grade (board.size/pos) como JSON ─────────────────
+// ── Exportar/importar grade (todos os boards salvos, por qtd. de colunas) ──
+// v1 exportava só o board da resolução atual — reimportar numa janela com
+// número de colunas diferente perdia o arranjo (layoutCols batia errado e o
+// board era reempilhado). v2 exporta o mapa `boards` inteiro, cada bucket
+// já com seu próprio layoutCols, então qualquer janela reencontra o layout
+// que já usou.
 
-export function downloadBoardJson(board: BoardLayout) {
-  const payload = { version: 1, exported_at: new Date().toISOString(), board };
+export function downloadBoardJson(boards: BoardsMap) {
+  const payload = { version: 2, exported_at: new Date().toISOString(), boards };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -35,14 +40,7 @@ export function downloadBoardJson(board: BoardLayout) {
   URL.revokeObjectURL(url);
 }
 
-export function parseBoardJson(text: string): BoardLayout | null {
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  const candidate = data && typeof data === "object" && "board" in (data as Record<string, unknown>) ? (data as Record<string, unknown>).board : data;
+function validateBoard(candidate: unknown): BoardLayout | null {
   if (!candidate || typeof candidate !== "object") return null;
   const { size, pos } = candidate as Record<string, unknown>;
   if (typeof size !== "object" || size === null || typeof pos !== "object" || pos === null) return null;
@@ -52,6 +50,36 @@ export function parseBoardJson(text: string): BoardLayout | null {
   const custom = (candidate as Record<string, unknown>).custom;
   if (custom !== undefined && (typeof custom !== "object" || custom === null)) return null;
   return candidate as BoardLayout;
+}
+
+/**
+ * Aceita o formato novo (v2, `{ boards }` com todos os buckets) e o antigo
+ * (v1, `{ board }` ou o board cru) — arquivos exportados antes continuam
+ * importáveis, entrando no bucket `fallbackCols` (a janela atual) já que não
+ * carregam um mapa completo.
+ */
+export function parseBoardsJson(text: string, fallbackCols: number): BoardsMap | null {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  if (obj.boards && typeof obj.boards === "object") {
+    const out: BoardsMap = {};
+    for (const [cols, raw] of Object.entries(obj.boards as Record<string, unknown>)) {
+      const b = validateBoard(raw);
+      if (b) out[cols] = b;
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  const candidate = "board" in obj ? obj.board : obj;
+  const b = validateBoard(candidate);
+  if (!b) return null;
+  const key = b.layoutCols ? String(b.layoutCols) : String(fallbackCols);
+  return { [key]: b };
 }
 
 // ── Clones: expande ProviderMeta com blocos duplicados salvos no board ─────

@@ -17,6 +17,11 @@ export function cleanBitcoinAddress(raw: string): string | null {
   text = [...text].filter((ch) => ch.charCodeAt(0) < 128).join("");
   text = text.split(/\s+/).filter(Boolean).join(" ");
   if (!text || text.includes(" ")) return null;
+  // Aceita link BIP21 (ex: "bitcoin:bc1q...?amount=0.01") colado direto do QR code.
+  text = text.replace(/^bitcoin:/i, "").split("?")[0];
+  // Bech32 (bc1...) é case-insensitive mas não pode misturar maiúsculas/minúsculas;
+  // carteiras (ex: BlueWallet) às vezes exibem tudo em maiúsculo no QR.
+  if (/^bc1/i.test(text)) text = text.toLowerCase();
   if (!ADDRESS_RE.test(text)) return null;
   return text;
 }

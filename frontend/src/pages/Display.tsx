@@ -370,6 +370,8 @@ export default function Display() {
                       return { ...b, [currentCols]: next };
                     })
                   }
+                  boards={boards}
+                  onImportBoards={(imported) => setBoards((b) => ({ ...b, ...imported }))}
                   onColsChange={setCurrentCols}
                   onOpen={(id) => {
                     if (id.startsWith("img:")) {
