@@ -1,4 +1,4 @@
-import type { CalendarPayload, CurrenciesPayload, GitPayload, GitRepo, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
+import type { CalendarPayload, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubRepo, IssPayload, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
 import type { PALETTES, ResolvedThemeName } from "../../theme";
 
 export type Pal = (typeof PALETTES)[ResolvedThemeName];
@@ -13,7 +13,7 @@ export type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "image" | "note";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "iss" | "image" | "note";
   weather?: WeatherPayload | null;
   weatherConfig?: WeatherConfig | null;
   currencies?: CurrenciesPayload | null;
@@ -22,6 +22,9 @@ export type ProviderMeta = {
   retroachievements?: RetroAchievementsAccount | null;
   calendar?: CalendarPayload | null;
   rss?: RssPayload | null;
+  github?: GithubPayload | null;
+  githubRepo?: GithubRepo | null;
+  iss?: IssPayload | null;
   imageSrc?: string | null;
   imageFit?: "cover" | "contain";
   imageTransform?: { x: number; y: number; scale: number } | null;

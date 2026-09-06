@@ -287,6 +287,23 @@ export type ConfigCopy = {
   gitNoPreview: string;
   gitPreviewOk: string;
   gitPreviewFail: string;
+  githubTitle: string;
+  githubLead: string;
+  githubRepoLabel: string;
+  githubRepoPh: string;
+  githubRepoHint: string;
+  githubLabelLabel: string;
+  githubLabelPh: string;
+  githubAdd: string;
+  githubPreview: string;
+  githubPreviewing: string;
+  githubListLabel: string;
+  githubEmpty: string;
+  githubNoPreview: string;
+  githubPreviewOk: string;
+  githubPreviewFail: string;
+  issTitle: string;
+  issLead: string;
   // RetroAchievements
   retroTitle: string;
   retroLead: string;
@@ -628,6 +645,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     gitNoPreview: "Cole uma URL ou caminho para testar.",
     gitPreviewOk: "Repositório acessível.",
     gitPreviewFail: "Não foi possível acessar.",
+    githubTitle: "GitHub — repositórios",
+    githubLead: "Adicione repositórios públicos do GitHub (formato owner/repo) para acompanhar estrelas, forks e issues/PRs abertas direto no painel. Usa a API pública do GitHub, sem necessidade de login.",
+    githubRepoLabel: "Repositório (owner/repo)",
+    githubRepoPh: "ex.: TrindadeBRA/vigia-ai",
+    githubRepoHint: "Só funciona com repositórios públicos.",
+    githubLabelLabel: "Nome (opcional)",
+    githubLabelPh: "ex.: vigia-ai",
+    githubAdd: "Adicionar repositório",
+    githubPreview: "Testar",
+    githubPreviewing: "Testando…",
+    githubListLabel: "Repositórios monitorados",
+    githubEmpty: "Nenhum repositório adicionado ainda.",
+    githubNoPreview: "Digite um repositório para testar.",
+    githubPreviewOk: "Repositório acessível.",
+    githubPreviewFail: "Não foi possível acessar.",
+    issTitle: "ISS — Estação Espacial Internacional",
+    issLead: "Widget único que mostra a posição, altitude e velocidade atuais da ISS. Usa a API pública wheretheiss.at, sem necessidade de login.",
     retroTitle: "RetroAchievements",
     retroLead: "Veja seu perfil de conquistas retrô no painel — pontos, ranking, jogos recentes e últimas conquistas desbloqueadas.",
     retroNotConfigured: "Nenhuma conta RetroAchievements configurada.",
@@ -964,6 +998,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     gitNoPreview: "Paste a URL or path to test.",
     gitPreviewOk: "Repository reachable.",
     gitPreviewFail: "Could not reach repository.",
+    githubTitle: "GitHub — repositories",
+    githubLead: "Add public GitHub repositories (owner/repo format) to track stars, forks and open issues/PRs right on the board. Uses the public GitHub API, no login required.",
+    githubRepoLabel: "Repository (owner/repo)",
+    githubRepoPh: "e.g. TrindadeBRA/vigia-ai",
+    githubRepoHint: "Only works with public repositories.",
+    githubLabelLabel: "Name (optional)",
+    githubLabelPh: "e.g. vigia-ai",
+    githubAdd: "Add repository",
+    githubPreview: "Test",
+    githubPreviewing: "Testing…",
+    githubListLabel: "Monitored repositories",
+    githubEmpty: "No repository added yet.",
+    githubNoPreview: "Type a repository to test.",
+    githubPreviewOk: "Repository reachable.",
+    githubPreviewFail: "Could not reach repository.",
+    issTitle: "ISS — International Space Station",
+    issLead: "Single widget showing the ISS's current position, altitude and velocity. Uses the public wheretheiss.at API, no login required.",
     retroTitle: "RetroAchievements",
     retroLead: "See your retro achievement profile on the board — points, rank, recent games and latest unlocks.",
     retroNotConfigured: "No RetroAchievements account configured.",
@@ -1300,6 +1351,23 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     gitNoPreview: "Pega una URL o ruta para probar.",
     gitPreviewOk: "Repositorio accesible.",
     gitPreviewFail: "No se pudo acceder.",
+    githubTitle: "GitHub — repositorios",
+    githubLead: "Agrega repositorios públicos de GitHub (formato owner/repo) para ver estrellas, forks e issues/PRs abiertas en el panel. Usa la API pública de GitHub, sin necesidad de login.",
+    githubRepoLabel: "Repositorio (owner/repo)",
+    githubRepoPh: "ej.: TrindadeBRA/vigia-ai",
+    githubRepoHint: "Solo funciona con repositorios públicos.",
+    githubLabelLabel: "Nombre (opcional)",
+    githubLabelPh: "ej.: vigia-ai",
+    githubAdd: "Añadir repositorio",
+    githubPreview: "Probar",
+    githubPreviewing: "Probando…",
+    githubListLabel: "Repositorios monitoreados",
+    githubEmpty: "Ningún repositorio añadido aún.",
+    githubNoPreview: "Escribe un repositorio para probar.",
+    githubPreviewOk: "Repositorio accesible.",
+    githubPreviewFail: "No se pudo acceder.",
+    issTitle: "ISS — Estación Espacial Internacional",
+    issLead: "Widget único que muestra la posición, altitud y velocidad actuales de la ISS. Usa la API pública wheretheiss.at, sin necesidad de login.",
     retroTitle: "RetroAchievements",
     retroLead: "Mira tu perfil de logros retro en el panel — puntos, ranking, juegos recientes y últimos desbloqueos.",
     retroNotConfigured: "Ninguna cuenta de RetroAchievements configurada.",

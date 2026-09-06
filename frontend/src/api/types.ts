@@ -485,6 +485,54 @@ export type RssConfig = {
   feeds: Array<{ id: string; url: string; label: string; limit: number }>;
 };
 
+export type GithubRepo = {
+  id: string;
+  label: string;
+  repo: string;
+  ok: boolean;
+  error: string | null;
+  full_name: string | null;
+  description: string | null;
+  stars: number | null;
+  forks: number | null;
+  open_issues: number | null;
+  watchers: number | null;
+  default_branch: string | null;
+  html_url: string | null;
+  pushed_at: string | null;
+  updated_at: string | null;
+};
+
+export type GithubPayload = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  repos: GithubRepo[];
+};
+
+export type GithubConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  repos: Array<{ id: string; repo: string; label: string }>;
+};
+
+export type IssPayload = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  altitude_km: number | null;
+  velocity_kmh: number | null;
+  visibility: "daylight" | "eclipsed" | null;
+  timestamp: number | null;
+};
+
+export type IssConfig = {
+  enabled: boolean;
+  hidden: boolean;
+};
+
 export type UsagePayload = {
   updated_at: string;
   claude: ClaudeAccount[];
@@ -502,6 +550,8 @@ export type UsagePayload = {
   git?: GitPayload | null;
   calendar?: CalendarPayload | null;
   rss?: RssPayload | null;
+  github?: GithubPayload | null;
+  iss?: IssPayload | null;
 };
 
 export type AccountPublic = { id: string; label: string; suffix: string | null };
@@ -583,5 +633,7 @@ export type ConfigPublic = {
   git: GitConfig;
   calendar: CalendarConfig;
   rss: RssConfig;
+  github: GithubConfig;
+  iss: IssConfig;
   device: DevicePublic;
 };

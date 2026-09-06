@@ -16,6 +16,8 @@ import { createCalendarRoutes } from "./routers/calendar.js";
 import { createConfigRoutes } from "./routers/config.js";
 import { createCurrenciesRoutes } from "./routers/currencies.js";
 import { createGitRoutes } from "./routers/git.js";
+import { createGithubRoutes } from "./routers/github.js";
+import { createIssRoutes } from "./routers/iss.js";
 import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
@@ -166,6 +168,8 @@ export async function createApp() {
   await fastify.register(createRetroachievementsRoutes, { prefix: "" });
   await fastify.register(createCalendarRoutes, { prefix: "" });
   await fastify.register(createRssRoutes, { prefix: "" });
+  await fastify.register(createGithubRoutes, { prefix: "" });
+  await fastify.register(createIssRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });
 

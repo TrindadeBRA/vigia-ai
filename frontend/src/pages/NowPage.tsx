@@ -19,7 +19,7 @@ type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "image" | "note";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "iss" | "image" | "note";
 };
 
 function Icon({ id }: { id: string }) {
@@ -36,7 +36,7 @@ function barFillStyle(pct: number, pal: Pal) {
 }
 
 function ProviderCard({ p, pal, t, onNavigate }: { p: ProviderMeta; pal: Pal; t: T; onNavigate: () => void }) {
-  if (p.provider === "weather" || p.kind === "weather" || p.provider === "currencies" || p.kind === "currencies" || p.provider === "git" || p.kind === "git" || p.provider === "retroachievements" || p.kind === "retroachievements") {
+  if (p.provider === "weather" || p.kind === "weather" || p.provider === "currencies" || p.kind === "currencies" || p.provider === "git" || p.kind === "git" || p.provider === "retroachievements" || p.kind === "retroachievements" || p.provider === "github" || p.kind === "github" || p.provider === "iss" || p.kind === "iss") {
     return null;
   }
 

@@ -369,6 +369,65 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       rss,
     });
   }
+  // GitHub — um card por repositório
+  const github = data.github;
+  if (github && github.repos) {
+    for (const repo of github.repos) {
+      const repoName = repo.label || repo.full_name || repo.repo;
+      const metrics: Metric[] = repo.ok
+        ? [
+          { label: t.githubStars, pct: null, value: repo.stars != null ? String(repo.stars) : null, sub: null },
+          { label: t.githubForks, pct: null, value: repo.forks != null ? String(repo.forks) : null, sub: null },
+          { label: t.githubIssues, pct: null, value: repo.open_issues != null ? String(repo.open_issues) : null, sub: null },
+        ]
+        : [{ label: repoName, pct: null, value: null, sub: repo.error ?? t.noData }];
+      list.push({
+        id: `github:${repo.id}`,
+        provider: "github",
+        ok: repo.ok,
+        error: repo.error,
+        title: repoName,
+        label: repo.default_branch || "",
+        metrics,
+        kind: "github",
+        github,
+        githubRepo: repo,
+      });
+    }
+    if (github.repos.length === 0 && !github.ok && github.error) {
+      list.push({
+        id: "github:main",
+        provider: "github",
+        ok: false,
+        error: github.error,
+        title: t.github,
+        label: "",
+        metrics: [{ label: t.github, pct: null, value: null, sub: github.error }],
+        kind: "github",
+        github,
+      });
+    }
+  }
+  // ISS — widget único (o backend já filtra hidden/enabled)
+  const iss = data.iss;
+  if (iss) {
+    list.push({
+      id: "iss:main",
+      provider: "iss",
+      ok: iss.ok,
+      error: iss.error,
+      title: t.iss,
+      label: iss.visibility === "daylight" ? t.issDaylight : iss.visibility === "eclipsed" ? t.issEclipsed : "",
+      metrics: iss.ok
+        ? [
+          { label: t.issAltitude, pct: null, value: iss.altitude_km != null ? `${Math.round(iss.altitude_km)} km` : null, sub: null },
+          { label: t.issVelocity, pct: null, value: iss.velocity_kmh != null ? `${Math.round(iss.velocity_kmh)} km/h` : null, sub: null },
+        ]
+        : [],
+      kind: "iss",
+      iss,
+    });
+  }
   return list;
 }
 

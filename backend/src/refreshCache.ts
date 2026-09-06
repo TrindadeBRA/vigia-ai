@@ -17,6 +17,8 @@ export const TTL_S: Record<string, number> = {
   git: 60,
   calendar: 300,
   rss: 300,
+  github: 300,
+  iss: 20,
 };
 
 export const FORCEABLE: ReadonlySet<string> = new Set([
@@ -178,7 +180,7 @@ export class RefreshCache {
 
 export function fingerprint(cfg: Record<string, unknown>, name: string): string {
   let blob: unknown;
-  if (name === "weather" || name === "currencies") {
+  if (name === "weather" || name === "currencies" || name === "iss") {
     blob = (cfg as Record<string, unknown>)[name] ?? {};
   } else {
     blob = providerCfg(cfg as Record<string, unknown>, name);

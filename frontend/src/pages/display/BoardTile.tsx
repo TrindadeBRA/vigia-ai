@@ -17,8 +17,10 @@ import {
   CursorTileCard,
   EyeTileCard,
   GitTileCard,
+  GithubTileCard,
   GptTileCard,
   ImageTileCard,
+  IssTileCard,
   NoteTileCard,
   RetroAchievementsTileCard,
   RssTileCard,
@@ -97,6 +99,12 @@ export function ProviderCard({
   }
   if (p.provider === "rss" || p.kind === "rss") {
     return <RssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "github" || p.kind === "github") {
+    return <GithubTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "iss" || p.kind === "iss") {
+    return <IssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   // Widgets extras: sem "conta"/dados de backend, só visuais
   if (p.provider === "clock") {

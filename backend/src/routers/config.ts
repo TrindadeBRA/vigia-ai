@@ -235,6 +235,8 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
   const gitRaw = (cfg.git ?? {}) as Record<string, unknown>;
   const calendarRaw = (cfg.calendar ?? { enabled: false, hidden: false, calendars: [] }) as Record<string, unknown>;
   const rssRaw = (cfg.rss ?? { enabled: false, hidden: false, feeds: [] }) as Record<string, unknown>;
+  const githubRaw = (cfg.github ?? { enabled: false, hidden: false, repos: [] }) as Record<string, unknown>;
+  const issRaw = (cfg.iss ?? { enabled: false, hidden: false }) as Record<string, unknown>;
   return {
     in_docker: inDocker(),
     mock: Boolean(cfg.mock),
@@ -269,6 +271,8 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
     git: gitRaw,
     calendar: calendarRaw,
     rss: rssRaw,
+    github: githubRaw,
+    iss: issRaw,
     device: devicePublic(hub),
   };
 }

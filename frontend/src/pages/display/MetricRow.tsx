@@ -141,7 +141,8 @@ export function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t
 
 export function Icon({ id, large, compact }: { id: string; large?: boolean; compact?: boolean }) {
   const src = PROVIDER_ICON[id];
-  const fallback = id === "git" ? "🌿" : null;
+  const EMOJI_FALLBACK: Record<string, string> = { git: "🌿", github: "🐙", iss: "🛰️" };
+  const fallback = EMOJI_FALLBACK[id] ?? null;
   if (compact) {
     return (
       <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">

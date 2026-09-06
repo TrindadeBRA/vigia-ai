@@ -7,6 +7,8 @@ import { CalendarConfigCard } from "./CalendarConfigCard";
 import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
 import { DesktopCard } from "./DesktopCard";
 import { GitConfigCard } from "./GitConfigCard";
+import { GithubConfigCard } from "./GithubConfigCard";
+import { IssConfigCard } from "./IssConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { RetroAchievementsConfigCard } from "./RetroAchievementsConfigCard";
 import type { ProviderCardPublic } from "../../api/types";
@@ -190,6 +192,8 @@ export default function ConfigPage() {
         <RetroAchievementsConfigCard c={c} onReload={reload} provider={cfg.providers.retroachievements as unknown as { configured: boolean; hidden: boolean; label: string; suffix: string | null; mode: string; accounts: Array<{ id: string; label: string; suffix: string | null }> }} />
         <CalendarConfigCard calendar={cfg.calendar} c={c} onReload={reload} />
         <RssConfigCard rss={cfg.rss} c={c} onReload={reload} />
+        <GithubConfigCard github={cfg.github} c={c} onReload={reload} />
+        <IssConfigCard iss={cfg.iss} c={c} onReload={reload} />
         <SpotifyConfigCard p={cfg.providers.spotify} listenPort={cfg.listen.port} {...common} />
         <YoutubeMusicConfigCard p={(cfg.providers as Record<string, unknown>).youtubemusic as ProviderCardPublic ?? { source: "missing", label: "", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] } as unknown as ProviderCardPublic} listenPort={cfg.listen.port} {...common} />
       </div>

@@ -121,6 +121,17 @@ const _RSS_DEFAULT: Record<string, unknown> = {
   feeds: [],
 };
 
+const _GITHUB_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+  repos: [],
+};
+
+const _ISS_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+};
+
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -143,6 +154,8 @@ export function defaultConfig(): Record<string, unknown> {
     git: deepClone(_GIT_DEFAULT),
     calendar: deepClone(_CALENDAR_DEFAULT),
     rss: deepClone(_RSS_DEFAULT),
+    github: deepClone(_GITHUB_DEFAULT),
+    iss: deepClone(_ISS_DEFAULT),
   };
   const providers = cfg.providers as Record<string, unknown>;
   for (const name of PROVIDERS) {
@@ -596,6 +609,35 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
     }
     rss.feeds = cleaned;
   }
+
+  // github
+  const rawGithub = (typeof raw.github === "object" && raw.github !== null ? raw.github : {}) as Record<string, unknown>;
+  const github = cfg.github as Record<string, unknown>;
+  github.enabled = Boolean(rawGithub.enabled ?? github.enabled);
+  github.hidden = Boolean(rawGithub.hidden ?? github.hidden);
+  const rawGhRepos = rawGithub.repos;
+  if (Array.isArray(rawGhRepos)) {
+    const cleaned: Array<Record<string, unknown>> = [];
+    for (const it of rawGhRepos) {
+      if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
+      const r = it as Record<string, unknown>;
+      const repo = String(r.repo ?? "").trim();
+      if (!repo) continue;
+      cleaned.push({
+        id: String(r.id),
+        repo,
+        label: String(r.label ?? ""),
+      });
+    }
+    github.repos = cleaned;
+  }
+
+  // iss
+  const rawIss = (typeof raw.iss === "object" && raw.iss !== null ? raw.iss : {}) as Record<string, unknown>;
+  const iss = cfg.iss as Record<string, unknown>;
+  iss.enabled = Boolean(rawIss.enabled ?? iss.enabled);
+  iss.hidden = Boolean(rawIss.hidden ?? iss.hidden);
+
   return cfg;
 }
 
