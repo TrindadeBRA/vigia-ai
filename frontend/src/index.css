@@ -10,70 +10,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Tom Select — tema Vigia (ver .agents/UI_TOM_SELECT.md) ────────────── */
-.ts-wrapper {
-  min-height: 42px;
-}
-
-.ts-wrapper .ts-control {
-  border-color: var(--card-border, #2e2e2e) !important;
-  background: var(--chip, #232323) !important;
-  color: var(--text, #f5f5f5) !important;
-  border-radius: 10px !important;
-  padding: 8px 10px !important;
-  font-size: 13.5px !important;
-  min-height: 42px;
-  box-shadow: none !important;
-}
-
-.ts-wrapper .ts-control input {
-  color: var(--text, #f5f5f5) !important;
-  font-size: 13.5px !important;
-}
-
-.ts-wrapper .ts-control input::placeholder {
-  color: var(--text-muted, #737373) !important;
-}
-
-.ts-wrapper .ts-dropdown {
-  background: var(--card, #1c1c1c) !important;
-  border-color: var(--card-border, #2e2e2e) !important;
-  border-radius: 10px !important;
-  color: var(--text, #f5f5f5) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .35) !important;
-}
-
-.ts-wrapper .ts-dropdown .optgroup-header {
-  background: var(--chip, #232323) !important;
-  color: var(--text-dim, #a1a1a1) !important;
-  font-weight: 700 !important;
-  font-size: 11px !important;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  padding: 6px 10px 4px !important;
-}
-
-.ts-wrapper .ts-dropdown .option {
-  color: var(--text, #f5f5f5) !important;
-  font-size: 13.5px !important;
-  padding: 7px 10px !important;
-}
-
-.ts-wrapper .ts-dropdown .option.active {
-  background: var(--accent, #e63931) !important;
-  color: var(--accent-ink, #fff) !important;
-}
-
-.ts-wrapper.plugin-remove_button .item {
-  background: var(--accent, #e63931) !important;
-  color: var(--accent-ink, #fff) !important;
-  border-radius: 6px !important;
-}
-
-.ts-wrapper.focus .ts-control {
-  border-color: var(--accent, #e63931) !important;
-  outline: 2px solid var(--accent, #e63931) !important;
-  outline-offset: 1px !important;
+/* ── react-select — tema Vigia (ver .agents/UI_SELECT.md) ──────────────
+   Estilos principais via prop `styles` em SearchableField (ui.tsx).
+   Aqui apenas ajustes globais mínimos para portal/menu. ────────────────── */
+.react-select__menu-portal {
+  z-index: 9999 !important;
 }
 
 /* Variáveis de tema — o JS (applyThemeVars) atualiza estes valores. */

@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "tom-select": "^2.6.2"
+    "react-emulatorjs": "^2.2.6",
+    "react-select": "^5.8.3"
   }
 }

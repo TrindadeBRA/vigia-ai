@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import TomSelect from "tom-select";
-import "tom-select/dist/css/tom-select.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Select, { type GroupBase, type SingleValue, type StylesConfig } from "react-select";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
@@ -112,8 +111,6 @@ export function EmulatorBoardCard({
     const containerId = useRef(`ejs-unified-${Math.random().toString(36).slice(2, 8)}`);
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const emulatorRef = useRef<HTMLDivElement>(null);
-    const selectRef = useRef<HTMLSelectElement>(null);
-    const tomSelectRef = useRef<TomSelect | null>(null);
     const [roms, setRoms] = useState<EmulatorRom[]>([]);
     const [groups, setGroups] = useState<EmulatorRomGroup[]>([]);
     const [loadingRoms, setLoadingRoms] = useState(false);
@@ -182,77 +179,119 @@ export function EmulatorBoardCard({
         void fetchRoms();
     }, [fetchRoms]);
 
-    // Tom Select — searchable dropdown with optgroups (programmatic options)
-    useEffect(() => {
-        const el = selectRef.current;
-        if (!el) return;
-        if (tomSelectRef.current) {
-            try { tomSelectRef.current.destroy(); } catch { }
-            tomSelectRef.current = null;
-        }
-        // Don't init while still loading
-        if (loadingRoms) return;
+    // react-select — searchable dropdown with optgroups
+    type RomOption = { value: string; label: string };
+    type RomGroup = { label: string; options: RomOption[] };
 
-        // Build options programmatically for Tom Select
-        const tsOptions: Array<{ value: string; text: string; optgroup?: string }> = [];
-        const tsOptgroups: Array<{ value: string; label: string }> = [];
+    const romSelectGroups: RomGroup[] = useMemo(() => {
         if (isUnified) {
-            for (const g of groups) {
-                if (!g.roms.length) continue;
-                tsOptgroups.push({ value: g.platform, label: g.label });
-                for (const r of g.roms) {
-                    tsOptions.push({
+            return groups
+                .filter((g) => g.roms.length > 0)
+                .map((g) => ({
+                    label: g.label,
+                    options: g.roms.map((r) => ({
                         value: g.platform + "::" + r.file,
-                        text: r.name + " (" + r.ext + ")" + (r.size ? " \u00b7 " + formatSize(r.size) : ""),
-                        optgroup: g.platform,
-                    });
-                }
-            }
-        } else {
-            for (const r of roms) {
-                tsOptions.push({
+                        label: r.name + " (" + r.ext + ")" + (r.size ? " \u00b7 " + formatSize(r.size) : ""),
+                    })),
+                }));
+        }
+        return [
+            {
+                label: "Jogos",
+                options: roms.map((r) => ({
                     value: r.file,
-                    text: r.name + " (" + r.ext + ")" + (r.size ? " \u00b7 " + formatSize(r.size) : ""),
-                });
-            }
-        }
-
-        const ts = new TomSelect(el, {
-            maxOptions: 500,
-            placeholder: tsOptions.length ? "selecione um jogo" : "nenhum jogo",
-            searchField: ["text"],
-            optgroupField: "optgroup",
-            optgroups: tsOptgroups,
-            options: tsOptions,
-            optgroupLabelField: "label",
-            optgroupValueField: "value",
-            lockOptgroupOrder: true,
-            dropdownParent: "body",
-            onChange: (value: string) => {
-                setSelectedRom(value);
-                if (value) void loadGame(value);
-                else destroyEmulator();
+                    label: r.name + " (" + r.ext + ")" + (r.size ? " \u00b7 " + formatSize(r.size) : ""),
+                })),
             },
-        });
-        tomSelectRef.current = ts;
-        if (selectedRom) ts.setValue(selectedRom, true);
+        ];
+    }, [groups, roms, isUnified]);
 
-        return () => {
-            try { ts.destroy(); } catch { }
-            if (tomSelectRef.current === ts) tomSelectRef.current = null;
-        };
+    const romSelectOptions: RomOption[] = useMemo(() => {
+        if (isUnified) return romSelectGroups.flatMap((g) => g.options);
+        return romSelectGroups[0]?.options ?? [];
+    }, [romSelectGroups, isUnified]);
+
+    const selectedRomOption: RomOption | null = useMemo(
+        () => romSelectOptions.find((o) => o.value === selectedRom) ?? null,
+        [romSelectOptions, selectedRom],
+    );
+
+    const romSelectStyles: StylesConfig<RomOption, false, GroupBase<RomOption>> = useMemo(
+        () => ({
+            control: (base, state) => ({
+                ...base,
+                minHeight: 34,
+                height: 34,
+                borderRadius: 10,
+                borderColor: state.isFocused ? "var(--accent, #e63931)" : "var(--card-border, #2e2e2e)",
+                backgroundColor: "var(--chip, #232323)",
+                color: "var(--text, #f5f5f5)",
+                boxShadow: state.isFocused ? "0 0 0 2px var(--accent, #e63931)" : "none",
+                "&:hover": { borderColor: state.isFocused ? "var(--accent, #e63931)" : "var(--card-border, #2e2e2e)" },
+            }),
+            valueContainer: (base) => ({ ...base, padding: "0 8px" }),
+            input: (base) => ({ ...base, color: "var(--text, #f5f5f5)", margin: 0, padding: 0, fontSize: 12.5 }),
+            placeholder: (base) => ({ ...base, color: "var(--text-muted, #737373)", fontSize: 12.5 }),
+            singleValue: (base) => ({ ...base, color: "var(--text, #f5f5f5)", fontSize: 12.5 }),
+            menu: (base) => ({
+                ...base,
+                backgroundColor: "var(--card, #1c1c1c)",
+                border: "1px solid var(--card-border, #2e2e2e)",
+                borderRadius: 10,
+                overflow: "hidden",
+                boxShadow: "0 8px 24px rgba(0,0,0,.4)",
+                zIndex: 50,
+            }),
+            menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+            menuList: (base) => ({ ...base, padding: 4 }),
+            option: (base, state) => ({
+                ...base,
+                backgroundColor: state.isSelected
+                    ? "var(--accent, #e63931)"
+                    : state.isFocused
+                        ? "color-mix(in srgb, var(--accent, #e63931) 14%, var(--card, #1c1c1c))"
+                        : "transparent",
+                color: state.isSelected ? "var(--accent-ink, #fff)" : "var(--text, #f5f5f5)",
+                fontSize: 12.5,
+                padding: "6px 10px",
+                borderRadius: 8,
+                cursor: "pointer",
+            }),
+            groupHeading: (base) => ({
+                ...base,
+                backgroundColor: "var(--chip, #232323)",
+                color: "var(--text-dim, #a1a1a1)",
+                fontWeight: 700,
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                padding: "6px 10px 4px",
+                margin: 0,
+            }),
+            indicatorSeparator: () => ({ display: "none" }),
+            dropdownIndicator: (base, state) => ({
+                ...base,
+                color: "var(--text-muted, #737373)",
+                padding: 6,
+                transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : undefined,
+                transition: "transform 0.15s",
+            }),
+            clearIndicator: (base) => ({ ...base, color: "var(--text-muted, #737373)", padding: 6 }),
+        }),
+        [],
+    );
+
+    const handleRomChange = useCallback(
+        (opt: SingleValue<RomOption>) => {
+            const val = opt?.value ?? "";
+            setSelectedRom(val);
+            if (val) void loadGame(val);
+            else destroyEmulator();
+        },
+        // loadGame/destroyEmulator are stable via useCallback deps
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [roms, groups, loadingRoms]);
-
-    // Keep Tom Select value in sync with selectedRom
-    useEffect(() => {
-        const ts = tomSelectRef.current;
-        if (!ts) return;
-        const current = ts.getValue() as string;
-        if (current !== selectedRom) {
-            ts.setValue(selectedRom, true);
-        }
-    }, [selectedRom]);
+        [],
+    );
 
     // Track AudioContexts to allow proper audio cleanup on destroy
     useEffect(() => {
@@ -289,17 +328,6 @@ export function EmulatorBoardCard({
             .ejs_menu_bar.ejs_menu_bar_hidden { display: none !important; }
             .ejs_menu_bar:not(.ejs_menu_bar_hidden) { display: flex !important; }
             .ejs_canvas_parent { pointer-events: auto; }
-            /* Tom Select theming to match Vigia — dropdown must escape card overflow */
-            .ts-wrapper { min-height: 34px; }
-            .ts-control { border-color: var(--card-border, #2e2e2e) !important; background: var(--chip, #232323) !important; color: var(--text, #f5f5f5) !important; border-radius: 10px !important; padding: 4px 8px !important; font-size: 12.5px !important; }
-            .ts-control input { color: var(--text, #f5f5f5) !important; font-size: 12.5px !important; }
-            .ts-control input::placeholder { color: var(--text-muted, #737373) !important; }
-            .ts-dropdown { background: var(--card, #1c1c1c) !important; border-color: var(--card-border, #2e2e2e) !important; border-radius: 10px !important; color: var(--text, #f5f5f5) !important; z-index: 9999 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; }
-            .ts-dropdown .optgroup-header { background: var(--chip, #232323) !important; color: var(--text-dim, #a1a1a1) !important; font-weight: 700 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 10px 4px !important; }
-            .ts-dropdown .option { color: var(--text, #f5f5f5) !important; font-size: 12.5px !important; padding: 6px 10px !important; }
-            .ts-dropdown .option.active { background: var(--accent, #e63931) !important; color: var(--accent-ink, #fff) !important; }
-            .ts-dropdown .create { color: var(--text-muted, #737373) !important; }
-            .ts-wrapper.plugin-remove_button .item { background: var(--accent, #e63931) !important; color: var(--accent-ink, #fff) !important; border-radius: 6px !important; }
         `;
         if (!document.getElementById("ejs-menu-fix")) {
             document.head.appendChild(style);
@@ -406,10 +434,6 @@ export function EmulatorBoardCard({
             const w = window as unknown as Record<string, unknown>;
             if (w.EJS_emulator && typeof (w.EJS_emulator as { exit?: () => void }).exit === "function") {
                 try { (w.EJS_emulator as { exit: () => void }).exit(); } catch { }
-            }
-            if (tomSelectRef.current) {
-                try { tomSelectRef.current.destroy(); } catch { }
-                tomSelectRef.current = null;
             }
         };
     }, []);
@@ -753,13 +777,39 @@ export function EmulatorBoardCard({
 
             <div className="flex shrink-0 items-center gap-1.5">
                 <div className="min-w-0 flex-1">
-                    <select
-                        ref={selectRef}
-                        defaultValue={selectedRom}
-                        disabled={loadingRoms}
-                    >
-                        <option value="">selecione um jogo</option>
-                    </select>
+                    {loadingRoms ? (
+                        <div className="flex h-[34px] items-center rounded-[10px] border border-edge bg-chip px-3 text-[12.5px] text-ink3">carregando jogos...</div>
+                    ) : romSelectOptions.length === 0 ? (
+                        <div className="flex h-[34px] items-center rounded-[10px] border border-edge bg-chip px-3 text-[12.5px] text-ink3">nenhum jogo</div>
+                    ) : isUnified ? (
+                        <Select<RomOption, false, GroupBase<RomOption>>
+                            options={romSelectGroups}
+                            value={selectedRomOption}
+                            onChange={handleRomChange}
+                            placeholder="selecione um jogo"
+                            isSearchable
+                            isClearable={Boolean(selectedRom)}
+                            menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                            menuPosition="fixed"
+                            styles={romSelectStyles}
+                            noOptionsMessage={() => "Nenhum jogo encontrado"}
+                            aria-label="Selecionar jogo"
+                        />
+                    ) : (
+                        <Select<RomOption, false, GroupBase<RomOption>>
+                            options={romSelectOptions}
+                            value={selectedRomOption}
+                            onChange={handleRomChange}
+                            placeholder="selecione um jogo"
+                            isSearchable
+                            isClearable={Boolean(selectedRom)}
+                            menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                            menuPosition="fixed"
+                            styles={romSelectStyles}
+                            noOptionsMessage={() => "Nenhum jogo encontrado"}
+                            aria-label="Selecionar jogo"
+                        />
+                    )}
                     {romError ? <div className="mt-1 truncate text-[11px] text-warn">{romError}</div> : null}
                 </div>
                 {status === "ready" ? (

@@ -1,8 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import TomSelect from "tom-select";
-import "tom-select/dist/css/tom-select.css";
+import Select, { type GroupBase, type SingleValue, type StylesConfig } from "react-select";
 import { cn } from "../../cn";
 import { CloseIcon } from "../../components/icons";
 import { useRequest, type RequestStatus } from "../../hooks/useRequest";
@@ -119,109 +118,134 @@ export function SelectField({
 }
 
 /**
- * TomSelectField — select pesquisável para listas longas/dinâmicas.
+ * SearchableField — select pesquisável para listas longas/dinâmicas.
  * Regra: todo select com ≥ 8 opções ou dados dinâmicos (API) DEVE usar este componente.
- * Ver .agents/UI_TOM_SELECT.md
+ * Implementado com react-select (https://react-select.com/home).
+ * Ver .agents/UI_SELECT.md
  */
-export function TomSelectField({
+export type SearchableFieldOption = SelectOption;
+
+const rsStyles: StylesConfig<SelectOption, false, GroupBase<SelectOption>> = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: 42,
+    height: 42,
+    borderRadius: 10,
+    borderColor: state.isFocused ? "var(--accent, #e63931)" : "var(--card-border, #2e2e2e)",
+    backgroundColor: "var(--chip, #232323)",
+    color: "var(--text, #f5f5f5)",
+    boxShadow: state.isFocused ? "0 0 0 2px var(--accent, #e63931)" : "none",
+    "&:hover": { borderColor: state.isFocused ? "var(--accent, #e63931)" : "var(--card-border, #2e2e2e)" },
+  }),
+  valueContainer: (base) => ({ ...base, padding: "0 8px" }),
+  input: (base) => ({ ...base, color: "var(--text, #f5f5f5)", margin: 0, padding: 0 }),
+  placeholder: (base) => ({ ...base, color: "var(--text-muted, #737373)", fontSize: 13.5 }),
+  singleValue: (base) => ({ ...base, color: "var(--text, #f5f5f5)", fontSize: 13.5 }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: "var(--card, #1c1c1c)",
+    border: "1px solid var(--card-border, #2e2e2e)",
+    borderRadius: 10,
+    overflow: "hidden",
+    boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+    zIndex: 50,
+  }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+  menuList: (base) => ({ ...base, padding: 4 }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? "var(--accent, #e63931)"
+      : state.isFocused
+        ? "color-mix(in srgb, var(--accent, #e63931) 14%, var(--card, #1c1c1c))"
+        : "transparent",
+    color: state.isSelected ? "var(--accent-ink, #fff)" : "var(--text, #f5f5f5)",
+    fontSize: 13.5,
+    padding: "7px 10px",
+    borderRadius: 8,
+    cursor: "pointer",
+    ":active": { backgroundColor: "var(--accent, #e63931)", color: "var(--accent-ink, #fff)" },
+  }),
+  groupHeading: (base) => ({
+    ...base,
+    backgroundColor: "var(--chip, #232323)",
+    color: "var(--text-dim, #a1a1a1)",
+    fontWeight: 700,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    padding: "6px 10px 4px",
+    margin: 0,
+  }),
+  indicatorSeparator: () => ({ display: "none" }),
+  dropdownIndicator: (base, state) => ({
+    ...base,
+    color: "var(--text-muted, #737373)",
+    padding: 8,
+    transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : undefined,
+    transition: "transform 0.15s",
+  }),
+  clearIndicator: (base) => ({ ...base, color: "var(--text-muted, #737373)", padding: 8 }),
+};
+
+export function SearchableField({
   label,
   hint,
   options,
   wrapperClassName,
-  className,
-  style,
   placeholder,
   value,
   onChange,
   disabled,
-  children,
-  ...rest
-}: SelectHTMLAttributes<HTMLSelectElement> & {
+  isClearable,
+  noOptionsMessage,
+}: {
   label?: string;
   hint?: string;
   options?: SelectOption[];
   wrapperClassName?: string;
   placeholder?: string;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  disabled?: boolean;
+  isClearable?: boolean;
+  noOptionsMessage?: string;
 }) {
-  const selectRef = useRef<HTMLSelectElement>(null);
-  const tsRef = useRef<TomSelect | null>(null);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const opts = options ?? [];
+  const selected = opts.find((o) => o.value === (value ?? "")) ?? null;
 
-  // Inicializa / recria quando options ou placeholder mudam
-  useEffect(() => {
-    const el = selectRef.current;
-    if (!el) return;
-    if (tsRef.current) {
-      try { tsRef.current.destroy(); } catch { /* ignore */ }
-      tsRef.current = null;
-    }
-    const ts = new TomSelect(el, {
-      maxOptions: 500,
-      placeholder: placeholder || "Buscar...",
-      searchField: ["text"],
-      // mantém ordem original das options
-      lockOptgroupOrder: true,
-      onChange: (val: string) => {
-        const cb = onChangeRef.current;
-        if (cb) {
-          const evt = { target: { value: val }, currentTarget: { value: val } } as unknown as React.ChangeEvent<HTMLSelectElement>;
-          cb(evt);
-        }
-      },
-    });
-    tsRef.current = ts;
-    const initial = value == null ? "" : String(value);
-    if (initial) ts.setValue(initial, true);
-    if (disabled) ts.disable();
-    return () => {
-      try { ts.destroy(); } catch { /* ignore */ }
-      if (tsRef.current === ts) tsRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placeholder, JSON.stringify(options)]);
-
-  // Sincroniza value controlado
-  useEffect(() => {
-    const ts = tsRef.current;
-    if (!ts) return;
-    const cur = ts.getValue() as string;
-    const next = value == null ? "" : String(value);
-    if (cur !== next) ts.setValue(next, true);
-  }, [value]);
-
-  // Sincroniza disabled
-  useEffect(() => {
-    const ts = tsRef.current;
-    if (!ts) return;
-    if (disabled) ts.disable();
-    else ts.enable();
-  }, [disabled]);
+  const handleChange = (opt: SingleValue<SelectOption>) => {
+    const val = opt?.value ?? "";
+    if (!onChange) return;
+    const evt = { target: { value: val }, currentTarget: { value: val } } as unknown as React.ChangeEvent<HTMLSelectElement>;
+    onChange(evt);
+  };
 
   return (
     <label className={cn("flex min-w-[140px] flex-1 flex-col gap-1.5", wrapperClassName)}>
       {label ? <span className={cfgFieldLabel}>{label}</span> : null}
-      <select
-        ref={selectRef}
-        className={cn(fieldControlClass, "tom-select-target", className)}
-        style={style}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        {...rest}
-      >
-        {options
-          ? options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))
-          : children}
-      </select>
+      <Select<SelectOption, false, GroupBase<SelectOption>>
+        options={opts}
+        value={selected}
+        onChange={handleChange}
+        placeholder={placeholder || "Buscar..."}
+        isDisabled={disabled}
+        isClearable={isClearable}
+        isSearchable
+        menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+        menuPosition="fixed"
+        styles={rsStyles}
+        noOptionsMessage={() => noOptionsMessage ?? "Nenhum resultado"}
+        aria-label={label}
+      />
       {hint ? <span className="text-xs leading-[1.45] text-ink3">{hint}</span> : null}
     </label>
   );
 }
+
+/** Alias de compatibilidade — use SearchableField em código novo. */
+export const TomSelectField = SearchableField;
+export type TomSelectFieldProps = Parameters<typeof SearchableField>[0];
 
 export function TextField({
   label,
