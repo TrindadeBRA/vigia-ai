@@ -29,17 +29,18 @@ import {
   type CardSize,
   type Cell
 } from "../../board";
+
 import { cn } from "../../cn";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { DownloadIcon, MaximizeIcon, MinimizeIcon, UploadIcon } from "../../components/icons";
 import { payloadAgeMs } from "../../format";
-import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
 import type { BoardsMap } from "../../hooks/useGridBoards";
+import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
 import type { T } from "../../i18n";
 import { accentLink, emptyNote, num, overviewBoard } from "../../tw";
 import { boardCollision, downloadBoardJson, parseBoardsJson } from "./boardHelpers";
-import { FreeSizeModal } from "./FreeSizeModal";
 import { BoardTile, EmptySlot, ProviderCard } from "./BoardTile";
+import { FreeSizeModal } from "./FreeSizeModal";
 import type { Pal, ProviderMeta } from "./types";
 
 /** Largura da sidebar (Sidebar `w-[264px]`) — usada para compensar o cálculo de colunas do grid quando ela some no modo foco. */
@@ -206,6 +207,54 @@ export function Overview({
   useEffect(() => {
     onBoard((b) => syncBoard(ids, b, b.layoutCols || cols));
   }, [idsKey]);
+
+  // ── Gamepad: mover widget (R1 + Dpad), alternar tamanho (X), cor (Y) ──
+  const sizeCycle: CardSize[] = ["sm", "md", "lg", "xl", "wl", "wxl", "free"];
+  useEffect(() => {
+    const onMove = (e: Event) => {
+      const { id, dir } = (e as CustomEvent).detail as { id: string; dir: "up" | "down" | "left" | "right" };
+      const pos = layout.pos[id];
+      if (!pos) return;
+      const rect = cardRect(layout, id, cols);
+      let target: { r: number; c: number } | null = null;
+      if (dir === "up") target = { r: Math.max(0, pos.r - 1), c: pos.c };
+      else if (dir === "down") target = { r: pos.r + 1, c: pos.c };
+      else if (dir === "left") target = { r: pos.r, c: Math.max(0, pos.c - 1) };
+      else if (dir === "right") target = { r: pos.r, c: Math.min(cols - rect.w, pos.c + 1) };
+      if (!target) return;
+      onBoard((b) => {
+        const cur = displayBoard(ids, b, cols);
+        return placeCard(ids, cur, id, target!, cols);
+      });
+    };
+    const onSize = (e: Event) => {
+      const { id } = (e as CustomEvent).detail as { id: string };
+      const cur = normalizeSize(layout.size[id]);
+      const idx = sizeCycle.indexOf(cur);
+      const next = sizeCycle[(idx + 1) % sizeCycle.length] as CardSize;
+      if (next === "free") {
+        // free precisa de modal; por enquanto vai pra sm
+        onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, "sm", cols));
+        return;
+      }
+      onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols));
+    };
+    const onColor = (e: Event) => {
+      const { id } = (e as CustomEvent).detail as { id: string };
+      // abre o seletor de cor do card: clica no botão de cor
+      const card = document.querySelector(`[data-gamepad-card="${id}"]`) as HTMLElement | null;
+      const colorBtn = card?.querySelector<HTMLElement>('[aria-label="Cor de fundo"]');
+      colorBtn?.click();
+    };
+    window.addEventListener("vigia:gamepad-move", onMove as EventListener);
+    window.addEventListener("vigia:gamepad-size", onSize as EventListener);
+    window.addEventListener("vigia:gamepad-color", onColor as EventListener);
+    return () => {
+      window.removeEventListener("vigia:gamepad-move", onMove as EventListener);
+      window.removeEventListener("vigia:gamepad-size", onSize as EventListener);
+      window.removeEventListener("vigia:gamepad-color", onColor as EventListener);
+    };
+  }, [layout, cols, ids, onBoard]);
 
   function onDragStart(e: DragStartEvent) {
     if (readonly) return;

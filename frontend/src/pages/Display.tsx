@@ -7,12 +7,13 @@ import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
 import { MenuIcon, SettingsIcon } from "../components/icons";
-import { PageBreadcrumb } from "../components/PageBreadcrumb";
 import { ImageWidgetModal } from "../components/ImageWidgetModal";
 import { Logo } from "../components/Logo";
+import { PageBreadcrumb } from "../components/PageBreadcrumb";
 import { PixDonateModal } from "../components/PixDonateModal";
 import { Skeleton } from "../components/Skeleton";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, countdownSecs, fmtClock, nextFetchAtMs, payloadAgeMs } from "../format";
+import { GAMEPAD_CSS, gamepadScrollMain, gamepadZoom, isGamepadTypingActive, useGamepad } from "../hooks/useGamepad";
 import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useImageWidgets } from "../hooks/useImageWidgets";
@@ -258,6 +259,346 @@ export default function Display() {
   const toggleFocus = () => {
     setPrefs((p) => ({ ...p, focus: !p.focus }));
   };
+
+  // ── Gamepad: CSS de foco ──
+  useEffect(() => {
+    const id = "gamepad-css";
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = GAMEPAD_CSS;
+    document.head.appendChild(style);
+  }, []);
+
+  // ── Gamepad: navegação global ──
+  const gamepadInsideRef = useRef(false);
+  const gamepadSidebarFocusRef = useRef(false);
+
+  useGamepad({
+    onTick: (a) => {
+      if (isGamepadTypingActive()) return;
+      // analógico direito = scroll sempre
+      if (Math.abs(a.rightX) > 0.15 || Math.abs(a.rightY) > 0.15) {
+        gamepadScrollMain(a.rightX, a.rightY);
+      }
+      // L2/R2 = zoom contínuo
+      if (a.l2 || a.r2) {
+        const delta = (a.r2 ? 0.012 : 0) + (a.l2 ? -0.012 : 0);
+        if (delta !== 0) gamepadZoom(delta);
+      }
+    },
+    onAction: (a) => {
+      if (isGamepadTypingActive()) return;
+
+      // HOME = volta pro dashboard (overview)
+      if (a.homeJust) {
+        navigate("/display");
+        setSection("overview");
+        setSelectedId(null);
+        gamepadInsideRef.current = false;
+        gamepadSidebarFocusRef.current = false;
+        return;
+      }
+
+      // START+SELECT = fullscreen toggle
+      if (a.comboStartSelect) {
+        if (document.fullscreenElement) document.exitFullscreen?.().catch(() => { });
+        else document.documentElement.requestFullscreen?.().catch(() => { });
+        return;
+      }
+
+      // SELECT = modo foco on/off (só no overview)
+      if (a.selectJust && !a.start && section === "overview" && !isNested) {
+        setPrefs((p) => ({ ...p, focus: !p.focus }));
+        return;
+      }
+
+      // START = foco pro menu lateral (e sai do modo foco se estiver)
+      if (a.startJust && !a.select) {
+        if (prefs.focus) setPrefs((p) => ({ ...p, focus: false }));
+        // abre sidebar em mobile, foca primeiro item
+        setSidebarOpen(true);
+        gamepadSidebarFocusRef.current = true;
+        // foca primeiro link da sidebar
+        setTimeout(() => {
+          const first = document.querySelector("nav a, nav button") as HTMLElement | null;
+          first?.focus();
+        }, 80);
+        return;
+      }
+
+      // L1 = refresh + reinicia contador
+      if (a.l1Just) {
+        void loadUsage();
+        return;
+      }
+
+      // Se estiver dentro de um card (account view), B volta
+      if (section === "account" && a.bJust) {
+        setSection("overview");
+        gamepadInsideRef.current = false;
+        return;
+      }
+
+      // Se estiver em rota aninhada (config/theme/etc), B volta pro overview, A seleciona focado
+      if (isNested) {
+        if (a.bJust) {
+          navigate("/display");
+          return;
+        }
+        if (a.aJust) {
+          (document.activeElement as HTMLElement | null)?.click();
+          return;
+        }
+        // Dpad/analógico navega entre focáveis
+        if (a.dpadDownJust || a.dpadRightJust) {
+          const els = Array.from(document.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((el) => {
+            const s = window.getComputedStyle(el);
+            if (s.display === "none" || s.visibility === "hidden") return false;
+            const r = el.getBoundingClientRect();
+            return r.width > 0 || r.height > 0;
+          });
+          const idx = els.indexOf(document.activeElement as HTMLElement);
+          const next = idx >= 0 ? (idx + 1) % els.length : 0;
+          els[next]?.focus();
+          els[next]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          return;
+        }
+        if (a.dpadUpJust || a.dpadLeftJust) {
+          const els = Array.from(document.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((el) => {
+            const s = window.getComputedStyle(el);
+            if (s.display === "none" || s.visibility === "hidden") return false;
+            const r = el.getBoundingClientRect();
+            return r.width > 0 || r.height > 0;
+          });
+          const idx = els.indexOf(document.activeElement as HTMLElement);
+          const prev = idx >= 0 ? (idx - 1 + els.length) % els.length : els.length - 1;
+          els[prev]?.focus();
+          els[prev]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          return;
+        }
+        return;
+      }
+
+      // ── Overview: navegação entre cards ──
+      if (section === "overview") {
+        // Se estiver com foco na sidebar, Dpad navega lá
+        if (gamepadSidebarFocusRef.current) {
+          if (a.bJust) {
+            gamepadSidebarFocusRef.current = false;
+            // volta foco pros cards
+            const firstCard = document.querySelector("[data-gamepad-card]") as HTMLElement | null;
+            firstCard?.focus();
+            return;
+          }
+          if (a.dpadDownJust || a.dpadRightJust) {
+            const els = Array.from(document.querySelectorAll<HTMLElement>("nav a, nav button")).filter((el) => {
+              const s = window.getComputedStyle(el);
+              return s.display !== "none" && s.visibility !== "hidden";
+            });
+            const idx = els.indexOf(document.activeElement as HTMLElement);
+            const next = idx >= 0 ? (idx + 1) % els.length : 0;
+            els[next]?.focus();
+            return;
+          }
+          if (a.dpadUpJust || a.dpadLeftJust) {
+            const els = Array.from(document.querySelectorAll<HTMLElement>("nav a, nav button")).filter((el) => {
+              const s = window.getComputedStyle(el);
+              return s.display !== "none" && s.visibility !== "hidden";
+            });
+            const idx = els.indexOf(document.activeElement as HTMLElement);
+            const prev = idx >= 0 ? (idx - 1 + els.length) % els.length : els.length - 1;
+            els[prev]?.focus();
+            return;
+          }
+          if (a.aJust) {
+            (document.activeElement as HTMLElement | null)?.click();
+            gamepadSidebarFocusRef.current = false;
+            return;
+          }
+          return;
+        }
+
+        // R1 segurado + Dpad/analógico = move widget
+        if (a.r1) {
+          const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+          const cardId = focused?.getAttribute("data-gamepad-card");
+          if (cardId) {
+            let dir: "up" | "down" | "left" | "right" | null = null;
+            if (a.dpadUpJust) dir = "up";
+            else if (a.dpadDownJust) dir = "down";
+            else if (a.dpadLeftJust) dir = "left";
+            else if (a.dpadRightJust) dir = "right";
+            if (dir) {
+              // dispara evento custom que o Overview escuta para mover
+              window.dispatchEvent(new CustomEvent("vigia:gamepad-move", { detail: { id: cardId, dir } }));
+            }
+          }
+          return;
+        }
+
+        // X = alterna tamanho do card focado
+        if (a.xJust) {
+          const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+          const cardId = focused?.getAttribute("data-gamepad-card");
+          if (cardId) {
+            window.dispatchEvent(new CustomEvent("vigia:gamepad-size", { detail: { id: cardId } }));
+          }
+          return;
+        }
+
+        // Y = abre seletor de cores do card focado
+        if (a.yJust) {
+          const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+          const cardId = focused?.getAttribute("data-gamepad-card");
+          if (cardId) {
+            window.dispatchEvent(new CustomEvent("vigia:gamepad-color", { detail: { id: cardId } }));
+          }
+          return;
+        }
+
+        // A = entra no card/widget (navega dentro dele)
+        if (a.aJust) {
+          if (gamepadInsideRef.current) {
+            // já dentro: A age como click no elemento focado dentro do card
+            const inside = document.querySelector("[data-gamepad-inside] [data-gamepad-focusable]:focus, [data-gamepad-inside]:focus") as HTMLElement | null;
+            if (inside) inside.click();
+            else {
+              const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+              const cardId = focused?.getAttribute("data-gamepad-card");
+              if (cardId) {
+                const card = document.querySelector(`[data-gamepad-card="${cardId}"]`) as HTMLElement | null;
+                const inner = card?.querySelector<HTMLElement>("[data-gamepad-focusable], button, a");
+                if (inner) {
+                  gamepadInsideRef.current = true;
+                  card?.setAttribute("data-gamepad-inside", "true");
+                  inner.focus();
+                } else {
+                  // sem conteúdo interno focável: abre a página do card
+                  const openBtn = card?.querySelector<HTMLElement>("[data-gamepad-open]");
+                  openBtn?.click();
+                }
+              }
+            }
+            return;
+          }
+          const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+          const cardId = focused?.getAttribute("data-gamepad-card");
+          if (cardId) {
+            // tenta entrar no card (foco interno), se não houver, abre a página
+            const card = document.querySelector(`[data-gamepad-card="${cardId}"]`) as HTMLElement | null;
+            const innerFocusable = card?.querySelector<HTMLElement>("button:not([data-gamepad-open]), a, [data-gamepad-focusable]");
+            if (innerFocusable && card) {
+              gamepadInsideRef.current = true;
+              card.setAttribute("data-gamepad-inside", "true");
+              innerFocusable.focus();
+            } else {
+              const openBtn = card?.querySelector<HTMLElement>("[data-gamepad-open]");
+              if (openBtn) openBtn.click();
+              else if (cardId) {
+                // fallback: navega direto
+                setSection("account");
+                setSelectedId(cardId);
+              }
+            }
+          } else {
+            // nenhum card focado: foca o primeiro
+            const first = document.querySelector("[data-gamepad-card]") as HTMLElement | null;
+            if (first) {
+              document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
+              first.setAttribute("data-gamepad-focused", "true");
+              first.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }
+          }
+          return;
+        }
+
+        // B = voltar (sai do card se estiver dentro, senão limpa foco)
+        if (a.bJust) {
+          if (gamepadInsideRef.current) {
+            gamepadInsideRef.current = false;
+            document.querySelectorAll("[data-gamepad-inside]").forEach((el) => el.removeAttribute("data-gamepad-inside"));
+            const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+            (focused as HTMLElement | null)?.focus();
+            return;
+          }
+          // se estiver com algum card focado, só desfoca
+          const focused = document.querySelector('[data-gamepad-focused="true"]');
+          if (focused) {
+            focused.removeAttribute("data-gamepad-focused");
+            return;
+          }
+        }
+
+        // Dpad / analógico esquerdo = navega entre cards (spatial)
+        let dir: "up" | "down" | "left" | "right" | null = null;
+        if (a.dpadUpJust) dir = "up";
+        else if (a.dpadDownJust) dir = "down";
+        else if (a.dpadLeftJust) dir = "left";
+        else if (a.dpadRightJust) dir = "right";
+        if (dir) {
+          if (gamepadInsideRef.current) {
+            // dentro do card: navega entre focáveis internos
+            const card = document.querySelector("[data-gamepad-inside]") as HTMLElement | null;
+            if (card) {
+              const focusables = Array.from(card.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"]), [data-gamepad-focusable]')).filter((el) => {
+                const s = window.getComputedStyle(el);
+                return s.display !== "none" && s.visibility !== "hidden";
+              });
+              if (focusables.length) {
+                const idx = focusables.indexOf(document.activeElement as HTMLElement);
+                let next: HTMLElement | null = null;
+                if (dir === "down" || dir === "right") next = focusables[(idx + 1) % focusables.length] || null;
+                else next = focusables[(idx - 1 + focusables.length) % focusables.length] || null;
+                next?.focus();
+              }
+            }
+            return;
+          }
+          const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-gamepad-card]"));
+          if (!cards.length) return;
+          const current = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+          // se nenhum focado, foca o primeiro
+          if (!current) {
+            cards[0]?.setAttribute("data-gamepad-focused", "true");
+            cards[0]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            return;
+          }
+          // spatial nearest
+          const curRect = current.getBoundingClientRect();
+          const curCenter = { x: curRect.left + curRect.width / 2, y: curRect.top + curRect.height / 2 };
+          let best: HTMLElement | null = null;
+          let bestDist = Infinity;
+          for (const card of cards) {
+            if (card === current) continue;
+            const r = card.getBoundingClientRect();
+            const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+            const dx = c.x - curCenter.x;
+            const dy = c.y - curCenter.y;
+            let inDir = false;
+            let primary = 0;
+            let secondary = 0;
+            if (dir === "up") { inDir = dy < -8; primary = -dy; secondary = Math.abs(dx); }
+            else if (dir === "down") { inDir = dy > 8; primary = dy; secondary = Math.abs(dx); }
+            else if (dir === "left") { inDir = dx < -8; primary = -dx; secondary = Math.abs(dy); }
+            else if (dir === "right") { inDir = dx > 8; primary = dx; secondary = Math.abs(dy); }
+            if (!inDir) continue;
+            const dist = primary + secondary * 0.35;
+            if (dist < bestDist) { bestDist = dist; best = card; }
+          }
+          if (!best) {
+            const idx = cards.indexOf(current);
+            best = dir === "right" || dir === "down" ? cards[(idx + 1) % cards.length] || null : cards[(idx - 1 + cards.length) % cards.length] || null;
+          }
+          if (best) {
+            current.removeAttribute("data-gamepad-focused");
+            best.setAttribute("data-gamepad-focused", "true");
+            best.scrollIntoView({ block: "nearest", behavior: "smooth" });
+          }
+        }
+      }
+    },
+  });
 
   const showOutlet = isCanvas || (isNested && !isNow);
   const focusMode = (Boolean(prefs.focus) || isKiosk) && !isNested;

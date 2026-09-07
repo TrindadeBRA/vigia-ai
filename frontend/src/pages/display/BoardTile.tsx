@@ -287,6 +287,8 @@ export function BoardTile({
         setDropRef(node);
         rootRef.current = node;
       }}
+      data-gamepad-card={p.id}
+      tabIndex={-1}
       style={{ gridColumn: `${col + 1} / span ${rect.w}`, gridRow: `${row + 1} / span ${rect.h}`, zIndex: isDragging ? 2 : 1 }}
       className={cn("min-h-0 min-w-0 h-full", revealed && "is-revealed")}
       onClickCapture={(e) => {
@@ -294,6 +296,17 @@ export function BoardTile({
         e.preventDefault();
         e.stopPropagation();
         setRevealed(true);
+      }}
+      onFocus={(e) => {
+        // quando o card recebe foco via gamepad, marca como focado
+        if (e.currentTarget === e.target) {
+          document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
+          e.currentTarget.setAttribute("data-gamepad-focused", "true");
+        }
+      }}
+      onClick={() => {
+        document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
+        rootRef.current?.setAttribute("data-gamepad-focused", "true");
       }}
     >
       <ProviderCard
@@ -312,6 +325,8 @@ export function BoardTile({
         onSetBg={onSetBg}
         onFree={onFree}
       />
+      {/* botão invisível para gamepad "A" abrir o card */}
+      <button data-gamepad-open aria-hidden tabIndex={-1} onClick={onOpen} style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0, pointerEvents: "none" }} />
     </div>
   );
 }
