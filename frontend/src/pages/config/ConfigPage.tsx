@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import type { ProviderCardPublic } from "../../api/types";
 import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
 import { isDesktop } from "../../desktop";
@@ -8,19 +9,19 @@ import { CalendarConfigCard } from "./CalendarConfigCard";
 import { CameraConfigCard } from "./CameraConfigCard";
 import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
 import { DesktopCard } from "./DesktopCard";
+import { EmulatorConfigCard } from "./EmulatorConfigCard";
 import { GitConfigCard } from "./GitConfigCard";
 import { GithubConfigCard } from "./GithubConfigCard";
 import { IssConfigCard } from "./IssConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { RetroAchievementsConfigCard } from "./RetroAchievementsConfigCard";
-import type { ProviderCardPublic } from "../../api/types";
 import { RssConfigCard } from "./RssConfigCard";
 import { SpotifyConfigCard } from "./SpotifyConfigCard";
+import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
+import { WeatherConfigCard } from "./WeatherConfigCard";
 import { YoutubeMusicConfigCard } from "./YoutubeMusicConfigCard";
 import { Button, Fold } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
-import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
-import { WeatherConfigCard } from "./WeatherConfigCard";
 
 export type { ConfigOutlet } from "./usePublicConfig";
 
@@ -201,6 +202,14 @@ export default function ConfigPage() {
         <CameraConfigCard c={c} />
         <SpotifyConfigCard p={cfg.providers.spotify} listenPort={cfg.listen.port} {...common} />
         <YoutubeMusicConfigCard p={(cfg.providers as Record<string, unknown>).youtubemusic as ProviderCardPublic ?? { source: "missing", label: "", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] } as unknown as ProviderCardPublic} listenPort={cfg.listen.port} {...common} />
+      </div>
+
+      <div className="mt-2 w-full">
+        <h2 className="mb-1 mt-0 text-base font-bold">Emulador</h2>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">EmulatorJS via CDN — cada plataforma habilitada vira um card com seletor de jogos, reset e tela cheia. Saves em IndexedDB; configure pastas para backup.</p>
+      </div>
+      <div className={cfgGrid}>
+        <EmulatorConfigCard c={c} onReload={reload} />
       </div>
 
       <div className="mt-2 w-full">

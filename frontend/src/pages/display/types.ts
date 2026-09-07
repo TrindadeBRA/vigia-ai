@@ -13,7 +13,7 @@ export type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "iss" | "image" | "note";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "iss" | "image" | "note" | "emulator";
   weather?: WeatherPayload | null;
   weatherConfig?: WeatherConfig | null;
   currencies?: CurrenciesPayload | null;
@@ -29,4 +29,5 @@ export type ProviderMeta = {
   imageFit?: "cover" | "contain";
   imageTransform?: { x: number; y: number; scale: number } | null;
   note?: { id: string; text: string; color: string } | null;
+  emulator?: { platform: string; core: string; romPath: string; biosPath: string | null; label: string } | null;
 };

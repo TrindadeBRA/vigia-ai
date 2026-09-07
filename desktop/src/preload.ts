@@ -41,6 +41,12 @@ const api = {
     ipcRenderer.invoke("vigia:save-file", { name, contents }),
   checkForUpdates: (): Promise<{ ok: boolean; status: string; version?: string }> =>
     ipcRenderer.invoke("vigia:check-updates"),
+  pickFolder: (defaultPath?: string): Promise<string | null> =>
+    ipcRenderer.invoke("vigia:pick-folder", defaultPath),
+  pickFile: (defaultPath?: string): Promise<string | null> =>
+    ipcRenderer.invoke("vigia:pick-file", defaultPath),
+  pickPath: (opts?: { defaultPath?: string; kind?: "folder" | "file" | "both" }): Promise<string | null> =>
+    ipcRenderer.invoke("vigia:pick-path", opts),
 };
 
 contextBridge.exposeInMainWorld("vigia", api);

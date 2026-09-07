@@ -47,9 +47,10 @@ Nada no produto. O que o app acrescenta:
   conexões deste computador e a placa deixa de enxergar o painel.
 - **Abrir no navegador**: continua sendo uma aba comum quando você preferir.
 - **Diálogo nativo** ao baixar o `secrets.h` e ao exportar alarmes.
+- **Picker de pasta/arquivo** nos campos de caminho (ex.: pastas de ROMs/BIOS, `source` do Git) — botão `…` ao lado do input, só no app.
 
 Tudo isso fica no card **Aplicativo** em `/display/config`, que só aparece
-dentro do app.
+dentro do app. O picker de caminho é detalhado em [FRONTEND.md](FRONTEND.md) (seção "Campos de caminho — picker nativo só no Electron") e usa `window.vigia.pickPath` (`desktop/src/preload.ts` → `desktop/src/ipc.ts` → `dialog.showOpenDialog`).
 
 ## Onde ficam os arquivos
 

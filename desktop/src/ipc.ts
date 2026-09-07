@@ -74,4 +74,35 @@ export function registerIpc(deps: IpcDeps): void {
     deps.log(`arquivo salvo em ${res.filePath}`);
     return { ok: true, path: res.filePath };
   });
+
+  ipcMain.handle("vigia:pick-folder", async (_e, defaultPath: unknown) => {
+    const res = await dialog.showOpenDialog({
+      properties: ["openDirectory"],
+      defaultPath: typeof defaultPath === "string" && defaultPath.trim() ? defaultPath : undefined,
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    return res.filePaths[0];
+  });
+
+  ipcMain.handle("vigia:pick-file", async (_e, defaultPath: unknown) => {
+    const res = await dialog.showOpenDialog({
+      properties: ["openFile"],
+      defaultPath: typeof defaultPath === "string" && defaultPath.trim() ? defaultPath : undefined,
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    return res.filePaths[0];
+  });
+
+  ipcMain.handle("vigia:pick-path", async (_e, opts: unknown) => {
+    const o = (opts ?? {}) as { defaultPath?: unknown; kind?: unknown };
+    const kind = typeof o.kind === "string" ? o.kind : "folder";
+    const props: ("openDirectory" | "openFile")[] =
+      kind === "file" ? ["openFile"] : kind === "both" ? ["openDirectory", "openFile"] : ["openDirectory"];
+    const res = await dialog.showOpenDialog({
+      properties: props,
+      defaultPath: typeof o.defaultPath === "string" && o.defaultPath.trim() ? o.defaultPath : undefined,
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    return res.filePaths[0];
+  });
 }

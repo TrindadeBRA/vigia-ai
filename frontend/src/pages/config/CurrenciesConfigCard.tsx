@@ -5,7 +5,7 @@ import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
-import { ActionRow, Button, FieldStatus, Fold, SelectField, Switch, TextField } from "./ui";
+import { ActionRow, Button, FieldStatus, Fold, Switch, TextField, TomSelectField } from "./ui";
 
 // Códigos ISO 4217 mais comuns — cobre a maioria dos casos sem precisar de
 // busca (ao contrário de cripto, que tem milhares de ativos no CoinGecko).
@@ -163,11 +163,12 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
             </div>
 
             <ActionRow>
-                <SelectField
+                <TomSelectField
                     label={c.currenciesBaseLabel}
                     value={base}
                     onChange={(e) => setBase(e.target.value)}
                     options={FIAT_CODES.map((f) => ({ value: f.code, label: `${f.code} — ${f.label}` }))}
+                    placeholder="Buscar moeda..."
                 />
                 <Button
                     loading={saveBase.busy}
@@ -221,10 +222,11 @@ export function CurrenciesConfigCard({ currencies, c, onReload }: { currencies: 
 
                 {kind === "fiat" ? (
                     <ActionRow>
-                        <SelectField
+                        <TomSelectField
                             value={fiatCode}
                             onChange={(e) => setFiatCode(e.target.value)}
                             options={FIAT_CODES.map((f) => ({ value: f.code, label: `${f.code} — ${f.label}` }))}
+                            placeholder="Buscar moeda..."
                         />
                         <Button loading={add.busy} onClick={() => void addFiat()}>
                             {add.busy ? c.adding : c.currenciesAdd}

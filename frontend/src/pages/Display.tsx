@@ -5,6 +5,7 @@ import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, Cur
 import { colsForWidth, sameBoard } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
+import { GamepadLegend } from "../components/GamepadLegend";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
 import { MenuIcon, SettingsIcon } from "../components/icons";
 import { ImageWidgetModal } from "../components/ImageWidgetModal";
@@ -24,7 +25,7 @@ import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
 import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
-import { buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
+import { buildEmulatorProviders, buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
 import { SettingsDrawer } from "./display/SettingsDrawer";
@@ -76,6 +77,23 @@ export default function Display() {
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
+
+  const [emulatorConfig, setEmulatorConfig] = useState<import("../api/types").EmulatorConfig | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/emulator/config", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => { if (alive) setEmulatorConfig(j as import("../api/types").EmulatorConfig); })
+      .catch(() => { });
+    const onUpdate = () => {
+      fetch("/api/emulator/config", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((j) => { if (alive) setEmulatorConfig(j as import("../api/types").EmulatorConfig); })
+        .catch(() => { });
+    };
+    window.addEventListener("vigia:emulator-config-updated", onUpdate);
+    return () => { alive = false; window.removeEventListener("vigia:emulator-config-updated", onUpdate); };
+  }, []);
 
   const [systemTheme, setSystemTheme] = useState(() => getSystemTheme());
   useEffect(() => {
@@ -201,8 +219,31 @@ export default function Display() {
   // Notas: uma única fonte, no backend (/api/notes) — compartilhadas entre
   // qualquer navegador/dispositivo/app que aponte pro mesmo servidor.
   const noteProviders = buildNoteProviders(serverNotes.items as unknown as Array<{ id: string; text: string; color: string }>, t);
+  const emulatorProviders = buildEmulatorProviders(emulatorConfig, t).map((p) => Object.assign(p, {
+    _emulatorConfig: emulatorConfig ? {
+      cdnVersion: emulatorConfig.cdnVersion,
+      cacheEnabled: emulatorConfig.cacheEnabled,
+      volume: emulatorConfig.volume,
+      startOnLoaded: emulatorConfig.startOnLoaded,
+      fullscreenOnLoad: emulatorConfig.fullscreenOnLoad,
+      color: emulatorConfig.color,
+      backgroundBlur: emulatorConfig.backgroundBlur,
+      softLoad: emulatorConfig.softLoad,
+      disableCue: emulatorConfig.disableCue,
+      language: emulatorConfig.language,
+      saveFolder: emulatorConfig.saveFolder,
+      biosFolder: emulatorConfig.biosFolder,
+      defaultOptions: emulatorConfig.defaultOptions,
+      disableAutoUnload: emulatorConfig.disableAutoUnload,
+      disableBatchBootup: emulatorConfig.disableBatchBootup,
+      noAutoFocus: emulatorConfig.noAutoFocus,
+      hideSettings: emulatorConfig.hideSettings,
+    } : null,
+  }));
   const bpBoard = boardForCols(boards, currentCols);
-  const boardProviders = data ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders] : [...imageProviders, ...noteProviders, ...buildWidgetProviders(prefs.widgets, t)];
+  const boardProviders = data
+    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders, ...emulatorProviders]
+    : [...imageProviders, ...noteProviders, ...buildWidgetProviders(prefs.widgets, t), ...emulatorProviders];
   const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
   const toggleWidget = (kind: WidgetKind) =>
     setPrefs((p) => {
@@ -216,7 +257,7 @@ export default function Display() {
     // clones usam id "base::clone:N" — resolve para base para buscar ProviderMeta e conta
     const baseSelected = selectedId ? baseIdForProvider(selectedId) : null;
     meta = (baseSelected ? displayProviders.find((p) => p.id === selectedId) || providers.find((p) => p.id === baseSelected) : null) || null;
-    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss" && meta.provider !== "github" && meta.kind !== "github" && meta.provider !== "iss" && meta.kind !== "iss") {
+    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss" && meta.provider !== "github" && meta.kind !== "github" && meta.provider !== "iss" && meta.kind !== "iss" && meta.provider !== "emulator" && meta.kind !== "emulator") {
       const baseId = baseIdForProvider(meta.id);
       const idx = baseId.indexOf(":");
       const accountId = baseId.slice(idx + 1);
@@ -273,6 +314,8 @@ export default function Display() {
   // ── Gamepad: navegação global ──
   const gamepadInsideRef = useRef(false);
   const gamepadSidebarFocusRef = useRef(false);
+  const [gamepadTick, setGamepadTick] = useState(0);
+  const bumpGamepadTick = () => setGamepadTick((n) => n + 1);
 
   useGamepad({
     onTick: (a) => {
@@ -448,90 +491,161 @@ export default function Display() {
           return;
         }
 
-        // Y = abre seletor de cores do card focado
+        // Y = abre seletor de cores do card focado e foca dentro dele
         if (a.yJust) {
-          const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
-          const cardId = focused?.getAttribute("data-gamepad-card");
-          if (cardId) {
-            window.dispatchEvent(new CustomEvent("vigia:gamepad-color", { detail: { id: cardId } }));
-          }
-          return;
-        }
-
-        // A = entra no card/widget (navega dentro dele)
-        if (a.aJust) {
-          if (gamepadInsideRef.current) {
-            // já dentro: A age como click no elemento focado dentro do card
-            const inside = document.querySelector("[data-gamepad-inside] [data-gamepad-focusable]:focus, [data-gamepad-inside]:focus") as HTMLElement | null;
-            if (inside) inside.click();
-            else {
-              const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
-              const cardId = focused?.getAttribute("data-gamepad-card");
-              if (cardId) {
-                const card = document.querySelector(`[data-gamepad-card="${cardId}"]`) as HTMLElement | null;
-                const inner = card?.querySelector<HTMLElement>("[data-gamepad-focusable], button, a");
-                if (inner) {
-                  gamepadInsideRef.current = true;
-                  card?.setAttribute("data-gamepad-inside", "true");
-                  inner.focus();
-                } else {
-                  // sem conteúdo interno focável: abre a página do card
-                  const openBtn = card?.querySelector<HTMLElement>("[data-gamepad-open]");
-                  openBtn?.click();
-                }
-              }
-            }
+          const colorDlgAlready = document.querySelector('[aria-label="Seletor de cor do card"]') as HTMLElement | null;
+          if (colorDlgAlready) {
+            // já aberto: foca dentro
+            const first = colorDlgAlready.querySelector<HTMLElement>('input, button:not([disabled])');
+            first?.focus();
             return;
           }
           const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
           const cardId = focused?.getAttribute("data-gamepad-card");
           if (cardId) {
-            // tenta entrar no card (foco interno), se não houver, abre a página
+            window.dispatchEvent(new CustomEvent("vigia:gamepad-color", { detail: { id: cardId } }));
+            bumpGamepadTick();
+          }
+          return;
+        }
+
+        // A = entra no conteúdo do card (não nos mini controles)
+        // Se o seletor de cor estiver aberto, A confirma dentro dele
+        if (a.aJust) {
+          const colorDlg = document.querySelector('[aria-label="Seletor de cor do card"]') as HTMLElement | null;
+          if (colorDlg) {
+            const active = document.activeElement as HTMLElement | null;
+            // se estiver num input do seletor, A confirma (Aplicar) ou age como Enter
+            if (active && colorDlg.contains(active)) {
+              if (active.tagName === "INPUT") {
+                if (active.getAttribute("type") !== "text" && active.getAttribute("type") !== "color") {
+                  active.click();
+                } else {
+                  const apply = Array.from(colorDlg.querySelectorAll<HTMLElement>("button")).find((b) => b.textContent?.includes("Aplicar"));
+                  apply?.focus();
+                }
+                return;
+              }
+              active.click();
+              return;
+            }
+            // foca o primeiro focável do seletor
+            const first = colorDlg.querySelector<HTMLElement>('input, button:not([disabled])');
+            first?.focus();
+            return;
+          }
+
+          if (gamepadInsideRef.current) {
+            const active = document.activeElement as HTMLElement | null;
+            const card = document.querySelector("[data-gamepad-inside]") as HTMLElement | null;
+            if (active && card?.contains(active)) {
+              active.click();
+            } else {
+              const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+              const cardId = focused?.getAttribute("data-gamepad-card");
+              if (cardId) {
+                const c = document.querySelector(`[data-gamepad-card="${cardId}"]`) as HTMLElement | null;
+                const inner = c?.querySelector<HTMLElement>("[data-gamepad-content] button, [data-gamepad-content] a, [data-gamepad-content] [data-gamepad-focusable]");
+                if (inner) {
+                  c?.setAttribute("data-gamepad-inside", "true");
+                  inner.focus();
+                } else {
+                  const openBtn = c?.querySelector<HTMLElement>("[data-gamepad-open]");
+                  openBtn?.click();
+                }
+              }
+            }
+            bumpGamepadTick();
+            return;
+          }
+          const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+          const cardId = focused?.getAttribute("data-gamepad-card");
+          if (cardId) {
             const card = document.querySelector(`[data-gamepad-card="${cardId}"]`) as HTMLElement | null;
-            const innerFocusable = card?.querySelector<HTMLElement>("button:not([data-gamepad-open]), a, [data-gamepad-focusable]");
+            const innerFocusable = card?.querySelector<HTMLElement>("[data-gamepad-content] button, [data-gamepad-content] a, [data-gamepad-content] [data-gamepad-focusable]");
             if (innerFocusable && card) {
               gamepadInsideRef.current = true;
               card.setAttribute("data-gamepad-inside", "true");
               innerFocusable.focus();
+              bumpGamepadTick();
             } else {
               const openBtn = card?.querySelector<HTMLElement>("[data-gamepad-open]");
               if (openBtn) openBtn.click();
               else if (cardId) {
-                // fallback: navega direto
                 setSection("account");
                 setSelectedId(cardId);
               }
+              bumpGamepadTick();
             }
           } else {
-            // nenhum card focado: foca o primeiro
             const first = document.querySelector("[data-gamepad-card]") as HTMLElement | null;
             if (first) {
               document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
               first.setAttribute("data-gamepad-focused", "true");
               first.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              bumpGamepadTick();
             }
           }
           return;
         }
 
-        // B = voltar (sai do card se estiver dentro, senão limpa foco)
+        // B = voltar (fecha seletor de cor, sai do card se estiver dentro, senão limpa foco)
         if (a.bJust) {
+          const colorDlg = document.querySelector('[aria-label="Seletor de cor do card"]') as HTMLElement | null;
+          if (colorDlg) {
+            const esc = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+            document.dispatchEvent(esc);
+            document.body.click();
+            window.setTimeout(() => {
+              const still = document.querySelector('[aria-label="Seletor de cor do card"]');
+              if (!still) {
+                const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
+                (focused as HTMLElement | null)?.focus();
+              }
+            }, 50);
+            bumpGamepadTick();
+            return;
+          }
           if (gamepadInsideRef.current) {
             gamepadInsideRef.current = false;
             document.querySelectorAll("[data-gamepad-inside]").forEach((el) => el.removeAttribute("data-gamepad-inside"));
             const focused = document.querySelector('[data-gamepad-focused="true"]') as HTMLElement | null;
             (focused as HTMLElement | null)?.focus();
+            bumpGamepadTick();
             return;
           }
-          // se estiver com algum card focado, só desfoca
           const focused = document.querySelector('[data-gamepad-focused="true"]');
           if (focused) {
             focused.removeAttribute("data-gamepad-focused");
+            bumpGamepadTick();
             return;
           }
         }
 
         // Dpad / analógico esquerdo = navega entre cards (spatial)
+        // Se seletor de cor aberto, navega dentro dele
+        const colorDlgOpen = document.querySelector('[aria-label="Seletor de cor do card"]') as HTMLElement | null;
+        if (colorDlgOpen) {
+          let dir2: "up" | "down" | "left" | "right" | null = null;
+          if (a.dpadUpJust) dir2 = "up";
+          else if (a.dpadDownJust) dir2 = "down";
+          else if (a.dpadLeftJust) dir2 = "left";
+          else if (a.dpadRightJust) dir2 = "right";
+          if (dir2) {
+            const focusables = Array.from(colorDlgOpen.querySelectorAll<HTMLElement>('input:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((el) => {
+              const s = window.getComputedStyle(el);
+              return s.display !== "none" && s.visibility !== "hidden";
+            });
+            if (focusables.length) {
+              const idx = focusables.indexOf(document.activeElement as HTMLElement);
+              let next: HTMLElement | null = null;
+              if (dir2 === "down" || dir2 === "right") next = focusables[(idx + 1) % focusables.length] || null;
+              else next = focusables[(idx - 1 + focusables.length) % focusables.length] || null;
+              next?.focus();
+            }
+          }
+          return;
+        }
         let dir: "up" | "down" | "left" | "right" | null = null;
         if (a.dpadUpJust) dir = "up";
         else if (a.dpadDownJust) dir = "down";
@@ -539,10 +653,10 @@ export default function Display() {
         else if (a.dpadRightJust) dir = "right";
         if (dir) {
           if (gamepadInsideRef.current) {
-            // dentro do card: navega entre focáveis internos
+            // dentro do card: navega entre focáveis do conteúdo (ignora chrome)
             const card = document.querySelector("[data-gamepad-inside]") as HTMLElement | null;
             if (card) {
-              const focusables = Array.from(card.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"]), [data-gamepad-focusable]')).filter((el) => {
+              const focusables = Array.from(card.querySelectorAll<HTMLElement>('[data-gamepad-content] button:not([disabled]), [data-gamepad-content] a[href], [data-gamepad-content] [tabindex]:not([tabindex="-1"]), [data-gamepad-content] [data-gamepad-focusable]')).filter((el) => {
                 const s = window.getComputedStyle(el);
                 return s.display !== "none" && s.visibility !== "hidden";
               });
@@ -766,6 +880,7 @@ export default function Display() {
         onSaveEdit={(src, fit, label) => { if (editingImageId) void imageWidgets.update(editingImageId, { src, fit, label }); }}
       />
       <PixDonateModal open={pixModalOpen} onClose={() => setPixModalOpen(false)} />
+      <GamepadLegend key={gamepadTick} section={section} isNested={isNested} insideCard={gamepadInsideRef.current} />
     </div>
   );
 }

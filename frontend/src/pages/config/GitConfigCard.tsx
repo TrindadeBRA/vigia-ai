@@ -3,7 +3,7 @@ import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
-import { Button, FieldStatus, Fold, SelectField, Switch, TextField } from "./ui";
+import { Button, FieldStatus, Fold, PathField, SelectField, Switch, TextField } from "./ui";
 
 type GitRepoConfig = { id: string; source: string; label: string; limit: number; branch: string | null };
 type GitConfig = { enabled: boolean; hidden: boolean; repos: GitRepoConfig[] };
@@ -151,7 +151,7 @@ export function GitConfigCard({ git, c, onReload }: { git: GitConfig; c: ConfigC
 
             <Fold summary={c.gitAdd}>
                 <div className="flex flex-col gap-3">
-                    <TextField label={c.gitSourceLabel} value={source} onChange={(e) => setSource(e.target.value)} placeholder={c.gitSourcePh} autoComplete="off" />
+                    <PathField kind="both" label={c.gitSourceLabel} value={source} onChange={(e) => setSource(e.target.value)} onPicked={(v: string) => setSource(v)} placeholder={c.gitSourcePh} autoComplete="off" />
                     <p className="m-0 text-[11px] leading-snug text-ink3">{c.gitSourceHint}</p>
                     <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-2">
                         <TextField label={c.gitLabelLabel} value={label} onChange={(e) => setLabel(e.target.value)} placeholder={c.gitLabelPh} />

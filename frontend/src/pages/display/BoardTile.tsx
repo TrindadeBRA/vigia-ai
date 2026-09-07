@@ -16,6 +16,7 @@ import {
   CreditsTileCard,
   CurrenciesTileCard,
   CursorTileCard,
+  EmulatorTileCard,
   EyeTileCard,
   GitTileCard,
   GithubTileCard,
@@ -107,6 +108,10 @@ export function ProviderCard({
   if (p.provider === "iss" || p.kind === "iss") {
     return <IssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
+  if (p.provider === "emulator" || p.kind === "emulator") {
+    const emuCfg = (p as unknown as { _emulatorConfig?: import("../../components/cards/EmulatorCard").EmulatorGlobalConfig | null })._emulatorConfig ?? null;
+    return <EmulatorTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} emulatorConfig={emuCfg} />;
+  }
   // Widgets extras: sem "conta"/dados de backend, só visuais
   if (p.provider === "clock") {
     return <ClockTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} nowMs={nowMs ?? Date.now()} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
@@ -178,7 +183,7 @@ export function ProviderCard({
       {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} isClone={isCloneId(p.id)} onDuplicate={onDuplicate} onRemove={onRemove} bg={fallbackBg} onSetBg={onSetBgGeneric} onFree={onFree} />
       ) : null}
-      <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
+      <button data-gamepad-content="true" type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", sm ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
         <div className="relative shrink-0">
           <Icon id={p.provider} compact={sm} large={!sm} />
           <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", p.ok ? "bg-good" : "bg-bad")} />
@@ -189,6 +194,7 @@ export function ProviderCard({
         </div>
       </button>
       <button
+        data-gamepad-content="true"
         type="button"
         className={cn(
           "flex min-h-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-0 text-left text-ink",

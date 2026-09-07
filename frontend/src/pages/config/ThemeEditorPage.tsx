@@ -14,21 +14,10 @@ import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
 import { IconCard, providerSupportsCard } from "./ThemeCanvasView";
 import { THEME_STR } from "./themeCopy";
-import {
-  ICON_PROVIDERS,
-  PROVIDER_METRICS,
-  defaultMetric,
-  formatThemeMetric,
-  metricLabel,
-  providerHasData,
-  weatherEmoji,
-  type ThemeProvider,
-} from "./themeMetrics";
 import { CanvasDot } from "./themeEditor/CanvasDot";
 import { ColorField, ColorSwatch, ScaleField } from "./themeEditor/fields";
 import { IconChip } from "./themeEditor/IconChip";
 import { ThemeIOButtons } from "./themeEditor/ThemeIOButtons";
-import { ToolbarDivider, ToolButton, ToolPopover } from "./themeEditor/Toolbar";
 import {
   MAX_ICONS,
   MAX_TEXTS,
@@ -41,10 +30,21 @@ import {
   type ThemeText,
   type WallpaperItem,
 } from "./themeEditor/themeState";
-import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, TextField } from "./ui";
+import { ToolButton, ToolPopover, ToolbarDivider } from "./themeEditor/Toolbar";
+import {
+  ICON_PROVIDERS,
+  PROVIDER_METRICS,
+  defaultMetric,
+  formatThemeMetric,
+  metricLabel,
+  providerHasData,
+  weatherEmoji,
+  type ThemeProvider,
+} from "./themeMetrics";
+import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, TextField, TomSelectField } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
-import { WallpaperLibrary } from "./wallpaperManager/Library";
 import { WallpaperManager } from "./wallpaperManager/context";
+import { WallpaperLibrary } from "./wallpaperManager/Library";
 
 export default function ThemeEditorPage() {
   const { cfg, phase, reload, setPhase, lang } = usePublicConfig();
@@ -94,12 +94,12 @@ export default function ThemeEditorPage() {
       .then((d: UsagePayload | null) => {
         if (!cancelled && d) setUsage(d);
       })
-      .catch(() => {});
+      .catch(() => { });
     const stop = openUsageEvents(
       (d) => {
         if (!cancelled) setUsage(d);
       },
-      () => {},
+      () => { },
     );
     return () => {
       cancelled = true;
@@ -160,7 +160,7 @@ export default function ThemeEditorPage() {
             setCanvasKnown(true);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }, 600);
     return () => window.clearTimeout(id);
   }, [deviceIp]);
@@ -588,7 +588,7 @@ export default function ThemeEditorPage() {
           {selectedIcon ? (
             <Card title={providerLabel(selectedIcon.provider)}>
               <div className="flex flex-col gap-3">
-                <SelectField
+                <TomSelectField
                   label={c.icons}
                   value={selectedIcon.provider}
                   onChange={(e) => {
@@ -596,6 +596,7 @@ export default function ThemeEditorPage() {
                     updateIcon(selectedIcon.id, { provider, metric: defaultMetric(provider) });
                   }}
                   options={ICON_PROVIDERS.map((p) => ({ value: p.id, label: p.label }))}
+                  placeholder="Buscar provedor..."
                 />
                 {providerSupportsCard(selectedIcon.provider) ? (
                   <label className="flex flex-col gap-1.5">

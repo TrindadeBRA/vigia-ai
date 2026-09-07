@@ -237,6 +237,7 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
   const rssRaw = (cfg.rss ?? { enabled: false, hidden: false, feeds: [] }) as Record<string, unknown>;
   const githubRaw = (cfg.github ?? { enabled: false, hidden: false, repos: [] }) as Record<string, unknown>;
   const issRaw = (cfg.iss ?? { enabled: false, hidden: false }) as Record<string, unknown>;
+  const emulatorRaw = (cfg.emulator ?? { enabled: false, hidden: false, cdnVersion: "stable", platforms: [] }) as Record<string, unknown>;
   return {
     in_docker: inDocker(),
     mock: Boolean(cfg.mock),
@@ -273,6 +274,7 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
     rss: rssRaw,
     github: githubRaw,
     iss: issRaw,
+    emulator: emulatorRaw,
     device: devicePublic(hub),
   };
 }

@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import TomSelect from "tom-select";
+import "tom-select/dist/css/tom-select.css";
 import { cn } from "../../cn";
 import { CloseIcon } from "../../components/icons";
 import { useRequest, type RequestStatus } from "../../hooks/useRequest";
@@ -105,10 +107,115 @@ export function SelectField({
       >
         {options
           ? options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))
+          : children}
+      </select>
+      {hint ? <span className="text-xs leading-[1.45] text-ink3">{hint}</span> : null}
+    </label>
+  );
+}
+
+/**
+ * TomSelectField — select pesquisável para listas longas/dinâmicas.
+ * Regra: todo select com ≥ 8 opções ou dados dinâmicos (API) DEVE usar este componente.
+ * Ver .agents/UI_TOM_SELECT.md
+ */
+export function TomSelectField({
+  label,
+  hint,
+  options,
+  wrapperClassName,
+  className,
+  style,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+  children,
+  ...rest
+}: SelectHTMLAttributes<HTMLSelectElement> & {
+  label?: string;
+  hint?: string;
+  options?: SelectOption[];
+  wrapperClassName?: string;
+  placeholder?: string;
+}) {
+  const selectRef = useRef<HTMLSelectElement>(null);
+  const tsRef = useRef<TomSelect | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Inicializa / recria quando options ou placeholder mudam
+  useEffect(() => {
+    const el = selectRef.current;
+    if (!el) return;
+    if (tsRef.current) {
+      try { tsRef.current.destroy(); } catch { /* ignore */ }
+      tsRef.current = null;
+    }
+    const ts = new TomSelect(el, {
+      maxOptions: 500,
+      placeholder: placeholder || "Buscar...",
+      searchField: ["text"],
+      // mantém ordem original das options
+      lockOptgroupOrder: true,
+      onChange: (val: string) => {
+        const cb = onChangeRef.current;
+        if (cb) {
+          const evt = { target: { value: val }, currentTarget: { value: val } } as unknown as React.ChangeEvent<HTMLSelectElement>;
+          cb(evt);
+        }
+      },
+    });
+    tsRef.current = ts;
+    const initial = value == null ? "" : String(value);
+    if (initial) ts.setValue(initial, true);
+    if (disabled) ts.disable();
+    return () => {
+      try { ts.destroy(); } catch { /* ignore */ }
+      if (tsRef.current === ts) tsRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placeholder, JSON.stringify(options)]);
+
+  // Sincroniza value controlado
+  useEffect(() => {
+    const ts = tsRef.current;
+    if (!ts) return;
+    const cur = ts.getValue() as string;
+    const next = value == null ? "" : String(value);
+    if (cur !== next) ts.setValue(next, true);
+  }, [value]);
+
+  // Sincroniza disabled
+  useEffect(() => {
+    const ts = tsRef.current;
+    if (!ts) return;
+    if (disabled) ts.disable();
+    else ts.enable();
+  }, [disabled]);
+
+  return (
+    <label className={cn("flex min-w-[140px] flex-1 flex-col gap-1.5", wrapperClassName)}>
+      {label ? <span className={cfgFieldLabel}>{label}</span> : null}
+      <select
+        ref={selectRef}
+        className={cn(fieldControlClass, "tom-select-target", className)}
+        style={style}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        {...rest}
+      >
+        {options
+          ? options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))
           : children}
       </select>
       {hint ? <span className="text-xs leading-[1.45] text-ink3">{hint}</span> : null}
@@ -129,6 +236,73 @@ export function TextField({
         className={cn(fieldControlClass, className)}
         {...rest}
       />
+      {hint ? <span className="text-xs leading-[1.45] text-ink3">{hint}</span> : null}
+    </label>
+  );
+}
+
+/** Campo de caminho/arquivo com botão "…" que só aparece no Electron. */
+export function PathField({
+  label,
+  hint,
+  className,
+  kind = "folder",
+  value,
+  onChange,
+  onPicked,
+  ...rest
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "value"> & {
+  label?: string;
+  hint?: string;
+  kind?: "folder" | "file" | "both";
+  value?: string;
+  onPicked?: (v: string) => void;
+}) {
+  const [picking, setPicking] = useState(false);
+  const isDesktopEnv = typeof window !== "undefined" && Boolean((window as unknown as { vigia?: { isDesktop?: boolean } }).vigia?.isDesktop);
+
+  async function handlePick() {
+    if (picking) return;
+    setPicking(true);
+    try {
+      const mod = await import("../../desktop");
+      const picked = await mod.pickPath({ defaultPath: typeof value === "string" ? value : undefined, kind });
+      if (picked && onPicked) onPicked(picked);
+      else if (picked && onChange) {
+        // sintetiza evento para compatibilidade com onChange existente
+        const el = document.createElement("input");
+        el.value = picked;
+        const evt = { target: { value: picked }, currentTarget: { value: picked } } as unknown as React.ChangeEvent<HTMLInputElement>;
+        onChange(evt);
+      }
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  return (
+    <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
+      {label ? <span className={cfgFieldLabel}>{label}</span> : null}
+      <span className="flex min-w-0 gap-1.5">
+        <input
+          className={cn(fieldControlClass, "min-w-0 flex-1", className)}
+          value={value}
+          onChange={onChange}
+          {...rest}
+        />
+        {isDesktopEnv ? (
+          <button
+            type="button"
+            className="inline-flex h-[42px] shrink-0 items-center justify-center rounded-[10px] border border-edge bg-chip px-3 text-[16px] font-bold leading-none text-ink hover:bg-surface disabled:opacity-45"
+            onClick={handlePick}
+            disabled={picking}
+            title={kind === "file" ? "Escolher arquivo" : kind === "both" ? "Escolher pasta ou arquivo" : "Escolher pasta"}
+            aria-label="Escolher"
+          >
+            {picking ? "…" : "…"}
+          </button>
+        ) : null}
+      </span>
       {hint ? <span className="text-xs leading-[1.45] text-ink3">{hint}</span> : null}
     </label>
   );

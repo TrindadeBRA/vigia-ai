@@ -112,8 +112,27 @@ export function useGamepad(opts: {
 
     useEffect(() => {
         if (!enabled) return;
+        // listen for emulator active flag
+        const onEmu = (e: Event) => {
+            const detail = (e as CustomEvent).detail as { active?: boolean } | undefined;
+            (window as unknown as Record<string, unknown>).__vigiaEmuActive = Boolean(detail?.active);
+            const el = document.querySelector("[data-emulator-active]");
+            if (detail?.active) {
+                if (!el) {
+                    const marker = document.createElement("div");
+                    marker.setAttribute("data-emulator-active", "true");
+                    marker.style.display = "none";
+                    document.body.appendChild(marker);
+                }
+            } else {
+                document.querySelectorAll("[data-emulator-active]").forEach((n) => n.remove());
+            }
+        };
+        window.addEventListener("vigia:emulator-active", onEmu as EventListener);
         const loop = () => {
             rafRef.current = requestAnimationFrame(loop);
+            // when emulator is active, don't handle dashboard navigation — let emulator consume gamepad
+            if (isEmulatorActive()) return;
             const now = performance.now();
             const pad = getGamepad();
             if (!pad) return;
@@ -256,6 +275,7 @@ export function useGamepad(opts: {
         rafRef.current = requestAnimationFrame(loop);
         return () => {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            window.removeEventListener("vigia:emulator-active", onEmu as EventListener);
         };
     }, [enabled]);
 }
@@ -298,6 +318,14 @@ export function gamepadResetZoom() {
         target.style.removeProperty("transform-origin");
         target.style.removeProperty("zoom");
     }
+}
+
+export function isEmulatorActive(): boolean {
+    // EmulatorCard sets this via custom event; also check DOM
+    const el = document.querySelector("[data-emulator-active='true']");
+    if (el) return true;
+    // fallback: check global flag via event detail cache
+    return (window as unknown as { __vigiaEmuActive?: boolean }).__vigiaEmuActive ?? false;
 }
 
 export function isGamepadTypingActive(): boolean {

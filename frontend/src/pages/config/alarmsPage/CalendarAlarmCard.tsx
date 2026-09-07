@@ -4,7 +4,7 @@ import type { AlarmsPublic } from "../../../api/types";
 import { useRequest } from "../../../hooks/useRequest";
 import { cfgHint } from "../../../tw";
 import type { ALARMS_STR } from "../alarmsCopy";
-import { ActionRow, Button, Card, FieldStatus, SelectField, TextField } from "../ui";
+import { ActionRow, Button, Card, FieldStatus, SelectField, TextField, TomSelectField } from "../ui";
 import { calendarUnitLabel, suggestLabel } from "./helpers";
 
 export function CalendarAlarmCard({
@@ -60,7 +60,7 @@ export function CalendarAlarmCard({
                             label: m.key === "event" ? c.calendarKindEvent : m.key === "task" ? c.calendarKindTask : c.calendarKindAll,
                         }))}
                     />
-                    <SelectField
+                    <TomSelectField
                         label={c.calendarTarget}
                         value={calendarId}
                         onChange={(e) => setCalendarId(e.target.value)}
@@ -68,6 +68,7 @@ export function CalendarAlarmCard({
                             { value: "*", label: c.calendarTargetAll },
                             ...calendars.map((cal) => ({ value: cal.id, label: cal.label || cal.url.slice(0, 32) })),
                         ]}
+                        placeholder="Buscar calendário..."
                     />
                 </div>
 

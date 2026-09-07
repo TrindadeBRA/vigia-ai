@@ -10,6 +10,7 @@ import { ClockBoardCard, clockAllowedSizes, clockSizeLabel } from "../../compone
 import { CreditsBoardCard, creditsAllowedSizes, creditsSizeLabel } from "../../components/cards/CreditsCard";
 import { CurrenciesBoardCard, currenciesAllowedSizes, currenciesSizeLabel } from "../../components/cards/CurrenciesCard";
 import { CursorBoardCard, cursorAllowedSizes, cursorSizeLabel } from "../../components/cards/CursorCard";
+import { EmulatorBoardCard, emulatorAllowedSizes, emulatorSizeLabel } from "../../components/cards/EmulatorCard";
 import { EyeBoardCard, eyeAllowedSizes, eyeSizeLabel } from "../../components/cards/EyeCard";
 import { GitBoardCard, gitAllowedSizes, gitSizeLabel } from "../../components/cards/GitCard";
 import { GithubBoardCard, githubAllowedSizes, githubSizeLabel } from "../../components/cards/GithubCard";
@@ -21,8 +22,8 @@ import { RetroAchievementsBoardCard, retroAllowedSizes, retroSizeLabel } from ".
 import { RssBoardCard, rssAllowedSizes, rssSizeLabel } from "../../components/cards/RssCard";
 import { SpotifyBoardCard, spotifyAllowedSizes, spotifySizeLabel } from "../../components/cards/SpotifyCard";
 import { SystemBoardCard, systemAllowedSizes, systemSizeLabel } from "../../components/cards/SystemCard";
-import { YoutubeMusicBoardCard, youtubemusicAllowedSizes, youtubemusicSizeLabel } from "../../components/cards/YoutubeMusicCard";
 import { WeatherBoardCard, weatherAllowedSizes, weatherSizeLabel } from "../../components/cards/WeatherCard";
+import { YoutubeMusicBoardCard, youtubemusicAllowedSizes, youtubemusicSizeLabel } from "../../components/cards/YoutubeMusicCard";
 import { ntcGenerateReadableColor, useNameToColor } from "../../hooks/useNameToColor";
 import type { T } from "../../i18n";
 import { viewFade } from "../../tw";
@@ -366,6 +367,27 @@ export function NoteTileCard({ p, size, dragging, lifted, t, grip, bg, readonly,
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={noteAllowedSizes()} getLabel={(s) => noteSizeLabel(s, t)} isClone={true} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <NoteBoardCard text={p.note?.text ?? ""} colorId={p.note?.color ?? "yellow"} size={size} t={t} readonly={readonly} onUpdate={(patch) => onUpdate?.(p.id, patch)} onEditingChange={setEditing} />
+    </div>
+  );
+}
+
+export function EmulatorTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree, emulatorConfig }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void; emulatorConfig?: import("../../components/cards/EmulatorCard").EmulatorGlobalConfig | null }) {
+  const allowed = emulatorAllowedSizes();
+  const isClone = isCloneId(p.id);
+  const style = useTileStyle(bg);
+  const emu = p.emulator;
+  // Passa a cor do card (bg) para o EmulatorJS via EJS_backgroundColor — herda do tile
+  const emuConfigWithBg = emulatorConfig ? { ...emulatorConfig, backgroundColor: bg ?? "transparent" } as unknown as import("../../components/cards/EmulatorCard").EmulatorGlobalConfig : emulatorConfig;
+  return (
+    <div className={cn(TILE_BASE.replace("overflow-hidden", "overflow-visible"), "px-3 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => emulatorSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      {emu ? (
+        <EmulatorBoardCard platform={emu.platform} core={emu.core} romPath={emu.romPath} biosPath={emu.biosPath} globalConfig={emuConfigWithBg ?? null} t={t} size={size} />
+      ) : (
+        <div className="flex h-full items-center justify-center text-[12px] text-ink3">sem plataforma</div>
+      )}
     </div>
   );
 }

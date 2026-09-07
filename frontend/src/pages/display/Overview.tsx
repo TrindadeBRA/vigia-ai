@@ -241,10 +241,17 @@ export function Overview({
     };
     const onColor = (e: Event) => {
       const { id } = (e as CustomEvent).detail as { id: string };
-      // abre o seletor de cor do card: clica no botão de cor
       const card = document.querySelector(`[data-gamepad-card="${id}"]`) as HTMLElement | null;
       const colorBtn = card?.querySelector<HTMLElement>('[aria-label="Cor de fundo"]');
       colorBtn?.click();
+      // foca dentro do seletor após abrir (portal)
+      window.setTimeout(() => {
+        const input = document.querySelector<HTMLElement>('[data-gamepad-color-input="true"]');
+        input?.focus();
+        // marca que estamos navegando dentro do seletor de cor
+        const dlg = document.querySelector('[aria-label="Seletor de cor do card"]') as HTMLElement | null;
+        if (dlg) dlg.setAttribute("data-gamepad-color-open", "true");
+      }, 80);
     };
     window.addEventListener("vigia:gamepad-move", onMove as EventListener);
     window.addEventListener("vigia:gamepad-size", onSize as EventListener);

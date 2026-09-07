@@ -132,6 +132,29 @@ const _ISS_DEFAULT: Record<string, unknown> = {
   hidden: false,
 };
 
+const _EMULATOR_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+  cdnVersion: "stable",
+  cacheEnabled: true,
+  volume: 1,
+  startOnLoaded: true,
+  fullscreenOnLoad: false,
+  color: null,
+  backgroundBlur: false,
+  softLoad: false,
+  disableCue: false,
+  language: "pt-BR",
+  saveFolder: "",
+  biosFolder: "",
+  defaultOptions: {},
+  disableAutoUnload: false,
+  disableBatchBootup: false,
+  noAutoFocus: false,
+  hideSettings: false,
+  platforms: [],
+};
+
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -156,6 +179,7 @@ export function defaultConfig(): Record<string, unknown> {
     rss: deepClone(_RSS_DEFAULT),
     github: deepClone(_GITHUB_DEFAULT),
     iss: deepClone(_ISS_DEFAULT),
+    emulator: deepClone(_EMULATOR_DEFAULT),
   };
   const providers = cfg.providers as Record<string, unknown>;
   for (const name of PROVIDERS) {
@@ -637,6 +661,44 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   const iss = cfg.iss as Record<string, unknown>;
   iss.enabled = Boolean(rawIss.enabled ?? iss.enabled);
   iss.hidden = Boolean(rawIss.hidden ?? iss.hidden);
+
+  // emulator
+  const rawEmu = (typeof raw.emulator === "object" && raw.emulator !== null ? raw.emulator : {}) as Record<string, unknown>;
+  const emu = cfg.emulator as Record<string, unknown>;
+  emu.enabled = Boolean(rawEmu.enabled ?? emu.enabled);
+  emu.hidden = Boolean(rawEmu.hidden ?? emu.hidden);
+  if (typeof rawEmu.cdnVersion === "string" && ["stable", "latest", "nightly"].includes(rawEmu.cdnVersion)) emu.cdnVersion = rawEmu.cdnVersion;
+  if (typeof rawEmu.cacheEnabled === "boolean") emu.cacheEnabled = rawEmu.cacheEnabled;
+  if (typeof rawEmu.volume === "number" && Number.isFinite(rawEmu.volume)) emu.volume = Math.max(0, Math.min(1, rawEmu.volume));
+  if (typeof rawEmu.startOnLoaded === "boolean") emu.startOnLoaded = rawEmu.startOnLoaded;
+  if (typeof rawEmu.fullscreenOnLoad === "boolean") emu.fullscreenOnLoad = rawEmu.fullscreenOnLoad;
+  if (rawEmu.color !== undefined) emu.color = rawEmu.color === null ? null : String(rawEmu.color);
+  if (typeof rawEmu.backgroundBlur === "boolean") emu.backgroundBlur = rawEmu.backgroundBlur;
+  if (typeof rawEmu.softLoad === "boolean") emu.softLoad = rawEmu.softLoad;
+  if (typeof rawEmu.disableCue === "boolean") emu.disableCue = rawEmu.disableCue;
+  if (typeof rawEmu.language === "string") emu.language = rawEmu.language;
+  if (typeof rawEmu.saveFolder === "string") emu.saveFolder = rawEmu.saveFolder;
+  if (typeof rawEmu.biosFolder === "string") emu.biosFolder = rawEmu.biosFolder;
+  if (typeof rawEmu.defaultOptions === "object" && rawEmu.defaultOptions !== null) emu.defaultOptions = rawEmu.defaultOptions;
+  if (typeof rawEmu.disableAutoUnload === "boolean") emu.disableAutoUnload = rawEmu.disableAutoUnload;
+  if (typeof rawEmu.disableBatchBootup === "boolean") emu.disableBatchBootup = rawEmu.disableBatchBootup;
+  if (typeof rawEmu.noAutoFocus === "boolean") emu.noAutoFocus = rawEmu.noAutoFocus;
+  if (typeof rawEmu.hideSettings === "boolean") emu.hideSettings = rawEmu.hideSettings;
+  if (Array.isArray(rawEmu.platforms)) {
+    const cleaned: Array<Record<string, unknown>> = [];
+    for (const it of rawEmu.platforms) {
+      if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
+      const r = it as Record<string, unknown>;
+      cleaned.push({
+        id: String(r.id),
+        enabled: Boolean(r.enabled),
+        romPath: String(r.romPath ?? ""),
+        biosPath: r.biosPath != null ? String(r.biosPath) : null,
+        core: r.core != null ? String(r.core) : null,
+      });
+    }
+    emu.platforms = cleaned;
+  }
 
   return cfg;
 }

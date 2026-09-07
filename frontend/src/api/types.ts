@@ -649,6 +649,37 @@ export type TelegramStatus = {
   chats: TelegramChat[];
 };
 
+export type EmulatorPlatformConfig = {
+  id: string;
+  enabled: boolean;
+  romPath: string;
+  biosPath: string | null;
+  core: string | null;
+};
+
+export type EmulatorConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  cdnVersion: "stable" | "latest" | "nightly";
+  cacheEnabled: boolean;
+  volume: number;
+  startOnLoaded: boolean;
+  fullscreenOnLoad: boolean;
+  color: string | null;
+  backgroundBlur: boolean;
+  softLoad: boolean;
+  disableCue: boolean;
+  language: string;
+  saveFolder: string;
+  biosFolder: string;
+  defaultOptions: Record<string, unknown>;
+  disableAutoUnload: boolean;
+  disableBatchBootup: boolean;
+  noAutoFocus: boolean;
+  hideSettings: boolean;
+  platforms: EmulatorPlatformConfig[];
+};
+
 export type ConfigPublic = {
   ok: boolean;
   in_docker: boolean;
@@ -673,5 +704,6 @@ export type ConfigPublic = {
   rss: RssConfig;
   github: GithubConfig;
   iss: IssConfig;
+  emulator: EmulatorConfig;
   device: DevicePublic;
 };

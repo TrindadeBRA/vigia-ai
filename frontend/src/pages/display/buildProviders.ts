@@ -485,3 +485,24 @@ export function buildNoteProviders(notes: Array<{ id: string; text: string; colo
     note: n,
   }));
 }
+
+export function buildEmulatorProviders(
+  emulator: { enabled: boolean; hidden: boolean; platforms: Array<{ id: string; enabled: boolean; romPath: string; biosPath: string | null; core: string | null }>; cdnVersion: string } | null | undefined,
+  _t: T,
+): ProviderMeta[] {
+  if (!emulator || emulator.hidden || !emulator.enabled) return [];
+  const enabled = (emulator.platforms ?? []).filter((p) => p.enabled);
+  if (!enabled.length) return [];
+  // Single unified card — all platforms together
+  return [{
+    id: "emulator:all",
+    provider: "emulator",
+    kind: "emulator" as const,
+    ok: true,
+    error: null,
+    title: "Emulador",
+    label: enabled.map((p) => p.id).join(" · "),
+    metrics: [],
+    emulator: { platform: "all", core: "all", romPath: "", biosPath: null, label: "Emulador" },
+  }];
+}

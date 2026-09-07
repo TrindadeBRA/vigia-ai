@@ -17,6 +17,7 @@ import { createCameraRoutes } from "./routers/camera.js";
 import { createClientStateRoutes } from "./routers/clientState.js";
 import { createConfigRoutes } from "./routers/config.js";
 import { createCurrenciesRoutes } from "./routers/currencies.js";
+import { createEmulatorRoutes } from "./routers/emulator.js";
 import { createGitRoutes } from "./routers/git.js";
 import { createGithubRoutes } from "./routers/github.js";
 import { createImagesRoutes } from "./routers/images.js";
@@ -26,12 +27,12 @@ import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
 import { createSpotifyRoutes } from "./routers/spotify.js";
-import { createYoutubeMusicRoutes } from "./routers/youtubemusic.js";
 import { createSystemRoutes } from "./routers/system.js";
 import { createThemeRoutes } from "./routers/theme.js";
 import { createUsageRoutes } from "./routers/usage.js";
 import { createWallpapersRoutes } from "./routers/wallpapers/router.js";
 import { createWeatherRoutes } from "./routers/weather.js";
+import { createYoutubeMusicRoutes } from "./routers/youtubemusic.js";
 import { load } from "./store.js";
 import { TelegramPoller } from "./telegram/poller.js";
 import { createTelegramRoutes } from "./telegram/router.js";
@@ -180,6 +181,7 @@ export async function createApp() {
   await fastify.register(createImagesRoutes, { prefix: "" });
   await fastify.register(createClientStateRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });
+  await fastify.register(createEmulatorRoutes, { prefix: "" });
 
   const IMAGE_CONTENT_TYPES: Record<string, string> = {
     ".svg": "image/svg+xml",

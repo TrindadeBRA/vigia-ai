@@ -6,7 +6,7 @@ import { SlidersIcon, TrashIcon } from "../../../components/icons";
 import { useRequest } from "../../../hooks/useRequest";
 import { cfgHint, iconBtn } from "../../../tw";
 import type { ALARMS_STR } from "../alarmsCopy";
-import { ActionRow, Button, FieldStatus, SelectField, Switch, TextField } from "../ui";
+import { ActionRow, Button, FieldStatus, SelectField, Switch, TextField, TomSelectField } from "../ui";
 import { PROVIDER_LABEL, formatThreshold, ruleHint, ruleSearchText, suggestLabel } from "./helpers";
 import { ProviderIcon } from "./ProviderIcon";
 
@@ -71,7 +71,7 @@ export function RulesList({
               </div>
             ) : null}
             {providerOrder.length > 1 ? (
-              <SelectField
+              <TomSelectField
                 value={filterProvider}
                 onChange={(e) => setFilterProvider(e.target.value)}
                 wrapperClassName="min-w-[148px] flex-1"
@@ -79,6 +79,7 @@ export function RulesList({
                   { value: "", label: c.filterAll },
                   ...providerOrder.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p })),
                 ]}
+                placeholder="Filtrar provedor..."
               />
             ) : null}
           </div>

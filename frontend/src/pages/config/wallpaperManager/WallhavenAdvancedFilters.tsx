@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cn } from "../../../cn";
 import { cfgFieldLabel } from "../../../tw";
-import { SelectField } from "../ui";
+import { SelectField, TomSelectField } from "../ui";
 import {
     WALLHAVEN_ATLEAST_PRESETS,
     WALLHAVEN_COLORS,
@@ -173,11 +173,12 @@ export function WallhavenAdvancedFilters({
 
                     {/* Resolução */}
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <SelectField
+                        <TomSelectField
                             label="Resolução mínima (atleast)"
                             value={value.atleast}
                             onChange={(e) => patch({ atleast: e.target.value })}
                             options={WALLHAVEN_ATLEAST_PRESETS.map((v) => ({ value: v, label: v || "Qualquer" }))}
+                            placeholder="Buscar resolução..."
                         />
                         <label className="flex min-w-[140px] flex-1 flex-col gap-1.5">
                             <span className={cfgFieldLabel}>Resoluções exatas (resolutions)</span>

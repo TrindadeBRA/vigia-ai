@@ -104,6 +104,14 @@ export function TileColorPicker({
 
     const hasBg = !!value;
 
+    // expõe controle para gamepad: Y abre e foca dentro
+    useEffect(() => {
+        const el = btnRef.current;
+        if (!el) return;
+        el.setAttribute("data-gamepad-color-trigger", "true");
+        return () => el.removeAttribute("data-gamepad-color-trigger");
+    }, []);
+
     return (
         <>
             <button
@@ -169,6 +177,8 @@ export function TileColorPicker({
 
                         <div className="flex gap-2">
                             <input
+                                data-gamepad-color-input="true"
+                                autoFocus
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
                                 placeholder="ex.: oceano, #ff6600, azul claro"

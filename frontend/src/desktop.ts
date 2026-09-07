@@ -35,6 +35,9 @@ export type DesktopBridge = {
   setAutostart(enabled: boolean): Promise<boolean>;
   saveFile(name: string, contents: string): Promise<{ ok: boolean; path?: string }>;
   checkForUpdates(): Promise<{ ok: boolean; status: string; version?: string }>;
+  pickFolder(defaultPath?: string): Promise<string | null>;
+  pickFile(defaultPath?: string): Promise<string | null>;
+  pickPath(opts?: { defaultPath?: string; kind?: "folder" | "file" | "both" }): Promise<string | null>;
 };
 
 declare global {
@@ -95,4 +98,35 @@ export function openExternal(url: string): void {
   const api = desktop();
   if (api) void api.openExternal(url);
   else window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/** Picker nativo — só existe no Electron; no browser retorna null. */
+export async function pickFolder(defaultPath?: string): Promise<string | null> {
+  const api = desktop();
+  if (!api) return null;
+  try {
+    return await api.pickFolder(defaultPath);
+  } catch {
+    return null;
+  }
+}
+export async function pickFile(defaultPath?: string): Promise<string | null> {
+  const api = desktop();
+  if (!api) return null;
+  try {
+    return await api.pickFile(defaultPath);
+  } catch {
+    return null;
+  }
+}
+export async function pickPath(
+  opts?: { defaultPath?: string; kind?: "folder" | "file" | "both" },
+): Promise<string | null> {
+  const api = desktop();
+  if (!api) return null;
+  try {
+    return await api.pickPath(opts);
+  } catch {
+    return null;
+  }
 }

@@ -31,3 +31,16 @@ O mesmo padrão (backend-only + migração única) vale pro rascunho do editor d
 ## Marca
 
 `frontend/src/components/Logo.tsx` — `EyeMark` (olho SVG animado) e `Logo` (olho + `VIGIA AI`). A íris usa `var(--accent)`, então acompanha o tema. O olho dá sacadas para posições aleatórias, pisca em intervalos irregulares e segue o ponteiro do mouse quando ele passa perto (`follow`, ligado por padrão). Com `prefers-reduced-motion` o olho fica parado no centro. Versão estática em `frontend/public/favicon.svg`.
+
+## Campos de caminho — picker nativo só no Electron
+
+Todo campo que representa caminho de pasta ou arquivo (ex.: `saveFolder`, `biosFolder`, `romPath`, `biosPath`, `source` do Git) **deve** usar `PathField` (`frontend/src/pages/config/ui.tsx`) em vez de `TextField`/`input` cru.
+
+- `PathField` renderiza `input` + botão `…` lado a lado.
+- O botão só aparece quando `window.vigia?.isDesktop === true` (Electron). No navegador o campo é apenas texto — sem botão, sem `dialog`.
+- `kind`: `"folder"` (pasta), `"file"` (arquivo) ou `"both"` (qualquer um). Ex.: BIOS aceita arquivo ou pasta → `kind="both"`.
+- Ao clicar, chama `pickPath({ defaultPath, kind })` (`frontend/src/desktop.ts` → `window.vigia.pickPath` → `desktop/src/preload.ts` → `desktop/src/ipc.ts` → `dialog.showOpenDialog`). Retorna `string | null`; `null` se cancelado.
+- `onPicked` preenche o valor e já dispara o save quando fizer sentido (ex.: `saveFolder`/`biosFolder` salvam imediatamente); `onChange` continua para digitação manual.
+- Manter build único: nada de `ipcRenderer` direto no renderer, só via `window.vigia`.
+
+Campos já migrados: `EmulatorConfigCard` (`saveFolder`, `biosFolder`, `romPath`, `biosPath`) e `GitConfigCard` (`source`). Novos campos de caminho devem seguir o mesmo padrão.

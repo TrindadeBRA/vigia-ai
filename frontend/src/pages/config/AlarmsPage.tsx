@@ -13,7 +13,7 @@ import { PROVIDER_LABEL, ruleHint, suggestLabel } from "./alarmsPage/helpers";
 import { ProviderIcon } from "./alarmsPage/ProviderIcon";
 import { RulesList } from "./alarmsPage/RulesList";
 import { TelegramConnectedPanel } from "./alarmsPage/TelegramConnectedPanel";
-import { ActionRow, Button, Card, FieldStatus, SelectField, StatusPill, TextField } from "./ui";
+import { ActionRow, Button, Card, FieldStatus, StatusPill, TextField, TomSelectField } from "./ui";
 import type { ConfigOutlet } from "./usePublicConfig";
 import { useTelegram } from "./useTelegram";
 
@@ -199,19 +199,21 @@ export default function AlarmsPage() {
             <ActionRow>
               <div className="flex min-w-[140px] flex-1 items-end gap-2.5">
                 {provider ? <ProviderIcon provider={provider} size="lg" /> : null}
-                <SelectField
+                <TomSelectField
                   label={c.provider}
                   value={provider}
                   onChange={(e) => setProvider(e.target.value)}
                   wrapperClassName="min-w-0 flex-1"
                   options={providers.map((p) => ({ value: p, label: PROVIDER_LABEL[p] || p }))}
+                  placeholder="Buscar provedor..."
                 />
               </div>
-              <SelectField
+              <TomSelectField
                 label={c.metric}
                 value={metric}
                 onChange={(e) => setMetric(e.target.value)}
                 options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.label }))}
+                placeholder="Buscar métrica..."
               />
               <TextField
                 label={c.threshold}
