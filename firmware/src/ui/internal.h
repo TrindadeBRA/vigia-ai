@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mining/mining_task.h"
+#include "ui/i18n.h"
 #include "ui/ui.h"
 #include "ui/widgets.h"
 
@@ -170,6 +172,9 @@ void paintCurrencies();
 void paintWeather();
 void paintStatus();
 void paintMiner();
+// Compartilhadas entre ui/views/miner.cpp e o card da Início (home.cpp).
+String miningFmtHashrate(double hs);
+const char *miningStatusLabel(MiningStatus s, const UiStrings &t);
 void paintNow();
 void paintNowClock();
 // Move o paginador de contas da view de detalhe atual (dir -1/+1); sem

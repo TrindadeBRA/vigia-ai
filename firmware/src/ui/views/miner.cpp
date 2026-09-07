@@ -7,7 +7,9 @@
 #include "mining/mining_task.h"
 #include "ui/i18n.h"
 
-static String fmtHashrate(double hs)
+// Não-static: reusadas pelo card da Início (ui/views/home.cpp), pra não
+// duplicar a formatação/rótulos de status.
+String miningFmtHashrate(double hs)
 {
   if (hs >= 1000000.0)
   {
@@ -31,7 +33,7 @@ static String fmtUptime(uint32_t totalS)
   return String(m) + "min";
 }
 
-static const char *statusLabel(MiningStatus s, const UiStrings &t)
+const char *miningStatusLabel(MiningStatus s, const UiStrings &t)
 {
   switch (s)
   {
@@ -65,9 +67,9 @@ void paintMiner()
     return;
   }
 
-  dKv(t.miningStatus, statusLabel(r.status, t));
-  dKv(t.miningHashrateCurrent, fmtHashrate(r.hashrateCurrent));
-  dKv(t.miningHashrateAvg, fmtHashrate(r.hashrateAvg));
+  dKv(t.miningStatus, miningStatusLabel(r.status, t));
+  dKv(t.miningHashrateCurrent, miningFmtHashrate(r.hashrateCurrent));
+  dKv(t.miningHashrateAvg, miningFmtHashrate(r.hashrateAvg));
   dGap();
   dKv(t.miningSharesAccepted, String(r.sharesAccepted));
   dKv(t.miningSharesRejected, String(r.sharesRejected));

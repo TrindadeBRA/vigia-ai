@@ -49,8 +49,9 @@ firmware/src/ui/views/miner.cpp  # nova view, no padrão de bitcoin.cpp/status.c
                                     # block height/erros em texto puro
                                     # entrar aqui -> chama mining_task start
                                     # sair daqui -> chama mining_task stop/pause
-                                    # (mesmo padrão de tela dedicada que VIEW_THEME já usa
-                                    # hoje: entra deliberadamente, não no ciclo normal de swipe)
+                                    # entrada: card sempre visível na grade da Início
+                                    # (home.cpp), ICON_BITCOIN — deliberado (toque), não
+                                    # um gesto de swipe sem indicação visual
 
 firmware/src/mining/
   stratum_client.cpp/.h    # port ~quase literal de NerdMiner_v2/src/stratum.cpp/.h
@@ -116,7 +117,7 @@ Quem decide **se pode** minerar é a config remota (`enabled` + `btcWallet`); qu
 1. **Backend primeiro** (sem tocar em firmware): schema `mining.ts`, router `mining.ts`, `mining.json`, testes. Dá pra validar contrato JSON isolado. ✅ feito.
 2. **Frontend**: `MiningPage.tsx` (`/display/mining`) + `miningCopy.ts`, apontando pro backend já pronto (mock manual via `curl -X POST` no `/api/mining/report` pra testar a página sem firmware). ✅ feito.
 3. **Firmware — port do motor**: `stratum_client`, `sha256_miner` (`nerd_sha256.*`), `mining_math` (target/merkle/header) e `mining_task` com `Start()`/`Stop()` explícitos. ✅ feito — só o worker de software (sem `HARDWARE_SHA265`, ver "Decisões de implementação" abaixo).
-4. **Firmware — nova rota**: `VIEW_MINER` em `core/state.h` + `ui/views/miner.cpp` (renderiza texto/erros). Entrada: faz parte do carrossel de swipe Início→Sistema→Mineração (não um item na grade da Home) — `uiSetView()` em `ui/nav.cpp` chama `miningClientEnterView()`/`ExitView()` ao entrar/sair. ✅ feito.
+4. **Firmware — nova rota**: `VIEW_MINER` em `core/state.h` + `ui/views/miner.cpp` (renderiza texto/erros). Entrada: card na grade da Início (`ui/views/home.cpp`), sempre visível, reusando `ICON_BITCOIN` — não por swipe (tentativa inicial descartada a pedido do usuário: um card no menu é mais descobrível que um gesto sem indicação visual). `uiSetView()` em `ui/nav.cpp` chama `miningClientEnterView()`/`ExitView()` ao entrar/sair, igual antes. O card mostra status + hashrate atual (texto puro, mesmo padrão de Bitcoin/Weather — sem barra de porcentagem, que não faz sentido pra esses dados). ✅ feito.
 5. **Firmware — cliente de rede**: `net/mining_client.cpp` (busca config remota ao entrar na view + a cada 20s, só reinicia a task se a config mudou de verdade; envia report a cada 10s), plugado no `loop()` (não bloqueante). ✅ feito.
 6. **Validar em hardware real, na rota**: entrar na `VIEW_MINER` e checar — touch da própria tela responde? Sair da tela realmente para o hashing? SSE do usage em outras telas continua chegando normalmente? Sem watchdog reset depois de um tempo minerando? **Ainda não feito — só validado em compilação (`./dev firmware build`/`wokwi`), não em placa física.**
 7. Atualizar `AGENTS.md`/`.agents/CONTEXTO_IA.md` (tabela de arquivos) e `CONTRATO_JSON.md` só se o `/usage` mudar — mineração é contrato **novo**, não mexe no existente. ✅ feito (`.agents/CONTEXTO_IA.md`; `/usage` não mudou).

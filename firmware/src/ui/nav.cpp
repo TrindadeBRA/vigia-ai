@@ -151,35 +151,14 @@ void uiDetailScrollBy(int dy)
   uiPaint();
 }
 
-// Carrossel de 3: Inicio -> Sistema -> Mineracao -> Inicio (e o inverso em
-// uiPrev). Qualquer outra view (Claude, Bitcoin etc.) volta pra Inicio,
-// igual antes de existir a Mineracao.
 void uiNext()
 {
-  View next = VIEW_HOME;
-  if (g_view == VIEW_HOME)
-  {
-    next = VIEW_STATUS;
-  }
-  else if (g_view == VIEW_STATUS)
-  {
-    next = VIEW_MINER;
-  }
-  uiSetView(next);
+  uiSetView(g_view == VIEW_HOME ? VIEW_STATUS : VIEW_HOME);
 }
 
 void uiPrev()
 {
-  View prev = VIEW_HOME;
-  if (g_view == VIEW_HOME)
-  {
-    prev = VIEW_MINER;
-  }
-  else if (g_view == VIEW_MINER)
-  {
-    prev = VIEW_STATUS;
-  }
-  uiSetView(prev);
+  uiSetView(g_view == VIEW_STATUS ? VIEW_HOME : VIEW_STATUS);
 }
 
 // Redesenha header e a view atual sem limpar a tela inteira primeiro.
