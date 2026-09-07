@@ -281,18 +281,6 @@ export function EmulatorBoardCard({
         [],
     );
 
-    const handleRomChange = useCallback(
-        (opt: SingleValue<RomOption>) => {
-            const val = opt?.value ?? "";
-            setSelectedRom(val);
-            if (val) void loadGame(val);
-            else destroyEmulator();
-        },
-        // loadGame/destroyEmulator are stable via useCallback deps
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [],
-    );
-
     // Track AudioContexts to allow proper audio cleanup on destroy
     useEffect(() => {
         const w = window as unknown as Record<string, unknown>;
@@ -674,6 +662,16 @@ export function EmulatorBoardCard({
             });
         }, 15000);
     }, [roms, platform, core, biosPath, globalConfig, dataPath, destroyEmulator, isSmall, isUnified]);
+
+    const handleRomChange = useCallback(
+        (opt: SingleValue<RomOption>) => {
+            const val = opt?.value ?? "";
+            setSelectedRom(val);
+            if (val) void loadGame(val);
+            else destroyEmulator();
+        },
+        [loadGame, destroyEmulator],
+    );
 
     // Track selected platform for bios/gameUrl (used in loadGame via closure)
     const [, setSelectedPlatform] = useState<string>("");
