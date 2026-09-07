@@ -1,6 +1,7 @@
 #include "mining_client.h"
 
 #include "core/state.h"
+#include "mining/mining_log.h"
 #include "mining/mining_task.h"
 
 #ifdef WOKWI_SIM
@@ -121,6 +122,15 @@ void postReport()
   doc["blockHeight"] = r.blockHeight;
   doc["uptimeS"] = r.uptimeS;
   doc["lastError"] = r.lastError;
+  {
+    String lines[MINING_LOG_MAX_LINES];
+    int n = miningLogSnapshot(lines);
+    JsonArray logArr = doc["log"].to<JsonArray>();
+    for (int i = 0; i < n; i++)
+    {
+      logArr.add(lines[i]);
+    }
+  }
   String body;
   serializeJson(doc, body);
 

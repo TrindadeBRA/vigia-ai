@@ -105,6 +105,16 @@ export default function MiningPage() {
         ) : null}
       </Card>
 
+      <Card title={c.logTitle} lead={c.logLead}>
+        {status.log.length ? (
+          <pre className="m-0 max-h-64 overflow-y-auto whitespace-pre-wrap break-all rounded-lg bg-canvas p-3 text-[11.5px] leading-[1.5] text-ink2">
+            {status.log.join("\n")}
+          </pre>
+        ) : (
+          <p className={cfgHint}>{c.logEmpty}</p>
+        )}
+      </Card>
+
       {config ? (
         <Card title={c.configTitle} lead={c.configLead}>
           <div className="flex flex-col gap-3">

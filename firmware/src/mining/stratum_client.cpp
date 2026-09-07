@@ -1,5 +1,6 @@
 #include "stratum_client.h"
 
+#include "mining_log.h"
 #include "version.h"
 
 namespace
@@ -36,7 +37,7 @@ bool checkError(const JsonDocument &doc)
   {
     return false;
   }
-  Serial.printf("[stratum] ERROR: %d | reason: %s\n", (const int)doc["error"][0], (const char *)doc["error"][1]);
+  miningLog("[stratum] ERRO: %d | motivo: %s", (const int)doc["error"][0], (const char *)doc["error"][1]);
   return true;
 }
 } // namespace
@@ -60,7 +61,7 @@ bool stratumTxSubscribe(WiFiClient &client, StratumSubscribe &sub)
   g_id = 1;
   snprintf(payload, sizeof(payload), "{\"id\": %lu, \"method\": \"mining.subscribe\", \"params\": [\"VigiaAI-Miner/%s\"]}\n", g_id, FIRMWARE_VERSION);
 
-  Serial.println("[stratum] ==> mining.subscribe");
+  miningLog("[stratum] ==> mining.subscribe");
   client.print(payload);
 
   vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -73,7 +74,7 @@ bool stratumTxSubscribe(WiFiClient &client, StratumSubscribe &sub)
 
   if (sub.extranonce1.length() == 0)
   {
-    Serial.println("[stratum] subscribe sem extranonce1, abortando");
+    miningLog("[stratum] subscribe sem extranonce1, abortando");
     g_doc.clear();
     return false;
   }
@@ -109,7 +110,7 @@ bool stratumTxAuth(WiFiClient &client, const char *user, const char *pass)
   g_id = nextId(g_id);
   snprintf(payload, sizeof(payload), "{\"params\": [\"%s\", \"%s\"], \"id\": %lu, \"method\": \"mining.authorize\"}\n", user, pass, g_id);
 
-  Serial.println("[stratum] ==> mining.authorize");
+  miningLog("[stratum] ==> mining.authorize");
   client.print(payload);
   vTaskDelay(200 / portTICK_PERIOD_MS);
   return true;
@@ -168,7 +169,7 @@ bool stratumParseNotify(String line, StratumJob &job)
 
   if (checkError(g_doc))
   {
-    Serial.println("[stratum] notify com erro, descartando job");
+    miningLog("[stratum] notify com erro, descartando job");
     return false;
   }
   return true;
@@ -197,7 +198,7 @@ bool stratumParseSetDifficulty(String line, double &difficulty)
     return false;
   }
   difficulty = (double)g_doc["params"][0];
-  Serial.printf("[stratum] nova dificuldade: %.12g\n", difficulty);
+  miningLog("[stratum] nova dificuldade: %.12g", difficulty);
   return true;
 }
 

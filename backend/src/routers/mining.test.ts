@@ -40,6 +40,26 @@ describe("mining router", () => {
     });
   });
 
+  it("normalizes an uppercase bech32 wallet to lowercase (pools reject BC1...)", async () => {
+    app = await createTestApp();
+    const put = await app.inject({
+      method: "PUT",
+      url: "/api/mining/config",
+      payload: { btcWallet: "BC1QM46SK5J5KECXL7T9X5CEYDLVAKL6HVDNF7L6J6" },
+    });
+    expect(put.json().config.btcWallet).toBe("bc1qm46sk5j5kecxl7t9x5ceydlvakl6hvdnf7l6j6");
+  });
+
+  it("leaves a legacy base58 wallet untouched (case-sensitive)", async () => {
+    app = await createTestApp();
+    const put = await app.inject({
+      method: "PUT",
+      url: "/api/mining/config",
+      payload: { btcWallet: "1BoatSLRHtKNngkdXEeobR76b53LETtpyT" },
+    });
+    expect(put.json().config.btcWallet).toBe("1BoatSLRHtKNngkdXEeobR76b53LETtpyT");
+  });
+
   it("rejects an invalid config patch", async () => {
     app = await createTestApp();
     const res = await app.inject({

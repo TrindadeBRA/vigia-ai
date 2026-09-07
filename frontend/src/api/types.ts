@@ -620,6 +620,10 @@ export type MiningStatus = {
   blockHeight: number;
   uptimeS: number;
   lastError: string;
+  // Últimas linhas do log da placa (buffer circular pequeno no firmware) —
+  // aproximação de "tempo real", não histórico completo nem stream de
+  // verdade (atualiza junto com o report, a cada ~10s).
+  log: string[];
   reportedAt: string | null;
   stale: boolean;
 };

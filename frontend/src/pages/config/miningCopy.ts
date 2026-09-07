@@ -34,6 +34,9 @@ export type MiningCopy = {
   walletMissingHint: string;
   workerLabel: string;
   workerHint: string;
+  logTitle: string;
+  logLead: string;
+  logEmpty: string;
 };
 
 export const MINING_STR: Record<Lang, MiningCopy> = {
@@ -77,6 +80,9 @@ export const MINING_STR: Record<Lang, MiningCopy> = {
     walletMissingHint: "Sem wallet configurada, a rota de mineração na placa recusa minerar.",
     workerLabel: "Nome do worker (opcional)",
     workerHint: "Aparece como sufixo do wallet no pool (ex.: endereço.nome).",
+    logTitle: "Log da placa",
+    logLead: "Últimas linhas recebidas da placa — atualiza junto com o status (a cada ~10s), não é um stream de verdade nem histórico completo.",
+    logEmpty: "Sem linhas de log ainda.",
   },
   en: {
     title: "Bitcoin mining",
@@ -118,6 +124,9 @@ export const MINING_STR: Record<Lang, MiningCopy> = {
     walletMissingHint: "Without a configured wallet, the mining screen on the board refuses to mine.",
     workerLabel: "Worker name (optional)",
     workerHint: "Shown as a suffix on the wallet at the pool (e.g. address.name).",
+    logTitle: "Board log",
+    logLead: "Latest lines received from the board — updates along with the status (every ~10s), not a real stream nor a full history.",
+    logEmpty: "No log lines yet.",
   },
   es: {
     title: "Minería de Bitcoin",
@@ -159,5 +168,8 @@ export const MINING_STR: Record<Lang, MiningCopy> = {
     walletMissingHint: "Sin wallet configurada, la pantalla de minería de la placa se niega a minar.",
     workerLabel: "Nombre del worker (opcional)",
     workerHint: "Aparece como sufijo del wallet en el pool (ej.: direccion.nombre).",
+    logTitle: "Log de la placa",
+    logLead: "Últimas líneas recibidas de la placa — se actualiza junto con el estado (cada ~10s), no es un stream real ni historial completo.",
+    logEmpty: "Todavía no hay líneas de log.",
   },
 };

@@ -15,6 +15,7 @@
 //    sistema continua sendo uma rede de segurança de verdade.
 #include "mining_task.h"
 
+#include "mining_log.h"
 #include "mining_math.h"
 #include "nerd_sha256.h"
 #include "stratum_client.h"
@@ -139,7 +140,7 @@ bool checkPoolConnection(WiFiClient &client, IPAddress &serverIp)
   {
     return true;
   }
-  Serial.println("[mining] pool desconectado, tentando conectar...");
+  miningLog("[mining] pool desconectado, tentando conectar...");
   if (serverIp == IPAddress(1, 1, 1, 1))
   {
     WiFi.hostByName(g_cfg.poolUrl.c_str(), serverIp);
@@ -196,7 +197,7 @@ bool checkPoolInactivity(WiFiClient &client, uint32_t &lastTxMs, uint32_t &start
 // ponto não sobra nenhum objeto C++ relevante no escopo.
 void stratumTaskBody()
 {
-  Serial.printf("[mining] stratum task iniciada no core %d\n", xPortGetCoreID());
+  miningLog("[mining] stratum task iniciada no core %d", xPortGetCoreID());
   g_stratumTaskAlive = true;
 
   WiFiClient client;
@@ -275,7 +276,7 @@ void stratumTaskBody()
 
     if (checkPoolInactivity(client, lastTxMs, start0HashrateMs, lastHashesSample))
     {
-      Serial.println("[mining] pool inativo por muito tempo, reconectando");
+      miningLog("[mining] pool inativo por muito tempo, reconectando");
       client.stop();
       subscribed = false;
       clearJobs();
@@ -336,7 +337,7 @@ void stratumTaskBody()
         }
         else
         {
-          Serial.println("[mining] erro no parse do notify, reconectando");
+          miningLog("[mining] erro no parse do notify, reconectando");
           client.stop();
           subscribed = false;
           clearJobs();
@@ -429,7 +430,7 @@ void stratumTaskBody()
 
   client.stop();
   clearJobs();
-  Serial.println("[mining] stratum task encerrada");
+  miningLog("[mining] stratum task encerrada");
   g_stratumTaskAlive = false;
 }
 
@@ -441,7 +442,7 @@ void stratumTaskFn(void *)
 
 void hashWorkerTaskBody()
 {
-  Serial.printf("[mining] hash worker iniciado no core %d\n", xPortGetCoreID());
+  miningLog("[mining] hash worker iniciado no core %d", xPortGetCoreID());
   g_workerTaskAlive = true;
 
   std::shared_ptr<JobRequest> job;
@@ -514,7 +515,7 @@ void hashWorkerTaskBody()
     }
   }
 
-  Serial.println("[mining] hash worker encerrado");
+  miningLog("[mining] hash worker encerrado");
   g_workerTaskAlive = false;
 }
 
@@ -528,6 +529,7 @@ void hashWorkerTaskFn(void *)
 
 void miningTaskStart(const MiningConfig &cfg)
 {
+  miningLogClear();
   if (g_stratumTaskAlive || g_workerTaskAlive)
   {
     miningTaskStop();
