@@ -363,7 +363,7 @@ export function Overview({
   const gridBgUrl = gridWallpaperUrl(gridWallpaperId);
   const parallax = wallpaperParallax && Boolean(bgRect);
   return (
-    <div className={cn("flex min-h-full flex-col", gridBgUrl && !parallax && "relative", gridBgUrl && !parallax && !focus && "overflow-hidden rounded-xl")}>
+    <div data-gamepad-cards className={cn("flex min-h-full flex-col", gridBgUrl && !parallax && "relative", gridBgUrl && !parallax && !focus && "overflow-hidden rounded-xl")}>
       {/* Grid wallpaper: por padrão fixo (parallax) — ancorado na área visível do <main>, ponta a ponta,
           sem esticar e sem rolar junto do grid; só os cards se movem por cima ao rolar. */}
       {gridBgUrl ? (

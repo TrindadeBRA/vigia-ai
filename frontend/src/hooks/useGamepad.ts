@@ -277,30 +277,27 @@ export function gamepadScrollMain(rx: number, ry: number) {
 let zoomLevel = 1;
 export function gamepadZoom(delta: number) {
     zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomLevel + delta));
-    document.documentElement.style.setProperty("--gamepad-zoom", String(zoomLevel));
-    const main = document.querySelector("main");
-    if (main) {
-        (main as HTMLElement).style.zoom = String(zoomLevel);
-        if (!(main as HTMLElement).style.zoom) {
-            (main as HTMLElement).style.transform = `scale(${zoomLevel})`;
-            (main as HTMLElement).style.transformOrigin = "top center";
-        }
-    } else {
-        (document.body as HTMLElement).style.zoom = String(zoomLevel);
+    document.documentElement.style.setProperty("--gamepad-cards-zoom", String(zoomLevel));
+    const target = document.querySelector<HTMLElement>("[data-gamepad-cards]");
+    if (target) {
+        // zoom só nos cards — não na página toda (header/sidebar/main)
+        // usa transform scale para não afetar layout do header/sidebar
+        target.style.transform = `scale(${zoomLevel})`;
+        target.style.transformOrigin = "top center";
+        // mantém zoom como fallback para browsers que suportam (reflow correto)
+        (target.style as unknown as Record<string, string>).zoom = String(zoomLevel);
     }
-    document.documentElement.style.setProperty("zoom", String(zoomLevel));
 }
 
 export function gamepadResetZoom() {
     zoomLevel = 1;
-    document.documentElement.style.removeProperty("--gamepad-zoom");
-    const main = document.querySelector("main");
-    if (main) {
-        (main as HTMLElement).style.removeProperty("zoom");
-        (main as HTMLElement).style.removeProperty("transform");
+    document.documentElement.style.removeProperty("--gamepad-cards-zoom");
+    const target = document.querySelector<HTMLElement>("[data-gamepad-cards]");
+    if (target) {
+        target.style.removeProperty("transform");
+        target.style.removeProperty("transform-origin");
+        target.style.removeProperty("zoom");
     }
-    document.body.style.removeProperty("zoom");
-    document.documentElement.style.removeProperty("zoom");
 }
 
 export function isGamepadTypingActive(): boolean {

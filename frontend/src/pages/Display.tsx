@@ -281,8 +281,9 @@ export default function Display() {
       if (Math.abs(a.rightX) > 0.15 || Math.abs(a.rightY) > 0.15) {
         gamepadScrollMain(a.rightX, a.rightY);
       }
-      // L2/R2 = zoom contínuo
-      if (a.l2 || a.r2) {
+      // L2/R2 = zoom só nos cards do dashboard (não na página toda)
+      // só quando estiver no overview (dashboard principal)
+      if ((a.l2 || a.r2) && section === "overview" && !isNested) {
         const delta = (a.r2 ? 0.012 : 0) + (a.l2 ? -0.012 : 0);
         if (delta !== 0) gamepadZoom(delta);
       }
