@@ -86,6 +86,7 @@ type Strings = {
   board: string;
   theme: string;
   alarms: string;
+  mining: string;
   configCta: string;
   cardSmall: string;
   cardSmallWeek: string;
@@ -346,6 +347,7 @@ export const STR: Record<Lang, Strings> = {
     board: "Placa e rede",
     theme: "Tema",
     alarms: "Alarmes",
+    mining: "Mineração",
     configCta: "Configurar contas",
     cardSmall: "Pequeno · 5h",
     cardSmallWeek: "Pequeno · semana",
@@ -594,6 +596,7 @@ export const STR: Record<Lang, Strings> = {
     board: "Board and network",
     theme: "Theme",
     alarms: "Alarms",
+    mining: "Mining",
     configCta: "Set up accounts",
     cardSmall: "Small · 5h",
     cardSmallWeek: "Small · week",
@@ -842,6 +845,7 @@ export const STR: Record<Lang, Strings> = {
     board: "Placa y red",
     theme: "Tema",
     alarms: "Alarmas",
+    mining: "Minería",
     configCta: "Configurar cuentas",
     cardSmall: "Pequeño · 5h",
     cardSmallWeek: "Pequeño · semana",

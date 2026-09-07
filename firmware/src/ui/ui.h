@@ -73,6 +73,9 @@ void uiPaint();
 void uiRefreshData();
 void uiTickClock();
 void uiTickEye();
+// Repinta a VIEW_MINER periodicamente (hashrate/uptime mudam sem toque
+// nenhum) — no-op fora dela. Ver ui/views/miner.cpp.
+void uiTickMiner();
 void uiNext();
 void uiPrev();
 void uiSetView(View v);

@@ -1,5 +1,6 @@
 #include "ui/ui.h"
 
+#include "net/mining_client.h"
 #include "net/usage_client.h"
 #include "ui/customtheme.h"
 #include "ui/internal.h"
@@ -60,6 +61,16 @@ void uiSetView(View v)
   {
     return;
   }
+  // Liga/desliga a mineracao no unico ponto por onde toda troca de tela
+  // passa — ver .agents/PLANO_MINERACAO.md: nunca minera fora da VIEW_MINER.
+  if (v == VIEW_MINER)
+  {
+    miningClientEnterView();
+  }
+  else if (g_view == VIEW_MINER)
+  {
+    miningClientExitView();
+  }
   // Entrando numa view de detalhe vinda de outra: comeca pela conta que mais
   // precisa de atencao. Reabrir a mesma view (idx ja escolhido pelo
   // paginador) nao passa por aqui, pois o "if (v == g_view) return;" acima
@@ -112,7 +123,7 @@ static bool viewHasScroll()
          g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK ||
          g_view == VIEW_OPENCODE || g_view == VIEW_FAL || g_view == VIEW_BITCOIN ||
          g_view == VIEW_ADSENSE || g_view == VIEW_CURRENCIES || g_view == VIEW_WEATHER ||
-         g_view == VIEW_STATUS;
+         g_view == VIEW_STATUS || g_view == VIEW_MINER;
 }
 
 bool uiCanScroll() { return viewHasScroll() && g_detailCanScroll; }
@@ -213,6 +224,9 @@ void uiRefreshData()
   case VIEW_STATUS:
     paintStatus();
     break;
+  case VIEW_MINER:
+    paintMiner();
+    break;
   default:
     paintHome();
     break;
@@ -292,6 +306,16 @@ void uiHandleTap(int16_t x, int16_t y)
     {
       uiSetView(VIEW_NOW);
       return;
+    }
+    if (g_miningIconR > 0)
+    {
+      const int hit = g_miningIconR + 8;
+      if (x >= g_miningIconCx - hit && x < g_miningIconCx + hit && y >= g_miningIconCy - hit &&
+          y < g_miningIconCy + hit)
+      {
+        uiSetView(VIEW_MINER);
+        return;
+      }
     }
     if (g_reloadIconR > 0)
     {

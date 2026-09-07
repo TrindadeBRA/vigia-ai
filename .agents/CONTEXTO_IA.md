@@ -92,7 +92,17 @@ backend/src/providers/spotify.ts   OAuth Spotify + chamadas ao player (play/paus
 backend/src/routers/spotify.ts     rotas /api/oauth/spotify/* + /api/spotify* (estado + comandos do player) — protótipo, fora do contrato JSON
 frontend/src/components/cards/SpotifyCard.tsx  widget "Spotify" do board (/display) — poll próprio de 5s, não usa o hub de usage
 frontend/src/pages/config/SpotifyConfigCard.tsx  credenciais + login/logout OAuth do Spotify (/display/config)
-firmware/platformio.ini
+firmware/platformio.ini            board_build.partitions = huge_app.csv (mineração empurrou o app pra perto do limite da partição padrão)
+backend/src/schemas/mining.ts      contrato de /api/mining/* (config remota + report/status) — protótipo, ver PLANO_MINERACAO.md
+backend/src/routers/mining.ts      rotas /api/mining/config (GET/PUT), /api/mining/report (POST, placa->coletor), /api/mining/status (GET, painel)
+frontend/src/pages/config/MiningPage.tsx  página dedicada /display/mining (status + config remota), padrão AlarmsPage.tsx
+frontend/src/pages/config/miningCopy.ts   i18n pt/en/es da página de mineração
+firmware/src/core/state.h          + VIEW_MINER — só minera de fato enquanto essa view está ativa (nunca em segundo plano)
+firmware/src/ui/views/miner.cpp    renderiza a VIEW_MINER (texto puro) + uiTickMiner() (repaint 1x/s)
+firmware/src/ui/nav.cpp            uiSetView() liga/desliga a mineração ao entrar/sair da VIEW_MINER (miningClientEnterView/ExitView)
+firmware/src/mining/               motor de mineração (Stratum + SHA256), portado de NerdMiner_v2 (MIT) — mining_task.cpp orquestra, roda só no core 0 (nunca no core do loopTask/touch)
+firmware/src/net/mining_client.cpp cliente HTTP da mineração: busca config do coletor, envia report periódico — só ativo com VIEW_MINER
+.agents/PLANO_MINERACAO.md         plano do MVP de mineração de Bitcoin (histórico da decisão + riscos)
 backend/src/desktop.ts             entrypoint do coletor como sidecar do Electron (port de app/desktop.py)
 desktop/src/main.ts                processo principal do app (janela, bandeja, menu)
 desktop/src/sidecar.ts             spawn/handshake/restart do coletor (usa ELECTRON_RUN_AS_NODE para o bundle Node)

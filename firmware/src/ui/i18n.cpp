@@ -89,6 +89,20 @@ static const UiStrings kPt = {
     "Chuva",
     "Max",
     "Min",
+    "Mineracao",
+    "Status",
+    "Parado",
+    "Sem Wi-Fi",
+    "Conectando",
+    "Minerando",
+    "Pool offline",
+    "Erro",
+    "Hashrate atual",
+    "Hashrate medio",
+    "Shares aceitas",
+    "Shares rejeitadas",
+    "Melhor dificuldade",
+    "Tempo minerando",
 };
 
 static const UiStrings kEn = {
@@ -178,6 +192,20 @@ static const UiStrings kEn = {
     "Rain",
     "High",
     "Low",
+    "Mining",
+    "Status",
+    "Stopped",
+    "No Wi-Fi",
+    "Connecting",
+    "Mining",
+    "Pool offline",
+    "Error",
+    "Current hashrate",
+    "Average hashrate",
+    "Accepted shares",
+    "Rejected shares",
+    "Best difficulty",
+    "Mining uptime",
 };
 
 static const UiStrings kEs = {
@@ -267,6 +295,20 @@ static const UiStrings kEs = {
     "Lluvia",
     "Max",
     "Min",
+    "Mineria",
+    "Estado",
+    "Detenido",
+    "Sin Wi-Fi",
+    "Conectando",
+    "Minando",
+    "Pool fuera de linea",
+    "Error",
+    "Hashrate actual",
+    "Hashrate promedio",
+    "Shares aceptadas",
+    "Shares rechazadas",
+    "Mejor dificultad",
+    "Tiempo minando",
 };
 
 const UiStrings &uiTr()

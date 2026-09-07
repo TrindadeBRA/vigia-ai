@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "../../cn";
-import { BellIcon, ChipIcon, GitHubIcon, GridIcon, HeartIcon, PaletteIcon, SlidersIcon } from "../../components/icons";
+import { BellIcon, ChipIcon, GitHubIcon, GridIcon, HeartIcon, PaletteIcon, PickaxeIcon, SlidersIcon } from "../../components/icons";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { accentLink, sideItem, sideItemActive } from "../../tw";
@@ -19,11 +19,12 @@ export function Sidebar(props: {
   setupActive: boolean;
   themeActive: boolean;
   alarmsActive: boolean;
+  miningActive: boolean;
   onOpenPix: () => void;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, themeActive, alarmsActive, onOpenPix, t } = props;
-  const onPage = configActive || setupActive || themeActive || alarmsActive || nowActive;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, themeActive, alarmsActive, miningActive, onOpenPix, t } = props;
+  const onPage = configActive || setupActive || themeActive || alarmsActive || miningActive || nowActive;
   const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
   return (
     <nav
@@ -75,6 +76,9 @@ export function Sidebar(props: {
         </NavLink>
         <NavLink to="/display/alarms" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
           <BellIcon size={16} /> {t.alarms}
+        </NavLink>
+        <NavLink to="/display/mining" className={({ isActive }) => cn(sideItem, isActive && sideItemActive)} onClick={onClose}>
+          <PickaxeIcon size={16} /> {t.mining}
         </NavLink>
       </div>
       <div className="mt-1 flex shrink-0 items-center gap-1.5 border-t border-edge pt-1">

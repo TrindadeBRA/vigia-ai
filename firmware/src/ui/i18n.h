@@ -89,6 +89,20 @@ struct UiStrings
   const char *weatherPrecip;
   const char *weatherHigh;
   const char *weatherLow;
+  const char *miningTitle;
+  const char *miningStatus;
+  const char *miningStatusIdle;
+  const char *miningStatusNoWifi;
+  const char *miningStatusConnecting;
+  const char *miningStatusMining;
+  const char *miningStatusPoolOffline;
+  const char *miningStatusError;
+  const char *miningHashrateCurrent;
+  const char *miningHashrateAvg;
+  const char *miningSharesAccepted;
+  const char *miningSharesRejected;
+  const char *miningBestDifficulty;
+  const char *miningUptime;
 };
 
 const UiStrings &uiTr();

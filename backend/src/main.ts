@@ -20,6 +20,7 @@ import { createGitRoutes } from "./routers/git.js";
 import { createGithubRoutes } from "./routers/github.js";
 import { createImagesRoutes } from "./routers/images.js";
 import { createIssRoutes } from "./routers/iss.js";
+import { createMiningRoutes } from "./routers/mining.js";
 import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
@@ -173,6 +174,7 @@ export async function createApp() {
   await fastify.register(createGithubRoutes, { prefix: "" });
   await fastify.register(createIssRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
+  await fastify.register(createMiningRoutes, { prefix: "" });
   await fastify.register(createImagesRoutes, { prefix: "" });
   await fastify.register(createClientStateRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });

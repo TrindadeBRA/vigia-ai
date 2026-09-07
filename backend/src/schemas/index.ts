@@ -6,6 +6,7 @@ export * from "./calendar.js";
 export * from "./config.js";
 export * from "./currencies.js";
 export * from "./git.js";
+export * from "./mining.js";
 export * from "./retroachievements.js";
 export * from "./rss.js";
 export * from "./telegram.js";

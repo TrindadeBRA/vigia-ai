@@ -29,7 +29,10 @@ int drawErrorWrapped(int x, int y, int maxW, const String& err, uint16_t bg, uin
 void drawButton(int x, int y, int w, int h, const char* label);
 void drawChoiceButton(int x, int y, int w, int h, const char* label, bool selected);
 void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor);
-void drawIcon(int x, int y, int w, int h, const uint16_t* data);
+// bg: cor de fundo assumida no bake do ícone (gen_icons.py), substituída
+// pela cor real de destino — default COL_CARD (ícones de card); passe
+// COL_BG explicitamente pra desenhar sobre o fundo da tela (ex.: header).
+void drawIcon(int x, int y, int w, int h, const uint16_t* data, uint16_t bg = COL_CARD);
 void drawInfoIcon(int cx, int cy, int r, uint16_t color);
 void drawClockIcon(int cx, int cy, int r, uint16_t color);
 void drawReloadIcon(int cx, int cy, int r, uint16_t color);
