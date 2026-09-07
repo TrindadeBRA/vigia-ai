@@ -1,5 +1,6 @@
 #include "ui/ui.h"
 
+#include "net/mining_client.h"
 #include "net/usage_client.h"
 #include "ui/customtheme.h"
 #include "ui/internal.h"
@@ -60,6 +61,16 @@ void uiSetView(View v)
   {
     return;
   }
+  // Liga/desliga a mineracao no unico ponto por onde toda troca de tela
+  // passa — ver .agents/PLANO_MINERACAO.md: nunca minera fora da VIEW_MINER.
+  if (v == VIEW_MINER)
+  {
+    miningClientEnterView();
+  }
+  else if (g_view == VIEW_MINER)
+  {
+    miningClientExitView();
+  }
   // Entrando numa view de detalhe vinda de outra: comeca pela conta que mais
   // precisa de atencao. Reabrir a mesma view (idx ja escolhido pelo
   // paginador) nao passa por aqui, pois o "if (v == g_view) return;" acima
@@ -112,7 +123,7 @@ static bool viewHasScroll()
          g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK ||
          g_view == VIEW_OPENCODE || g_view == VIEW_FAL || g_view == VIEW_BITCOIN ||
          g_view == VIEW_ADSENSE || g_view == VIEW_CURRENCIES || g_view == VIEW_WEATHER ||
-         g_view == VIEW_STATUS;
+         g_view == VIEW_STATUS || g_view == VIEW_MINER;
 }
 
 bool uiCanScroll() { return viewHasScroll() && g_detailCanScroll; }
@@ -140,14 +151,35 @@ void uiDetailScrollBy(int dy)
   uiPaint();
 }
 
+// Carrossel de 3: Inicio -> Sistema -> Mineracao -> Inicio (e o inverso em
+// uiPrev). Qualquer outra view (Claude, Bitcoin etc.) volta pra Inicio,
+// igual antes de existir a Mineracao.
 void uiNext()
 {
-  uiSetView(g_view == VIEW_HOME ? VIEW_STATUS : VIEW_HOME);
+  View next = VIEW_HOME;
+  if (g_view == VIEW_HOME)
+  {
+    next = VIEW_STATUS;
+  }
+  else if (g_view == VIEW_STATUS)
+  {
+    next = VIEW_MINER;
+  }
+  uiSetView(next);
 }
 
 void uiPrev()
 {
-  uiSetView(g_view == VIEW_STATUS ? VIEW_HOME : VIEW_STATUS);
+  View prev = VIEW_HOME;
+  if (g_view == VIEW_HOME)
+  {
+    prev = VIEW_MINER;
+  }
+  else if (g_view == VIEW_MINER)
+  {
+    prev = VIEW_STATUS;
+  }
+  uiSetView(prev);
 }
 
 // Redesenha header e a view atual sem limpar a tela inteira primeiro.
@@ -212,6 +244,9 @@ void uiRefreshData()
     break;
   case VIEW_STATUS:
     paintStatus();
+    break;
+  case VIEW_MINER:
+    paintMiner();
     break;
   default:
     paintHome();

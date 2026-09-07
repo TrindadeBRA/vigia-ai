@@ -169,6 +169,7 @@ void paintAdsense();
 void paintCurrencies();
 void paintWeather();
 void paintStatus();
+void paintMiner();
 void paintNow();
 void paintNowClock();
 // Move o paginador de contas da view de detalhe atual (dir -1/+1); sem

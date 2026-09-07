@@ -4,6 +4,8 @@
 
 // Árvore: core/ (estado) · net/ (Wi-Fi/SSE/JSON) · input/ (toque/serial) · ui/ (tema, nav, views/).
 #include "input/input.h"
+#include "mining/mining_task.h"
+#include "net/mining_client.h"
 #include "net/theme_server.h"
 #include "net/usage_client.h"
 #include "ui/ui.h"
@@ -60,7 +62,10 @@ void loop()
   inputPoll();
   uiTickClock();
   uiTickEye();
+  uiTickMiner();
   themeServerHandle();
+  miningTaskTick();
+  miningClientPoll();
 
   usageClientEnsureWifi();
   uint32_t now = millis();

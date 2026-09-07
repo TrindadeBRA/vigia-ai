@@ -23,7 +23,12 @@ enum View : uint8_t
   VIEW_ADSENSE = 12,
   VIEW_CURRENCIES = 13,
   VIEW_WEATHER = 14,
-  VIEW_COUNT = 15
+  // Mineração de Bitcoin (protótipo/MVP, ver .agents/PLANO_MINERACAO.md) —
+  // entrar aqui liga a task de mineração (uiSetView em ui/nav.cpp), sair
+  // desliga. Faz parte do swipe normal a partir da Início (ver uiNext/uiPrev
+  // em ui/nav.cpp), mas nunca minera sozinha fora desta tela.
+  VIEW_MINER = 15,
+  VIEW_COUNT = 16
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da
