@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
 import { isDesktop } from "../../desktop";
 import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
@@ -30,7 +31,7 @@ rm -f "$tmp"
 [ -n "$val" ] && echo "$val" || echo "Vazio — a conta não guarda sessão nessa tabela, refaça sign-out/sign-in no Cursor.")`;
 
 export default function ConfigPage() {
-  const { c, cfg, phase, reload, setPhase } = usePublicConfig();
+  const { c, cfg, phase, reload, setPhase, lang } = usePublicConfig();
 
   if (phase === "loading" && !cfg) {
     return <Skeleton page="config" />;
@@ -40,6 +41,7 @@ export default function ConfigPage() {
     return (
       <div className={`${pageCol} ${viewFade}`}>
         <header className="w-full">
+          <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
           <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
         </header>
@@ -56,6 +58,7 @@ export default function ConfigPage() {
   return (
     <div className={`${pageCol} ${viewFade}`}>
       <header className="w-full">
+        <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
         <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
         <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
         <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { UsagePayload } from "../api/types";
 import { cn } from "../cn";
-import { ArrowLeftIcon, ChevronRightIcon } from "../components/icons";
+import { ChevronRightIcon } from "../components/icons";
+import { PageBreadcrumb } from "../components/PageBreadcrumb";
 import { FETCH_OK_FLASH_MS, barColor, barGlow, clamp, fmtPct } from "../format";
 import { WEEKDAYS, type Lang, type T } from "../i18n";
 import { PALETTES, PROVIDER_ICON, resolveTheme, type ThemeName } from "../theme";
@@ -132,15 +133,7 @@ export default function NowPage({
 
   return (
     <div className="flex min-h-full w-full flex-col">
-      <div className="mb-6 flex items-center justify-between gap-4 max-[860px]:mb-4">
-        <button
-          onClick={() => navigate("/display")}
-          className="flex items-center gap-2 rounded-lg border-0 bg-transparent px-2 py-1.5 text-sm font-medium text-ink2 transition-colors hover:bg-chip hover:text-ink"
-        >
-          <ArrowLeftIcon size={16} />
-          {t.overview}
-        </button>
-      </div>
+      <PageBreadcrumb current={t.now} lang={prefs.lang} className="mb-6 max-[860px]:mb-4" />
 
       <div className="mb-8 flex flex-col items-center justify-center rounded-3xl border border-edge bg-[radial-gradient(900px_420px_at_50%_30%,var(--glow),transparent_65%),var(--panel)] px-6 py-12 shadow-card [.flat_&]:shadow-none max-[860px]:py-8">
         <div className={cn(num, "mb-2 text-[clamp(56px,14vw,96px)] font-[650] tracking-[-2px] leading-none [text-shadow:0_0_50px_var(--glow)] transition-opacity duration-300", flash && "opacity-60", "[.flat_&]:[text-shadow:none]")}>

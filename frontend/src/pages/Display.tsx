@@ -6,7 +6,8 @@ import { colsForWidth, sameBoard } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
-import { ArrowLeftIcon, ChevronRightIcon, MenuIcon, SettingsIcon } from "../components/icons";
+import { MenuIcon, SettingsIcon } from "../components/icons";
+import { PageBreadcrumb } from "../components/PageBreadcrumb";
 import { ImageWidgetModal } from "../components/ImageWidgetModal";
 import { Logo } from "../components/Logo";
 import { PixDonateModal } from "../components/PixDonateModal";
@@ -89,7 +90,6 @@ export default function Display() {
   const flat = effectiveTheme === "contrast";
   const accent = prefs.accentCustom || ACCENTS[effectiveTheme][prefs.accent] || ACCENTS[effectiveTheme][0];
   const t = STR[prefs.lang];
-  const pageTitle = isConfig ? t.config : isSetup ? t.board : isTheme ? t.theme : isAlarms ? t.alarms : isMining ? t.mining : isNow ? t.now : null;
   const outlet: DisplayOutlet = { lang: prefs.lang, data, nowMs: now, driftMs };
   const shellClass = cn(shell, flat && "flat");
   const pollS = pollMs / 1000;
@@ -280,14 +280,7 @@ export default function Display() {
         <button data-app-brand className="group/brand -mr-1.5 flex shrink-0 cursor-pointer items-center gap-[9px] rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-ink transition-colors duration-150 hover:bg-chip" onClick={goOverview}>
           <Logo size={38} showText={false} />
         </button>
-        <div className="flex min-w-0 flex-1 items-center gap-0.5">
-          {pageTitle ? (
-            <div className="ml-0.5 flex min-w-0 items-center gap-1.5 text-ink3 max-[520px]:hidden">
-              <span aria-hidden className="text-[15px] leading-none">/</span>
-              <span className="min-w-0 truncate text-[14px] font-semibold text-ink">{pageTitle}</span>
-            </div>
-          ) : null}
-        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-0.5" />
         <NavLink
           to="/display/now"
           className={({ isActive }) =>
@@ -403,17 +396,7 @@ export default function Display() {
                 />
               ) : null}
               {section === "account" && meta && !hideChrome ? (
-                <div className="mb-3 flex min-w-0 items-center gap-1.5 text-[12.5px]">
-                  <button
-                    type="button"
-                    className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent px-1 py-0.5 font-medium text-ink2 hover:text-accent"
-                    onClick={goOverview}
-                  >
-                    <ArrowLeftIcon size={13} /> {t.overview}
-                  </button>
-                  <ChevronRightIcon size={13} className="shrink-0 text-ink3" />
-                  <span className="truncate text-ink3">{meta.title}</span>
-                </div>
+                <PageBreadcrumb current={meta.title} lang={prefs.lang} onBack={goOverview} className="mb-3" />
               ) : null}
               {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
             </>

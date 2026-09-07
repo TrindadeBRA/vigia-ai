@@ -4,6 +4,7 @@ import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
 import { ChipIcon, ClockIcon, ImageIcon, PlusCircleIcon, TextIcon } from "../../components/icons";
 import { Logo } from "../../components/Logo";
+import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
 import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import { useRequest } from "../../hooks/useRequest";
@@ -245,6 +246,7 @@ export default function ThemeEditorPage() {
     return (
       <div className={`${pageCol} ${viewFade}`}>
         <header className="w-full">
+          <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
           <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
         </header>
@@ -265,6 +267,7 @@ export default function ThemeEditorPage() {
     <div className={`${pageCol} ${viewFade}`}>
       <header className="flex w-full flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
+          <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
           <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
         </div>

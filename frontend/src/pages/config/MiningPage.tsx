@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { fetchMiningConfig, fetchMiningStatus, saveMiningConfig } from "../../api/client";
 import type { MiningConfig, MiningStatus } from "../../api/types";
+import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
 import { fmtWhen } from "../../format";
 import { useRequest } from "../../hooks/useRequest";
@@ -29,7 +30,8 @@ function fmtUptime(totalS: number): string {
 
 export default function MiningPage() {
   const ctx = useOutletContext<DisplayOutlet | null>();
-  const c = MINING_STR[ctx?.lang || "pt"];
+  const lang = ctx?.lang || "pt";
+  const c = MINING_STR[lang];
 
   const [status, setStatus] = useState<MiningStatus | null>(null);
   const [statusPhase, setStatusPhase] = useState<"loading" | "ready" | "error">("loading");
@@ -69,6 +71,7 @@ export default function MiningPage() {
     return (
       <div className={`${pageCol} ${viewFade}`}>
         <header className="w-full">
+          <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
           <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
         </header>
@@ -83,6 +86,7 @@ export default function MiningPage() {
   return (
     <div className={`${pageCol} ${viewFade}`}>
       <header className="w-full">
+        <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
         <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
         <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
       </header>

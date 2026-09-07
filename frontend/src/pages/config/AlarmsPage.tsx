@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { createAlarm, fetchAlarms, fetchConfig } from "../../api/client";
 import type { AlarmsPublic, ConfigPublic } from "../../api/types";
+import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
 import { useRequest } from "../../hooks/useRequest";
 import { cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
@@ -18,7 +19,8 @@ import { useTelegram } from "./useTelegram";
 
 export default function AlarmsPage() {
   const ctx = useOutletContext<ConfigOutlet | null>();
-  const c = ALARMS_STR[ctx?.lang || "pt"];
+  const lang = ctx?.lang || "pt";
+  const c = ALARMS_STR[lang];
   const telegram = useTelegram();
   const [tokenInput, setTokenInput] = useState("");
 
@@ -103,6 +105,7 @@ export default function AlarmsPage() {
     return (
       <div className={`${pageCol} ${viewFade}`}>
         <header className="w-full">
+          <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
           <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
         </header>
@@ -117,6 +120,7 @@ export default function AlarmsPage() {
   return (
     <div className={`${pageCol} ${viewFade}`}>
       <header className="w-full">
+        <PageBreadcrumb current={c.title} lang={lang} className="mb-2" />
         <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.title}</h1>
         <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
       </header>

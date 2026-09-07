@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
 import { cfgGrid, cfgStatus, pageCol, viewFade } from "../../tw";
 import { BoardCard } from "./BoardCard";
@@ -8,7 +9,7 @@ import { UsageCheck } from "./UsageCheck";
 import { usePublicConfig } from "./usePublicConfig";
 
 export default function SetupPage() {
-  const { c, cfg, phase, reload, setPhase } = usePublicConfig();
+  const { c, cfg, phase, reload, setPhase, lang } = usePublicConfig();
 
   if (phase === "loading" && !cfg) {
     return <Skeleton page="setup" />;
@@ -18,6 +19,7 @@ export default function SetupPage() {
     return (
       <div className={`${pageCol} ${viewFade}`}>
         <header className="w-full">
+          <PageBreadcrumb current={c.toolsTitle} lang={lang} className="mb-2" />
           <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.toolsTitle}</h1>
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.loadError}</p>
         </header>
@@ -40,6 +42,7 @@ export default function SetupPage() {
   return (
     <div className={`${pageCol} ${viewFade}`}>
       <header className="w-full">
+        <PageBreadcrumb current={c.toolsTitle} lang={lang} className="mb-2" />
         <h1 className="m-0 text-[21px] font-[750] tracking-[-.2px]">{c.toolsTitle}</h1>
         <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.howLead}</p>
       </header>
