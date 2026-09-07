@@ -37,6 +37,15 @@ export type MiningCopy = {
   logTitle: string;
   logLead: string;
   logEmpty: string;
+  hintCurrentStatus: string;
+  hintHashrateCurrent: string;
+  hintHashrateAvg: string;
+  hintSharesAccepted: string;
+  hintSharesRejected: string;
+  hintBestDifficulty: string;
+  hintBlockHeight: string;
+  hintUptime: string;
+  hintLastReport: string;
 };
 
 export const MINING_STR: Record<Lang, MiningCopy> = {
@@ -83,6 +92,15 @@ export const MINING_STR: Record<Lang, MiningCopy> = {
     logTitle: "Log da placa",
     logLead: "Últimas linhas recebidas da placa — atualiza junto com o status (a cada ~10s), não é um stream de verdade nem histórico completo.",
     logEmpty: "Sem linhas de log ainda.",
+    hintCurrentStatus: "Estado atual da conexão com o pool de mineração.",
+    hintHashrateCurrent: "Velocidade de hashing agora (tentativas de solução por segundo), medida no ultimo ~1s.",
+    hintHashrateAvg: "Velocidade média desde que a sessão de mineração atual começou.",
+    hintSharesAccepted: "Soluções parciais (bem mais fáceis que um bloco de verdade) que o pool aceitou — é como ele mede sua contribuição.",
+    hintSharesRejected: "Soluções que o pool recusou (chegaram atrasadas ou com a dificuldade errada).",
+    hintBestDifficulty: "A dificuldade mais alta entre as soluções encontradas até agora — quanto maior, mais \"perto\" (ainda astronomicamente longe) de um bloco de verdade.",
+    hintBlockHeight: "Altura do bloco atual da rede Bitcoin. Fora do escopo deste MVP — a placa não busca isso (precisaria de uma API externa), por isso fica sempre \"—\".",
+    hintUptime: "Há quanto tempo a sessão de mineração atual está rodando — zera toda vez que a placa entra na tela de mineração de novo.",
+    hintLastReport: "Quando o coletor recebeu o último relatório da placa.",
   },
   en: {
     title: "Bitcoin mining",
@@ -127,6 +145,15 @@ export const MINING_STR: Record<Lang, MiningCopy> = {
     logTitle: "Board log",
     logLead: "Latest lines received from the board — updates along with the status (every ~10s), not a real stream nor a full history.",
     logEmpty: "No log lines yet.",
+    hintCurrentStatus: "Current state of the connection to the mining pool.",
+    hintHashrateCurrent: "Hashing speed right now (solution attempts per second), measured over the last ~1s.",
+    hintHashrateAvg: "Average speed since the current mining session started.",
+    hintSharesAccepted: "Partial solutions (much easier than a real block) the pool accepted — this is how it measures your contribution.",
+    hintSharesRejected: "Solutions the pool refused (arrived late or with the wrong difficulty).",
+    hintBestDifficulty: "The highest difficulty among the solutions found so far — higher means \"closer\" (still astronomically far) to an actual block.",
+    hintBlockHeight: "Current Bitcoin network block height. Out of scope for this MVP — the board doesn't fetch it (would need an external API), so it always shows \"—\".",
+    hintUptime: "How long the current mining session has been running — resets every time the board re-enters the mining screen.",
+    hintLastReport: "When the collector received the last report from the board.",
   },
   es: {
     title: "Minería de Bitcoin",
@@ -171,5 +198,14 @@ export const MINING_STR: Record<Lang, MiningCopy> = {
     logTitle: "Log de la placa",
     logLead: "Últimas líneas recibidas de la placa — se actualiza junto con el estado (cada ~10s), no es un stream real ni historial completo.",
     logEmpty: "Todavía no hay líneas de log.",
+    hintCurrentStatus: "Estado actual de la conexión con el pool de minería.",
+    hintHashrateCurrent: "Velocidad de hashing ahora mismo (intentos de solución por segundo), medida en el ultimo ~1s.",
+    hintHashrateAvg: "Velocidad promedio desde que empezó la sesión de minería actual.",
+    hintSharesAccepted: "Soluciones parciales (mucho más fáciles que un bloque real) que el pool aceptó — así mide tu contribución.",
+    hintSharesRejected: "Soluciones que el pool rechazó (llegaron tarde o con la dificultad incorrecta).",
+    hintBestDifficulty: "La dificultad más alta entre las soluciones encontradas hasta ahora — cuanto mayor, más \"cerca\" (todavía astronómicamente lejos) de un bloque real.",
+    hintBlockHeight: "Altura del bloque actual de la red Bitcoin. Fuera del alcance de este MVP — la placa no lo busca (necesitaría una API externa), por eso siempre muestra \"—\".",
+    hintUptime: "Cuánto tiempo lleva corriendo la sesión de minería actual — se reinicia cada vez que la placa vuelve a entrar en la pantalla de minería.",
+    hintLastReport: "Cuándo el colector recibió el último reporte de la placa.",
   },
 };

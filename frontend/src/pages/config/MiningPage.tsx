@@ -89,15 +89,15 @@ export default function MiningPage() {
 
       <Card title={c.statusTitle}>
         <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-[13.5px] sm:grid-cols-2">
-          <Row label={c.currentStatusLabel} value={c.status[status.status]} />
-          <Row label={c.hashrateCurrent} value={fmtHashrate(status.hashrateCurrent)} />
-          <Row label={c.hashrateAvg} value={fmtHashrate(status.hashrateAvg)} />
-          <Row label={c.sharesAccepted} value={String(status.sharesAccepted)} />
-          <Row label={c.sharesRejected} value={String(status.sharesRejected)} />
-          <Row label={c.bestDifficulty} value={status.bestDifficulty.toLocaleString()} />
-          <Row label={c.blockHeight} value={status.blockHeight ? status.blockHeight.toLocaleString() : "—"} />
-          <Row label={c.uptime} value={fmtUptime(status.uptimeS)} />
-          <Row label={c.lastReport} value={status.reportedAt ? fmtWhen(status.reportedAt) : c.never} />
+          <Row label={c.currentStatusLabel} value={c.status[status.status]} hint={c.hintCurrentStatus} />
+          <Row label={c.hashrateCurrent} value={fmtHashrate(status.hashrateCurrent)} hint={c.hintHashrateCurrent} />
+          <Row label={c.hashrateAvg} value={fmtHashrate(status.hashrateAvg)} hint={c.hintHashrateAvg} />
+          <Row label={c.sharesAccepted} value={String(status.sharesAccepted)} hint={c.hintSharesAccepted} />
+          <Row label={c.sharesRejected} value={String(status.sharesRejected)} hint={c.hintSharesRejected} />
+          <Row label={c.bestDifficulty} value={status.bestDifficulty.toLocaleString()} hint={c.hintBestDifficulty} />
+          <Row label={c.blockHeight} value={status.blockHeight ? status.blockHeight.toLocaleString() : "—"} hint={c.hintBlockHeight} />
+          <Row label={c.uptime} value={fmtUptime(status.uptimeS)} hint={c.hintUptime} />
+          <Row label={c.lastReport} value={status.reportedAt ? fmtWhen(status.reportedAt) : c.never} hint={c.hintLastReport} />
         </div>
         {status.stale ? <p className={`${cfgHint} mt-3`}>{c.staleHint}</p> : null}
         {status.lastError ? (
@@ -173,10 +173,15 @@ export default function MiningPage() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-edge/60 py-1.5 first:pt-0 sm:border-none sm:py-0.5">
-      <span className="text-ink3">{label}</span>
+      <span
+        className={hint ? "cursor-help text-ink3 underline decoration-dotted decoration-ink3/60 underline-offset-2" : "text-ink3"}
+        title={hint}
+      >
+        {label}
+      </span>
       <span className="font-semibold text-ink">{value}</span>
     </div>
   );
