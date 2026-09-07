@@ -440,6 +440,9 @@ export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): P
   if (enabled?.includes("eye")) {
     list.push({ id: "widget:eye", provider: "eye", ok: true, error: null, title: t.widgetEye, label: "", metrics: [] });
   }
+  if (enabled?.includes("camera")) {
+    list.push({ id: "widget:camera", provider: "camera", ok: true, error: null, title: t.widgetCamera, label: "", metrics: [] });
+  }
   if (enabled?.includes("spotify")) {
     list.push({ id: "widget:spotify", provider: "spotify", ok: true, error: null, title: t.widgetSpotify, label: "", metrics: [] });
   }

@@ -10,6 +10,7 @@ import { TileChrome } from "./SizeMenu";
 import {
   AdsenseTileCard,
   BitcoinTileCard,
+  CameraTileCard,
   ClaudeTileCard,
   ClockTileCard,
   CreditsTileCard,
@@ -112,6 +113,9 @@ export function ProviderCard({
   }
   if (p.provider === "eye") {
     return <EyeTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "camera") {
+    return <CameraTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "spotify") {
     return <SpotifyTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;

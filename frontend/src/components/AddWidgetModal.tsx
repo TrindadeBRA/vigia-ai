@@ -4,9 +4,9 @@ import { Modal } from "../pages/config/ui";
 import { PROVIDER_ICON } from "../theme";
 import { EyeMark } from "./Logo";
 
-export type WidgetKind = "clock" | "eye" | "spotify" | "youtubemusic" | "system";
+export type WidgetKind = "clock" | "eye" | "camera" | "spotify" | "youtubemusic" | "system";
 
-export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "spotify", "youtubemusic", "system"];
+export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "camera", "spotify", "youtubemusic", "system"];
 
 function ClockIcon() {
   return (
@@ -29,10 +29,20 @@ function ImageIcon() {
 
 function widgetLabel(kind: WidgetKind, t: T): string {
   if (kind === "clock") return t.widgetClock;
+  if (kind === "camera") return t.widgetCamera;
   if (kind === "spotify") return t.widgetSpotify;
   if (kind === "youtubemusic") return t.widgetYoutubeMusic;
   if (kind === "system") return t.widgetSystem;
   return t.widgetEye;
+}
+
+function CameraIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 7l-7 5 7 5V7z" />
+      <rect x="1" y="5" width="15" height="14" rx="2" />
+    </svg>
+  );
 }
 
 function SystemIcon() {
@@ -47,6 +57,7 @@ function SystemIcon() {
 
 function widgetIcon(kind: WidgetKind) {
   if (kind === "clock") return <ClockIcon />;
+  if (kind === "camera") return <CameraIcon />;
   if (kind === "spotify") return <img className="size-5 object-contain" src={PROVIDER_ICON.spotify} alt="" draggable={false} />;
   if (kind === "youtubemusic") return <img className="size-5 object-contain" src={PROVIDER_ICON.youtubemusic} alt="" draggable={false} />;
   if (kind === "system") return <SystemIcon />;

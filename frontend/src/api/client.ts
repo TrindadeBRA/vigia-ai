@@ -1,4 +1,4 @@
-import type { AlarmRule, AlarmsPublic, ConfigPublic, MiningConfig, MiningStatus, UsagePayload } from "./types";
+import type { AlarmRule, AlarmsPublic, CameraConfig, ConfigPublic, MiningConfig, MiningStatus, UsagePayload } from "./types";
 
 export async function fetchUsage(): Promise<UsagePayload> {
   const res = await fetch("/usage", { cache: "no-store" });
@@ -91,6 +91,21 @@ export async function fetchMiningConfig(): Promise<MiningConfig> {
 
 export async function saveMiningConfig(patch: Partial<MiningConfig>): Promise<MutateResult> {
   const res = await fetch("/api/mining/config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return readMutate(res);
+}
+
+export async function fetchCameraConfig(): Promise<CameraConfig> {
+  const res = await fetch("/api/camera/config", { cache: "no-store" });
+  if (!res.ok) throw new Error(`camera config HTTP ${res.status}`);
+  return res.json() as Promise<CameraConfig>;
+}
+
+export async function saveCameraConfig(patch: { host?: string; port?: number; path?: string; username?: string; password?: string }): Promise<MutateResult> {
+  const res = await fetch("/api/camera/config", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),

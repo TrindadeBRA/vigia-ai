@@ -4,6 +4,7 @@ import { isCloneId, normalizeSize, type CardSize } from "../../board";
 import { cn } from "../../cn";
 import { AdsenseBoardCard, adsenseAllowedSizes, adsenseSizeLabel } from "../../components/cards/AdsenseCard";
 import { BitcoinBoardCard, bitcoinAllowedSizes, bitcoinSizeLabel } from "../../components/cards/BitcoinCard";
+import { CameraBoardCard, cameraAllowedSizes, cameraSizeLabel } from "../../components/cards/CameraCard";
 import { ClaudeBoardCard, claudeAllowedSizes, claudeSizeLabel } from "../../components/cards/ClaudeCard";
 import { ClockBoardCard, clockAllowedSizes, clockSizeLabel } from "../../components/cards/ClockCard";
 import { CreditsBoardCard, creditsAllowedSizes, creditsSizeLabel } from "../../components/cards/CreditsCard";
@@ -148,6 +149,20 @@ export function SpotifyTileCard({ p, size, dragging, lifted, t, grip, bg, readon
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => spotifySizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <SpotifyBoardCard t={t} size={size} />
+    </div>
+  );
+}
+
+export function CameraTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = cameraAllowedSizes();
+  const isClone = isCloneId(p.id);
+  const style = useTileStyle(bg);
+  return (
+    <div className={cn(TILE_BASE, "p-2", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => cameraSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <CameraBoardCard t={t} size={size} />
     </div>
   );
 }

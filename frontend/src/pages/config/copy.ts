@@ -221,6 +221,25 @@ export type ConfigCopy = {
   providerSaving: string;
   providerSaved: string;
   providerError: string;
+  // Câmera IP (protótipo)
+  cameraTitle: string;
+  cameraBlurb: string;
+  cameraHost: string;
+  cameraHostPh: string;
+  cameraPort: string;
+  cameraPath: string;
+  cameraPathPh: string;
+  cameraUsername: string;
+  cameraPassword: string;
+  cameraPasswordPh: string;
+  cameraSave: string;
+  cameraSaving: string;
+  cameraSaved: string;
+  cameraError: string;
+  cameraConfigured: string;
+  cameraNotConfigured: string;
+  cameraOfflineHint: string;
+  cameraNeedsConfigHint: string;
   // Financeiro
   financeiroTitle: string;
   financeiroLead: string;
@@ -582,6 +601,24 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     providerSaving: "Salvando…",
     providerSaved: "Chaves salvas.",
     providerError: "Falha ao salvar chaves.",
+    cameraTitle: "Câmera IP",
+    cameraBlurb: "Mostra o snapshot de uma câmera RTSP local no board. Exige ffmpeg instalado no computador do coletor — câmeras baratas (Yoosee/HiIP e clones) costumam expor RTSP em /onvif1 com autenticação Digest.",
+    cameraHost: "IP / HOST",
+    cameraHostPh: "ex.: 192.168.3.27",
+    cameraPort: "PORTA",
+    cameraPath: "CAMINHO RTSP",
+    cameraPathPh: "ex.: onvif1",
+    cameraUsername: "USUÁRIO",
+    cameraPassword: "SENHA",
+    cameraPasswordPh: "senha da câmera",
+    cameraSave: "Salvar câmera",
+    cameraSaving: "Salvando…",
+    cameraSaved: "Câmera salva.",
+    cameraError: "Falha ao salvar a câmera.",
+    cameraConfigured: "Configurada",
+    cameraNotConfigured: "Não configurada",
+    cameraOfflineHint: "Não foi possível carregar a imagem da câmera.",
+    cameraNeedsConfigHint: "Configure a câmera em Configurações.",
     financeiroTitle: "Financeiro",
     financeiroLead: "Carteira Bitcoin, AdSense e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
     outrosTitle: "Outros",
@@ -935,6 +972,24 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     providerSaving: "Saving…",
     providerSaved: "Keys saved.",
     providerError: "Failed to save keys.",
+    cameraTitle: "IP Camera",
+    cameraBlurb: "Shows a snapshot from a local RTSP camera on the board. Requires ffmpeg installed on the collector's machine — cheap cameras (Yoosee/HiIP clones) usually expose RTSP at /onvif1 with Digest auth.",
+    cameraHost: "IP / HOST",
+    cameraHostPh: "e.g. 192.168.3.27",
+    cameraPort: "PORT",
+    cameraPath: "RTSP PATH",
+    cameraPathPh: "e.g. onvif1",
+    cameraUsername: "USERNAME",
+    cameraPassword: "PASSWORD",
+    cameraPasswordPh: "camera password",
+    cameraSave: "Save camera",
+    cameraSaving: "Saving…",
+    cameraSaved: "Camera saved.",
+    cameraError: "Failed to save camera.",
+    cameraConfigured: "Configured",
+    cameraNotConfigured: "Not configured",
+    cameraOfflineHint: "Could not load the camera image.",
+    cameraNeedsConfigHint: "Set up the camera in Settings.",
     financeiroTitle: "Finance",
     financeiroLead: "Bitcoin wallet, AdSense and currency quotes — dollar, euro, crypto, whatever you want to track.",
     outrosTitle: "Other",
@@ -1288,6 +1343,24 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     providerSaving: "Guardando…",
     providerSaved: "Claves guardadas.",
     providerError: "Error al guardar claves.",
+    cameraTitle: "Cámara IP",
+    cameraBlurb: "Muestra la instantánea de una cámara RTSP local en el tablero. Requiere ffmpeg instalado en el equipo del colector — las cámaras baratas (Yoosee/HiIP y clones) suelen exponer RTSP en /onvif1 con autenticación Digest.",
+    cameraHost: "IP / HOST",
+    cameraHostPh: "ej.: 192.168.3.27",
+    cameraPort: "PUERTO",
+    cameraPath: "RUTA RTSP",
+    cameraPathPh: "ej.: onvif1",
+    cameraUsername: "USUARIO",
+    cameraPassword: "CONTRASEÑA",
+    cameraPasswordPh: "contraseña de la cámara",
+    cameraSave: "Guardar cámara",
+    cameraSaving: "Guardando…",
+    cameraSaved: "Cámara guardada.",
+    cameraError: "Error al guardar la cámara.",
+    cameraConfigured: "Configurada",
+    cameraNotConfigured: "No configurada",
+    cameraOfflineHint: "No se pudo cargar la imagen de la cámara.",
+    cameraNeedsConfigHint: "Configura la cámara en Configuración.",
     financeiroTitle: "Finanzas",
     financeiroLead: "Billetera Bitcoin, AdSense y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
     outrosTitle: "Otros",

@@ -5,6 +5,7 @@ import { isDesktop } from "../../desktop";
 import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
 import { AdSenseConfigCard } from "./AdSenseConfigCard";
 import { CalendarConfigCard } from "./CalendarConfigCard";
+import { CameraConfigCard } from "./CameraConfigCard";
 import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
 import { DesktopCard } from "./DesktopCard";
 import { GitConfigCard } from "./GitConfigCard";
@@ -197,6 +198,7 @@ export default function ConfigPage() {
         <RssConfigCard rss={cfg.rss} c={c} onReload={reload} />
         <GithubConfigCard github={cfg.github} c={c} onReload={reload} />
         <IssConfigCard iss={cfg.iss} c={c} onReload={reload} />
+        <CameraConfigCard c={c} />
         <SpotifyConfigCard p={cfg.providers.spotify} listenPort={cfg.listen.port} {...common} />
         <YoutubeMusicConfigCard p={(cfg.providers as Record<string, unknown>).youtubemusic as ProviderCardPublic ?? { source: "missing", label: "", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] } as unknown as ProviderCardPublic} listenPort={cfg.listen.port} {...common} />
       </div>

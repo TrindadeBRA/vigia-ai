@@ -608,6 +608,15 @@ export type MiningConfig = {
   workerName: string;
 };
 
+// Câmera IP local (protótipo) — snapshot via /api/camera/snapshot (ffmpeg no coletor).
+export type CameraConfig = {
+  configured: boolean;
+  host: string;
+  port: number;
+  path: string;
+  username: string;
+};
+
 export type MiningStatusValue = "idle" | "no_wifi" | "connecting" | "mining" | "pool_offline" | "error";
 
 export type MiningStatus = {

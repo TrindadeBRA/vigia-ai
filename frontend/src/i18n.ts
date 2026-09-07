@@ -152,9 +152,12 @@ type Strings = {
   addWidgetHint: string;
   widgetClock: string;
   widgetEye: string;
+  widgetCamera: string;
   widgetSpotify: string;
   spotifyNothingPlaying: string;
   spotifyConnectHint: string;
+  cameraNeedsConfigHint: string;
+  cameraOfflineHint: string;
   spotifyPlay: string;
   spotifyPause: string;
   spotifyNext: string;
@@ -409,9 +412,12 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Widgets extras não usam dados de conta — são só visuais.",
     widgetClock: "Relógio",
     widgetEye: "Olho",
+    widgetCamera: "Câmera",
     widgetSpotify: "Spotify",
     spotifyNothingPlaying: "Nada tocando",
     spotifyConnectHint: "Conecte sua conta Spotify em Configurações",
+    cameraNeedsConfigHint: "Configure a câmera em Configurações.",
+    cameraOfflineHint: "Não foi possível carregar a imagem da câmera.",
     spotifyPlay: "Tocar",
     spotifyPause: "Pausar",
     spotifyNext: "Próxima faixa",
@@ -658,9 +664,12 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Extra widgets don't use account data — they're just visual.",
     widgetClock: "Clock",
     widgetEye: "Eye",
+    widgetCamera: "Camera",
     widgetSpotify: "Spotify",
     spotifyNothingPlaying: "Nothing playing",
     spotifyConnectHint: "Connect your Spotify account in Settings",
+    cameraNeedsConfigHint: "Set up the camera in Settings.",
+    cameraOfflineHint: "Could not load the camera image.",
     spotifyPlay: "Play",
     spotifyPause: "Pause",
     spotifyNext: "Next track",
@@ -907,9 +916,12 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Los widgets extra no usan datos de cuenta — son solo visuales.",
     widgetClock: "Reloj",
     widgetEye: "Ojo",
+    widgetCamera: "Cámara",
     widgetSpotify: "Spotify",
     spotifyNothingPlaying: "Nada sonando",
     spotifyConnectHint: "Conecta tu cuenta de Spotify en Configuración",
+    cameraNeedsConfigHint: "Configura la cámara en Configuración.",
+    cameraOfflineHint: "No se pudo cargar la imagen de la cámara.",
     spotifyPlay: "Reproducir",
     spotifyPause: "Pausar",
     spotifyNext: "Pista siguiente",

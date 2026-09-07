@@ -13,6 +13,7 @@ import { lanIPv4 } from "./netutil.js";
 import { createAdsenseRoutes } from "./routers/adsense.js";
 import { createBoardRoutes } from "./routers/board.js";
 import { createCalendarRoutes } from "./routers/calendar.js";
+import { createCameraRoutes } from "./routers/camera.js";
 import { createClientStateRoutes } from "./routers/clientState.js";
 import { createConfigRoutes } from "./routers/config.js";
 import { createCurrenciesRoutes } from "./routers/currencies.js";
@@ -175,6 +176,7 @@ export async function createApp() {
   await fastify.register(createIssRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
   await fastify.register(createMiningRoutes, { prefix: "" });
+  await fastify.register(createCameraRoutes, { prefix: "" });
   await fastify.register(createImagesRoutes, { prefix: "" });
   await fastify.register(createClientStateRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });
