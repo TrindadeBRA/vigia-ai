@@ -116,15 +116,18 @@ export default function MiningPage() {
       </Card>
 
       {config ? (
-        <Card title={c.configTitle} lead={c.configLead}>
+        <Card
+          title={c.configTitle}
+          lead={c.configLead}
+          action={
+            <Switch
+              label={c.enabledLabel}
+              checked={config.enabled}
+              onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
+            />
+          }
+        >
           <div className="flex flex-col gap-3">
-            <ActionRow>
-              <Switch
-                label={c.enabledLabel}
-                checked={config.enabled}
-                onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-              />
-            </ActionRow>
             <ActionRow>
               <TextField label={c.poolUrlLabel} value={config.poolUrl} onChange={(e) => setConfig({ ...config, poolUrl: e.target.value })} />
               <TextField
