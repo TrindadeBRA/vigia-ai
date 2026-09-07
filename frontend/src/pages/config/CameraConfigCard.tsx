@@ -32,7 +32,7 @@ function CameraRow({ camera, c, onReload }: { camera: CameraItem; c: ConfigCopy;
 
   const portNum = Number(port);
   const onvifPortNum = Number(onvifPort);
-  const ready = Boolean(host.trim()) && Number.isInteger(portNum) && portNum > 0 && portNum <= 65535 && Boolean(path.trim()) && Boolean(username.trim());
+  const ready = Boolean(host.trim()) && Number.isInteger(portNum) && portNum > 0 && portNum <= 65535 && Boolean(username.trim());
   const pill = camera.configured ? { state: "ok" as const, label: c.cameraConfigured } : { state: "missing" as const, label: c.cameraNotConfigured };
 
   return (
@@ -137,7 +137,7 @@ export function CameraConfigCard({ c }: { c: ConfigCopy }) {
 
   const portNum = Number(port);
   const onvifPortNum = Number(onvifPort);
-  const ready = Boolean(host.trim()) && Number.isInteger(portNum) && portNum > 0 && portNum <= 65535 && Boolean(path.trim()) && Boolean(username.trim());
+  const ready = Boolean(host.trim()) && Number.isInteger(portNum) && portNum > 0 && portNum <= 65535 && Boolean(username.trim());
   const listSummary = cameras.length ? `${c.cameraListLabel} (${cameras.length})` : c.cameraListLabel;
 
   async function handleAdd() {
