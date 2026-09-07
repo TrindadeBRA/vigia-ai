@@ -18,6 +18,7 @@ import { fetchRssFeeds, mockRssPayload } from "./providers/rss.js";
 import { fetchWeatherData, mockWeatherPayload } from "./providers/weather.js";
 import { cache, fingerprint } from "./refreshCache.js";
 import { load, provider as providerCfg } from "./store.js";
+import { getStorageInfo, getSystemDetails } from "./systemInfo.js";
 
 export function mockPayload(): Record<string, unknown> {
   const now = utcNow();
@@ -162,6 +163,23 @@ export function mockPayload(): Record<string, unknown> {
     rss: mockRssPayload(),
     github: mockGithubPayload(),
     iss: mockIssPayload(),
+    storage: getStorageInfo().map((d) => ({
+      id: d.mount,
+      label: d.name,
+      ok: true,
+      error: null,
+      mount: d.mount,
+      filesystem: d.filesystem,
+      total_bytes: d.total_bytes,
+      free_bytes: d.free_bytes,
+      used_bytes: d.used_bytes,
+      total_gb: d.total_gb,
+      free_gb: d.free_gb,
+      used_gb: d.used_gb,
+      use_percent: d.use_percent,
+      free_percent: 100 - d.use_percent,
+    })),
+    system: [{ id: "host", label: getSystemDetails().hostname, ok: true, error: null, ...getSystemDetails() }],
   };
 }
 
@@ -487,6 +505,35 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     results.iss = await issPromise;
   } catch (exc) {
     results.iss = { ok: false, error: String(exc), updated_at: utcNow(), latitude: null, longitude: null, altitude_km: null, velocity_kmh: null, visibility: null, timestamp: null };
+  }
+
+  // storage + system are local, no external API — always fresh
+  try {
+    const storage = getStorageInfo();
+    results.storage = storage.map((d) => ({
+      id: d.mount,
+      label: d.name,
+      ok: true,
+      error: null,
+      mount: d.mount,
+      filesystem: d.filesystem,
+      total_bytes: d.total_bytes,
+      free_bytes: d.free_bytes,
+      used_bytes: d.used_bytes,
+      total_gb: d.total_gb,
+      free_gb: d.free_gb,
+      used_gb: d.used_gb,
+      use_percent: d.use_percent,
+      free_percent: 100 - d.use_percent,
+    }));
+  } catch {
+    results.storage = [];
+  }
+  try {
+    const sys = getSystemDetails();
+    results.system = [{ id: "host", label: sys.hostname, ok: true, error: null, ...sys }];
+  } catch {
+    results.system = [];
   }
 
   return { updated_at: utcNow(), ...results };

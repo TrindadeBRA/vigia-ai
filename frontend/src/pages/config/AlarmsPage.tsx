@@ -12,6 +12,7 @@ import { CalendarAlarmCard } from "./alarmsPage/CalendarAlarmCard";
 import { PROVIDER_LABEL, ruleHint, suggestLabel } from "./alarmsPage/helpers";
 import { ProviderIcon } from "./alarmsPage/ProviderIcon";
 import { RulesList } from "./alarmsPage/RulesList";
+import { StorageAlarmCard } from "./alarmsPage/StorageAlarmCard";
 import { TelegramConnectedPanel } from "./alarmsPage/TelegramConnectedPanel";
 import { ActionRow, Button, Card, FieldStatus, StatusPill, TextField, TomSelectField } from "./ui";
 import type { ConfigOutlet } from "./usePublicConfig";
@@ -44,12 +45,14 @@ export default function AlarmsPage() {
     void fetchConfig().then(setCfg).catch(() => { });
   }, []);
 
-  // Só mostra provedores que têm alguma conta configurada (ou calendar que é separado)
+  // Só mostra provedores que têm alguma conta configurada (ou calendar/storage/system que são locais)
+  const alwaysVisible = new Set(["storage", "system"]);
   const providers = useMemo(() => {
     if (!data) return [];
     const all = Object.keys(data.metrics || {}).filter((p) => p !== "calendar");
     if (!cfg) return all;
     return all.filter((p) => {
+      if (alwaysVisible.has(p)) return true;
       const card = (cfg.providers as Record<string, { configured?: boolean; accounts?: unknown[] }>)[p];
       if (!card) return false;
       if (card.configured) return true;
@@ -260,6 +263,8 @@ export default function AlarmsPage() {
 
         <RulesList data={data} c={c} onReload={reload} className="mt-6" />
       </Card>
+
+      <StorageAlarmCard c={c} data={data} onReload={reload} />
 
       <CalendarAlarmCard c={c} data={data} onReload={reload} />
     </div>

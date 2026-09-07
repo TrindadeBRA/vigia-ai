@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Select, { type GroupBase, type SingleValue, type StylesConfig } from "react-select";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
@@ -30,7 +30,7 @@ export type EmulatorRomGroup = {
     core: string;
     romPath: string;
     biosPath?: string | null;
-    roms: Array<{ name: string; file: string; ext: string; size: number | null }>;
+    roms: Array<{ name: string; file: string; ext: string; size: number | null; meta?: Record<string, unknown> | null }>;
     warning?: string;
 };
 
@@ -82,12 +82,13 @@ function setEmulatorActive(active: boolean) {
     window.dispatchEvent(new CustomEvent("vigia:emulator-active", { detail: { active: isEmulatorActive() } }));
 }
 
-function formatSize(bytes: number | null): string {
+function _formatSize(bytes: number | null): string {
     if (bytes == null) return "";
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
+void _formatSize;
 
 export function EmulatorBoardCard({
     platform,
@@ -108,6 +109,7 @@ export function EmulatorBoardCard({
     const isUnified = platform === "all";
     const s = normalizeSize(size);
     const isSmall = s === "sm" || s === "md";
+    const navigate = useNavigate();
     const containerId = useRef(`ejs-unified-${Math.random().toString(36).slice(2, 8)}`);
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const emulatorRef = useRef<HTMLDivElement>(null);
@@ -115,9 +117,10 @@ export function EmulatorBoardCard({
     const [groups, setGroups] = useState<EmulatorRomGroup[]>([]);
     const [loadingRoms, setLoadingRoms] = useState(false);
     const [romError, setRomError] = useState<string | null>(null);
-    const [selectedRom, setSelectedRom] = useState<string>("");
     const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [currentGame, setCurrentGame] = useState<string | null>(null);
+    const [pendingKey, setPendingKey] = useState<string | null>(null);
     const loaderRef = useRef<HTMLScriptElement | null>(null);
     const activeRef = useRef(false);
     const loadingRef = useRef(false);
@@ -178,108 +181,6 @@ export function EmulatorBoardCard({
     useEffect(() => {
         void fetchRoms();
     }, [fetchRoms]);
-
-    // react-select — searchable dropdown with optgroups
-    type RomOption = { value: string; label: string };
-    type RomGroup = { label: string; options: RomOption[] };
-
-    const romSelectGroups: RomGroup[] = useMemo(() => {
-        if (isUnified) {
-            return groups
-                .filter((g) => g.roms.length > 0)
-                .map((g) => ({
-                    label: g.label,
-                    options: g.roms.map((r) => ({
-                        value: g.platform + "::" + r.file,
-                        label: r.name + " (" + r.ext + ")" + (r.size ? " \u00b7 " + formatSize(r.size) : ""),
-                    })),
-                }));
-        }
-        return [
-            {
-                label: "Jogos",
-                options: roms.map((r) => ({
-                    value: r.file,
-                    label: r.name + " (" + r.ext + ")" + (r.size ? " \u00b7 " + formatSize(r.size) : ""),
-                })),
-            },
-        ];
-    }, [groups, roms, isUnified]);
-
-    const romSelectOptions: RomOption[] = useMemo(() => {
-        if (isUnified) return romSelectGroups.flatMap((g) => g.options);
-        return romSelectGroups[0]?.options ?? [];
-    }, [romSelectGroups, isUnified]);
-
-    const selectedRomOption: RomOption | null = useMemo(
-        () => romSelectOptions.find((o) => o.value === selectedRom) ?? null,
-        [romSelectOptions, selectedRom],
-    );
-
-    const romSelectStyles: StylesConfig<RomOption, false, GroupBase<RomOption>> = useMemo(
-        () => ({
-            control: (base, state) => ({
-                ...base,
-                minHeight: 34,
-                height: 34,
-                borderRadius: 10,
-                borderColor: state.isFocused ? "var(--accent, #e63931)" : "var(--card-border, #2e2e2e)",
-                backgroundColor: "var(--chip, #232323)",
-                color: "var(--text, #f5f5f5)",
-                boxShadow: state.isFocused ? "0 0 0 2px var(--accent, #e63931)" : "none",
-                "&:hover": { borderColor: state.isFocused ? "var(--accent, #e63931)" : "var(--card-border, #2e2e2e)" },
-            }),
-            valueContainer: (base) => ({ ...base, padding: "0 8px" }),
-            input: (base) => ({ ...base, color: "var(--text, #f5f5f5)", margin: 0, padding: 0, fontSize: 12.5 }),
-            placeholder: (base) => ({ ...base, color: "var(--text-muted, #737373)", fontSize: 12.5 }),
-            singleValue: (base) => ({ ...base, color: "var(--text, #f5f5f5)", fontSize: 12.5 }),
-            menu: (base) => ({
-                ...base,
-                backgroundColor: "var(--card, #1c1c1c)",
-                border: "1px solid var(--card-border, #2e2e2e)",
-                borderRadius: 10,
-                overflow: "hidden",
-                boxShadow: "0 8px 24px rgba(0,0,0,.4)",
-                zIndex: 50,
-            }),
-            menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-            menuList: (base) => ({ ...base, padding: 4 }),
-            option: (base, state) => ({
-                ...base,
-                backgroundColor: state.isSelected
-                    ? "var(--accent, #e63931)"
-                    : state.isFocused
-                        ? "color-mix(in srgb, var(--accent, #e63931) 14%, var(--card, #1c1c1c))"
-                        : "transparent",
-                color: state.isSelected ? "var(--accent-ink, #fff)" : "var(--text, #f5f5f5)",
-                fontSize: 12.5,
-                padding: "6px 10px",
-                borderRadius: 8,
-                cursor: "pointer",
-            }),
-            groupHeading: (base) => ({
-                ...base,
-                backgroundColor: "var(--chip, #232323)",
-                color: "var(--text-dim, #a1a1a1)",
-                fontWeight: 700,
-                fontSize: 11,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                padding: "6px 10px 4px",
-                margin: 0,
-            }),
-            indicatorSeparator: () => ({ display: "none" }),
-            dropdownIndicator: (base, state) => ({
-                ...base,
-                color: "var(--text-muted, #737373)",
-                padding: 6,
-                transform: state.selectProps.menuIsOpen ? "rotate(180deg)" : undefined,
-                transition: "transform 0.15s",
-            }),
-            clearIndicator: (base) => ({ ...base, color: "var(--text-muted, #737373)", padding: 6 }),
-        }),
-        [],
-    );
 
     // Track AudioContexts to allow proper audio cleanup on destroy
     useEffect(() => {
@@ -516,6 +417,7 @@ export function EmulatorBoardCard({
         resettingRef.current = false;
         setStatus("idle");
         setErrorMsg(null);
+        setCurrentGame(null);
     }, []);
 
     const loadGame = useCallback(async (romValue: string) => {
@@ -550,6 +452,7 @@ export function EmulatorBoardCard({
         loadingRef.current = true;
         setStatus("loading");
         setErrorMsg(null);
+        setCurrentGame(rom.name);
         setSelectedPlatform(effectivePlatform);
 
         const container = emulatorRef.current;
@@ -663,17 +566,58 @@ export function EmulatorBoardCard({
         }, 15000);
     }, [roms, platform, core, biosPath, globalConfig, dataPath, destroyEmulator, isSmall, isUnified]);
 
-    const handleRomChange = useCallback(
-        (opt: SingleValue<RomOption>) => {
-            const val = opt?.value ?? "";
-            setSelectedRom(val);
-            if (val) void loadGame(val);
-            else destroyEmulator();
-        },
-        [loadGame, destroyEmulator],
-    );
+    // pending play from library (localStorage + event)
+    useEffect(() => {
+        const checkPending = () => {
+            try {
+                const raw = localStorage.getItem("vigia:emulator:pending");
+                if (!raw) return;
+                const j = JSON.parse(raw) as { platform: string; file: string; key: string; at: number };
+                if (!j.key || !j.platform || !j.file) return;
+                // only if within last 30s
+                if (Date.now() - j.at > 30_000) {
+                    localStorage.removeItem("vigia:emulator:pending");
+                    return;
+                }
+                setPendingKey(j.key);
+            } catch { }
+        };
+        checkPending();
+        const onPlay = (e: Event) => {
+            const d = (e as CustomEvent).detail as { platform: string; file: string; key: string };
+            if (d?.key) setPendingKey(d.key);
+        };
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === "vigia:emulator:pending") checkPending();
+        };
+        window.addEventListener("vigia:emulator-play", onPlay as EventListener);
+        window.addEventListener("storage", onStorage);
+        // also poll once after roms load
+        const id = window.setInterval(checkPending, 1000);
+        return () => {
+            window.removeEventListener("vigia:emulator-play", onPlay as EventListener);
+            window.removeEventListener("storage", onStorage);
+            window.clearInterval(id);
+        };
+    }, []);
 
-    // Track selected platform for bios/gameUrl (used in loadGame via closure)
+    // when roms are ready and we have a pending key, auto-load
+    useEffect(() => {
+        if (!pendingKey || loadingRoms || roms.length === 0) return;
+        const exists = roms.some((r) => `${r.platform}::${r.file}` === pendingKey);
+        if (!exists) {
+            // maybe the pending is stale — clear
+            try { localStorage.removeItem("vigia:emulator:pending"); } catch { }
+            setPendingKey(null);
+            return;
+        }
+        // consume pending
+        try { localStorage.removeItem("vigia:emulator:pending"); } catch { }
+        const keyToLoad = pendingKey;
+        setPendingKey(null);
+        void loadGame(keyToLoad);
+    }, [pendingKey, loadingRoms, roms, loadGame]);
+
     const [, setSelectedPlatform] = useState<string>("");
 
     // ResizeObserver: when card resizes, tell EmulatorJS to resize canvas
@@ -729,6 +673,9 @@ export function EmulatorBoardCard({
 
     const handleContainerBlur = useCallback(() => { }, []);
 
+    const totalGames = roms.length;
+    const totalPlatforms = groups.length;
+
     return (
         <div className="flex h-full min-h-0 w-full flex-col gap-2">
             <div
@@ -750,90 +697,80 @@ export function EmulatorBoardCard({
                     style={{ contain: "layout size" } as React.CSSProperties}
                 />
                 {status === "idle" ? (
-                    <div className="relative z-10 flex flex-col items-center gap-2 p-4 text-center pointer-events-none">
-                        <div className="text-[13px] font-medium text-white/70">
-                            {roms.length ? "selecione um jogo abaixo" : "nenhum jogo na pasta"}
+                    <div className="relative z-10 flex flex-col items-center gap-3 p-4 text-center pointer-events-none">
+                        <div className="flex size-12 items-center justify-center rounded-2xl bg-white/10 text-[22px]">🎮</div>
+                        <div className="text-[13px] font-semibold text-white/80">
+                            {loadingRoms ? "carregando biblioteca…" : totalGames ? `${totalGames} jogo${totalGames === 1 ? "" : "s"} · ${totalPlatforms} plataforma${totalPlatforms === 1 ? "" : "s"}` : "nenhum jogo na pasta"}
                         </div>
-                        <div className="max-w-[28ch] text-[11px] leading-snug text-white/40">
-                            {isUnified ? `${groups.length} plataformas · ${roms.length} jogos` : romPath ? `pasta: ${romPath}` : "configure a pasta de jogos nas configurações"}
+                        <div className="max-w-[30ch] text-[11px] leading-snug text-white/40">
+                            {totalGames ? "abra a biblioteca para escolher um jogo" : "configure as pastas de ROMs em Configurações → Emulador"}
                         </div>
                     </div>
                 ) : null}
                 {status === "loading" ? (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/80">
                         <div className="size-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                        <div className="text-[12px] text-white/60">carregando...</div>
+                        <div className="text-[12px] text-white/60">carregando{currentGame ? ` · ${currentGame}` : "…"}</div>
                     </div>
                 ) : null}
                 {status === "error" ? (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black p-4 text-center">
                         <div className="text-[12px] text-bad">{errorMsg ?? "erro ao carregar"}</div>
-                        <button type="button" onClick={() => selectedRom && void loadGame(selectedRom)} className="rounded-lg bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20">tentar novamente</button>
+                        <button type="button" onClick={() => pendingKey && void loadGame(pendingKey)} className="rounded-lg bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20">tentar novamente</button>
+                    </div>
+                ) : null}
+                {status === "ready" && currentGame ? (
+                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
+                        ● {currentGame}
                     </div>
                 ) : null}
             </div>
 
-            <div className="flex shrink-0 items-center gap-1.5">
-                <div className="min-w-0 flex-1">
-                    {loadingRoms ? (
-                        <div className="flex h-[34px] items-center rounded-[10px] border border-edge bg-chip px-3 text-[12.5px] text-ink3">carregando jogos...</div>
-                    ) : romSelectOptions.length === 0 ? (
-                        <div className="flex h-[34px] items-center rounded-[10px] border border-edge bg-chip px-3 text-[12.5px] text-ink3">nenhum jogo</div>
-                    ) : isUnified ? (
-                        <Select<RomOption, false, GroupBase<RomOption>>
-                            options={romSelectGroups}
-                            value={selectedRomOption}
-                            onChange={handleRomChange}
-                            placeholder="selecione um jogo"
-                            isSearchable
-                            isClearable={Boolean(selectedRom)}
-                            menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
-                            menuPosition="fixed"
-                            styles={romSelectStyles}
-                            noOptionsMessage={() => "Nenhum jogo encontrado"}
-                            aria-label="Selecionar jogo"
-                        />
-                    ) : (
-                        <Select<RomOption, false, GroupBase<RomOption>>
-                            options={romSelectOptions}
-                            value={selectedRomOption}
-                            onChange={handleRomChange}
-                            placeholder="selecione um jogo"
-                            isSearchable
-                            isClearable={Boolean(selectedRom)}
-                            menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
-                            menuPosition="fixed"
-                            styles={romSelectStyles}
-                            noOptionsMessage={() => "Nenhum jogo encontrado"}
-                            aria-label="Selecionar jogo"
-                        />
-                    )}
-                    {romError ? <div className="mt-1 truncate text-[11px] text-warn">{romError}</div> : null}
-                </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                <button
+                    type="button"
+                    onClick={() => navigate("/display/emulator")}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-[13px] font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
+                >
+                    <span className="text-[14px]">▦</span> Biblioteca
+                    {totalGames ? <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[11px]">{totalGames}</span> : null}
+                </button>
                 {status === "ready" ? (
-                    <button
-                        type="button"
-                        data-emu-menu-btn
-                        onClick={toggleMenu}
-                        title={menuOpen ? "Fechar menu" : "Menu do emulador"}
-                        className={`flex size-7 shrink-0 items-center justify-center rounded-lg border text-ink2 hover:text-ink ${menuOpen ? "border-accent bg-accent text-white" : "border-edge bg-chip hover:border-accent"}`}
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-                    </button>
+                    <>
+                        <button
+                            type="button"
+                            data-emu-menu-btn
+                            onClick={toggleMenu}
+                            title={menuOpen ? "Fechar menu" : "Menu do emulador"}
+                            className={`flex size-8 shrink-0 items-center justify-center rounded-xl border text-ink2 hover:text-ink ${menuOpen ? "border-accent bg-accent text-white" : "border-edge bg-chip hover:border-accent"}`}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => destroyEmulator()}
+                            title="Parar jogo"
+                            className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-edge bg-chip text-ink2 hover:border-bad hover:text-bad"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
+                        </button>
+                    </>
                 ) : null}
                 <button
                     type="button"
                     onClick={() => void fetchRoms()}
                     title="Atualizar lista"
-                    className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-edge bg-chip text-ink2 hover:border-accent hover:text-ink"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-edge bg-chip text-ink2 hover:border-accent hover:text-ink"
                 >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9" /><path d="M21 12H12M12 12V3" /></svg>
                 </button>
             </div>
 
             <div className="flex shrink-0 items-center justify-between gap-2 text-[11px] text-ink3">
-                <span className="truncate">{isUnified ? `${groups.length} plataformas · ${roms.length} jogos` : `${core} · ${dataPath.replace("https://", "")}`}</span>
-                {status === "ready" ? <span className="shrink-0 text-good">● jogando</span> : null}
+                <span className="truncate">
+                    {status === "ready" && currentGame ? `jogando · ${currentGame}` : isUnified ? `${totalPlatforms} plataformas · ${totalGames} jogos` : `${core} · ${dataPath.replace("https://", "")}`}
+                </span>
+                {status === "ready" ? <span className="shrink-0 text-good">● jogando</span> : loadingRoms ? <span className="shrink-0">carregando…</span> : romError ? <span className="shrink-0 truncate text-warn">{romError}</span> : null}
             </div>
         </div>
     );

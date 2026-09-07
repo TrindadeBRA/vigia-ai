@@ -1,4 +1,4 @@
-import type { CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubRepo, IssPayload, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
+import type { AndroidDevice, CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubRepo, IssPayload, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
 import type { PALETTES, ResolvedThemeName } from "../../theme";
 
 export type Pal = (typeof PALETTES)[ResolvedThemeName];
@@ -13,7 +13,7 @@ export type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "iss" | "image" | "note" | "emulator";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "iss" | "image" | "note" | "emulator" | "android";
   weather?: WeatherPayload | null;
   weatherConfig?: WeatherConfig | null;
   currencies?: CurrenciesPayload | null;
@@ -30,5 +30,6 @@ export type ProviderMeta = {
   imageTransform?: { x: number; y: number; scale: number } | null;
   note?: { id: string; text: string; color: string } | null;
   camera?: CameraItem | null;
+  android?: AndroidDevice | null;
   emulator?: { platform: string; core: string; romPath: string; biosPath: string | null; label: string } | null;
 };

@@ -47,6 +47,26 @@ export const EmulatorPlatformConfigSchema = z.object({
 });
 export type EmulatorPlatformConfig = z.infer<typeof EmulatorPlatformConfigSchema>;
 
+export const EmulatorIgdbConfigSchema = z.object({
+    clientId: z.string().default(""),
+    clientSecret: z.string().default(""),
+});
+export type EmulatorIgdbConfig = z.infer<typeof EmulatorIgdbConfigSchema>;
+
+export const EmulatorGameMetaSchema = z.object({
+    platform: z.string(),
+    file: z.string(),
+    igdbId: z.number().nullable().default(null),
+    name: z.string().nullable().default(null),
+    coverUrl: z.string().nullable().default(null),
+    coverImageId: z.string().nullable().default(null),
+    summary: z.string().nullable().default(null),
+    firstReleaseDate: z.number().nullable().default(null),
+    rating: z.number().nullable().default(null),
+    updatedAt: z.string().nullable().default(null),
+});
+export type EmulatorGameMeta = z.infer<typeof EmulatorGameMetaSchema>;
+
 export const EmulatorConfigSchema = z.object({
     enabled: z.boolean().default(false),
     hidden: z.boolean().default(false),
@@ -68,8 +88,12 @@ export const EmulatorConfigSchema = z.object({
     disableBatchBootup: z.boolean().default(false),
     noAutoFocus: z.boolean().default(false),
     hideSettings: z.boolean().default(false),
+    // IGDB
+    igdb: EmulatorIgdbConfigSchema.default({ clientId: "", clientSecret: "" }),
     // plataformas
     platforms: z.array(EmulatorPlatformConfigSchema).default([]),
+    // metadados de jogos (chave = "platform::file")
+    gameMeta: z.record(EmulatorGameMetaSchema).default({}),
 });
 export type EmulatorConfig = z.infer<typeof EmulatorConfigSchema>;
 

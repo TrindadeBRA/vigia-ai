@@ -3,6 +3,7 @@ import { useKonamiCode } from "./hooks/useKonamiCode";
 import "./index.css";
 import CanvasPage from "./pages/CanvasPage";
 import Display from "./pages/Display";
+import EmulatorLibraryPage from "./pages/EmulatorLibraryPage";
 import AlarmsPage from "./pages/config/AlarmsPage";
 import ConfigPage from "./pages/config/ConfigPage";
 import MiningPage from "./pages/config/MiningPage";
@@ -27,6 +28,9 @@ export default function App() {
           <Route path="alarmes" element={<Navigate to="/display/alarms" replace />} />
           <Route path="mining" element={<MiningPage />} />
           <Route path="mineracao" element={<Navigate to="/display/mining" replace />} />
+          <Route path="emulator" element={<EmulatorLibraryPage />} />
+          <Route path="emulador" element={<Navigate to="/display/emulator" replace />} />
+          <Route path="biblioteca" element={<Navigate to="/display/emulator" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

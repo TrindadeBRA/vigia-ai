@@ -254,6 +254,34 @@ export type ConfigCopy = {
   cameraPtzRight: string;
   cameraPtzZoomIn: string;
   cameraPtzZoomOut: string;
+  // Android via ADB (protótipo inspirado no scrcpy)
+  androidTitle: string;
+  androidBlurb: string;
+  androidListLabel: string;
+  androidEmpty: string;
+  androidAdd: string;
+  androidLabel: string;
+  androidLabelPh: string;
+  androidHost: string;
+  androidHostPh: string;
+  androidPort: string;
+  androidSerial: string;
+  androidAutoConnect: string;
+  androidSave: string;
+  androidSaving: string;
+  androidSaved: string;
+  androidError: string;
+  androidConfigured: string;
+  androidNotConfigured: string;
+  androidOfflineHint: string;
+  androidNeedsConfigHint: string;
+  androidConnected: string;
+  androidBack: string;
+  androidHome: string;
+  androidMenu: string;
+  androidPower: string;
+  androidInteractiveOn: string;
+  androidInteractiveOff: string;
   // Financeiro
   financeiroTitle: string;
   financeiroLead: string;
@@ -647,6 +675,33 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraPtzRight: "Mover para a direita",
     cameraPtzZoomIn: "Aproximar zoom",
     cameraPtzZoomOut: "Afastar zoom",
+    androidTitle: "Android (ADB / scrcpy)",
+    androidBlurb: "Espelhe a tela de qualquer Android via ADB — USB ou TCP/IP. Cada dispositivo vira um card no dashboard com vídeo ao vivo e controle por toque (tap/swipe) e botões (voltar/home). Inspirado no scrcpy, sem precisar do binário scrcpy.",
+    androidListLabel: "Dispositivos cadastrados",
+    androidEmpty: "Nenhum dispositivo cadastrado ainda.",
+    androidAdd: "Adicionar dispositivo",
+    androidLabel: "NOME",
+    androidLabelPh: "ex.: Pixel 7",
+    androidHost: "IP (TCP/IP, opcional)",
+    androidHostPh: "ex.: 192.168.1.10",
+    androidPort: "PORTA",
+    androidSerial: "SERIAL (USB, opcional)",
+    androidAutoConnect: "Conectar automaticamente (TCP/IP)",
+    androidSave: "Salvar",
+    androidSaving: "Salvando…",
+    androidSaved: "Dispositivo salvo.",
+    androidError: "Falha ao salvar.",
+    androidConfigured: "Configurado",
+    androidNotConfigured: "Não configurado",
+    androidOfflineHint: "Dispositivo offline — verifique cabo USB ou adb connect e autorize a depuração.",
+    androidNeedsConfigHint: "Configure um dispositivo Android em Configurações.",
+    androidConnected: "Conectado",
+    androidBack: "Voltar",
+    androidHome: "Home",
+    androidMenu: "Recentes",
+    androidPower: "Power",
+    androidInteractiveOn: "Toque ativo",
+    androidInteractiveOff: "Toque inativo",
     financeiroTitle: "Financeiro",
     financeiroLead: "Carteira Bitcoin, AdSense e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
     outrosTitle: "Outros",
@@ -1032,6 +1087,33 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraPtzRight: "Move right",
     cameraPtzZoomIn: "Zoom in",
     cameraPtzZoomOut: "Zoom out",
+    androidTitle: "Android (ADB / scrcpy)",
+    androidBlurb: "Mirror any Android screen over ADB — USB or TCP/IP. Each device becomes its own card on the dashboard with live video and touch controls (tap/swipe) plus back/home buttons. Inspired by scrcpy, without needing the scrcpy binary.",
+    androidListLabel: "Configured devices",
+    androidEmpty: "No devices configured yet.",
+    androidAdd: "Add device",
+    androidLabel: "NAME",
+    androidLabelPh: "e.g. Pixel 7",
+    androidHost: "IP (TCP/IP, optional)",
+    androidHostPh: "e.g. 192.168.1.10",
+    androidPort: "PORT",
+    androidSerial: "SERIAL (USB, optional)",
+    androidAutoConnect: "Auto-connect (TCP/IP)",
+    androidSave: "Save",
+    androidSaving: "Saving…",
+    androidSaved: "Device saved.",
+    androidError: "Failed to save.",
+    androidConfigured: "Configured",
+    androidNotConfigured: "Not configured",
+    androidOfflineHint: "Device offline — check USB cable or adb connect and authorize debugging.",
+    androidNeedsConfigHint: "Set up an Android device in Settings.",
+    androidConnected: "Connected",
+    androidBack: "Back",
+    androidHome: "Home",
+    androidMenu: "Recents",
+    androidPower: "Power",
+    androidInteractiveOn: "Touch on",
+    androidInteractiveOff: "Touch off",
     financeiroTitle: "Finance",
     financeiroLead: "Bitcoin wallet, AdSense and currency quotes — dollar, euro, crypto, whatever you want to track.",
     outrosTitle: "Other",
@@ -1417,6 +1499,33 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraPtzRight: "Mover a la derecha",
     cameraPtzZoomIn: "Acercar zoom",
     cameraPtzZoomOut: "Alejar zoom",
+    androidTitle: "Android (ADB / scrcpy)",
+    androidBlurb: "Duplica la pantalla de cualquier Android vía ADB — USB o TCP/IP. Cada dispositivo se convierte en su propio card en el dashboard con video en vivo y control táctil (tap/swipe) más botones atrás/inicio. Inspirado en scrcpy, sin necesitar el binario scrcpy.",
+    androidListLabel: "Dispositivos configurados",
+    androidEmpty: "Todavía no hay dispositivos configurados.",
+    androidAdd: "Agregar dispositivo",
+    androidLabel: "NOMBRE",
+    androidLabelPh: "ej.: Pixel 7",
+    androidHost: "IP (TCP/IP, opcional)",
+    androidHostPh: "ej.: 192.168.1.10",
+    androidPort: "PUERTO",
+    androidSerial: "SERIAL (USB, opcional)",
+    androidAutoConnect: "Conectar automáticamente (TCP/IP)",
+    androidSave: "Guardar",
+    androidSaving: "Guardando…",
+    androidSaved: "Dispositivo guardado.",
+    androidError: "Error al guardar.",
+    androidConfigured: "Configurado",
+    androidNotConfigured: "No configurado",
+    androidOfflineHint: "Dispositivo sin conexión — revisa el cable USB o adb connect y autoriza la depuración.",
+    androidNeedsConfigHint: "Configura un dispositivo Android en Configuración.",
+    androidConnected: "Conectado",
+    androidBack: "Atrás",
+    androidHome: "Inicio",
+    androidMenu: "Recientes",
+    androidPower: "Power",
+    androidInteractiveOn: "Toque activo",
+    androidInteractiveOff: "Toque inactivo",
     financeiroTitle: "Finanzas",
     financeiroLead: "Billetera Bitcoin, AdSense y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
     outrosTitle: "Otros",

@@ -204,6 +204,47 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
                 </div>
             </Fold>
 
+            {/* IGDB */}
+            <Fold summary="IGDB — capas e informações dos jogos">
+                <p className={cfgHint}>
+                    Conecte sua conta da <a href="https://api.igdb.com" target="_blank" rel="noreferrer" className="underline hover:text-ink">IGDB (Twitch Developers)</a> para buscar capas e dados dos jogos na biblioteca. Crie um app em <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noreferrer" className="underline hover:text-ink">dev.twitch.tv/console/apps</a> e copie o Client ID e Client Secret.
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-3 max-[520px]:grid-cols-1">
+                    <TextField
+                        label="IGDB Client ID"
+                        placeholder="ex.: abc123..."
+                        value={cfg.igdb?.clientId ?? ""}
+                        onChange={(e) => setCfg({ ...cfg, igdb: { ...(cfg.igdb ?? { clientId: "", clientSecret: "" }), clientId: e.target.value } })}
+                        onBlur={async () => {
+                            await saveReq.run(async () => patch({ igdb: { clientId: cfg.igdb?.clientId ?? "", clientSecret: cfg.igdb?.clientSecret ?? "" } }), { success: c.saved, error: c.fail });
+                        }}
+                    />
+                    <TextField
+                        label="IGDB Client Secret"
+                        placeholder="ex.: xyz789..."
+                        type="password"
+                        value={cfg.igdb?.clientSecret ?? ""}
+                        onChange={(e) => setCfg({ ...cfg, igdb: { ...(cfg.igdb ?? { clientId: "", clientSecret: "" }), clientSecret: e.target.value } })}
+                        onBlur={async () => {
+                            await saveReq.run(async () => patch({ igdb: { clientId: cfg.igdb?.clientId ?? "", clientSecret: cfg.igdb?.clientSecret ?? "" } }), { success: c.saved, error: c.fail });
+                        }}
+                    />
+                </div>
+                <div className="mt-2 flex gap-2">
+                    <Button
+                        loading={saveReq.busy}
+                        onClick={async () => {
+                            await saveReq.run(async () => patch({ igdb: { clientId: cfg.igdb?.clientId ?? "", clientSecret: cfg.igdb?.clientSecret ?? "" } }), { success: c.saved, error: c.fail });
+                        }}
+                    >
+                        Salvar IGDB
+                    </Button>
+                    <span className="self-center text-[11px] text-ink3">
+                        {(cfg.igdb?.clientId && cfg.igdb?.clientSecret) ? "✓ configurado" : "não configurado"}
+                    </span>
+                </div>
+            </Fold>
+
             {/* Platforms */}
             <div className="flex flex-col gap-2">
                 <h4 className="m-0 text-[13px] font-bold">Plataformas</h4>

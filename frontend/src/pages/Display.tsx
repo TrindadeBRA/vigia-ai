@@ -14,11 +14,12 @@ import { PageBreadcrumb } from "../components/PageBreadcrumb";
 import { PixDonateModal } from "../components/PixDonateModal";
 import { Skeleton } from "../components/Skeleton";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, countdownSecs, fmtClock, nextFetchAtMs, payloadAgeMs } from "../format";
+import { useAndroidDevices } from "../hooks/useAndroidDevices";
+import { useCameras } from "../hooks/useCameras";
 import { GAMEPAD_CSS, gamepadScrollMain, gamepadZoom, isGamepadTypingActive, useGamepad } from "../hooks/useGamepad";
 import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useImageWidgets } from "../hooks/useImageWidgets";
-import { useCameras } from "../hooks/useCameras";
 import { useServerNotes } from "../hooks/useServerNotes";
 import { STR } from "../i18n";
 import { ACCENTS, PALETTES, applyThemeVars, getSystemTheme, resolveTheme } from "../theme";
@@ -26,7 +27,7 @@ import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
 import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
-import { buildCameraProviders, buildEmulatorProviders, buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
+import { buildAndroidProviders, buildCameraProviders, buildEmulatorProviders, buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
 import { SettingsDrawer } from "./display/SettingsDrawer";
@@ -48,8 +49,9 @@ export default function Display() {
   const isCanvas = pathname === "/display/canvas";
   const isAlarms = pathname === "/display/alarms" || pathname === "/display/alarmes";
   const isMining = pathname === "/display/mining" || pathname === "/display/mineracao";
+  const isEmulatorLibrary = pathname === "/display/emulator" || pathname === "/display/emulador" || pathname === "/display/biblioteca";
   const isNow = pathname === "/display/now";
-  const isNested = isConfig || isSetup || isTheme || isCanvas || isAlarms || isMining || isNow;
+  const isNested = isConfig || isSetup || isTheme || isCanvas || isAlarms || isMining || isNow || isEmulatorLibrary;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -76,6 +78,7 @@ export default function Display() {
   const imageWidgets = useImageWidgets();
   const serverNotes = useServerNotes();
   const cameras = useCameras();
+  const androidDevices = useAndroidDevices();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
@@ -224,6 +227,9 @@ export default function Display() {
   // Câmeras: cada uma cadastrada em Configurações vira seu próprio bloco,
   // igual às notas — sem toggle único de "ativar câmera".
   const cameraProviders = buildCameraProviders(cameras.items, t);
+  // Android via ADB (scrcpy-like): cada dispositivo salvo vira seu próprio
+  // bloco no board, com espelhamento ao vivo e controle por toque.
+  const androidProviders = buildAndroidProviders(androidDevices.items, t);
   const emulatorProviders = buildEmulatorProviders(emulatorConfig, t).map((p) => Object.assign(p, {
     _emulatorConfig: emulatorConfig ? {
       cdnVersion: emulatorConfig.cdnVersion,
@@ -247,8 +253,8 @@ export default function Display() {
   }));
   const bpBoard = boardForCols(boards, currentCols);
   const boardProviders = data
-    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders, ...cameraProviders, ...emulatorProviders]
-    : [...imageProviders, ...noteProviders, ...cameraProviders, ...buildWidgetProviders(prefs.widgets, t), ...emulatorProviders];
+    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...emulatorProviders]
+    : [...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...buildWidgetProviders(prefs.widgets, t), ...emulatorProviders];
   const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
   const toggleWidget = (kind: WidgetKind) =>
     setPrefs((p) => {
@@ -855,6 +861,7 @@ export default function Display() {
                   onDuplicateNote={(id) => void serverNotes.duplicate(id.replace(/^note:/, ""))}
                   onUpdateNote={(id, patch) => void serverNotes.update(id.replace(/^note:/, ""), patch as never)}
                   onRemoveCamera={(id) => void cameras.remove(id.replace(/^widget:camera:/, ""))}
+                  onRemoveAndroid={(id) => void androidDevices.remove(id.replace(/^widget:android:/, ""))}
                 />
               ) : null}
               {section === "account" && meta && !hideChrome ? (

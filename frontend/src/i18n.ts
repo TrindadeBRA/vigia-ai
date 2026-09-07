@@ -164,6 +164,15 @@ type Strings = {
   cameraPtzRight: string;
   cameraPtzZoomIn: string;
   cameraPtzZoomOut: string;
+  widgetAndroid: string;
+  androidNeedsConfigHint: string;
+  androidOfflineHint: string;
+  androidBack: string;
+  androidHome: string;
+  androidMenu: string;
+  androidPower: string;
+  androidInteractiveOn: string;
+  androidInteractiveOff: string;
   spotifyPlay: string;
   spotifyPause: string;
   spotifyNext: string;
@@ -185,6 +194,15 @@ type Strings = {
   systemPlatform: string;
   systemCores: string;
   systemOffline: string;
+  systemStorage: string;
+  systemStorageFree: string;
+  systemStorageUsed: string;
+  systemStorageTotal: string;
+  systemDetails: string;
+  systemHostname: string;
+  systemCpuModel: string;
+  systemOs: string;
+  systemRam: string;
   widgetNote: string;
   widgetNoteDesc: string;
   widgetImage: string;
@@ -430,6 +448,15 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzRight: "Mover para a direita",
     cameraPtzZoomIn: "Aproximar zoom",
     cameraPtzZoomOut: "Afastar zoom",
+    widgetAndroid: "Android",
+    androidNeedsConfigHint: "Configure um dispositivo Android em Configurações.",
+    androidOfflineHint: "Dispositivo offline — verifique cabo USB ou adb connect.",
+    androidBack: "Voltar",
+    androidHome: "Home",
+    androidMenu: "Recentes",
+    androidPower: "Power",
+    androidInteractiveOn: "Toque ativo",
+    androidInteractiveOff: "Toque inativo",
     spotifyPlay: "Tocar",
     spotifyPause: "Pausar",
     spotifyNext: "Próxima faixa",
@@ -451,6 +478,15 @@ export const STR: Record<Lang, Strings> = {
     systemPlatform: "Plataforma",
     systemCores: "núcleos",
     systemOffline: "Coletor offline",
+    systemStorage: "Armazenamento",
+    systemStorageFree: "livre",
+    systemStorageUsed: "usados",
+    systemStorageTotal: "total",
+    systemDetails: "Detalhes do sistema",
+    systemHostname: "Host",
+    systemCpuModel: "CPU",
+    systemOs: "SO",
+    systemRam: "RAM",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it com Markdown e cor personalizável.",
     widgetImage: "Imagem",
@@ -688,6 +724,15 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzRight: "Move right",
     cameraPtzZoomIn: "Zoom in",
     cameraPtzZoomOut: "Zoom out",
+    widgetAndroid: "Android",
+    androidNeedsConfigHint: "Set up an Android device in Settings.",
+    androidOfflineHint: "Device offline — check USB cable or adb connect.",
+    androidBack: "Back",
+    androidHome: "Home",
+    androidMenu: "Recents",
+    androidPower: "Power",
+    androidInteractiveOn: "Touch on",
+    androidInteractiveOff: "Touch off",
     spotifyPlay: "Play",
     spotifyPause: "Pause",
     spotifyNext: "Next track",
@@ -709,6 +754,15 @@ export const STR: Record<Lang, Strings> = {
     systemPlatform: "Platform",
     systemCores: "cores",
     systemOffline: "Collector offline",
+    systemStorage: "Storage",
+    systemStorageFree: "free",
+    systemStorageUsed: "used",
+    systemStorageTotal: "total",
+    systemDetails: "System details",
+    systemHostname: "Host",
+    systemCpuModel: "CPU",
+    systemOs: "OS",
+    systemRam: "RAM",
     widgetNote: "Note",
     widgetNoteDesc: "Post-it with Markdown and custom color.",
     widgetImage: "Image",
@@ -946,6 +1000,15 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzRight: "Mover a la derecha",
     cameraPtzZoomIn: "Acercar zoom",
     cameraPtzZoomOut: "Alejar zoom",
+    widgetAndroid: "Android",
+    androidNeedsConfigHint: "Configura un dispositivo Android en Configuración.",
+    androidOfflineHint: "Dispositivo sin conexión — revisa el cable USB o adb connect.",
+    androidBack: "Atrás",
+    androidHome: "Inicio",
+    androidMenu: "Recientes",
+    androidPower: "Power",
+    androidInteractiveOn: "Toque activo",
+    androidInteractiveOff: "Toque inactivo",
     spotifyPlay: "Reproducir",
     spotifyPause: "Pausar",
     spotifyNext: "Pista siguiente",
@@ -967,6 +1030,15 @@ export const STR: Record<Lang, Strings> = {
     systemPlatform: "Plataforma",
     systemCores: "núcleos",
     systemOffline: "Colector fuera de línea",
+    systemStorage: "Almacenamiento",
+    systemStorageFree: "libre",
+    systemStorageUsed: "usados",
+    systemStorageTotal: "total",
+    systemDetails: "Detalles del sistema",
+    systemHostname: "Host",
+    systemCpuModel: "CPU",
+    systemOs: "SO",
+    systemRam: "RAM",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it con Markdown y color personalizable.",
     widgetImage: "Imagen",

@@ -152,7 +152,9 @@ const _EMULATOR_DEFAULT: Record<string, unknown> = {
   disableBatchBootup: false,
   noAutoFocus: false,
   hideSettings: false,
+  igdb: { clientId: "", clientSecret: "" },
   platforms: [],
+  gameMeta: {},
 };
 
 function deepClone<T>(obj: T): T {
@@ -684,6 +686,13 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   if (typeof rawEmu.disableBatchBootup === "boolean") emu.disableBatchBootup = rawEmu.disableBatchBootup;
   if (typeof rawEmu.noAutoFocus === "boolean") emu.noAutoFocus = rawEmu.noAutoFocus;
   if (typeof rawEmu.hideSettings === "boolean") emu.hideSettings = rawEmu.hideSettings;
+  if (typeof rawEmu.igdb === "object" && rawEmu.igdb !== null) {
+    const rawIgdb = rawEmu.igdb as Record<string, unknown>;
+    const igdb = (emu.igdb ?? {}) as Record<string, unknown>;
+    if (typeof rawIgdb.clientId === "string") igdb.clientId = String(rawIgdb.clientId).trim();
+    if (typeof rawIgdb.clientSecret === "string") igdb.clientSecret = String(rawIgdb.clientSecret).trim();
+    emu.igdb = igdb;
+  }
   if (Array.isArray(rawEmu.platforms)) {
     const cleaned: Array<Record<string, unknown>> = [];
     for (const it of rawEmu.platforms) {
@@ -698,6 +707,26 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
       });
     }
     emu.platforms = cleaned;
+  }
+  if (typeof rawEmu.gameMeta === "object" && rawEmu.gameMeta !== null && !Array.isArray(rawEmu.gameMeta)) {
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawEmu.gameMeta as Record<string, unknown>)) {
+      if (typeof v !== "object" || v === null) continue;
+      const r = v as Record<string, unknown>;
+      cleaned[k] = {
+        platform: String(r.platform ?? k.split("::")[0] ?? ""),
+        file: String(r.file ?? k.split("::")[1] ?? ""),
+        igdbId: r.igdbId != null ? Number(r.igdbId) : null,
+        name: r.name != null ? String(r.name) : null,
+        coverUrl: r.coverUrl != null ? String(r.coverUrl) : null,
+        coverImageId: r.coverImageId != null ? String(r.coverImageId) : null,
+        summary: r.summary != null ? String(r.summary) : null,
+        firstReleaseDate: r.firstReleaseDate != null ? Number(r.firstReleaseDate) : null,
+        rating: r.rating != null ? Number(r.rating) : null,
+        updatedAt: r.updatedAt != null ? String(r.updatedAt) : null,
+      };
+    }
+    emu.gameMeta = cleaned;
   }
 
   return cfg;

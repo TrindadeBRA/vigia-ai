@@ -52,6 +52,37 @@ type SystemLastCycle = {
   interval_s: number;
 };
 
+type DiskInfo = {
+  name: string;
+  mount: string;
+  filesystem: string;
+  label: string;
+  total_bytes: number;
+  free_bytes: number;
+  used_bytes: number;
+  total_gb: number;
+  free_gb: number;
+  used_gb: number;
+  use_percent: number;
+};
+
+type SystemDetails = {
+  hostname: string;
+  platform: string;
+  arch: string;
+  release: string;
+  cpu_model: string;
+  cpu_cores: number;
+  total_mem_mb: number;
+  free_mem_mb: number;
+  used_mem_mb: number;
+  mem_percent: number;
+  uptime_s: number;
+  load1: number;
+  load5: number;
+  load15: number;
+};
+
 type SystemStatus = {
   ok: boolean;
   version: string;
@@ -61,6 +92,8 @@ type SystemStatus = {
   uptime_s: number;
   memory: { rss_mb: number; heap_used_mb: number; heap_total_mb: number };
   cpu: { cores: number; load1: number; load5: number; load15: number };
+  system?: SystemDetails | null;
+  storage?: DiskInfo[] | null;
   last_cycle: SystemLastCycle | null;
 };
 
@@ -131,6 +164,20 @@ function fmtMb(n: number): string {
 function fmtLoad(v: number): string {
   if (!Number.isFinite(v)) return "--";
   return v.toFixed(2);
+}
+
+function fmtGb(n: number): string {
+  if (!Number.isFinite(n)) return "--";
+  if (n >= 1024) return `${(n / 1024).toFixed(1)} TB`;
+  return `${n.toFixed(1)} GB`;
+}
+
+function fmtDiskLabel(d: DiskInfo): string {
+  // prefer name, fallback to mount
+  const raw = d.name || d.mount || d.filesystem;
+  // shorten long paths
+  if (raw.length > 22) return raw.slice(0, 22) + "…";
+  return raw;
 }
 
 function fmtLastCycleShort(lc: SystemLastCycle | null, t: T): string {
@@ -306,6 +353,58 @@ function Gauge({ pct, label, value }: { pct: number; label: string; value: strin
   );
 }
 
+function StorageSection({ storage, compact }: { storage: DiskInfo[]; compact?: boolean }) {
+  if (!storage || storage.length === 0) return null;
+  const disks = storage.slice(0, compact ? 2 : 6);
+  return (
+    <div className={cn("space-y-2", compact ? "mt-2" : "mt-1")}>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-ink3">Armazenamento</div>
+      <div className="space-y-2">
+        {disks.map((d) => (
+          <div key={d.mount} className="min-w-0">
+            <div className="mb-1 flex items-baseline justify-between gap-1.5 text-[11px] leading-none">
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-ink2" title={`${d.name} · ${d.mount}`}>
+                {fmtDiskLabel(d)}
+              </span>
+              <span className={cn(num, "shrink-0 text-[11px] font-bold text-ink")}>
+                {fmtGb(d.free_gb)} livre
+              </span>
+            </div>
+            <div className={cn(barTrack, "h-[5px]")}>
+              <div
+                className={barFill}
+                style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent), boxShadow: barGlowVar(d.use_percent) } as React.CSSProperties}
+              />
+            </div>
+            <div className={cn(num, "mt-1 flex justify-between text-[11px] font-[500] text-ink2")}>
+              <span>{fmtGb(d.used_gb)} usados</span>
+              <span>{fmtGb(d.total_gb)} total · {d.use_percent}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SystemDetailsSection({ details }: { details: SystemDetails }) {
+  return (
+    <div className="space-y-1.5 rounded-xl border border-edge bg-chip/40 px-3 py-2.5">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-ink3">Detalhes do sistema</div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
+        <span className="text-ink3">Host</span>
+        <span className={cn(num, "truncate text-right font-semibold text-ink")} title={details.hostname}>{details.hostname}</span>
+        <span className="text-ink3">CPU</span>
+        <span className="truncate text-right text-ink2" title={details.cpu_model}>{details.cpu_model} · {details.cpu_cores} cores</span>
+        <span className="text-ink3">SO</span>
+        <span className="truncate text-right text-ink2">{details.platform} · {details.release}</span>
+        <span className="text-ink3">RAM</span>
+        <span className={cn(num, "text-right font-medium text-ink2")}>{details.used_mem_mb} / {details.total_mem_mb} MB · {details.mem_percent}%</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Board card ─────────────────────────────────────────────────────
 
 export function SystemBoardCard({ t, size }: { t: T; size: CardSize }) {
@@ -421,20 +520,21 @@ export function SystemBoardCard({ t, size }: { t: T; size: CardSize }) {
     );
   }
 
-  // ── md: 2×2 compacto — 2 barras
+  // ── md: 2×2 compacto — 2 barras + storage resumido
   if (ns === "md") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <Header state={state} compact />
-        <div className="flex min-h-0 flex-1 flex-col justify-center gap-3">
+        <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 overflow-y-auto [scrollbar-width:thin]">
           <BarRow label={t.systemMemory} value={fmtMb(state.memory.rss_mb)} pct={mp} sub={`heap ${fmtMb(state.memory.heap_used_mb)}/${fmtMb(state.memory.heap_total_mb)}`} />
           <BarRow label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} pct={cp} sub={`${state.cpu.cores} ${t.systemCores} · 5m ${fmtLoad(state.cpu.load5)}`} />
+          {state.storage?.length ? <StorageSection storage={state.storage} compact /> : null}
         </div>
       </div>
     );
   }
 
-  // ── lg: 4×2 largo — grade 2×2
+  // ── lg: 4×2 largo — grade 2×2 + storage inline
   if (ns === "lg") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
@@ -445,6 +545,19 @@ export function SystemBoardCard({ t, size }: { t: T; size: CardSize }) {
           <Row label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} sub={`×${state.cpu.cores}`} />
           <Row label={t.systemLastCycle} value={fmtLastCycleShort(state.last_cycle, t)} />
         </div>
+        {state.storage?.length ? (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {state.storage.slice(0, 2).map((d) => (
+              <div key={d.mount} className="min-w-0 rounded-lg border border-edge bg-chip/40 px-2 py-1.5">
+                <div className="truncate text-[11px] font-semibold leading-none text-ink2" title={`${d.name} · ${d.mount}`}>{fmtDiskLabel(d)}</div>
+                <div className={cn(num, "mt-1 text-[11px] leading-none text-ink3")}>{fmtGb(d.free_gb)} livre · {fmtGb(d.total_gb)} total</div>
+                <div className={cn(barTrack, "mt-1.5 h-[4px]")}>
+                  <div className={barFill} style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent) } as React.CSSProperties} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {state.last_cycle?.error ? <div className={cn(errorText, "mt-2 line-clamp-2")}>{state.last_cycle.error}</div> : null}
         <div className="mt-2 flex flex-wrap gap-1.5">
           <span className="rounded-full bg-chip px-2 py-0.5 text-[11px] font-medium text-ink3">heap {fmtMb(state.memory.heap_used_mb)}/{fmtMb(state.memory.heap_total_mb)}</span>
@@ -454,17 +567,32 @@ export function SystemBoardCard({ t, size }: { t: T; size: CardSize }) {
     );
   }
 
-  // ── xl: 4×4 — gauges + barras + meta
+  // ── xl: 4×4 — gauges + barras + storage + meta
   if (ns === "xl") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <Header state={state} subtitle={`${t.systemUptime} ${fmtUptime(state.uptime_s)} · ${state.node_version}`} />
-        <div className="flex min-h-0 flex-1 gap-4">
-          <div className="flex min-w-[132px] shrink-0 items-center justify-center gap-3 rounded-xl border border-edge bg-chip px-3 py-3">
-            <Gauge pct={mp} label="HEAP" value={`${Math.round(mp)}%`} />
-            <Gauge pct={cp} label="CPU" value={fmtLoad(state.cpu.load1)} />
+        <div className="flex min-h-0 flex-1 gap-4 overflow-hidden">
+          <div className="flex min-w-[132px] shrink-0 flex-col items-center justify-center gap-3 rounded-xl border border-edge bg-chip px-3 py-3">
+            <div className="flex items-center justify-center gap-3">
+              <Gauge pct={mp} label="HEAP" value={`${Math.round(mp)}%`} />
+              <Gauge pct={cp} label="CPU" value={fmtLoad(state.cpu.load1)} />
+            </div>
+            {state.storage?.length ? (
+              <div className="w-full space-y-1.5 border-t border-edge pt-2">
+                {state.storage.slice(0, 2).map((d) => (
+                  <div key={d.mount} className="min-w-0">
+                    <div className="truncate text-[10px] font-semibold leading-none text-ink2" title={`${d.name} · ${d.mount}`}>{fmtDiskLabel(d)}</div>
+                    <div className={cn(barTrack, "mt-1 h-[3px]")}>
+                      <div className={barFill} style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent) } as React.CSSProperties} />
+                    </div>
+                    <div className={cn(num, "mt-0.5 text-[10px] leading-none text-ink3")}>{fmtGb(d.free_gb)} livre</div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <div className="flex min-h-0 flex-1 flex-col justify-center gap-2.5">
+          <div className="flex min-h-0 flex-1 flex-col justify-center gap-2.5 overflow-y-auto [scrollbar-width:thin]">
             <Row label={t.systemMemory} value={`${fmtMb(state.memory.rss_mb)}`} sub={`heap ${fmtMb(state.memory.heap_used_mb)}/${fmtMb(state.memory.heap_total_mb)}`} />
             <div className={cn(barTrack, "h-[6px]")}>
               <div className={barFill} style={{ width: `${mp}%`, background: barColorVar(mp), boxShadow: barGlowVar(mp) } as React.CSSProperties} />
@@ -481,27 +609,28 @@ export function SystemBoardCard({ t, size }: { t: T; size: CardSize }) {
     );
   }
 
-  // ── wm: 2×3 médio-alto — mistura de md + detalhes
+  // ── wm: 2×3 médio-alto — mistura de md + detalhes + storage
   if (ns === "wm") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <Header state={state} />
-        <div className="flex min-h-0 flex-1 flex-col justify-evenly gap-2">
+        <div className="flex min-h-0 flex-1 flex-col justify-evenly gap-2 overflow-y-auto [scrollbar-width:thin]">
           <Row label={t.systemUptime} value={fmtUptime(state.uptime_s)} />
           <BarRow label={t.systemMemory} value={fmtMb(state.memory.rss_mb)} pct={mp} sub={`heap ${Math.round(mp)}% · ${fmtMb(state.memory.heap_used_mb)}/${fmtMb(state.memory.heap_total_mb)}`} />
           <BarRow label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} pct={cp} sub={`${state.cpu.cores} ${t.systemCores} · 15m ${fmtLoad(state.cpu.load15)}`} />
           <Row label={t.systemLastCycle} value={fmtLastCycleShort(state.last_cycle, t)} />
+          {state.storage?.length ? <StorageSection storage={state.storage} compact /> : null}
         </div>
         {state.last_cycle?.error ? <div className={cn(errorText, "mt-2 line-clamp-2 text-[11px]")}>{state.last_cycle.error}</div> : null}
       </div>
     );
   }
 
-  // ── wl / wxl / free — longo / super largo / livre: pilha detalhada
+  // ── wl / wxl / free — longo / super largo / livre: pilha detalhada + storage + detalhes
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
       <Header state={state} />
-      <div className="flex min-h-0 flex-1 flex-col justify-center gap-2.5 overflow-y-auto [scrollbar-width:thin]">
+      <div className="flex min-h-0 flex-1 flex-col justify-start gap-2.5 overflow-y-auto [scrollbar-width:thin]">
         <Row label={t.systemUptime} value={fmtUptime(state.uptime_s)} sub={state.started_at ? new Date(state.started_at).toLocaleString() : null} />
         <div className="space-y-1">
           <Row label={t.systemMemory} value={fmtMb(state.memory.rss_mb)} sub={`heap ${fmtMb(state.memory.heap_used_mb)}/${fmtMb(state.memory.heap_total_mb)} · ${Math.round(mp)}%`} />
@@ -516,6 +645,8 @@ export function SystemBoardCard({ t, size }: { t: T; size: CardSize }) {
           </div>
         </div>
         <Row label={t.systemLastCycle} value={fmtLastCycleShort(state.last_cycle, t)} sub={state.last_cycle?.interval_s ? `a cada ${state.last_cycle.interval_s}s` : null} />
+        {state.system ? <SystemDetailsSection details={state.system} /> : null}
+        {state.storage?.length ? <StorageSection storage={state.storage} /> : null}
         <div className="flex flex-wrap gap-1.5 pt-1">
           <span className="rounded-full bg-chip px-2 py-0.5 text-[11px] font-medium text-ink3">v{state.version}</span>
           <span className="rounded-full bg-chip px-2 py-0.5 text-[11px] font-medium text-ink3">{state.node_version}</span>

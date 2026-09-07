@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ProviderIdSchema } from "./usage.js";
 
-export const AlarmMetricKindSchema = z.enum(["percent", "cents"]);
+export const AlarmMetricKindSchema = z.enum(["percent", "cents", "gb", "percent_free", "calendar"]);
 export type AlarmMetricKind = z.infer<typeof AlarmMetricKindSchema>;
 
 export const AlarmMetricSchema = z.object({

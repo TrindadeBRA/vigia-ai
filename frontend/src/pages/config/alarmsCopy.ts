@@ -50,9 +50,13 @@ export type AlarmsCopy = {
   triggerHintPercent: (n: number) => string;
   triggerHintCents: (n: number) => string;
   triggerHintCalendar: (n: number, unit: string) => string;
+  triggerHintGb: (n: number) => string;
+  triggerHintPercentFree: (n: number) => string;
   suggestUsage: (provider: string, pct: number, metricLabel: string) => string;
   suggestBalance: (provider: string, amount: string, metricLabel: string) => string;
   suggestCalendar: (n: number, unit: string, metricLabel: string) => string;
+  suggestStorageGb: (provider: string, gb: number, metricLabel: string) => string;
+  suggestStorageFree: (provider: string, pct: number, metricLabel: string) => string;
   edit: string;
   save: string;
   saving: string;
@@ -136,12 +140,16 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
       const u = unit === "days" ? (n === 1 ? "1 dia" : `${n} dias`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
       return `dispara ${u} antes do evento/tarefa`;
     },
+    triggerHintGb: (n) => `dispara quando o espaço livre cair a ${n} GB`,
+    triggerHintPercentFree: (n) => `dispara quando o espaço livre cair a ${n}%`,
     suggestUsage: (provider, pct, metricLabel) => `${provider} - Uso de ${pct}% da cota ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - Saldo de ${amount} da cota ${metricLabel}`,
     suggestCalendar: (n, unit, metricLabel) => {
       const u = unit === "days" ? (n === 1 ? "1 dia" : `${n} dias`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
       return `Calendário · ${metricLabel} · ${u} antes`;
     },
+    suggestStorageGb: (provider, gb, metricLabel) => `${provider} - ${metricLabel} abaixo de ${gb} GB`,
+    suggestStorageFree: (provider, pct, metricLabel) => `${provider} - ${metricLabel} abaixo de ${pct}% livre`,
     edit: "Editar",
     save: "Salvar",
     saving: "Salvando…",
@@ -223,12 +231,16 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
       const u = unit === "days" ? (n === 1 ? "1 day" : `${n} days`) : unit === "hours" ? (n === 1 ? "1 hour" : `${n} hours`) : n === 1 ? "1 minute" : `${n} minutes`;
       return `fires ${u} before the event/task`;
     },
+    triggerHintGb: (n) => `fires when free space drops to ${n} GB`,
+    triggerHintPercentFree: (n) => `fires when free space drops to ${n}%`,
     suggestUsage: (provider, pct, metricLabel) => `${provider} - ${pct}% usage of ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - ${metricLabel} balance at ${amount}`,
     suggestCalendar: (n, unit, metricLabel) => {
       const u = unit === "days" ? (n === 1 ? "1 day" : `${n} days`) : unit === "hours" ? (n === 1 ? "1 hour" : `${n} hours`) : n === 1 ? "1 minute" : `${n} minutes`;
       return `Calendar · ${metricLabel} · ${u} before`;
     },
+    suggestStorageGb: (provider, gb, metricLabel) => `${provider} - ${metricLabel} below ${gb} GB`,
+    suggestStorageFree: (provider, pct, metricLabel) => `${provider} - ${metricLabel} below ${pct}% free`,
     edit: "Edit",
     save: "Save",
     saving: "Saving…",
@@ -310,12 +322,16 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
       const u = unit === "days" ? (n === 1 ? "1 día" : `${n} días`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
       return `dispara ${u} antes del evento/tarea`;
     },
+    triggerHintGb: (n) => `dispara cuando el espacio libre baje a ${n} GB`,
+    triggerHintPercentFree: (n) => `dispara cuando el espacio libre baje a ${n}%`,
     suggestUsage: (provider, pct, metricLabel) => `${provider} - Uso de ${pct}% de la cuota ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - Saldo de ${amount} de la cuota ${metricLabel}`,
     suggestCalendar: (n, unit, metricLabel) => {
       const u = unit === "days" ? (n === 1 ? "1 día" : `${n} días`) : unit === "hours" ? (n === 1 ? "1 hora" : `${n} horas`) : n === 1 ? "1 minuto" : `${n} minutos`;
       return `Calendario · ${metricLabel} · ${u} antes`;
     },
+    suggestStorageGb: (provider, gb, metricLabel) => `${provider} - ${metricLabel} por debajo de ${gb} GB`,
+    suggestStorageFree: (provider, pct, metricLabel) => `${provider} - ${metricLabel} por debajo de ${pct}% libre`,
     edit: "Editar",
     save: "Guardar",
     saving: "Guardando…",

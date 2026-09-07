@@ -3,6 +3,7 @@ import { useState } from "react";
 import { isCloneId, normalizeSize, type CardSize } from "../../board";
 import { cn } from "../../cn";
 import { AdsenseBoardCard, adsenseAllowedSizes, adsenseSizeLabel } from "../../components/cards/AdsenseCard";
+import { AndroidBoardCard, androidAllowedSizes, androidSizeLabel } from "../../components/cards/AndroidCard";
 import { BitcoinBoardCard, bitcoinAllowedSizes, bitcoinSizeLabel } from "../../components/cards/BitcoinCard";
 import { CameraBoardCard, cameraAllowedSizes, cameraSizeLabel } from "../../components/cards/CameraCard";
 import { ClaudeBoardCard, claudeAllowedSizes, claudeSizeLabel } from "../../components/cards/ClaudeCard";
@@ -166,6 +167,19 @@ export function CameraTileCard({ p, size, dragging, lifted, t, grip, bg, readonl
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => cameraSizeLabel(s, t)} isClone={true} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <CameraBoardCard camera={p.camera ?? null} t={t} size={size} />
+    </div>
+  );
+}
+
+export function AndroidTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = androidAllowedSizes();
+  const style = useTileStyle(bg);
+  return (
+    <div className={cn(TILE_BASE, "p-2", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => androidSizeLabel(s, t)} isClone={true} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <AndroidBoardCard device={p.android ?? null} t={t} size={size} />
     </div>
   );
 }

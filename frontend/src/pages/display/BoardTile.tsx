@@ -9,6 +9,7 @@ import { Icon, MetricRow } from "./MetricRow";
 import { TileChrome } from "./SizeMenu";
 import {
   AdsenseTileCard,
+  AndroidTileCard,
   BitcoinTileCard,
   CameraTileCard,
   ClaudeTileCard,
@@ -121,6 +122,9 @@ export function ProviderCard({
   }
   if (p.provider === "camera") {
     return <CameraTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "android" || p.kind === "android") {
+    return <AndroidTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "spotify") {
     return <SpotifyTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;

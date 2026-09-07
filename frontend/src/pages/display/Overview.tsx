@@ -110,6 +110,7 @@ export function Overview({
   onDuplicateNote,
   onUpdateNote,
   onRemoveCamera,
+  onRemoveAndroid,
   wallpaperParallax = true,
 }: {
   providers: ProviderMeta[];
@@ -135,6 +136,7 @@ export function Overview({
   onDuplicateNote?: (id: string) => void;
   onUpdateNote?: (id: string, patch: { text?: string; color?: string }) => void;
   onRemoveCamera?: (id: string) => void;
+  onRemoveAndroid?: (id: string) => void;
   /** Wallpaper fixo (parallax): ancorado na área visível do `<main>`, não estica com o conteúdo e não rola com o grid. Default true. */
   wallpaperParallax?: boolean;
 }) {
@@ -336,6 +338,19 @@ export function Overview({
     }
     if (id.startsWith("widget:camera:")) {
       onRemoveCamera?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
+      return;
+    }
+    if (id.startsWith("widget:android:")) {
+      onRemoveAndroid?.(id);
       onBoard((b) => {
         const size = { ...b.size };
         const pos = { ...b.pos };

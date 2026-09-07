@@ -575,7 +575,7 @@ export type DevicePublic = {
   height: number | null;
 };
 
-export type AlarmMetricKind = "percent" | "cents" | "calendar";
+export type AlarmMetricKind = "percent" | "cents" | "calendar" | "gb" | "percent_free";
 
 export type AlarmMetric = { key: string; label: string; kind: AlarmMetricKind };
 
@@ -638,6 +638,50 @@ export type CameraPatch = Partial<CameraCreate>;
 
 export type PtzAction = "up" | "down" | "left" | "right" | "zoom_in" | "zoom_out" | "stop";
 
+// Android via ADB (protótipo inspirado no scrcpy) — espelhamento leve via
+// `adb exec-out screencap -p` + MJPEG, sem precisar do binário scrcpy.
+export type AndroidDevice = {
+  id: string;
+  configured: boolean;
+  label: string;
+  host: string;
+  port: number;
+  serial: string;
+  autoConnect: boolean;
+  online: boolean;
+  state: string;
+  model: string | null;
+};
+
+export type AndroidCreate = {
+  label?: string;
+  host?: string;
+  port?: number;
+  serial?: string;
+  autoConnect?: boolean;
+};
+
+export type AndroidPatch = Partial<AndroidCreate>;
+
+export type AndroidInput = {
+  action: "tap" | "swipe" | "key" | "text" | "back" | "home" | "menu" | "power" | "wake" | "sleep";
+  x?: number;
+  y?: number;
+  x2?: number;
+  y2?: number;
+  duration?: number;
+  keycode?: number;
+  text?: string;
+};
+
+export type AndroidAdbStatus = {
+  ok: boolean;
+  adb: string | null;
+  version?: string;
+  error?: string;
+  devices?: Array<{ serial: string; state: string; model: string | null; size?: { w: number; h: number } | null }>;
+};
+
 export type MiningStatusValue = "idle" | "no_wifi" | "connecting" | "mining" | "pool_offline" | "error";
 
 export type MiningStatus = {
@@ -678,6 +722,24 @@ export type EmulatorPlatformConfig = {
   core: string | null;
 };
 
+export type EmulatorIgdbConfig = {
+  clientId: string;
+  clientSecret: string;
+};
+
+export type EmulatorGameMeta = {
+  platform: string;
+  file: string;
+  igdbId: number | null;
+  name: string | null;
+  coverUrl: string | null;
+  coverImageId: string | null;
+  summary: string | null;
+  firstReleaseDate: number | null;
+  rating: number | null;
+  updatedAt: string | null;
+};
+
 export type EmulatorConfig = {
   enabled: boolean;
   hidden: boolean;
@@ -698,7 +760,9 @@ export type EmulatorConfig = {
   disableBatchBootup: boolean;
   noAutoFocus: boolean;
   hideSettings: boolean;
+  igdb: EmulatorIgdbConfig;
   platforms: EmulatorPlatformConfig[];
+  gameMeta: Record<string, EmulatorGameMeta>;
 };
 
 export type ConfigPublic = {

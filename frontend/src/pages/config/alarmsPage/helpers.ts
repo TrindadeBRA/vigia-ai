@@ -13,6 +13,8 @@ export const PROVIDER_LABEL: Record<string, string> = {
   bitcoin: "Bitcoin",
   adsense: "AdSense",
   calendar: "Calendário",
+  storage: "Armazenamento",
+  system: "Sistema",
 };
 
 export function calendarUnitLabel(c: typeof ALARMS_STR.pt, unit: string): string {
@@ -24,6 +26,8 @@ export function calendarUnitLabel(c: typeof ALARMS_STR.pt, unit: string): string
 export function ruleHint(c: typeof ALARMS_STR.pt, metric: AlarmMetric | undefined, threshold: number, unit?: string): string {
   if (!metric) return "";
   if (metric.kind === "calendar") return c.triggerHintCalendar(threshold, unit ?? "minutes");
+  if (metric.kind === "gb") return c.triggerHintGb(threshold);
+  if (metric.kind === "percent_free") return c.triggerHintPercentFree(threshold);
   return metric.kind === "percent" ? c.triggerHintPercent(threshold) : c.triggerHintCents(threshold);
 }
 
@@ -33,6 +37,8 @@ export function formatThreshold(metric: AlarmMetric | undefined, threshold: numb
     return `${u} antes`;
   }
   if (metric?.kind === "cents") return `$${(threshold / 100).toFixed(2)}`;
+  if (metric?.kind === "gb") return `${threshold} GB`;
+  if (metric?.kind === "percent_free") return `${threshold}% livre`;
   return `${threshold}%`;
 }
 
@@ -48,6 +54,8 @@ export function ruleSearchText(
 }
 
 export function suggestLabel(c: typeof ALARMS_STR.pt, provider: string, metric: AlarmMetric | undefined, threshold: number, unit?: string): string {
+  if (metric?.kind === "gb") return c.suggestStorageGb(provider, threshold, metric.label);
+  if (metric?.kind === "percent_free") return c.suggestStorageFree(provider, threshold, metric.label);
   if (!metric) return "";
   if (metric.kind === "calendar") return c.suggestCalendar(threshold, unit ?? "minutes", metric.label);
   const providerName = PROVIDER_LABEL[provider] || provider;

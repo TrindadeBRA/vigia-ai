@@ -5,6 +5,7 @@ import { Skeleton } from "../../components/Skeleton";
 import { isDesktop } from "../../desktop";
 import { accentLink, cfgGrid, cfgHint, cfgStatus, pageCol, viewFade } from "../../tw";
 import { AdSenseConfigCard } from "./AdSenseConfigCard";
+import { AndroidConfigCard } from "./AndroidConfigCard";
 import { CalendarConfigCard } from "./CalendarConfigCard";
 import { CameraConfigCard } from "./CameraConfigCard";
 import { CurrenciesConfigCard } from "./CurrenciesConfigCard";
@@ -200,6 +201,7 @@ export default function ConfigPage() {
         <GithubConfigCard github={cfg.github} c={c} onReload={reload} />
         <IssConfigCard iss={cfg.iss} c={c} onReload={reload} />
         <CameraConfigCard c={c} />
+        <AndroidConfigCard c={c} />
         <SpotifyConfigCard p={cfg.providers.spotify} listenPort={cfg.listen.port} {...common} />
         <YoutubeMusicConfigCard p={(cfg.providers as Record<string, unknown>).youtubemusic as ProviderCardPublic ?? { source: "missing", label: "", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] } as unknown as ProviderCardPublic} listenPort={cfg.listen.port} {...common} />
       </div>

@@ -484,6 +484,23 @@ export function buildCameraProviders(cameras: CameraItem[] | undefined, t: T): P
   }));
 }
 
+/** Cada dispositivo Android via ADB vira seu próprio bloco no board — igual
+ * às câmeras/notas. Espelhamento leve via `adb screencap` (sem scrcpy). */
+export function buildAndroidProviders(devices: import("../../api/types").AndroidDevice[] | undefined, t: T): ProviderMeta[] {
+  if (!devices?.length) return [];
+  return devices.map((dev) => ({
+    id: `widget:android:${dev.id}`,
+    provider: "android",
+    kind: "android" as const,
+    ok: true,
+    error: null,
+    title: dev.label || dev.model || (t as unknown as Record<string, string>).widgetAndroid || "Android",
+    label: dev.model ? `${dev.model} · ${dev.state}` : dev.state,
+    metrics: [],
+    android: dev,
+  }));
+}
+
 export function buildNoteProviders(notes: Array<{ id: string; text: string; color: string }> | undefined, t: T): ProviderMeta[] {
   if (!notes?.length) return [];
   return notes.map((n) => ({

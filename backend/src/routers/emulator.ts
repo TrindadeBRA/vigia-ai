@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
 import { basename, extname, join, resolve } from "node:path";
+import { getIgdbGameById, igdbConfigured, igdbCoverUrl, searchIgdbGames } from "../providers/igdb.js";
 import { EMULATOR_PLATFORMS } from "../schemas/emulator.js";
 import { load, updateSync as update } from "../store.js";
 
@@ -19,6 +20,16 @@ function safeJoin(base: string, file: string): string | null {
     const baseResolved = resolve(base);
     if (!resolved.startsWith(baseResolved)) return null;
     return resolved;
+}
+
+function getGameMetaMap(): Record<string, Record<string, unknown>> {
+    const cfg = load() as Record<string, unknown>;
+    const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
+    return (emu.gameMeta ?? {}) as Record<string, Record<string, unknown>>;
+}
+
+function gameKey(platform: string, file: string): string {
+    return `${platform}::${file}`;
 }
 
 export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> {
@@ -74,6 +85,21 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
             ];
             for (const [k, v] of fields) {
                 if (v !== undefined) (emu as Record<string, unknown>)[k] = v;
+            }
+            if (body.igdb !== undefined && body.igdb !== null && typeof body.igdb === "object") {
+                const raw = body.igdb as Record<string, unknown>;
+                const cur = (emu.igdb ?? {}) as Record<string, unknown>;
+                if (raw.clientId !== undefined) cur.clientId = String(raw.clientId).trim();
+                if (raw.clientSecret !== undefined) cur.clientSecret = String(raw.clientSecret).trim();
+                emu.igdb = cur;
+            }
+            if (body.gameMeta !== undefined && body.gameMeta !== null && typeof body.gameMeta === "object" && !Array.isArray(body.gameMeta)) {
+                const cur = (emu.gameMeta ?? {}) as Record<string, unknown>;
+                for (const [k, v] of Object.entries(body.gameMeta as Record<string, unknown>)) {
+                    if (v === null) delete cur[k];
+                    else if (typeof v === "object") cur[k] = v;
+                }
+                emu.gameMeta = cur;
             }
 
             // platforms: array of { id, enabled, romPath, biosPath, core }
@@ -155,7 +181,8 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
             return reply.code(500).send({ ok: false, error: String(e) });
         }
 
-        const roms: Array<{ name: string; file: string; ext: string; size: number | null }> = [];
+        const roms: Array<{ name: string; file: string; ext: string; size: number | null; meta?: Record<string, unknown> | null }> = [];
+        const metaMap = getGameMetaMap();
         for (const f of files) {
             const full = join(romPath, f);
             let st: ReturnType<typeof statSync> | null = null;
@@ -165,7 +192,8 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
             if (!st.isFile()) continue;
             const ext = extname(f).slice(1).toLowerCase();
             if (!exts.has(ext)) continue;
-            roms.push({ name: basename(f, extname(f)), file: f, ext, size: st.size });
+            const key = gameKey(platform, f);
+            roms.push({ name: basename(f, extname(f)), file: f, ext, size: st.size, meta: metaMap[key] ?? null });
         }
         roms.sort((a, b) => a.name.localeCompare(b.name));
         return { ok: true, platform, romPath, roms };
@@ -185,8 +213,9 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
             const romPath = String(pCfg.romPath ?? "").trim();
             const core = pCfg.core ? String(pCfg.core) : plat.core;
             const exts = CORE_TO_EXTS.get(core) ?? ALLOWED_EXTS.get(platform) ?? new Set(plat.exts);
-            let roms: Array<{ name: string; file: string; ext: string; size: number | null }> = [];
+            let roms: Array<{ name: string; file: string; ext: string; size: number | null; meta?: Record<string, unknown> | null }> = [];
             let warning: string | undefined;
+            const metaMap = getGameMetaMap();
             if (!romPath) {
                 warning = "pasta não configurada";
             } else if (!existsSync(romPath) || !statSync(romPath).isDirectory()) {
@@ -201,7 +230,8 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
                         if (!st.isFile()) continue;
                         const ext = extname(f).slice(1).toLowerCase();
                         if (!exts.has(ext)) continue;
-                        roms.push({ name: basename(f, extname(f)), file: f, ext, size: st.size });
+                        const key = gameKey(platform, f);
+                        roms.push({ name: basename(f, extname(f)), file: f, ext, size: st.size, meta: metaMap[key] ?? null });
                     }
                     roms.sort((a, b) => a.name.localeCompare(b.name));
                 } catch (e) {
@@ -298,5 +328,122 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     // GET platforms meta (for frontend to know exts, labels)
     app.get("/api/emulator/platforms", async () => {
         return { ok: true, platforms: EMULATOR_PLATFORMS };
+    });
+
+    // ── IGDB ──────────────────────────────────────────────────────────────
+    app.get("/api/emulator/igdb/status", async () => {
+        return { ok: true, configured: igdbConfigured() };
+    });
+
+    app.get("/api/emulator/igdb/search", async (request, reply) => {
+        const q = String((request.query as Record<string, string>)?.q ?? "").trim();
+        if (!q) return reply.code(400).send({ ok: false, error: "q obrigatório" });
+        if (!igdbConfigured()) return reply.code(400).send({ ok: false, error: "IGDB não configurado — preencha Client ID e Secret em Configurações > Emulador" });
+        const limitRaw = Number((request.query as Record<string, string>)?.limit ?? 10);
+        const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(20, Math.floor(limitRaw))) : 10;
+        try {
+            const results = await searchIgdbGames(q, limit);
+            const mapped = results.map((g) => ({
+                id: g.id,
+                name: g.name,
+                summary: g.summary ?? null,
+                coverImageId: g.cover?.image_id ?? null,
+                coverUrl: g.cover?.image_id ? igdbCoverUrl(g.cover.image_id, "cover_big") : null,
+                firstReleaseDate: g.first_release_date ?? null,
+                rating: g.rating ?? null,
+                platforms: g.platforms ?? null,
+            }));
+            return { ok: true, results: mapped };
+        } catch (e) {
+            return reply.code(500).send({ ok: false, error: String(e) });
+        }
+    });
+
+    app.get("/api/emulator/igdb/game/:id", async (request, reply) => {
+        const id = Number((request.params as { id: string }).id);
+        if (!Number.isFinite(id)) return reply.code(400).send({ ok: false, error: "id inválido" });
+        if (!igdbConfigured()) return reply.code(400).send({ ok: false, error: "IGDB não configurado" });
+        try {
+            const g = await getIgdbGameById(id);
+            if (!g) return reply.code(404).send({ ok: false, error: "jogo não encontrado" });
+            return {
+                ok: true,
+                game: {
+                    id: g.id,
+                    name: g.name,
+                    summary: g.summary ?? null,
+                    coverImageId: g.cover?.image_id ?? null,
+                    coverUrl: g.cover?.image_id ? igdbCoverUrl(g.cover.image_id, "cover_big") : null,
+                    firstReleaseDate: g.first_release_date ?? null,
+                    rating: g.rating ?? null,
+                    platforms: g.platforms ?? null,
+                },
+            };
+        } catch (e) {
+            return reply.code(500).send({ ok: false, error: String(e) });
+        }
+    });
+
+    // ── Game meta (capas IGDB por ROM) ───────────────────────────────────
+    app.get("/api/emulator/game-meta", async () => {
+        return { ok: true, gameMeta: getGameMetaMap() };
+    });
+
+    app.patch("/api/emulator/game-meta", async (request, reply) => {
+        const body = request.body as Record<string, unknown> | null;
+        if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
+        const platform = String(body.platform ?? "").trim();
+        const file = String(body.file ?? "").trim();
+        if (!platform || !file) return reply.code(400).send({ ok: false, error: "platform e file obrigatórios" });
+        const key = gameKey(platform, file);
+        // se body.clear === true, remove
+        if (body.clear === true) {
+            update((cfg) => {
+                const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
+                const gm = (emu.gameMeta ?? {}) as Record<string, unknown>;
+                delete gm[key];
+                emu.gameMeta = gm;
+            });
+            return { ok: true, cleared: true };
+        }
+        const igdbId = body.igdbId != null ? Number(body.igdbId) : null;
+        const name = body.name != null ? String(body.name) : null;
+        const coverImageId = body.coverImageId != null ? String(body.coverImageId) : null;
+        const coverUrl = body.coverUrl != null ? String(body.coverUrl) : (coverImageId ? igdbCoverUrl(coverImageId, "cover_big") : null);
+        const summary = body.summary != null ? String(body.summary) : null;
+        const firstReleaseDate = body.firstReleaseDate != null ? Number(body.firstReleaseDate) : null;
+        const rating = body.rating != null ? Number(body.rating) : null;
+        update((cfg) => {
+            const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
+            const gm = (emu.gameMeta ?? {}) as Record<string, unknown>;
+            gm[key] = {
+                platform,
+                file,
+                igdbId: Number.isFinite(igdbId as number) ? igdbId : null,
+                name,
+                coverUrl,
+                coverImageId,
+                summary,
+                firstReleaseDate: Number.isFinite(firstReleaseDate as number) ? firstReleaseDate : null,
+                rating: Number.isFinite(rating as number) ? rating : null,
+                updatedAt: new Date().toISOString(),
+            };
+            emu.gameMeta = gm;
+        });
+        return { ok: true, key, gameMeta: getGameMetaMap()[key] };
+    });
+
+    app.delete("/api/emulator/game-meta/:platform/:file", async (request, reply) => {
+        const { platform, file } = request.params as { platform: string; file: string };
+        const key = gameKey(platform, file);
+        const before = getGameMetaMap()[key];
+        if (!before) return reply.code(404).send({ ok: false, error: "metadado não encontrado" });
+        update((cfg) => {
+            const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
+            const gm = (emu.gameMeta ?? {}) as Record<string, unknown>;
+            delete gm[key];
+            emu.gameMeta = gm;
+        });
+        return { ok: true, cleared: true };
     });
 }

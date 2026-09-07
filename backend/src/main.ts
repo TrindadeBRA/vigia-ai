@@ -11,6 +11,7 @@ import { createAlarmsRoutes } from "./alarms/router.js";
 import { UsageHub } from "./hub.js";
 import { lanIPv4 } from "./netutil.js";
 import { createAdsenseRoutes } from "./routers/adsense.js";
+import { createAndroidRoutes } from "./routers/android.js";
 import { createBoardRoutes } from "./routers/board.js";
 import { createCalendarRoutes } from "./routers/calendar.js";
 import { createCameraRoutes } from "./routers/camera.js";
@@ -178,6 +179,7 @@ export async function createApp() {
   await fastify.register(createNotesRoutes, { prefix: "" });
   await fastify.register(createMiningRoutes, { prefix: "" });
   await fastify.register(createCameraRoutes, { prefix: "" });
+  await fastify.register(createAndroidRoutes, { prefix: "" });
   await fastify.register(createImagesRoutes, { prefix: "" });
   await fastify.register(createClientStateRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });

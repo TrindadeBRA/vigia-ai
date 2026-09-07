@@ -137,6 +137,88 @@ export async function sendCameraPtz(id: string, action: PtzAction): Promise<Muta
   return readMutate(res);
 }
 
+// ── Android via ADB (scrcpy-like) ──────────────────────────────────
+
+export async function fetchAndroidDevices(): Promise<import("./types").AndroidDevice[]> {
+  const res = await fetch("/api/android/devices", { cache: "no-store" });
+  if (!res.ok) throw new Error(`android list HTTP ${res.status}`);
+  const data = (await res.json()) as { devices: import("./types").AndroidDevice[] };
+  return data.devices;
+}
+
+export async function fetchAndroidAdbStatus(): Promise<import("./types").AndroidAdbStatus> {
+  const res = await fetch("/api/android/adb/status", { cache: "no-store" });
+  if (!res.ok) throw new Error(`adb status HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").AndroidAdbStatus>;
+}
+
+export async function fetchAndroidAdbDevices(): Promise<Array<{ serial: string; state: string; model: string | null; size?: { w: number; h: number } | null }>> {
+  const res = await fetch("/api/android/adb/devices", { cache: "no-store" });
+  if (!res.ok) throw new Error(`adb devices HTTP ${res.status}`);
+  const data = (await res.json()) as { devices: Array<{ serial: string; state: string; model: string | null; size?: { w: number; h: number } | null }> };
+  return data.devices;
+}
+
+export async function addAndroidDevice(body: import("./types").AndroidCreate): Promise<MutateResult & { device?: import("./types").AndroidDevice }> {
+  const res = await fetch("/api/android/devices", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res) as Promise<MutateResult & { device?: import("./types").AndroidDevice }>;
+}
+
+export async function updateAndroidDevice(id: string, patch: import("./types").AndroidPatch): Promise<MutateResult & { device?: import("./types").AndroidDevice }> {
+  const res = await fetch(`/api/android/devices/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return readMutate(res) as Promise<MutateResult & { device?: import("./types").AndroidDevice }>;
+}
+
+export async function removeAndroidDevice(id: string): Promise<MutateResult> {
+  const res = await fetch(`/api/android/devices/${id}`, { method: "DELETE" });
+  return readMutate(res);
+}
+
+export async function connectAndroidDevice(id: string): Promise<MutateResult> {
+  const res = await fetch(`/api/android/devices/${id}/connect`, { method: "POST" });
+  return readMutate(res);
+}
+
+export async function disconnectAndroidDevice(id: string): Promise<MutateResult> {
+  const res = await fetch(`/api/android/devices/${id}/disconnect`, { method: "POST" });
+  return readMutate(res);
+}
+
+export async function adbConnect(host: string, port = 5555): Promise<MutateResult> {
+  const res = await fetch("/api/android/adb/connect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ host, port }),
+  });
+  return readMutate(res);
+}
+
+export async function adbDisconnect(target?: string): Promise<MutateResult> {
+  const res = await fetch("/api/android/adb/disconnect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(target ? { target } : {}),
+  });
+  return readMutate(res);
+}
+
+export async function sendAndroidInput(id: string, body: import("./types").AndroidInput): Promise<MutateResult> {
+  const res = await fetch(`/api/android/devices/${id}/input`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res);
+}
+
 export async function fetchMiningStatus(): Promise<MiningStatus> {
   const res = await fetch("/api/mining/status", { cache: "no-store" });
   if (!res.ok) throw new Error(`mining status HTTP ${res.status}`);

@@ -42,6 +42,15 @@ export const METRICS: Record<string, Array<[string, string, string]>> = {
   adsense: [
     ["unpaid_cents", "Carteira", "cents"],
   ],
+  storage: [
+    ["free_gb", "Espaço livre (GB)", "gb"],
+    ["free_percent", "Espaço livre (%)", "percent_free"],
+    ["used_percent", "Uso do disco (%)", "percent"],
+  ],
+  system: [
+    ["mem_percent", "Memória usada (%)", "percent"],
+    ["cpu_load1", "Carga CPU (1m)", "percent"],
+  ],
 };
 
 export const PROVIDER_NAMES: Record<string, string> = {
@@ -55,6 +64,8 @@ export const PROVIDER_NAMES: Record<string, string> = {
   bitcoin: "Bitcoin",
   adsense: "AdSense",
   calendar: "Calendário",
+  storage: "Armazenamento",
+  system: "Sistema",
 };
 
 export const CALENDAR_METRICS: Array<[string, string, string]> = [
@@ -122,7 +133,10 @@ export function metricResetField(provider: string, metric: string): string | nul
 }
 
 function fired(kind: string, value: number, threshold: number): boolean {
-  return kind === "percent" ? value >= threshold : value <= threshold;
+  if (kind === "percent") return value >= threshold;
+  if (kind === "percent_free") return value <= threshold;
+  if (kind === "gb") return value <= threshold;
+  return value <= threshold;
 }
 
 function escapeHtml(s: string): string {
@@ -306,6 +320,12 @@ export function formatAlarmNotification(event: Record<string, unknown>): string 
   if (kind === "percent") {
     detail = `${threshold.toFixed(0)}% da cota ${metricName}`;
     lines = [`⚠️ <b>${providerName}</b>`, "", `📊 Uso de <b>${detail}</b>`];
+  } else if (kind === "percent_free") {
+    detail = `${threshold.toFixed(0)}% livre em ${metricName}`;
+    lines = [`⚠️ <b>${providerName}</b>`, "", `💾 Espaço livre <b>${detail}</b>`];
+  } else if (kind === "gb") {
+    detail = `${threshold.toFixed(1)} GB livres em ${metricName}`;
+    lines = [`⚠️ <b>${providerName}</b>`, "", `💾 Espaço livre <b>${detail}</b>`];
   } else {
     const amount = `$${(threshold / 100).toFixed(2)}`;
     detail = `${amount} da cota ${metricName}`;

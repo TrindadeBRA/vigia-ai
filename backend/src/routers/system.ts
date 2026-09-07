@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import os from "node:os";
 import type { UsageHub } from "../hub.js";
+import { getStorageInfo, getSystemDetails } from "../systemInfo.js";
 import { VERSION } from "../version.js";
 
 const STARTED_AT = new Date();
@@ -11,6 +12,8 @@ export async function createSystemRoutes(app: FastifyInstance): Promise<void> {
     const hub = (app as unknown as { hub?: UsageHub }).hub;
     const mem = process.memoryUsage();
     const load = os.loadavg();
+    const storage = getStorageInfo();
+    const details = getSystemDetails();
     return {
       ok: true,
       version: VERSION,
@@ -29,6 +32,8 @@ export async function createSystemRoutes(app: FastifyInstance): Promise<void> {
         load5: load[1],
         load15: load[2],
       },
+      system: details,
+      storage,
       last_cycle: hub
         ? {
           at: hub.lastCycleAt,
