@@ -221,9 +221,14 @@ export type ConfigCopy = {
   providerSaving: string;
   providerSaved: string;
   providerError: string;
-  // Câmera IP (protótipo)
+  // Câmera IP (protótipo) — várias câmeras, cada uma com PTZ opcional (ONVIF)
   cameraTitle: string;
   cameraBlurb: string;
+  cameraListLabel: string;
+  cameraEmpty: string;
+  cameraAdd: string;
+  cameraLabel: string;
+  cameraLabelPh: string;
   cameraHost: string;
   cameraHostPh: string;
   cameraPort: string;
@@ -232,6 +237,9 @@ export type ConfigCopy = {
   cameraUsername: string;
   cameraPassword: string;
   cameraPasswordPh: string;
+  cameraPtz: string;
+  cameraOnvifPort: string;
+  cameraOnvifPortPh: string;
   cameraSave: string;
   cameraSaving: string;
   cameraSaved: string;
@@ -240,6 +248,12 @@ export type ConfigCopy = {
   cameraNotConfigured: string;
   cameraOfflineHint: string;
   cameraNeedsConfigHint: string;
+  cameraPtzUp: string;
+  cameraPtzDown: string;
+  cameraPtzLeft: string;
+  cameraPtzRight: string;
+  cameraPtzZoomIn: string;
+  cameraPtzZoomOut: string;
   // Financeiro
   financeiroTitle: string;
   financeiroLead: string;
@@ -601,8 +615,13 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     providerSaving: "Salvando…",
     providerSaved: "Chaves salvas.",
     providerError: "Falha ao salvar chaves.",
-    cameraTitle: "Câmera IP",
-    cameraBlurb: "Mostra o snapshot de uma câmera RTSP local no board. Exige ffmpeg instalado no computador do coletor — câmeras baratas (Yoosee/HiIP e clones) costumam expor RTSP em /onvif1 com autenticação Digest.",
+    cameraTitle: "Câmeras IP",
+    cameraBlurb: "Cada câmera cadastrada vira um bloco próprio no board, com vídeo via RTSP (ffmpeg no computador do coletor). Câmeras baratas (Yoosee/HiIP e clones) costumam expor RTSP em /onvif1 com autenticação Digest. Se a câmera tiver motor pan/tilt, habilite PTZ (ONVIF) pra controlar direto do bloco.",
+    cameraListLabel: "Câmeras cadastradas",
+    cameraEmpty: "Nenhuma câmera cadastrada ainda.",
+    cameraAdd: "Adicionar câmera",
+    cameraLabel: "NOME",
+    cameraLabelPh: "ex.: Sala",
     cameraHost: "IP / HOST",
     cameraHostPh: "ex.: 192.168.3.27",
     cameraPort: "PORTA",
@@ -611,6 +630,9 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraUsername: "USUÁRIO",
     cameraPassword: "SENHA",
     cameraPasswordPh: "senha da câmera",
+    cameraPtz: "Tem motor PTZ (pan/tilt, via ONVIF)",
+    cameraOnvifPort: "PORTA ONVIF",
+    cameraOnvifPortPh: "ex.: 5000",
     cameraSave: "Salvar câmera",
     cameraSaving: "Salvando…",
     cameraSaved: "Câmera salva.",
@@ -619,6 +641,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraNotConfigured: "Não configurada",
     cameraOfflineHint: "Não foi possível carregar a imagem da câmera.",
     cameraNeedsConfigHint: "Configure a câmera em Configurações.",
+    cameraPtzUp: "Mover para cima",
+    cameraPtzDown: "Mover para baixo",
+    cameraPtzLeft: "Mover para a esquerda",
+    cameraPtzRight: "Mover para a direita",
+    cameraPtzZoomIn: "Aproximar zoom",
+    cameraPtzZoomOut: "Afastar zoom",
     financeiroTitle: "Financeiro",
     financeiroLead: "Carteira Bitcoin, AdSense e cotação de moedas — dólar, euro, cripto, o que você quiser acompanhar.",
     outrosTitle: "Outros",
@@ -972,8 +1000,13 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     providerSaving: "Saving…",
     providerSaved: "Keys saved.",
     providerError: "Failed to save keys.",
-    cameraTitle: "IP Camera",
-    cameraBlurb: "Shows a snapshot from a local RTSP camera on the board. Requires ffmpeg installed on the collector's machine — cheap cameras (Yoosee/HiIP clones) usually expose RTSP at /onvif1 with Digest auth.",
+    cameraTitle: "IP Cameras",
+    cameraBlurb: "Every camera you add becomes its own block on the board, streaming over RTSP (ffmpeg on the collector's machine). Cheap cameras (Yoosee/HiIP clones) usually expose RTSP at /onvif1 with Digest auth. If the camera has a pan/tilt motor, enable PTZ (ONVIF) to control it right from the block.",
+    cameraListLabel: "Configured cameras",
+    cameraEmpty: "No cameras configured yet.",
+    cameraAdd: "Add camera",
+    cameraLabel: "NAME",
+    cameraLabelPh: "e.g. Living room",
     cameraHost: "IP / HOST",
     cameraHostPh: "e.g. 192.168.3.27",
     cameraPort: "PORT",
@@ -982,6 +1015,9 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraUsername: "USERNAME",
     cameraPassword: "PASSWORD",
     cameraPasswordPh: "camera password",
+    cameraPtz: "Has a PTZ motor (pan/tilt, via ONVIF)",
+    cameraOnvifPort: "ONVIF PORT",
+    cameraOnvifPortPh: "e.g. 5000",
     cameraSave: "Save camera",
     cameraSaving: "Saving…",
     cameraSaved: "Camera saved.",
@@ -990,6 +1026,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraNotConfigured: "Not configured",
     cameraOfflineHint: "Could not load the camera image.",
     cameraNeedsConfigHint: "Set up the camera in Settings.",
+    cameraPtzUp: "Move up",
+    cameraPtzDown: "Move down",
+    cameraPtzLeft: "Move left",
+    cameraPtzRight: "Move right",
+    cameraPtzZoomIn: "Zoom in",
+    cameraPtzZoomOut: "Zoom out",
     financeiroTitle: "Finance",
     financeiroLead: "Bitcoin wallet, AdSense and currency quotes — dollar, euro, crypto, whatever you want to track.",
     outrosTitle: "Other",
@@ -1343,8 +1385,13 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     providerSaving: "Guardando…",
     providerSaved: "Claves guardadas.",
     providerError: "Error al guardar claves.",
-    cameraTitle: "Cámara IP",
-    cameraBlurb: "Muestra la instantánea de una cámara RTSP local en el tablero. Requiere ffmpeg instalado en el equipo del colector — las cámaras baratas (Yoosee/HiIP y clones) suelen exponer RTSP en /onvif1 con autenticación Digest.",
+    cameraTitle: "Cámaras IP",
+    cameraBlurb: "Cada cámara que agregás se convierte en su propio bloque en el tablero, con video vía RTSP (ffmpeg en el equipo del colector). Las cámaras baratas (Yoosee/HiIP y clones) suelen exponer RTSP en /onvif1 con autenticación Digest. Si la cámara tiene motor pan/tilt, habilitá PTZ (ONVIF) para controlarla directo desde el bloque.",
+    cameraListLabel: "Cámaras configuradas",
+    cameraEmpty: "Todavía no hay cámaras configuradas.",
+    cameraAdd: "Agregar cámara",
+    cameraLabel: "NOMBRE",
+    cameraLabelPh: "ej.: Sala",
     cameraHost: "IP / HOST",
     cameraHostPh: "ej.: 192.168.3.27",
     cameraPort: "PUERTO",
@@ -1353,6 +1400,9 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraUsername: "USUARIO",
     cameraPassword: "CONTRASEÑA",
     cameraPasswordPh: "contraseña de la cámara",
+    cameraPtz: "Tiene motor PTZ (pan/tilt, vía ONVIF)",
+    cameraOnvifPort: "PUERTO ONVIF",
+    cameraOnvifPortPh: "ej.: 5000",
     cameraSave: "Guardar cámara",
     cameraSaving: "Guardando…",
     cameraSaved: "Cámara guardada.",
@@ -1361,6 +1411,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     cameraNotConfigured: "No configurada",
     cameraOfflineHint: "No se pudo cargar la imagen de la cámara.",
     cameraNeedsConfigHint: "Configura la cámara en Configuración.",
+    cameraPtzUp: "Mover hacia arriba",
+    cameraPtzDown: "Mover hacia abajo",
+    cameraPtzLeft: "Mover a la izquierda",
+    cameraPtzRight: "Mover a la derecha",
+    cameraPtzZoomIn: "Acercar zoom",
+    cameraPtzZoomOut: "Alejar zoom",
     financeiroTitle: "Finanzas",
     financeiroLead: "Billetera Bitcoin, AdSense y cotización de monedas — dólar, euro, cripto, lo que quieras seguir.",
     outrosTitle: "Otros",

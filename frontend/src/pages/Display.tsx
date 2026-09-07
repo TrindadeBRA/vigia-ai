@@ -18,6 +18,7 @@ import { GAMEPAD_CSS, gamepadScrollMain, gamepadZoom, isGamepadTypingActive, use
 import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useImageWidgets } from "../hooks/useImageWidgets";
+import { useCameras } from "../hooks/useCameras";
 import { useServerNotes } from "../hooks/useServerNotes";
 import { STR } from "../i18n";
 import { ACCENTS, PALETTES, applyThemeVars, getSystemTheme, resolveTheme } from "../theme";
@@ -25,7 +26,7 @@ import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
 import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
-import { buildEmulatorProviders, buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
+import { buildCameraProviders, buildEmulatorProviders, buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
 import { SettingsDrawer } from "./display/SettingsDrawer";
@@ -74,6 +75,7 @@ export default function Display() {
   const { gridId: gridWallpaperId } = useGridWallpaper();
   const imageWidgets = useImageWidgets();
   const serverNotes = useServerNotes();
+  const cameras = useCameras();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
@@ -219,6 +221,9 @@ export default function Display() {
   // Notas: uma única fonte, no backend (/api/notes) — compartilhadas entre
   // qualquer navegador/dispositivo/app que aponte pro mesmo servidor.
   const noteProviders = buildNoteProviders(serverNotes.items as unknown as Array<{ id: string; text: string; color: string }>, t);
+  // Câmeras: cada uma cadastrada em Configurações vira seu próprio bloco,
+  // igual às notas — sem toggle único de "ativar câmera".
+  const cameraProviders = buildCameraProviders(cameras.items, t);
   const emulatorProviders = buildEmulatorProviders(emulatorConfig, t).map((p) => Object.assign(p, {
     _emulatorConfig: emulatorConfig ? {
       cdnVersion: emulatorConfig.cdnVersion,
@@ -242,8 +247,8 @@ export default function Display() {
   }));
   const bpBoard = boardForCols(boards, currentCols);
   const boardProviders = data
-    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders, ...emulatorProviders]
-    : [...imageProviders, ...noteProviders, ...buildWidgetProviders(prefs.widgets, t), ...emulatorProviders];
+    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders, ...cameraProviders, ...emulatorProviders]
+    : [...imageProviders, ...noteProviders, ...cameraProviders, ...buildWidgetProviders(prefs.widgets, t), ...emulatorProviders];
   const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
   const toggleWidget = (kind: WidgetKind) =>
     setPrefs((p) => {
@@ -849,6 +854,7 @@ export default function Display() {
                   onRemoveNote={(id) => void serverNotes.remove(id.replace(/^note:/, ""))}
                   onDuplicateNote={(id) => void serverNotes.duplicate(id.replace(/^note:/, ""))}
                   onUpdateNote={(id, patch) => void serverNotes.update(id.replace(/^note:/, ""), patch as never)}
+                  onRemoveCamera={(id) => void cameras.remove(id.replace(/^widget:camera:/, ""))}
                 />
               ) : null}
               {section === "account" && meta && !hideChrome ? (

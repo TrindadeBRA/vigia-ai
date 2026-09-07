@@ -158,6 +158,12 @@ type Strings = {
   spotifyConnectHint: string;
   cameraNeedsConfigHint: string;
   cameraOfflineHint: string;
+  cameraPtzUp: string;
+  cameraPtzDown: string;
+  cameraPtzLeft: string;
+  cameraPtzRight: string;
+  cameraPtzZoomIn: string;
+  cameraPtzZoomOut: string;
   spotifyPlay: string;
   spotifyPause: string;
   spotifyNext: string;
@@ -418,6 +424,12 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Conecte sua conta Spotify em Configurações",
     cameraNeedsConfigHint: "Configure a câmera em Configurações.",
     cameraOfflineHint: "Não foi possível carregar a imagem da câmera.",
+    cameraPtzUp: "Mover para cima",
+    cameraPtzDown: "Mover para baixo",
+    cameraPtzLeft: "Mover para a esquerda",
+    cameraPtzRight: "Mover para a direita",
+    cameraPtzZoomIn: "Aproximar zoom",
+    cameraPtzZoomOut: "Afastar zoom",
     spotifyPlay: "Tocar",
     spotifyPause: "Pausar",
     spotifyNext: "Próxima faixa",
@@ -670,6 +682,12 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Connect your Spotify account in Settings",
     cameraNeedsConfigHint: "Set up the camera in Settings.",
     cameraOfflineHint: "Could not load the camera image.",
+    cameraPtzUp: "Move up",
+    cameraPtzDown: "Move down",
+    cameraPtzLeft: "Move left",
+    cameraPtzRight: "Move right",
+    cameraPtzZoomIn: "Zoom in",
+    cameraPtzZoomOut: "Zoom out",
     spotifyPlay: "Play",
     spotifyPause: "Pause",
     spotifyNext: "Next track",
@@ -922,6 +940,12 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Conecta tu cuenta de Spotify en Configuración",
     cameraNeedsConfigHint: "Configura la cámara en Configuración.",
     cameraOfflineHint: "No se pudo cargar la imagen de la cámara.",
+    cameraPtzUp: "Mover hacia arriba",
+    cameraPtzDown: "Mover hacia abajo",
+    cameraPtzLeft: "Mover a la izquierda",
+    cameraPtzRight: "Mover a la derecha",
+    cameraPtzZoomIn: "Acercar zoom",
+    cameraPtzZoomOut: "Alejar zoom",
     spotifyPlay: "Reproducir",
     spotifyPause: "Pausar",
     spotifyNext: "Pista siguiente",

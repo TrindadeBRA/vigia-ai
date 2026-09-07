@@ -156,14 +156,16 @@ export function SpotifyTileCard({ p, size, dragging, lifted, t, grip, bg, readon
 
 export function CameraTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
   const allowed = cameraAllowedSizes();
-  const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "p-2", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
       {!lifted && !readonly ? (
-        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => cameraSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+        // cada câmera é sua própria entidade (não um clone) — mas assim como
+        // nota/imagem, sempre removível direto do bloco (isClone forçado true
+        // só faz o botão de lixeira aparecer, ver SizeMenu.tsx)
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => cameraSizeLabel(s, t)} isClone={true} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
-      <CameraBoardCard t={t} size={size} />
+      <CameraBoardCard camera={p.camera ?? null} t={t} size={size} />
     </div>
   );
 }

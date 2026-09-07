@@ -1,4 +1,4 @@
-import type { BitcoinAccount, GptAccount, UsagePayload } from "../../api/types";
+import type { BitcoinAccount, CameraItem, GptAccount, UsagePayload } from "../../api/types";
 import type { WidgetKind } from "../../components/AddWidgetModal";
 import { getAdsenseMetrics } from "../../components/cards/AdsenseCard";
 import { getCreditsMetrics, getOpenCodeMetrics } from "../../components/cards/CreditsCard";
@@ -440,9 +440,6 @@ export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): P
   if (enabled?.includes("eye")) {
     list.push({ id: "widget:eye", provider: "eye", ok: true, error: null, title: t.widgetEye, label: "", metrics: [] });
   }
-  if (enabled?.includes("camera")) {
-    list.push({ id: "widget:camera", provider: "camera", ok: true, error: null, title: t.widgetCamera, label: "", metrics: [] });
-  }
   if (enabled?.includes("spotify")) {
     list.push({ id: "widget:spotify", provider: "spotify", ok: true, error: null, title: t.widgetSpotify, label: "", metrics: [] });
   }
@@ -468,6 +465,22 @@ export function buildImageProviders(items: Array<{ id: string; src: string; fit:
     imageSrc: it.src,
     imageFit: it.fit,
     imageTransform: (it as unknown as { transform?: { x: number; y: number; scale: number } }).transform ?? null,
+  }));
+}
+
+/** Cada câmera cadastrada em Configurações vira seu próprio bloco no board
+ * automaticamente — igual às notas, não um toggle único de "ativar câmera". */
+export function buildCameraProviders(cameras: CameraItem[] | undefined, t: T): ProviderMeta[] {
+  if (!cameras?.length) return [];
+  return cameras.map((cam) => ({
+    id: `widget:camera:${cam.id}`,
+    provider: "camera",
+    ok: true,
+    error: null,
+    title: cam.label || t.widgetCamera,
+    label: "",
+    metrics: [],
+    camera: cam,
   }));
 }
 

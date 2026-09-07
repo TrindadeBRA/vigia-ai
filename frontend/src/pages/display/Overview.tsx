@@ -109,6 +109,7 @@ export function Overview({
   onRemoveNote,
   onDuplicateNote,
   onUpdateNote,
+  onRemoveCamera,
   wallpaperParallax = true,
 }: {
   providers: ProviderMeta[];
@@ -133,6 +134,7 @@ export function Overview({
   onRemoveNote?: (id: string) => void;
   onDuplicateNote?: (id: string) => void;
   onUpdateNote?: (id: string, patch: { text?: string; color?: string }) => void;
+  onRemoveCamera?: (id: string) => void;
   /** Wallpaper fixo (parallax): ancorado na área visível do `<main>`, não estica com o conteúdo e não rola com o grid. Default true. */
   wallpaperParallax?: boolean;
 }) {
@@ -330,6 +332,19 @@ export function Overview({
     }
     if (id.startsWith("note:")) {
       setNoteToRemove(id);
+      return;
+    }
+    if (id.startsWith("widget:camera:")) {
+      onRemoveCamera?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
       return;
     }
     onBoard((b) => removeCloneBoard(b, id));

@@ -1,4 +1,4 @@
-import type { CalendarPayload, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubRepo, IssPayload, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
+import type { CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubRepo, IssPayload, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
 import type { PALETTES, ResolvedThemeName } from "../../theme";
 
 export type Pal = (typeof PALETTES)[ResolvedThemeName];
@@ -29,5 +29,6 @@ export type ProviderMeta = {
   imageFit?: "cover" | "contain";
   imageTransform?: { x: number; y: number; scale: number } | null;
   note?: { id: string; text: string; color: string } | null;
+  camera?: CameraItem | null;
   emulator?: { platform: string; core: string; romPath: string; biosPath: string | null; label: string } | null;
 };

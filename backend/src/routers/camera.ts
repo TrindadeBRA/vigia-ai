@@ -2,28 +2,51 @@ import type { FastifyInstance } from "fastify";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { dataDir } from "../config.js";
 import {
-  CameraConfigPatchSchema,
-  CameraConfigSchema,
-  type CameraConfig,
+  CameraCreateSchema,
+  CameraItemSchema,
+  CameraPatchSchema,
+  CamerasFileSchema,
+  RTSP_FIELDS,
+  type CameraItem,
+  type CamerasFile,
 } from "../schemas/camera.js";
+import { invalidatePtzCache, sendPtz, type PtzAction } from "../providers/onvifPtz.js";
 
 function cameraPath(): string {
   return join(dataDir(), "camera.json");
 }
 
-function load(): CameraConfig {
+// Migra o formato antigo (uma câmera única, campos no topo do arquivo) pra
+// `{ cameras: [...] }` na primeira leitura — usuários que já tinham uma
+// câmera configurada não perdem a config.
+function migrateLegacy(raw: Record<string, unknown>): CamerasFile | null {
+  if ("cameras" in raw) return null;
+  if (!("host" in raw)) return null;
+  const legacy = CameraItemSchema.omit({ id: true, label: true, ptzEnabled: true, onvifPort: true }).partial().parse(raw);
+  const item = CameraItemSchema.parse({ ...legacy, id: randomBytes(4).toString("hex"), label: "Câmera" });
+  return { cameras: [item] };
+}
+
+function load(): CamerasFile {
   const p = cameraPath();
-  if (!existsSync(p)) return CameraConfigSchema.parse({});
+  if (!existsSync(p)) return CamerasFileSchema.parse({});
   try {
-    return CameraConfigSchema.parse(JSON.parse(readFileSync(p, "utf-8")));
+    const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
+    const migrated = migrateLegacy(raw);
+    if (migrated) {
+      save(migrated);
+      return migrated;
+    }
+    return CamerasFileSchema.parse(raw);
   } catch {
-    return CameraConfigSchema.parse({});
+    return CamerasFileSchema.parse({});
   }
 }
 
-function save(config: CameraConfig): void {
+function save(config: CamerasFile): void {
   mkdirSync(dataDir(), { recursive: true });
   const p = cameraPath();
   const tmp = p + ".tmp";
@@ -31,12 +54,12 @@ function save(config: CameraConfig): void {
   renameSync(tmp, p);
 }
 
-function toPublic(config: CameraConfig) {
-  const { password, ...rest } = config;
-  return { ...rest, configured: Boolean(config.host.trim() && password.trim()) };
+function toPublic(item: CameraItem) {
+  const { password, ...rest } = item;
+  return { ...rest, configured: Boolean(item.host.trim() && password.trim()) };
 }
 
-function rtspUrl(config: CameraConfig): string {
+function rtspUrl(config: CameraItem): string {
   const user = encodeURIComponent(config.username);
   const pass = encodeURIComponent(config.password);
   const path = config.path.replace(/^\/+/, "");
@@ -45,13 +68,14 @@ function rtspUrl(config: CameraConfig): string {
 
 // Cache curto: o board pode ter várias abas/instâncias pollando o mesmo
 // snapshot — sem isso cada poll dispararia um ffmpeg novo (processo pesado,
-// ~1-2s pra conectar + decodificar o primeiro keyframe H.265).
+// ~1-2s pra conectar + decodificar o primeiro keyframe H.265). Uma entrada
+// por câmera (chave = id da câmera).
 const SNAPSHOT_TTL_MS = 2000;
 const SNAPSHOT_TIMEOUT_MS = 8000;
-let cache: { at: number; jpeg: Buffer } | null = null;
-let inFlight: Promise<Buffer> | null = null;
+const snapshotCache = new Map<string, { at: number; jpeg: Buffer }>();
+const snapshotInFlight = new Map<string, Promise<Buffer>>();
 
-function grabSnapshot(config: CameraConfig): Promise<Buffer> {
+function grabSnapshot(config: CameraItem): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const url = rtspUrl(config);
     // UDP em vez de TCP: várias câmeras clone (HiIP/Yoosee) devolvem o
@@ -92,7 +116,7 @@ const STREAM_BOUNDARY = "vigiaframe";
 const SOI = Buffer.from([0xff, 0xd8]);
 const EOI = Buffer.from([0xff, 0xd9]);
 
-function spawnFfmpegStream(config: CameraConfig, onFrame: (jpeg: Buffer) => void, onEnd: (err: Error | null) => void): () => void {
+function spawnFfmpegStream(config: CameraItem, onFrame: (jpeg: Buffer) => void, onEnd: (err: Error | null) => void): () => void {
   const url = rtspUrl(config);
   const args = [
     "-rtsp_transport", "udp",
@@ -140,109 +164,151 @@ function spawnFfmpegStream(config: CameraConfig, onFrame: (jpeg: Buffer) => void
   return () => { if (!proc.killed) proc.kill("SIGKILL"); };
 }
 
-// Fan-out: um único ffmpeg compartilhado entre todos os viewers conectados
-// (a câmera vê só 1 conexão RTSP, a CPU decodifica 1 vez), em vez de um
-// processo por aba/tela aberta. Nasce sob demanda no primeiro assinante e
-// morre STOP_GRACE_MS depois do último sair — o delay evita reabrir o
-// ffmpeg (handshake RTSP + primeiro keyframe H.265, ~1-2s) quando o próprio
-// frontend reconecta rapidinho (ex.: troca de aba, ou o retry de erro do
-// CameraCard.tsx).
+// Fan-out: um único ffmpeg compartilhado entre todos os viewers conectados de
+// uma mesma câmera (a câmera vê só 1 conexão RTSP, a CPU decodifica 1 vez),
+// em vez de um processo por aba/tela aberta. Nasce sob demanda no primeiro
+// assinante e morre STOP_GRACE_MS depois do último sair — o delay evita
+// reabrir o ffmpeg (handshake RTSP + primeiro keyframe H.265, ~1-2s) quando o
+// próprio frontend reconecta rapidinho (ex.: troca de aba, ou o retry de erro
+// do CameraCard.tsx). Uma entrada por câmera (chave = id da câmera).
 type StreamSub = { onFrame: (jpeg: Buffer) => void; onEnd: (err: Error | null) => void };
 const STOP_GRACE_MS = 5000;
-let shared: { key: string; stop: () => void; subs: Set<StreamSub>; stopTimer: NodeJS.Timeout | null } | null = null;
+type StreamEntry = { stop: () => void; subs: Set<StreamSub>; stopTimer: NodeJS.Timeout | null };
+const sharedStreams = new Map<string, StreamEntry>();
 
-function configKey(c: CameraConfig): string {
-  return `${c.host}:${c.port}:${c.path}:${c.username}:${c.password}`;
+function killStream(cameraId: string): void {
+  const entry = sharedStreams.get(cameraId);
+  if (!entry) return;
+  if (entry.stopTimer) clearTimeout(entry.stopTimer);
+  entry.stop();
+  sharedStreams.delete(cameraId);
 }
 
-function subscribeStream(config: CameraConfig, sub: StreamSub): () => void {
-  const key = configKey(config);
-  if (shared && shared.key === key) {
-    if (shared.stopTimer) {
-      clearTimeout(shared.stopTimer);
-      shared.stopTimer = null;
+function subscribeStream(cameraId: string, config: CameraItem, sub: StreamSub): () => void {
+  let entry = sharedStreams.get(cameraId);
+  if (entry) {
+    if (entry.stopTimer) {
+      clearTimeout(entry.stopTimer);
+      entry.stopTimer = null;
     }
   } else {
-    // Câmera trocada de config (ou primeiro assinante): derruba o antigo
-    // (se houver) e sobe um ffmpeg novo já compartilhável.
-    shared?.stop();
     const subs = new Set<StreamSub>();
-    const entry: { key: string; stop: () => void; subs: Set<StreamSub>; stopTimer: NodeJS.Timeout | null } = {
-      key,
-      subs,
-      stopTimer: null,
-      stop: () => { /* substituído logo abaixo, precisa existir pro closure do onEnd */ },
-    };
-    entry.stop = spawnFfmpegStream(
+    const created: StreamEntry = { subs, stopTimer: null, stop: () => {} };
+    created.stop = spawnFfmpegStream(
       config,
       (jpeg) => { for (const s of subs) s.onFrame(jpeg); },
       (err) => {
         for (const s of subs) s.onEnd(err);
         subs.clear();
-        if (shared === entry) shared = null;
+        if (sharedStreams.get(cameraId) === created) sharedStreams.delete(cameraId);
       },
     );
-    shared = entry;
+    sharedStreams.set(cameraId, created);
+    entry = created;
   }
-  shared.subs.add(sub);
+  entry.subs.add(sub);
   return () => {
-    if (!shared || shared.key !== key) return;
-    shared.subs.delete(sub);
-    if (shared.subs.size === 0) {
-      const entry = shared;
-      entry.stopTimer = setTimeout(() => {
-        if (shared === entry && shared.subs.size === 0) {
-          shared.stop();
-          shared = null;
+    const cur = sharedStreams.get(cameraId);
+    if (!cur || cur !== entry) return;
+    cur.subs.delete(sub);
+    if (cur.subs.size === 0) {
+      cur.stopTimer = setTimeout(() => {
+        if (sharedStreams.get(cameraId) === cur && cur.subs.size === 0) {
+          cur.stop();
+          sharedStreams.delete(cameraId);
         }
       }, STOP_GRACE_MS);
     }
   };
 }
 
-export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/camera/config", async () => toPublic(load()));
+function rtspFieldsChanged(a: CameraItem, b: CameraItem): boolean {
+  return RTSP_FIELDS.some((f) => a[f] !== b[f]);
+}
 
-  app.put("/api/camera/config", async (request, reply) => {
-    const parsed = CameraConfigPatchSchema.safeParse((request.body as Record<string, unknown>) ?? {});
+export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/api/camera/cameras", async () => ({ cameras: load().cameras.map(toPublic) }));
+
+  app.post("/api/camera/cameras", async (request, reply) => {
+    const parsed = CameraCreateSchema.safeParse((request.body as Record<string, unknown>) ?? {});
     if (!parsed.success) {
       return reply.code(400).send({ ok: false, error: parsed.error.message });
     }
-    const next = CameraConfigSchema.parse({ ...load(), ...parsed.data });
-    save(next);
-    cache = null;
-    // Config mudou (ex.: senha errada corrigida) — força reconectar em vez
-    // de deixar quem já está assistindo preso no stream com a config velha.
-    if (shared) {
-      shared.stop();
-      shared = null;
-    }
-    return { ok: true, config: toPublic(next) };
+    const file = load();
+    const item = CameraItemSchema.parse({ ...parsed.data, id: randomBytes(4).toString("hex") });
+    file.cameras.push(item);
+    save(file);
+    return { ok: true, camera: toPublic(item) };
   });
 
-  app.get("/api/camera/snapshot", async (request, reply) => {
-    const config = load();
+  app.patch("/api/camera/cameras/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsed = CameraPatchSchema.safeParse((request.body as Record<string, unknown>) ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ ok: false, error: parsed.error.message });
+    }
+    const file = load();
+    const idx = file.cameras.findIndex((c) => c.id === id);
+    if (idx === -1) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });
+    const prev = file.cameras[idx];
+    const next = CameraItemSchema.parse({ ...prev, ...parsed.data, id });
+    file.cameras[idx] = next;
+    save(file);
+    if (rtspFieldsChanged(prev, next)) {
+      killStream(id);
+      snapshotCache.delete(id);
+      snapshotInFlight.delete(id);
+    }
+    if (prev.host !== next.host || prev.username !== next.username || prev.password !== next.password || prev.onvifPort !== next.onvifPort) {
+      invalidatePtzCache(id);
+    }
+    return { ok: true, camera: toPublic(next) };
+  });
+
+  app.delete("/api/camera/cameras/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const file = load();
+    const idx = file.cameras.findIndex((c) => c.id === id);
+    if (idx === -1) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });
+    file.cameras.splice(idx, 1);
+    save(file);
+    killStream(id);
+    snapshotCache.delete(id);
+    snapshotInFlight.delete(id);
+    invalidatePtzCache(id);
+    return { ok: true };
+  });
+
+  app.get("/api/camera/cameras/:id/snapshot", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const config = load().cameras.find((c) => c.id === id);
+    if (!config) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });
     if (!config.host.trim()) {
       return reply.code(400).send({ ok: false, error: "Câmera não configurada — preencha o IP em Configurações." });
     }
     const now = Date.now();
-    if (cache && now - cache.at < SNAPSHOT_TTL_MS) {
-      return reply.type("image/jpeg").send(cache.jpeg);
+    const cached = snapshotCache.get(id);
+    if (cached && now - cached.at < SNAPSHOT_TTL_MS) {
+      return reply.type("image/jpeg").send(cached.jpeg);
     }
     try {
+      let inFlight = snapshotInFlight.get(id);
       if (!inFlight) {
-        inFlight = grabSnapshot(config).finally(() => { inFlight = null; });
+        inFlight = grabSnapshot(config).finally(() => { snapshotInFlight.delete(id); });
+        snapshotInFlight.set(id, inFlight);
       }
       const jpeg = await inFlight;
-      cache = { at: Date.now(), jpeg };
+      snapshotCache.set(id, { at: Date.now(), jpeg });
       return reply.type("image/jpeg").send(jpeg);
     } catch (e) {
       return reply.code(502).send({ ok: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
 
-  app.get("/api/camera/stream", async (request, reply) => {
-    const config = load();
+  app.get("/api/camera/cameras/:id/stream", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const config = load().cameras.find((c) => c.id === id);
+    if (!config) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });
     if (!config.host.trim()) {
       return reply.code(400).send({ ok: false, error: "Câmera não configurada — preencha o IP em Configurações." });
     }
@@ -254,7 +320,7 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
       Connection: "close",
     });
     let ended = false;
-    const unsubscribe = subscribeStream(config, {
+    const unsubscribe = subscribeStream(id, config, {
       onFrame: (jpeg) => {
         if (ended || res.destroyed) return;
         res.write(`--${STREAM_BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`);
@@ -271,5 +337,24 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
       ended = true;
       unsubscribe();
     });
+  });
+
+  app.post("/api/camera/cameras/:id/ptz", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const config = load().cameras.find((c) => c.id === id);
+    if (!config) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });
+    if (!config.ptzEnabled) return reply.code(400).send({ ok: false, error: "PTZ não habilitado nessa câmera" });
+    const body = (request.body as Record<string, unknown>) ?? {};
+    const action = body.action as PtzAction | undefined;
+    const valid: PtzAction[] = ["up", "down", "left", "right", "zoom_in", "zoom_out", "stop"];
+    if (!action || !valid.includes(action)) {
+      return reply.code(400).send({ ok: false, error: "action inválida" });
+    }
+    try {
+      await sendPtz(config, action);
+      return { ok: true };
+    } catch (e) {
+      return reply.code(502).send({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    }
   });
 }

@@ -1,4 +1,4 @@
-import type { AlarmRule, AlarmsPublic, CameraConfig, ConfigPublic, MiningConfig, MiningStatus, UsagePayload } from "./types";
+import type { AlarmRule, AlarmsPublic, CameraCreate, CameraItem, CameraPatch, ConfigPublic, MiningConfig, MiningStatus, PtzAction, UsagePayload } from "./types";
 
 export async function fetchUsage(): Promise<UsagePayload> {
   const res = await fetch("/usage", { cache: "no-store" });
@@ -98,17 +98,41 @@ export async function saveMiningConfig(patch: Partial<MiningConfig>): Promise<Mu
   return readMutate(res);
 }
 
-export async function fetchCameraConfig(): Promise<CameraConfig> {
-  const res = await fetch("/api/camera/config", { cache: "no-store" });
-  if (!res.ok) throw new Error(`camera config HTTP ${res.status}`);
-  return res.json() as Promise<CameraConfig>;
+export async function fetchCameras(): Promise<CameraItem[]> {
+  const res = await fetch("/api/camera/cameras", { cache: "no-store" });
+  if (!res.ok) throw new Error(`camera list HTTP ${res.status}`);
+  const data = (await res.json()) as { cameras: CameraItem[] };
+  return data.cameras;
 }
 
-export async function saveCameraConfig(patch: { host?: string; port?: number; path?: string; username?: string; password?: string }): Promise<MutateResult> {
-  const res = await fetch("/api/camera/config", {
-    method: "PUT",
+export async function addCamera(body: CameraCreate): Promise<MutateResult & { camera?: CameraItem }> {
+  const res = await fetch("/api/camera/cameras", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res) as Promise<MutateResult & { camera?: CameraItem }>;
+}
+
+export async function updateCamera(id: string, patch: CameraPatch): Promise<MutateResult & { camera?: CameraItem }> {
+  const res = await fetch(`/api/camera/cameras/${id}`, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
+  });
+  return readMutate(res) as Promise<MutateResult & { camera?: CameraItem }>;
+}
+
+export async function removeCamera(id: string): Promise<MutateResult> {
+  const res = await fetch(`/api/camera/cameras/${id}`, { method: "DELETE" });
+  return readMutate(res);
+}
+
+export async function sendCameraPtz(id: string, action: PtzAction): Promise<MutateResult> {
+  const res = await fetch(`/api/camera/cameras/${id}/ptz`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action }),
   });
   return readMutate(res);
 }

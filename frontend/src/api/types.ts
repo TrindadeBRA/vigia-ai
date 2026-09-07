@@ -608,14 +608,35 @@ export type MiningConfig = {
   workerName: string;
 };
 
-// Câmera IP local (protótipo) — snapshot via /api/camera/snapshot (ffmpeg no coletor).
-export type CameraConfig = {
+// Câmeras IP locais (protótipo) — snapshot/stream via ffmpeg no coletor,
+// PTZ via ONVIF SOAP quando ptzEnabled. Suporta várias câmeras; cada uma
+// vira seu próprio bloco no board.
+export type CameraItem = {
+  id: string;
   configured: boolean;
+  label: string;
   host: string;
   port: number;
   path: string;
   username: string;
+  ptzEnabled: boolean;
+  onvifPort: number;
 };
+
+export type CameraCreate = {
+  label?: string;
+  host: string;
+  port?: number;
+  path?: string;
+  username?: string;
+  password?: string;
+  ptzEnabled?: boolean;
+  onvifPort?: number;
+};
+
+export type CameraPatch = Partial<CameraCreate>;
+
+export type PtzAction = "up" | "down" | "left" | "right" | "zoom_in" | "zoom_out" | "stop";
 
 export type MiningStatusValue = "idle" | "no_wifi" | "connecting" | "mining" | "pool_offline" | "error";
 
