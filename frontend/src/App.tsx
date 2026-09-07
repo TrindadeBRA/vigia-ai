@@ -5,6 +5,7 @@ import CanvasPage from "./pages/CanvasPage";
 import Display from "./pages/Display";
 import AlarmsPage from "./pages/config/AlarmsPage";
 import ConfigPage from "./pages/config/ConfigPage";
+import MiningPage from "./pages/config/MiningPage";
 import SetupPage from "./pages/config/SetupPage";
 import ThemeEditorPage from "./pages/config/ThemeEditorPage";
 
@@ -24,6 +25,8 @@ export default function App() {
           <Route path="tema" element={<Navigate to="/display/theme" replace />} />
           <Route path="alarms" element={<AlarmsPage />} />
           <Route path="alarmes" element={<Navigate to="/display/alarms" replace />} />
+          <Route path="mining" element={<MiningPage />} />
+          <Route path="mineracao" element={<Navigate to="/display/mining" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

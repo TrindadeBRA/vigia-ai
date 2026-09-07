@@ -43,8 +43,9 @@ export default function Display() {
   const isTheme = pathname === "/display/theme" || pathname === "/display/tema";
   const isCanvas = pathname === "/display/canvas";
   const isAlarms = pathname === "/display/alarms" || pathname === "/display/alarmes";
+  const isMining = pathname === "/display/mining" || pathname === "/display/mineracao";
   const isNow = pathname === "/display/now";
-  const isNested = isConfig || isSetup || isTheme || isCanvas || isAlarms || isNow;
+  const isNested = isConfig || isSetup || isTheme || isCanvas || isAlarms || isMining || isNow;
   const [prefs, setPrefs] = usePrefs();
   const [data, setData] = useState<UsagePayload | null>(null);
   const [section, setSection] = useState<"overview" | "account">("overview");
@@ -88,7 +89,7 @@ export default function Display() {
   const flat = effectiveTheme === "contrast";
   const accent = prefs.accentCustom || ACCENTS[effectiveTheme][prefs.accent] || ACCENTS[effectiveTheme][0];
   const t = STR[prefs.lang];
-  const pageTitle = isConfig ? t.config : isSetup ? t.board : isTheme ? t.theme : isAlarms ? t.alarms : isNow ? t.now : null;
+  const pageTitle = isConfig ? t.config : isSetup ? t.board : isTheme ? t.theme : isAlarms ? t.alarms : isMining ? t.mining : isNow ? t.now : null;
   const outlet: DisplayOutlet = { lang: prefs.lang, data, nowMs: now, driftMs };
   const shellClass = cn(shell, flat && "flat");
   const pollS = pollMs / 1000;
@@ -328,6 +329,7 @@ export default function Display() {
               setupActive={isSetup}
               themeActive={isTheme}
               alarmsActive={isAlarms}
+              miningActive={isMining}
               onOverview={goOverview}
               onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
               onClose={() => setSidebarOpen(false)}

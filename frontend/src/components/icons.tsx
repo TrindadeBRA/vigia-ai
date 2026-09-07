@@ -141,6 +141,20 @@ export function BellIcon(props: { size?: number }) {
   );
 }
 
+export function PickaxeIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M5 5c3.5 0 8 2.7 10.5 5.2M19 5c-3.5 0-8 2.7-10.5 5.2"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+      <path d="M9.2 12.5 4 17.7l1.3 1.3 5.2-5.2" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export function SlidersIcon(props: { size?: number }) {
   return (
     <Svg {...props}>

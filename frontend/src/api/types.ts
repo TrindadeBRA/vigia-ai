@@ -599,6 +599,31 @@ export type AlarmsPublic = {
   calendars?: AlarmCalendarRef[];
 };
 
+// Mineração de Bitcoin (protótipo — ver .agents/PLANO_MINERACAO.md).
+export type MiningConfig = {
+  enabled: boolean;
+  poolUrl: string;
+  poolPort: number;
+  btcWallet: string;
+  workerName: string;
+};
+
+export type MiningStatusValue = "idle" | "no_wifi" | "connecting" | "mining" | "pool_offline" | "error";
+
+export type MiningStatus = {
+  status: MiningStatusValue;
+  hashrateCurrent: number;
+  hashrateAvg: number;
+  sharesAccepted: number;
+  sharesRejected: number;
+  bestDifficulty: number;
+  blockHeight: number;
+  uptimeS: number;
+  lastError: string;
+  reportedAt: string | null;
+  stale: boolean;
+};
+
 export type TelegramChat = {
   id: string;
   label: string;

@@ -1,4 +1,4 @@
-import type { AlarmRule, AlarmsPublic, ConfigPublic, UsagePayload } from "./types";
+import type { AlarmRule, AlarmsPublic, ConfigPublic, MiningConfig, MiningStatus, UsagePayload } from "./types";
 
 export async function fetchUsage(): Promise<UsagePayload> {
   const res = await fetch("/usage", { cache: "no-store" });
@@ -81,6 +81,27 @@ export async function deleteAccount(provider: string, id: string) {
 export async function clearSecret(name: string) {
   const res = await fetch(`/api/config/secret/${name}`, { method: "DELETE" });
   return readMutate(res);
+}
+
+export async function fetchMiningConfig(): Promise<MiningConfig> {
+  const res = await fetch("/api/mining/config", { cache: "no-store" });
+  if (!res.ok) throw new Error(`mining config HTTP ${res.status}`);
+  return res.json() as Promise<MiningConfig>;
+}
+
+export async function saveMiningConfig(patch: Partial<MiningConfig>): Promise<MutateResult> {
+  const res = await fetch("/api/mining/config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  return readMutate(res);
+}
+
+export async function fetchMiningStatus(): Promise<MiningStatus> {
+  const res = await fetch("/api/mining/status", { cache: "no-store" });
+  if (!res.ok) throw new Error(`mining status HTTP ${res.status}`);
+  return res.json() as Promise<MiningStatus>;
 }
 
 export async function fetchAlarms(): Promise<AlarmsPublic> {

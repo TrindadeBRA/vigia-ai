@@ -5,7 +5,7 @@ Decisões já tomadas com o usuário (2026-09-06):
 - **Branch**: implementação inteira em branch separada (ex.: `feature/mineracao-btc`), criada a partir de `develop`. Não commitar direto na `develop` — merge só quando validado em hardware real (ver "Como validar").
 - Hashing roda **na mesma placa** que já mostra o painel TFT (ILI9488, `env:esp32dev`) — não numa segunda placa dedicada.
 - **Mineração só roda numa rota/tela específica do ESP32** (`VIEW_MINER`, nova, seguindo o padrão de `View`/`uiSetView()` que já existe em `firmware/src/core/state.h` + `firmware/src/ui/views/*.cpp`). Não é um serviço de fundo que minera sempre — entrar na tela liga o hashing, sair desliga. A própria tela mostra dados e erros localmente (não só via web).
-- MVP: sem estilo/front — só texto e dados, tanto na tela do ESP32 quanto no painel web. Controle e visibilidade acontecem em três lugares: na rota dedicada do device, em `/display` (dados) e em `/display/config` (config + liga/desliga remoto).
+- MVP: sem estilo/front — só texto e dados, tanto na tela do ESP32 quanto no painel web. No painel, é **uma página dedicada** `/display/mining` (status + config remota juntos), no mesmo padrão de `/display/alarms` (`AlarmsPage.tsx`) — não um card solto no board arrastável nem espalhado em `/display/config`, pra não ter que integrar no sistema de tiles/drag-and-drop (`TileCards.tsx`/`ProviderMeta`) por algo que é só leitura+um formulário.
 - Fonte de referência: `NerdMiner_v2` (`/Users/trindadebra/Documents/TrindadeBRA/NerdMiner_v2`), MIT license (Bitmaker, com trabalho anterior de Valerio Vaccaro/HAN) — dá pra portar código com atribuição no header dos arquivos novos.
 
 ## O que é, de fato
@@ -32,7 +32,7 @@ Se depois de testar em hardware real isso se mostrar instável mesmo restrito à
 - Task FreeRTOS de baixa prioridade na placa, criada/destruída (ou pausada) junto com entrar/sair da `VIEW_MINER`, e controlável remotamente via config (liga/desliga geral, pool, wallet, worker).
 - Placa reporta stats pro coletor periodicamente **enquanto estiver minerando** (hashrate, shares aceitas/rejeitadas, melhor dificuldade, block height, uptime, erros).
 - Coletor guarda o último estado + config (`backend/data/mining.json`), expõe API pro painel.
-- Painel web: card com os dados em texto simples (sem estilização) em `/display` — reflete o último report e deixa claro quando a placa não está na rota de mineração (dado parado, não "ao vivo") — e card de config (pool/porta/wallet/worker/liga-desliga remoto) em `/display/config`.
+- Painel web: página dedicada `/display/mining` com os dados em texto simples (sem estilização) — reflete o último report e deixa claro quando a placa não está na rota de mineração (dado parado, não "ao vivo") — e, na mesma página, a config remota (pool/porta/wallet/worker/liga-desliga).
 
 **Fora do MVP (não implementar sem pedido explícito):**
 - Telas de estilo do NerdMiner (`ClockMiner`, relógio, `GlobalStats` de rede) — a `VIEW_MINER` do vigia é só texto/dados, sem esse polimento.
@@ -77,16 +77,20 @@ backend/src/routers/mining.ts   # GET/PUT /api/mining/config (config.json-like)
                                   # GET  /api/mining/status (painel -> coletor, snapshot em memória)
 backend/data/mining.json         # persistência simples (gitignored, como config.json)
 
-frontend/src/pages/config/MiningConfigCard.tsx   # pool, porta, wallet, worker, liga/desliga
-frontend/src/components/cards/MiningCard.tsx     # texto puro: status, hashrate, shares
-                                                    # aceitas/rejeitadas, melhor dificuldade,
-                                                    # block height, último report, uptime
-frontend/src/hooks/useMining.ts                  # poll próprio (padrão SpotifyCard: 5-10s,
-                                                    # não usa o hub de usage — regra 4 do CLAUDE.md
-                                                    # é só pro ciclo de cotas de assinatura)
+frontend/src/pages/config/MiningPage.tsx    # página dedicada /display/mining (status + config
+                                               # juntos, padrão AlarmsPage.tsx), poll próprio de
+                                               # /api/mining/status a cada 5s — não usa o hub de
+                                               # usage (regra 4 do CLAUDE.md é só pro ciclo de
+                                               # cotas de assinatura)
+frontend/src/pages/config/miningCopy.ts     # i18n pt/en/es da página, padrão alarmsCopy.ts
+frontend/src/api/client.ts                  # fetchMiningConfig/saveMiningConfig/fetchMiningStatus
+frontend/src/api/types.ts                   # MiningConfig/MiningStatus (espelham o Zod do backend)
+frontend/src/components/icons.tsx           # PickaxeIcon (ícone da rota no sidebar)
+frontend/src/pages/display/Sidebar.tsx      # link "Mineração" (mesmo grupo de Alarmes/Tema)
+frontend/src/pages/Display.tsx, App.tsx     # rota /display/mining (+ redirect /display/mineracao)
 ```
 
-### Dados mostrados (texto puro, sem estilo) — na `VIEW_MINER` do device E no card web
+### Dados mostrados (texto puro, sem estilo) — na `VIEW_MINER` do device E em `/display/mining`
 
 - Status: `parado (fora da rota)` / `sem wi-fi` / `conectando pool` / `minerando` / `pool offline` / erro específico (ex.: "wallet não configurada", "stratum: auth falhou")
 - Hashrate atual e média (kH/s)
@@ -96,9 +100,9 @@ frontend/src/hooks/useMining.ts                  # poll próprio (padrão Spotif
 - Pool + worker configurados
 - Uptime da sessão de mineração atual (zera ao sair da rota)
 - Último erro (texto curto, ex.: motivo da última desconexão do pool)
-- No card web, além disso: timestamp do último report recebido — se estiver velho, deixa claro que a placa não está na rota de mineração agora.
+- No painel web, além disso: timestamp do último report recebido — se estiver velho (`stale`, calculado pelo backend), deixa claro que a placa não está na rota de mineração agora.
 
-### Config remota (via `/display/config`, guardada em `backend/data/mining.json`, nunca no firmware)
+### Config remota (via `/display/mining`, guardada em `backend/data/mining.json`, nunca no firmware)
 
 - `enabled` (bool, default **false**) — **switch mestre remoto**: se falso, a `VIEW_MINER` mostra "mineração desativada nas configurações" e não liga o hashing mesmo que o usuário entre na tela. Serve como trava de segurança sem precisar reflash.
 - `poolUrl` / `poolPort` (default sugerido: `public-pool.io` / `3333` — pool recomendado p/ low-difficulty shares)
@@ -109,8 +113,8 @@ Quem decide **se pode** minerar é a config remota (`enabled` + `btcWallet`); qu
 
 ## Passos de implementação (ordem sugerida)
 
-1. **Backend primeiro** (sem tocar em firmware): schema `mining.ts`, router `mining.ts`, `mining.json`, testes. Dá pra validar contrato JSON isolado.
-2. **Frontend**: `MiningConfigCard.tsx` + `MiningCard.tsx` + `useMining.ts`, apontando pro backend já pronto (mock manual via `curl -X POST` no `/api/mining/report` pra testar o card sem firmware).
+1. **Backend primeiro** (sem tocar em firmware): schema `mining.ts`, router `mining.ts`, `mining.json`, testes. Dá pra validar contrato JSON isolado. ✅ feito.
+2. **Frontend**: `MiningPage.tsx` (`/display/mining`) + `miningCopy.ts`, apontando pro backend já pronto (mock manual via `curl -X POST` no `/api/mining/report` pra testar a página sem firmware). ✅ feito.
 3. **Firmware — port do motor**: `stratum_client`, `sha256_miner`, `mining_task` com `start()`/`stop()` explícitos (nada de auto-start), compilando mas sem ninguém chamando ainda.
 4. **Firmware — nova rota**: `VIEW_MINER` em `core/state.h` + `ui/views/miner.cpp` (renderiza texto/erros), ponto de entrada dedicado (ex.: item na Home ou ícone no header, igual `VIEW_THEME` hoje) chamando `mining_task` start/stop ao entrar/sair.
 5. **Firmware — cliente de rede**: `mining_client.cpp` (busca config remota, envia report só enquanto minerando), plugado no `loop()` existente (não bloqueante).
@@ -120,7 +124,7 @@ Quem decide **se pode** minerar é a config remota (`enabled` + `btcWallet`); qu
 ## Como validar
 
 - `./dev test` — schemas/router do backend.
-- Card de mineração no `/display` com dados mockados via `curl` antes de tocar em firmware.
+- Página `/display/mining` com dados mockados via `curl` antes de tocar em firmware.
 - `./dev wokwi`: o Stratum *pode* funcionar via `wokwigw` (tem internet real, mesmo caminho já usado pro SSE do `/usage`) — dá pra validar handshake com o pool, JSON do report e o card no painel. **Não** valida o risco principal do plano: o Wokwi simula touch via **FT6206**, não o **XPT2046** real (regra 8 do `CLAUDE.md`), e o timing do simulador não é ciclo-a-ciclo igual ao silício — "não travou no Wokwi" não garante ausência de watchdog reset/UI travando na placa real. Hashrate simulado também não representa desempenho nenhum.
 - Hardware real: único jeito de validar de fato a estabilidade (sem watchdog reset, touch responsivo) — obrigatório antes de considerar o MVP pronto, não é opcional.
 
