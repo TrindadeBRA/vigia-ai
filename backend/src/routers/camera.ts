@@ -92,12 +92,7 @@ const STREAM_BOUNDARY = "vigiaframe";
 const SOI = Buffer.from([0xff, 0xd8]);
 const EOI = Buffer.from([0xff, 0xd9]);
 
-// Vídeo ao vivo: mantém um ffmpeg rodando por conexão, decodificando o RTSP
-// contínuo e escrevendo cada JPEG como uma parte de um multipart/x-mixed-replace
-// — <img src="/api/camera/stream"> no browser já entende esse formato nativamente,
-// sem precisar de player/WebRTC. Downscale + fps baixo pra caber num card do board
-// sem pesar demais na CPU do coletor (um processo ffmpeg por viewer conectado).
-function startStream(config: CameraConfig, onFrame: (jpeg: Buffer) => void, onEnd: (err: Error | null) => void): () => void {
+function spawnFfmpegStream(config: CameraConfig, onFrame: (jpeg: Buffer) => void, onEnd: (err: Error | null) => void): () => void {
   const url = rtspUrl(config);
   const args = [
     "-rtsp_transport", "udp",
@@ -145,6 +140,66 @@ function startStream(config: CameraConfig, onFrame: (jpeg: Buffer) => void, onEn
   return () => { if (!proc.killed) proc.kill("SIGKILL"); };
 }
 
+// Fan-out: um único ffmpeg compartilhado entre todos os viewers conectados
+// (a câmera vê só 1 conexão RTSP, a CPU decodifica 1 vez), em vez de um
+// processo por aba/tela aberta. Nasce sob demanda no primeiro assinante e
+// morre STOP_GRACE_MS depois do último sair — o delay evita reabrir o
+// ffmpeg (handshake RTSP + primeiro keyframe H.265, ~1-2s) quando o próprio
+// frontend reconecta rapidinho (ex.: troca de aba, ou o retry de erro do
+// CameraCard.tsx).
+type StreamSub = { onFrame: (jpeg: Buffer) => void; onEnd: (err: Error | null) => void };
+const STOP_GRACE_MS = 5000;
+let shared: { key: string; stop: () => void; subs: Set<StreamSub>; stopTimer: NodeJS.Timeout | null } | null = null;
+
+function configKey(c: CameraConfig): string {
+  return `${c.host}:${c.port}:${c.path}:${c.username}:${c.password}`;
+}
+
+function subscribeStream(config: CameraConfig, sub: StreamSub): () => void {
+  const key = configKey(config);
+  if (shared && shared.key === key) {
+    if (shared.stopTimer) {
+      clearTimeout(shared.stopTimer);
+      shared.stopTimer = null;
+    }
+  } else {
+    // Câmera trocada de config (ou primeiro assinante): derruba o antigo
+    // (se houver) e sobe um ffmpeg novo já compartilhável.
+    shared?.stop();
+    const subs = new Set<StreamSub>();
+    const entry: { key: string; stop: () => void; subs: Set<StreamSub>; stopTimer: NodeJS.Timeout | null } = {
+      key,
+      subs,
+      stopTimer: null,
+      stop: () => { /* substituído logo abaixo, precisa existir pro closure do onEnd */ },
+    };
+    entry.stop = spawnFfmpegStream(
+      config,
+      (jpeg) => { for (const s of subs) s.onFrame(jpeg); },
+      (err) => {
+        for (const s of subs) s.onEnd(err);
+        subs.clear();
+        if (shared === entry) shared = null;
+      },
+    );
+    shared = entry;
+  }
+  shared.subs.add(sub);
+  return () => {
+    if (!shared || shared.key !== key) return;
+    shared.subs.delete(sub);
+    if (shared.subs.size === 0) {
+      const entry = shared;
+      entry.stopTimer = setTimeout(() => {
+        if (shared === entry && shared.subs.size === 0) {
+          shared.stop();
+          shared = null;
+        }
+      }, STOP_GRACE_MS);
+    }
+  };
+}
+
 export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/camera/config", async () => toPublic(load()));
 
@@ -156,6 +211,12 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     const next = CameraConfigSchema.parse({ ...load(), ...parsed.data });
     save(next);
     cache = null;
+    // Config mudou (ex.: senha errada corrigida) — força reconectar em vez
+    // de deixar quem já está assistindo preso no stream com a config velha.
+    if (shared) {
+      shared.stop();
+      shared = null;
+    }
     return { ok: true, config: toPublic(next) };
   });
 
@@ -193,23 +254,22 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
       Connection: "close",
     });
     let ended = false;
-    const stop = startStream(
-      config,
-      (jpeg) => {
+    const unsubscribe = subscribeStream(config, {
+      onFrame: (jpeg) => {
         if (ended || res.destroyed) return;
         res.write(`--${STREAM_BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`);
         res.write(jpeg);
         res.write("\r\n");
       },
-      () => {
+      onEnd: () => {
         if (ended) return;
         ended = true;
         res.end();
       },
-    );
+    });
     request.raw.on("close", () => {
       ended = true;
-      stop();
+      unsubscribe();
     });
   });
 }
