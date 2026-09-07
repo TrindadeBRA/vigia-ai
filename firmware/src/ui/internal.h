@@ -41,6 +41,12 @@ extern int g_clockIconR;
 extern int g_reloadIconCx;
 extern int g_reloadIconCy;
 extern int g_reloadIconR;
+// Ícone de mineração (protótipo, entre o relógio e o recarregar) — atalho
+// pra VIEW_MINER, só no header vertical (mesma limitação de espaço do
+// ícone de recarregar). g_miningIconR == 0 → não desenhado.
+extern int g_miningIconCx;
+extern int g_miningIconCy;
+extern int g_miningIconR;
 // Geometria do olho da marca no header, preenchida por drawHeader() a cada
 // pintura — uiTickEye() usa pra saber onde redesenhar só a pupila animada.
 extern int g_eyeCx;

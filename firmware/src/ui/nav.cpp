@@ -307,6 +307,16 @@ void uiHandleTap(int16_t x, int16_t y)
       uiSetView(VIEW_NOW);
       return;
     }
+    if (g_miningIconR > 0)
+    {
+      const int hit = g_miningIconR + 8;
+      if (x >= g_miningIconCx - hit && x < g_miningIconCx + hit && y >= g_miningIconCy - hit &&
+          y < g_miningIconCy + hit)
+      {
+        uiSetView(VIEW_MINER);
+        return;
+      }
+    }
     if (g_reloadIconR > 0)
     {
       const int hit = g_reloadIconR + 8;

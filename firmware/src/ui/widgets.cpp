@@ -443,10 +443,10 @@ void drawCheckIcon(int cx, int cy, int r, uint16_t strokeColor) {
 // ele sai com os bytes de cada pixel trocados (RGB565 vira outra cor, dá o
 // efeito "ruido colorido" nos icones). Restaura false depois pra nao afetar
 // outros desenhos (fillRect/drawString etc. nao usam pushImage).
-void drawIcon(int x, int y, int w, int h, const uint16_t* data) {
+void drawIcon(int x, int y, int w, int h, const uint16_t* data, uint16_t bg) {
   tft.setSwapBytes(true);
   constexpr uint16_t kBakedCard = 0x1904; // fundo do gen_icons.py
-  if (COL_CARD == kBakedCard) {
+  if (bg == kBakedCard) {
     tft.pushImage(x, y, w, h, data);
   } else {
     uint16_t buf[400];
@@ -456,7 +456,7 @@ void drawIcon(int x, int y, int w, int h, const uint16_t* data) {
     }
     for (int i = 0; i < n; i++) {
       uint16_t p = pgm_read_word(&data[i]);
-      buf[i] = (p == kBakedCard) ? COL_CARD : p;
+      buf[i] = (p == kBakedCard) ? bg : p;
     }
     tft.pushImage(x, y, w, h, buf);
   }

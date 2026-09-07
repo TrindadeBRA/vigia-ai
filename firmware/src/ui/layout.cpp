@@ -1,5 +1,7 @@
 #include "ui/internal.h"
 
+#include "assets/icons/icon_bitcoin.h"
+
 int g_headerH = 40;
 int g_contentX = 40;
 int g_contentY = 0;
@@ -27,6 +29,9 @@ int g_clockIconR = 0;
 int g_reloadIconCx = 0;
 int g_reloadIconCy = 0;
 int g_reloadIconR = 0;
+int g_miningIconCx = 0;
+int g_miningIconCy = 0;
+int g_miningIconR = 0;
 int g_eyeCx = 0;
 int g_eyeCy = 0;
 int g_eyeR = 0;
@@ -540,11 +545,34 @@ static void drawHeaderReloadButton(int gap0, int gap1, int along, uint16_t color
   drawReloadIcon(g_reloadIconCx, g_reloadIconCy, iconR, color);
 }
 
+// Atalho pra VIEW_MINER (protótipo, ver .agents/PLANO_MINERACAO.md), entre
+// o relógio e o recarregar de tema. Reusa o ícone bitmap do card Bitcoin
+// (ICON_BITCOIN) em vez de um glyph vetorial — ele já é pequeno o
+// suficiente (20x20) pra caber no header. Só no header vertical, mesma
+// razão de espaço do botão de recarregar.
+static void drawHeaderMiningButton(int gap0, int gap1, int along, uint16_t bg)
+{
+  const int halfW = ICON_BITCOIN_W / 2;
+  const int halfH = ICON_BITCOIN_H / 2;
+  const int need = (max(halfW, halfH) + 6) * 2;
+  g_miningIconR = 0;
+  if (gap1 - gap0 < need)
+  {
+    return;
+  }
+  const int mid = (gap0 + gap1) / 2;
+  g_miningIconCx = along;
+  g_miningIconCy = mid;
+  g_miningIconR = max(halfW, halfH) + 4;
+  drawIcon(along - halfW, mid - halfH, ICON_BITCOIN_W, ICON_BITCOIN_H, ICON_BITCOIN, bg);
+}
+
 void drawHeader()
 {
   layoutContent();
   g_clockIconR = 0;
   g_reloadIconR = 0;
+  g_miningIconR = 0;
   const int W = tft.width();
   const int H = tft.height();
   const HeaderEdge edge = uiHeaderEdge();
@@ -654,9 +682,15 @@ void drawHeader()
   g_headerInfoY0 = infoCy - infoR - 8;
   g_headerInfoX1 = g_hdrX1;
   g_headerInfoY1 = infoCy + infoR + 8;
-  const int clockReloadMid = (g_headerClockY1 + g_headerInfoY0) / 2;
-  drawHeaderClockButton(g_headerClockY1, clockReloadMid, cx, true, clockCol);
-  drawHeaderReloadButton(clockReloadMid, g_headerInfoY0, cx, clockCol);
+  // Vão entre o horário e o "i" dividido em 3: relógio (VIEW_NOW),
+  // mineração (VIEW_MINER) e recarregar tema — nessa ordem, de cima pra
+  // baixo, igual o usuário pediu ("entre o relógio e a seta baixada").
+  const int span3 = g_headerInfoY0 - g_headerClockY1;
+  const int third1 = g_headerClockY1 + span3 / 3;
+  const int third2 = g_headerClockY1 + (span3 * 2) / 3;
+  drawHeaderClockButton(g_headerClockY1, third1, cx, true, clockCol);
+  drawHeaderMiningButton(third1, third2, cx, COL_BG);
+  drawHeaderReloadButton(third2, g_headerInfoY0, cx, clockCol);
   if (showBadge)
   {
     drawCountdownBadgeAt(cx, badgeCy, secs);
