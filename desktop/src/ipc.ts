@@ -2,7 +2,7 @@
 import { app, dialog, ipcMain, shell } from "electron";
 import { writeFileSync } from "node:fs";
 
-import { appVersion, logsDir, dataDir, isPackaged } from "./paths";
+import { appVersion, dataDir, isPackaged, logsDir } from "./paths";
 import { configuredHost, configuredPort } from "./ports";
 import type { Sidecar } from "./sidecar";
 
