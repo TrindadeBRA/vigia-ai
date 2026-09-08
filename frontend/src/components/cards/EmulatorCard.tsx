@@ -4,7 +4,6 @@ import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
 import type { T } from "../../i18n";
-import { downloadSave, uploadSave } from "../../lib/emulatorSaves";
 import type { RetroarchTheme } from "../../lib/retroarchIcons";
 import { RetroarchIconBadge } from "../RetroarchIcon";
 import { EmulatorToolbar } from "./EmulatorToolbar";
@@ -115,7 +114,6 @@ export function EmulatorBoardCard({
     const s = normalizeSize(size);
     const isSmall = s === "sm" || s === "md" || s === "lg";
     const navigate = useNavigate();
-    const containerId = useRef(`ejs-unified-${Math.random().toString(36).slice(2, 8)}`);
     const gameContainerRef = useRef<HTMLDivElement>(null);
     const emulatorRef = useRef<HTMLDivElement>(null);
     const [roms, setRoms] = useState<EmulatorRom[]>([]);
@@ -125,6 +123,7 @@ export function EmulatorBoardCard({
     const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [currentGame, setCurrentGame] = useState<string | null>(null);
+    const [isolatedFrameSrc, setIsolatedFrameSrc] = useState<string | null>(null);
     const [pendingKey, setPendingKey] = useState<string | null>(null);
     const lastRomKeyRef = useRef<string | null>(null);
     const loadTimeoutRef = useRef<number | null>(null);
@@ -526,6 +525,7 @@ export function EmulatorBoardCard({
             window.clearTimeout(loadTimeoutRef.current);
             loadTimeoutRef.current = null;
         }
+        setIsolatedFrameSrc(null);
         loadingRef.current = false;
         resettingRef.current = false;
         setStatus("idle");
@@ -569,241 +569,41 @@ export function EmulatorBoardCard({
         setCurrentGame(rom.name);
         setSelectedPlatform(effectivePlatform);
 
-        const container = emulatorRef.current;
-        if (!container) {
-            loadingRef.current = false;
-            setStatus("error");
-            setErrorMsg("container não encontrado");
-            return;
-        }
-        container.innerHTML = "";
-        const gameDiv = document.createElement("div");
-        gameDiv.id = containerId.current;
-        gameDiv.style.width = "100%";
-        gameDiv.style.height = "100%";
-        gameDiv.style.minHeight = isSmall ? "110px" : "260px";
-        gameDiv.style.display = "flex";
-        gameDiv.style.alignItems = "center";
-        gameDiv.style.justifyContent = "center";
-        gameDiv.style.overflow = "hidden";
-        container.appendChild(gameDiv);
-
-        const w = window as unknown as Record<string, unknown>;
-
-        let biosUrl: string | undefined;
-        if (effectiveBiosPath) {
-            biosUrl = `/api/emulator/bios/${encodeURIComponent(effectivePlatform)}`;
-        } else if (globalConfig?.biosFolder) {
-            biosUrl = undefined;
-        }
-
+        // Híbrido: iframe isolado (evita travar dashboard) + auto-start direto + saves no servidor
+        // O frame (emulator-frame.html) já cuida de EJS_* , menus custom e saves — aqui só montamos a URL
         const gameUrl = `/api/emulator/rom/${encodeURIComponent(effectivePlatform)}/${encodeURIComponent(rom.file)}`;
-
-        // EJS_core deve ser o ID da plataforma (system) — ex: "gb", "gba", "nds", "n64"
-        // O EmulatorJS resolve o core automaticamente (gb→gambatte, gba→mgba, nds→melonds, etc)
-        // Não mapear para nome do core aqui, senão o EmulatorJS pode não encontrar o system
-        void effectiveCore;
-        w.EJS_player = `#${containerId.current}`;
-        w.EJS_core = effectivePlatform;
-        w.EJS_gameUrl = gameUrl;
-        w.EJS_pathtodata = dataPath;
-        w.EJS_gameName = rom.name;
-        if (biosUrl) w.EJS_biosUrl = biosUrl;
-        if (globalConfig?.color) w.EJS_color = globalConfig.color;
-        w.EJS_backgroundColor = (globalConfig as unknown as { backgroundColor?: string })?.backgroundColor ?? "transparent";
-        w.EJS_backgroundBlur = globalConfig?.backgroundBlur ?? false;
-        w.EJS_volume = globalConfig?.volume ?? 1;
-        w.EJS_startOnLoaded = globalConfig?.startOnLoaded ?? true;
-        w.EJS_fullscreenOnLoad = globalConfig?.fullscreenOnLoad ?? false;
-        w.EJS_threads = false;
-        w.EJS_cacheConfig = globalConfig?.cacheEnabled ? { enabled: true } : { enabled: false };
-        w.EJS_language = globalConfig?.language ?? "pt-BR";
-        w.EJS_softLoad = globalConfig?.softLoad ?? false;
-        w.EJS_disableCue = globalConfig?.disableCue ?? false;
-        w.EJS_defaultOptions = globalConfig?.defaultOptions ?? {};
-        w.EJS_disableAutoUnload = globalConfig?.disableAutoUnload ?? false;
-        w.EJS_disableBatchBootup = globalConfig?.disableBatchBootup ?? false;
-        w.EJS_noAutoFocus = globalConfig?.noAutoFocus ?? false;
-        w.EJS_hideSettings = globalConfig?.hideSettings ?? false;
-        // Desativa 100% do overlay nativo — todas as funções via nossa toolbar
-        w.EJS_Buttons = {
-            playPause: false,
-            play: false,
-            pause: false,
-            restart: false,
-            mute: false,
-            unmute: false,
-            settings: false,
-            fullscreen: false,
-            enterFullscreen: false,
-            exitFullscreen: false,
-            saveState: false,
-            loadState: false,
-            screenRecord: false,
-            gamepad: false,
-            cheat: false,
-            volumeSlider: false,
-            saveSavFiles: false,
-            loadSavFiles: false,
-            quickSave: false,
-            quickLoad: false,
-            screenshot: false,
-            cacheManager: false,
-            exitEmulation: false,
-            netplay: false,
-            diskButton: false,
-            contextMenu: false,
-        } as unknown as typeof w.EJS_Buttons;
-        // Garante que o CSS de ocultação já esteja aplicado antes do start
+        const frameUrl = new URL("/emulator-frame.html", window.location.origin);
+        // EJS_core deve ser o ID da plataforma (ex: "gb", "gba", "nds") — EmulatorJS resolve o core sozinho
+        frameUrl.searchParams.set("core", effectivePlatform);
+        frameUrl.searchParams.set("platform", effectivePlatform);
+        frameUrl.searchParams.set("game", new URL(gameUrl, window.location.origin).href);
+        frameUrl.searchParams.set("data", dataPath);
+        frameUrl.searchParams.set("name", rom.name);
+        frameUrl.searchParams.set("language", globalConfig?.language ?? "pt-BR");
+        frameUrl.searchParams.set("volume", String(globalConfig?.volume ?? 1));
+        frameUrl.searchParams.set("cacheEnabled", String(globalConfig?.cacheEnabled ?? false));
+        frameUrl.searchParams.set("noAutoFocus", String(globalConfig?.noAutoFocus ?? false));
+        frameUrl.searchParams.set("backgroundColor", (globalConfig as unknown as { backgroundColor?: string })?.backgroundColor ?? "transparent");
+        frameUrl.searchParams.set("backgroundBlur", String(globalConfig?.backgroundBlur ?? false));
+        frameUrl.searchParams.set("softLoad", String(globalConfig?.softLoad ?? false));
+        frameUrl.searchParams.set("disableCue", String(globalConfig?.disableCue ?? false));
+        frameUrl.searchParams.set("disableAutoUnload", String(globalConfig?.disableAutoUnload ?? false));
+        frameUrl.searchParams.set("disableBatchBootup", String(globalConfig?.disableBatchBootup ?? false));
+        frameUrl.searchParams.set("hideSettings", String(globalConfig?.hideSettings ?? false));
+        frameUrl.searchParams.set("fullscreenOnLoad", String(globalConfig?.fullscreenOnLoad ?? false));
+        if (globalConfig?.color) frameUrl.searchParams.set("color", globalConfig.color);
         try {
-            const existing = emulatorRef.current?.querySelector(".ejs_menu_bar") as HTMLElement | null;
-            if (existing) existing.style.display = "none";
-        } catch { /* ignore */ }
-
-        // Guarda jogo atual para callbacks de save
-        const currentPlatform = effectivePlatform;
-        const currentGameName = rom.name;
-
-        // SRAM: imediato + adicional no ciclo do dashboard (backup)
-        const getCurrentSram = (): Uint8Array | null => {
-            try {
-                const w3 = window as unknown as Record<string, unknown>;
-                const emu3 = w3.EJS_emulator as Record<string, unknown> | undefined;
-                const gm3 = (emu3 as Record<string, unknown> | undefined)?.gameManager as Record<string, unknown> | undefined;
-                const getSave = (gm3 as Record<string, unknown> | undefined)?.getSaveFile as ((b?: boolean) => Uint8Array | null) | undefined;
-                const d = getSave ? getSave.call(gm3, false) : null;
-                if (d && (d as Uint8Array).length > 0) return d as Uint8Array;
-            } catch { /* ignore */ }
-            return null;
-        };
-        const flushSramPeriodic = () => {
-            const d = getCurrentSram();
-            if (d && d.length > 0) void uploadSave(currentPlatform, currentGameName, "sram", d);
-        };
-        const onDashboardCycle = () => flushSramPeriodic();
-        window.addEventListener("vigia:dashboard-cycle", onDashboardCycle as EventListener);
-        // expõe para destroyEmulator fazer flush final
-        const prevFlush = sramFlushRef.current;
-        const prevCleanup = sramCleanupRef.current;
-        void prevFlush; void prevCleanup;
-        sramFlushRef.current = flushSramPeriodic;
-        sramCleanupRef.current = () => {
-            window.removeEventListener("vigia:dashboard-cycle", onDashboardCycle as EventListener);
-            flushSramPeriodic();
-        };
-
-        const onGameStart = () => {
-            setStatus("ready");
-            loadingRef.current = false;
-            if (!activeRef.current) {
-                activeRef.current = true;
-                setEmulatorActive(true);
-            }
-            // Restaura SRAM do servidor (sincronizado entre dispositivos)
-            void (async () => {
-                try {
-                    const data = await downloadSave(currentPlatform, currentGameName, "sram");
-                    if (data && data.length > 0) {
-                        const w2 = window as unknown as Record<string, unknown>;
-                        const emu = w2.EJS_emulator as Record<string, unknown> | undefined;
-                        const gm = (emu as Record<string, unknown> | undefined)?.gameManager as Record<string, unknown> | undefined;
-                        const mod = (emu as Record<string, unknown> | undefined)?.Module as Record<string, unknown> | undefined;
-                        const fs = (mod as Record<string, unknown> | undefined)?.FS as { writeFile: (p: string, d: Uint8Array) => void; unlink: (p: string) => void } | undefined;
-                        const getSavePath = (emu as Record<string, unknown> | undefined)?.getSaveFilePath as (() => string) | undefined
-                            ?? (gm as Record<string, unknown> | undefined)?.getSaveFilePath as (() => string) | undefined;
-                        if (fs && getSavePath) {
-                            try {
-                                const savePath = String(getSavePath.call(gm ?? emu) ?? "");
-                                if (savePath) {
-                                    try { fs.unlink(savePath); } catch { /* ignore */ }
-                                    fs.writeFile(savePath, data);
-                                    const loadFn = (gm as Record<string, unknown> | undefined)?.loadSaveFiles as (() => void) | undefined
-                                        ?? (emu as Record<string, unknown> | undefined)?.loadSaveFiles as (() => void) | undefined;
-                                    if (loadFn) try { loadFn.call(gm ?? emu); } catch { /* ignore */ }
-                                    console.log("[emulator-saves] SRAM restaurado do servidor", currentPlatform, currentGameName, data.length);
-                                }
-                            } catch (e) { console.warn("[emulator-saves] falha ao restaurar SRAM", e); }
-                        }
-                    }
-                } catch (e) { console.warn("[emulator-saves] download SRAM falhou", e); }
-            })();
-            // Garante que nenhum overlay nativo apareça mesmo após o start
-            setTimeout(() => {
-                try {
-                    const bar = emulatorRef.current?.querySelector(".ejs_menu_bar") as HTMLElement | null;
-                    if (bar) bar.style.display = "none";
-                    const ctx = emulatorRef.current?.querySelector(".ejs_context_menu") as HTMLElement | null;
-                    if (ctx) ctx.style.display = "none";
-                } catch { /* ignore */ }
-            }, 100);
-            // Hooks: onSaveState/onSaveSave/onSaveUpdate = imediato; ciclo = adicional
-            setTimeout(() => {
-                try {
-                    const w3 = window as unknown as Record<string, unknown>;
-                    const emu3 = w3.EJS_emulator as Record<string, unknown> | undefined;
-                    const gm3 = (emu3 as Record<string, unknown> | undefined)?.gameManager as Record<string, unknown> | undefined;
-                    if (gm3 && typeof (gm3 as Record<string, unknown>).saveSaveFiles === "function") {
-                        const origSave = (gm3 as Record<string, unknown>).saveSaveFiles as () => void;
-                        (gm3 as Record<string, unknown>).saveSaveFiles = function (this: unknown, ...args: unknown[]) {
-                            const ret = (origSave as unknown as (...a: unknown[]) => unknown).apply(this, args);
-                            setTimeout(() => {
-                                try {
-                                    const getSave = (gm3 as Record<string, unknown>).getSaveFile as ((b?: boolean) => Uint8Array | null) | undefined;
-                                    const saveData = getSave ? getSave.call(gm3, false) : null;
-                                    if (saveData && saveData.length > 0) void uploadSave(currentPlatform, currentGameName, "sram", saveData as Uint8Array);
-                                } catch (e) { console.warn("[emulator-saves] hook saveSaveFiles falhou", e); }
-                            }, 500);
-                            return ret;
-                        };
-                    }
-                    const ejsInst = (w3 as Record<string, unknown>).EJS_emulator as Record<string, unknown> | undefined;
-                    const enableSaveEvent = (ejsInst as Record<string, unknown> | undefined)?.enableSaveUpdateEvent as (() => void) | undefined;
-                    if (enableSaveEvent && typeof enableSaveEvent === "function") {
-                        try { enableSaveEvent.call(ejsInst); } catch { /* ignore */ }
-                    }
-                    const onSaveUpdate = (w3 as Record<string, unknown>).EJS_onSaveUpdate as unknown;
-                    if (!onSaveUpdate) {
-                        (w3 as Record<string, unknown>).EJS_onSaveUpdate = (data: { save?: Uint8Array; hash?: string }) => {
-                            if (data?.save && data.save.length > 0) void uploadSave(currentPlatform, currentGameName, "sram", data.save);
-                        };
-                    }
-                } catch (e) { console.warn("[emulator-saves] hook falhou", e); }
-            }, 1500);
-        };
-        // State e SRAM = imediato; ciclo do dashboard faz save adicional (backup)
-        w.EJS_onSaveState = (data: { state: Uint8Array; screenshot?: Uint8Array }) => {
-            if (data?.state && data.state.length > 0) void uploadSave(currentPlatform, currentGameName, "state", data.state);
-        };
-        w.EJS_onSaveSave = (data: { save: Uint8Array; screenshot?: Uint8Array }) => {
-            if (data?.save && data.save.length > 0) void uploadSave(currentPlatform, currentGameName, "sram", data.save);
-        };
-        w.EJS_onLoadState = () => { };
-        w.EJS_onGameStart = onGameStart;
-        (window as unknown as Record<string, unknown>).EJS_onGameStart = onGameStart;
-        w.EJS_ready = () => {
-            console.log("[EmulatorJS] ready");
-        };
-
-        const script = document.createElement("script");
-        script.src = `${dataPath}loader.js`;
-        script.async = true;
-        script.onerror = () => {
-            loadingRef.current = false;
-            setStatus("error");
-            setErrorMsg("falha ao carregar EmulatorJS (CDN). Verifique a conexão.");
-        };
-        script.onload = () => {
-            window.setTimeout(() => {
-                const w3 = window as unknown as Record<string, unknown>;
-                if (!w3.EJS_emulator) {
-                    console.warn("[EmulatorJS] loader loaded but EJS_emulator not created after 8s");
-                }
-            }, 8000);
-        };
-        loaderRef.current = script;
-        document.body.appendChild(script);
-
-        // Timeout proporcional ao tamanho da ROM: 15s base + 1s por MB (mín 15s, máx 60s)
+            const defOpts = globalConfig?.defaultOptions;
+            if (defOpts && Object.keys(defOpts).length) frameUrl.searchParams.set("defaultOptions", JSON.stringify(defOpts));
+        } catch {}
+        if (effectiveBiosPath) {
+            frameUrl.searchParams.set("bios", new URL(`/api/emulator/bios/${encodeURIComponent(effectivePlatform)}`, window.location.origin).href);
+        }
+        // Guarda para destroy fazer flush se necessário (frame já faz, mas mantemos compat)
+        void effectiveCore;
+        setIsolatedFrameSrc(frameUrl.href);
+        // Frame vai notificar "ready" e "started" via postMessage — status fica "loading" até lá
+        // Timeout proporcional ao tamanho da ROM
         const romSizeMb = rom.size ? rom.size / (1024 * 1024) : 1;
         const timeoutMs = Math.min(60000, Math.max(15000, 15000 + Math.ceil(romSizeMb) * 1000));
         if (loadTimeoutRef.current != null) window.clearTimeout(loadTimeoutRef.current);
@@ -813,27 +613,59 @@ export function EmulatorBoardCard({
                 if (prev === "loading") {
                     loadingRef.current = false;
                     const isNds = effectivePlatform === "nds";
-                    const hint = isNds && !effectiveBiosPath
-                        ? " NDS requer BIOS — configure em Configurações → Emulador."
-                        : "";
+                    const hint = isNds && !effectiveBiosPath ? " NDS requer BIOS — configure em Configurações → Emulador." : "";
                     setErrorMsg(`tempo esgotado ao carregar o jogo.${hint} Verifique o arquivo e tente novamente.`);
                     return "error";
                 }
                 return prev;
             });
         }, timeoutMs);
-        // Cancela timeout quando o jogo inicia com sucesso
-        const origOnGameStart = onGameStart;
-        const wrappedOnGameStart = () => {
-            if (loadTimeoutRef.current != null) {
-                window.clearTimeout(loadTimeoutRef.current);
-                loadTimeoutRef.current = null;
-            }
-            origOnGameStart();
-        };
-        w.EJS_onGameStart = wrappedOnGameStart;
-        (window as unknown as Record<string, unknown>).EJS_onGameStart = wrappedOnGameStart;
+        return;
     }, [roms, platform, core, biosPath, globalConfig, dataPath, destroyEmulator, isSmall, isUnified]);
+
+
+    // Mensagens do iframe isolado (ready/started/error)
+    useEffect(() => {
+        if (!isolatedFrameSrc) return;
+        const onMessage = (event: MessageEvent) => {
+            const iframe = emulatorRef.current?.querySelector("iframe") as HTMLIFrameElement | null;
+            if (!iframe || event.source !== iframe.contentWindow) return;
+            const message = event.data as { source?: string; type?: string; detail?: string | Record<string, unknown> } | null;
+            if (!message || message.source !== "vigia-emulator") return;
+            if (message.type === "ready") {
+                if (loadTimeoutRef.current != null) {
+                    window.clearTimeout(loadTimeoutRef.current);
+                    loadTimeoutRef.current = null;
+                }
+                loadingRef.current = false;
+                // Frame já está com startOnLoaded=true, então "ready" já significa que vai iniciar
+                // Mantém loading até "started" para não piscar
+            } else if (message.type === "started" || message.type === "starting") {
+                if (loadTimeoutRef.current != null) {
+                    window.clearTimeout(loadTimeoutRef.current);
+                    loadTimeoutRef.current = null;
+                }
+                loadingRef.current = false;
+                setStatus("ready");
+                if (!activeRef.current) {
+                    activeRef.current = true;
+                    setEmulatorActive(true);
+                }
+            } else if (message.type === "error") {
+                if (loadTimeoutRef.current != null) {
+                    window.clearTimeout(loadTimeoutRef.current);
+                    loadTimeoutRef.current = null;
+                }
+                loadingRef.current = false;
+                setErrorMsg(typeof message.detail === "string" ? message.detail : "falha ao carregar o emulador");
+                setStatus("error");
+            } else if (message.type === "state") {
+                // Atualiza estado da toolbar se necessário (opcional)
+            }
+        };
+        window.addEventListener("message", onMessage);
+        return () => window.removeEventListener("message", onMessage);
+    }, [isolatedFrameSrc]);
 
     // pending play from library (localStorage + event)
     useEffect(() => {
@@ -959,11 +791,21 @@ export function EmulatorBoardCard({
                 )}
                 style={{ outline: "none" }}
             >
-                <div
-                    ref={emulatorRef}
-                    className="absolute inset-0 overflow-hidden [&_canvas]:!w-full [&_canvas]:!h-full [&_canvas]:!object-contain"
-                    style={{ contain: "layout size" } as React.CSSProperties}
-                />
+                <div ref={emulatorRef} className="absolute inset-0 overflow-hidden">
+                    {isolatedFrameSrc ? (
+                        <iframe
+                            ref={(el) => {
+                                // Guarda ref para postMessage da toolbar
+                                if (el) (emulatorRef.current as unknown as { _iframe?: HTMLIFrameElement })._iframe = el;
+                            }}
+                            src={isolatedFrameSrc}
+                            title={currentGame ? `Emulador · ${currentGame}` : "Emulador"}
+                            sandbox="allow-scripts allow-same-origin allow-downloads allow-pointer-lock"
+                            allow="autoplay; fullscreen; gamepad"
+                            className="size-full border-0"
+                        />
+                    ) : null}
+                </div>
                 {status === "idle" ? (
                     <div className="relative z-10 flex flex-col items-center gap-3 p-4 text-center pointer-events-none">
                         <RetroarchIconBadge platform={isUnified ? "all" : platform} theme={(globalConfig?.iconTheme as RetroarchTheme) ?? "monochrome"} size={48} alt="Emulador" />
@@ -1007,7 +849,7 @@ export function EmulatorBoardCard({
                     {!isSmall ? <span className="hidden sm:inline">Biblioteca</span> : null}
                     {totalGames ? <span className={cn("rounded-full bg-white/20 font-bold", isSmall ? "px-1 py-0 text-[9px]" : "px-1.5 py-0.5 text-[10px]")}>{totalGames}</span> : null}
                 </button>
-                {status === "ready" ? <EmulatorToolbar status={status} onExit={destroyEmulator} compact={isSmall} /> : null}
+                {status === "ready" && isolatedFrameSrc ? <EmulatorToolbar status={status} onExit={destroyEmulator} compact={isSmall} iframeRef={emulatorRef as React.RefObject<HTMLDivElement>} /> : null}
             </div>
 
             <div className={cn("flex shrink-0 items-center justify-between gap-1 overflow-hidden text-ink3", isSmall ? "text-[10px]" : "text-[11px]")}>

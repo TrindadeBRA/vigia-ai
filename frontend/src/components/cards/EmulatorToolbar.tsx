@@ -38,6 +38,20 @@ function getEmu(): Emu | null {
     return (w.EJS_emulator as Emu | undefined) ?? null;
 }
 
+function getIframe(iframeRef?: React.RefObject<HTMLDivElement | null>): HTMLIFrameElement | null {
+    if (!iframeRef?.current) return null;
+    return iframeRef.current.querySelector("iframe") as HTMLIFrameElement | null;
+}
+
+function sendToFrame(iframeRef: React.RefObject<HTMLDivElement | null> | undefined, msg: Record<string, unknown>) {
+    const iframe = getIframe(iframeRef as React.RefObject<HTMLDivElement | null>);
+    if (!iframe?.contentWindow) return false;
+    try {
+        iframe.contentWindow.postMessage({ source: "vigia-emulator-host", ...msg }, "*");
+        return true;
+    } catch { return false; }
+}
+
 function IconPause() {
     return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>;
 }
@@ -91,10 +105,12 @@ export function EmulatorToolbar({
     status,
     onExit,
     compact,
+    iframeRef,
 }: {
     status: "idle" | "loading" | "ready" | "error";
     onExit: () => void;
     compact?: boolean;
+    iframeRef?: React.RefObject<HTMLDivElement | null>;
 }) {
     const isReady = status === "ready";
     const [paused, setPaused] = useState(false);
@@ -115,8 +131,34 @@ export function EmulatorToolbar({
 
     useEffect(() => {
         if (!isReady) return;
+        // Se tem iframe, pede estado via postMessage e também tenta ler direto
         const id = window.setInterval(() => {
             if (draggingRef.current) return;
+            // Tenta via iframe primeiro
+            if (iframeRef?.current) {
+                const iframe = getIframe(iframeRef as React.RefObject<HTMLDivElement | null>);
+                if (iframe?.contentWindow) {
+                    // Pede estado ao frame (frame responde com postMessage type=state)
+                    try { iframe.contentWindow.postMessage({ source: "vigia-emulator-host", type: "getState" }, "*"); } catch {}
+                    // Também tenta ler EJS_emulator do iframe se same-origin
+                    try {
+                        const w = iframe.contentWindow as unknown as Record<string, unknown>;
+                        const emu = w.EJS_emulator as Emu | undefined;
+                        if (emu) {
+                            setPaused(Boolean(emu.paused));
+                            if (typeof emu.volume === "number") {
+                                const v = emu.volume;
+                                setVolume(v);
+                                if (v > 0) lastVolumeRef.current = v;
+                            }
+                            setMuted(Boolean(emu.muted));
+                            const s = emu.getSettingValue?.("save-state-slot");
+                            if (s) setSlot(s);
+                            return;
+                        }
+                    } catch {}
+                }
+            }
             const emu = getEmu();
             if (!emu) return;
             setPaused(Boolean(emu.paused));
@@ -129,8 +171,26 @@ export function EmulatorToolbar({
             const s = emu.getSettingValue?.("save-state-slot");
             if (s) setSlot(s);
         }, 500);
-        return () => window.clearInterval(id);
-    }, [isReady]);
+        // Escuta resposta de estado do iframe
+        const onState = (e: MessageEvent) => {
+            const msg = e.data as { source?: string; type?: string; detail?: Record<string, unknown> } | null;
+            if (!msg || msg.source !== "vigia-emulator" || msg.type !== "state") return;
+            const d = msg.detail as { paused?: boolean; volume?: number; muted?: boolean; slot?: string } | undefined;
+            if (!d) return;
+            if (typeof d.paused === "boolean") setPaused(d.paused);
+            if (typeof d.volume === "number") {
+                setVolume(d.volume);
+                if (d.volume > 0) lastVolumeRef.current = d.volume;
+            }
+            if (typeof d.muted === "boolean") setMuted(d.muted);
+            if (typeof d.slot === "string") setSlot(d.slot);
+        };
+        window.addEventListener("message", onState);
+        return () => {
+            window.clearInterval(id);
+            window.removeEventListener("message", onState);
+        };
+    }, [isReady, iframeRef]);
 
     useEffect(() => {
         if (!showMore) return;
@@ -144,28 +204,39 @@ export function EmulatorToolbar({
     }, [showMore]);
 
     const withEmu = useCallback((fn: (emu: Emu) => void) => {
+        // Se tem iframe, tenta operar via postMessage primeiro para comandos simples
+        // Para compatibilidade, também tenta getEmu direto (caso sem iframe)
         const emu = getEmu();
-        if (!emu) return;
-        try { fn(emu); } catch (e) { console.warn("[emu-toolbar]", e); }
-    }, []);
+        if (emu) {
+            try { fn(emu); return; } catch (e) { console.warn("[emu-toolbar]", e); }
+        }
+        // Fallback: se não tem emu no parent mas tem iframe, os comandos específicos
+        // já são tratados via sendToFrame nos callbacks individuais
+    }, [iframeRef]);
 
     const togglePause = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "togglePause" })) {
+            setPaused((v) => !v);
+            return;
+        }
         withEmu((emu) => {
             if (emu.paused) emu.play?.();
             else emu.pause?.();
             setPaused(Boolean(!emu.paused));
         });
-    }, [withEmu]);
+    }, [withEmu, iframeRef]);
 
     const doRestart = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "restart" })) return;
         withEmu((emu) => {
             const gm = emu.gameManager as Record<string, unknown> | undefined;
             (gm?.restart as (() => void) | undefined)?.call(gm);
             emu.displayMessage?.("Reiniciando…");
         });
-    }, [withEmu]);
+    }, [withEmu, iframeRef]);
 
     const doSaveState = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "saveState" })) return;
         withEmu((emu) => {
             const gm = emu.gameManager as Record<string, unknown> | undefined;
             if (!gm) return;
@@ -184,9 +255,10 @@ export function EmulatorToolbar({
                 if (cb) try { cb({ state }); } catch { /* ignore */ }
             } catch (e) { console.warn(e); emu.displayMessage?.("Falha ao salvar estado"); }
         });
-    }, [withEmu, slot]);
+    }, [withEmu, slot, iframeRef]);
 
     const doLoadState = useCallback(async () => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "loadState" })) return;
         withEmu(async (emu) => {
             const gm = emu.gameManager as Record<string, unknown> | undefined;
             if (!gm) return;
@@ -212,25 +284,28 @@ export function EmulatorToolbar({
             };
             input.click();
         });
-    }, [withEmu]);
+    }, [withEmu, iframeRef]);
 
     const doQuickSave = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "quickSave", slot })) return;
         withEmu((emu) => {
             const gm = emu.gameManager as Record<string, unknown> | undefined;
             const ok = (gm?.quickSave as unknown as ((s: string) => boolean) | undefined)?.call(gm, slot);
             emu.displayMessage?.(ok ? `Salvo no slot ${slot}` : "Falha ao salvar");
         });
-    }, [withEmu, slot]);
+    }, [withEmu, slot, iframeRef]);
 
     const doQuickLoad = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "quickLoad", slot })) return;
         withEmu((emu) => {
             const gm = emu.gameManager as Record<string, unknown> | undefined;
             (gm?.quickLoad as unknown as ((s: string) => void) | undefined)?.call(gm, slot);
             emu.displayMessage?.(`Carregado do slot ${slot}`);
         });
-    }, [withEmu, slot]);
+    }, [withEmu, slot, iframeRef]);
 
     const doExportSram = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "exportSram" })) return;
         withEmu((emu) => {
             const gm = emu.gameManager as Record<string, unknown> | undefined;
             const file = (gm?.getSaveFile as unknown as ((b?: boolean) => Uint8Array | null) | undefined)?.call(gm, false);
@@ -244,6 +319,7 @@ export function EmulatorToolbar({
     }, [withEmu]);
 
     const doImportSram = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "importSram" })) return;
         withEmu((emu) => {
             const gm = emu.gameManager as Record<string, unknown> | undefined;
             if (!gm) return;
@@ -275,6 +351,7 @@ export function EmulatorToolbar({
     }, [withEmu]);
 
     const doScreenshot = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "screenshot" })) return;
         withEmu((emu) => {
             const take = emu.takeScreenshot ?? emu.screenshot;
             if (!take) { emu.displayMessage?.("Screenshot não disponível"); return; }
@@ -297,6 +374,13 @@ export function EmulatorToolbar({
     }, [withEmu]);
 
     const toggleRecording = useCallback(() => {
+        if (iframeRef?.current) {
+            const action = recording ? "stop" : "start";
+            if (sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "screenRecord", action })) {
+                setRecording(!recording);
+                return;
+            }
+        }
         withEmu((emu) => {
             if (recording && recorderRef.current) {
                 try { recorderRef.current.stop(); } catch { /* ignore */ }
@@ -320,11 +404,12 @@ export function EmulatorToolbar({
         if (clamped > 0) lastVolumeRef.current = clamped;
         setVolume(clamped);
         setMuted(clamped === 0);
+        if (iframeRef?.current) sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "setVolume", volume: clamped });
         withEmu((emu) => {
             emu.volume = clamped;
             emu.setVolume?.(clamped);
         });
-    }, [withEmu]);
+    }, [withEmu, iframeRef]);
 
     const toggleMute = useCallback(() => {
         const isMuted = muted || volume === 0;
@@ -332,6 +417,7 @@ export function EmulatorToolbar({
             const nv = lastVolumeRef.current > 0 ? lastVolumeRef.current : 0.5;
             setVolume(nv);
             setMuted(false);
+            if (iframeRef?.current) sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "setVolume", volume: nv });
             withEmu((emu) => {
                 emu.volume = nv;
                 emu.muted = false;
@@ -341,24 +427,27 @@ export function EmulatorToolbar({
             if (volume > 0) lastVolumeRef.current = volume;
             setVolume(0);
             setMuted(true);
+            if (iframeRef?.current) sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "setVolume", volume: 0 });
             withEmu((emu) => {
                 emu.muted = true;
                 emu.setVolume?.(0);
             });
         }
-    }, [withEmu, muted, volume]);
+    }, [withEmu, muted, volume, iframeRef]);
 
     const doFullscreen = useCallback(() => {
+        if (iframeRef?.current && sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "fullscreen" })) return;
         withEmu((emu) => {
             const isFs = Boolean(document.fullscreenElement);
             emu.toggleFullscreen?.(!isFs);
         });
-    }, [withEmu]);
+    }, [withEmu, iframeRef]);
 
     const changeSlot = useCallback((next: string) => {
         setSlot(next);
+        if (iframeRef?.current) sendToFrame(iframeRef as React.RefObject<HTMLDivElement | null>, { type: "changeSetting", key: "save-state-slot", value: next });
         withEmu((emu) => emu.changeSettingOption?.("save-state-slot", next));
-    }, [withEmu]);
+    }, [withEmu, iframeRef]);
 
     if (!isReady) return null;
 
