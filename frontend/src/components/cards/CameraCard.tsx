@@ -152,7 +152,7 @@ export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null
         key={tick}
         src={`/api/camera/cameras/${camera.id}/stream`}
         alt=""
-        className={cn("h-full w-full object-cover transition-opacity", loading && "opacity-0", broken && "opacity-30")}
+        className={cn("h-full w-full object-cover transition-opacity", (loading || broken) && "opacity-0")}
         onLoad={() => setLoading(false)}
         onError={() => { setLoading(false); setBroken(true); }}
       />
