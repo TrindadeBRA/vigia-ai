@@ -65,6 +65,7 @@ void loop()
     inputPoll();
     cameraClientTickLive();
     uiTickCamera();
+    cameraClientTickLive();
     delay(1);
     return;
   }

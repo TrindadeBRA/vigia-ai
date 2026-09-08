@@ -21,6 +21,7 @@
 
 #include <ArduinoJson.h>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <esp_task_wdt.h>
 
@@ -155,7 +156,12 @@ void pushTile(int x, int y, int w, int h, uint16_t *bitmap)
 
 bool jpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap)
 {
-  esp_task_wdt_reset();
+  static uint8_t n = 0;
+  if ((++n & 15) == 0)
+  {
+    yield();
+    esp_task_wdt_reset();
+  }
   if (w == 0 || h == 0 || !bitmap)
   {
     return true;
@@ -170,6 +176,7 @@ bool drawJpegFullscreen(const uint8_t *buf, int nread)
   {
     return false;
   }
+  tft.resetViewport();
   TJpgDec.setSwapBytes(true);
   TJpgDec.setCallback(jpgOutput);
   const int scrW = tft.width();
@@ -192,7 +199,7 @@ bool drawJpegFullscreen(const uint8_t *buf, int nread)
   return ok;
 }
 
-constexpr int kJpegTry[] = {16 * 1024, 12 * 1024, 8 * 1024};
+constexpr int kJpegTry[] = {24 * 1024, 16 * 1024, 12 * 1024};
 uint8_t *g_bufs[2] = {nullptr, nullptr};
 int g_lens[2] = {0, 0};
 int g_jpegCap = 0;
@@ -275,11 +282,11 @@ bool allocJpegBufs()
 int pickFillSlot()
 {
   int slot = g_fill;
-  if (g_bufCount > 1 && slot == g_busy)
+  if (g_bufCount > 1 && (slot == g_busy || slot == g_ready))
   {
     slot ^= 1;
   }
-  if (slot == g_busy || !g_bufs[slot])
+  if (slot == g_busy || slot == g_ready || !g_bufs[slot])
   {
     return -1;
   }
@@ -299,21 +306,91 @@ LivePhase g_livePhase = LIVE_IDLE;
 char g_liveHdr[384];
 int g_liveHdrLen = 0;
 uint32_t g_livePhaseAt = 0;
-int g_slot = -1;
+int g_partSlot = -1;
 int g_accLen = 0;
-bool g_inJpeg = false;
-bool g_drop = false;
 bool g_pendingFf = false;
-uint8_t g_prev = 0;
+uint32_t g_frameN = 0;
+int g_chunkLeft = -2;
+int g_chunkHex = 0;
+
+int completeJpegLen(const uint8_t *buf, int n)
+{
+  if (n < 4 || buf[0] != 0xff || buf[1] != 0xd8)
+  {
+    return 0;
+  }
+  int i = 2;
+  while (i + 1 < n)
+  {
+    if (buf[i] != 0xff)
+    {
+      i++;
+      continue;
+    }
+    const uint8_t m = buf[i + 1];
+    if (m == 0xff)
+    {
+      i++;
+      continue;
+    }
+    if (m == 0xd9)
+    {
+      i += 2;
+      continue;
+    }
+    if (m == 0xda)
+    {
+      if (i + 3 >= n)
+      {
+        return 0;
+      }
+      const int sosLen = (buf[i + 2] << 8) | buf[i + 3];
+      i += 2 + sosLen;
+      while (i + 1 < n)
+      {
+        if (buf[i] == 0xff && buf[i + 1] != 0x00)
+        {
+          const uint8_t mm = buf[i + 1];
+          if (mm == 0xd9)
+          {
+            return i + 2;
+          }
+          if (mm >= 0xd0 && mm <= 0xd7)
+          {
+            i += 2;
+            continue;
+          }
+        }
+        i++;
+      }
+      return 0;
+    }
+    if (m == 0x01 || (m >= 0xd0 && m <= 0xd7))
+    {
+      i += 2;
+      continue;
+    }
+    if (i + 3 >= n)
+    {
+      return 0;
+    }
+    const int len = (buf[i + 2] << 8) | buf[i + 3];
+    if (len < 2)
+    {
+      return 0;
+    }
+    i += 2 + len;
+  }
+  return 0;
+}
 
 void liveResetParser()
 {
-  g_slot = -1;
+  g_partSlot = -1;
   g_accLen = 0;
-  g_inJpeg = false;
-  g_drop = false;
   g_pendingFf = false;
-  g_prev = 0;
+  g_chunkLeft = -2;
+  g_chunkHex = 0;
 }
 
 void liveDisconnect(uint32_t retryMs)
@@ -326,59 +403,163 @@ void liveDisconnect(uint32_t retryMs)
   g_livePhaseAt = millis() + retryMs;
 }
 
+void livePublish(int slot, int n)
+{
+  if (slot < 0 || n < 16 || !g_bufs[slot])
+  {
+    return;
+  }
+  g_lens[slot] = n;
+  g_ready = slot;
+  g_frameN++;
+  if ((g_frameN % 15) == 1)
+  {
+    Serial.printf("[camera] frame %u %d B\n", (unsigned)g_frameN, n);
+  }
+  if (g_bufCount > 1)
+  {
+    g_fill = slot ^ 1;
+  }
+}
+
 void liveIngest(const uint8_t *tmp, int n)
 {
-  for (int i = 0; i < n; i++)
+  int off = 0;
+  while (off < n)
   {
-    uint8_t b = tmp[i];
-    if (!g_inJpeg)
+    if (g_partSlot < 0)
     {
+      const uint8_t b = tmp[off++];
       if (g_pendingFf && b == 0xd8)
       {
         g_pendingFf = false;
-        g_slot = pickFillSlot();
-        g_drop = g_slot < 0;
-        g_inJpeg = true;
-        g_prev = 0xd8;
-        if (!g_drop)
+        g_partSlot = pickFillSlot();
+        if (g_partSlot < 0)
         {
-          g_bufs[g_slot][0] = 0xff;
-          g_bufs[g_slot][1] = 0xd8;
-          g_accLen = 2;
+          continue;
+        }
+        g_bufs[g_partSlot][0] = 0xff;
+        g_bufs[g_partSlot][1] = 0xd8;
+        g_accLen = 2;
+      }
+      else
+      {
+        g_pendingFf = (b == 0xff);
+      }
+      continue;
+    }
+    const int space = g_jpegCap - g_accLen;
+    if (space <= 0)
+    {
+      g_partSlot = -1;
+      g_accLen = 0;
+      g_pendingFf = false;
+      continue;
+    }
+    int take = n - off;
+    if (take > space)
+    {
+      take = space;
+    }
+    memcpy(g_bufs[g_partSlot] + g_accLen, tmp + off, (size_t)take);
+    g_accLen += take;
+    off += take;
+    const int done = completeJpegLen(g_bufs[g_partSlot], g_accLen);
+    if (done <= 0)
+    {
+      continue;
+    }
+    const int extra = g_accLen - done;
+    livePublish(g_partSlot, done);
+    g_partSlot = -1;
+    g_accLen = 0;
+    g_pendingFf = false;
+    if (extra > 0 && extra <= take)
+    {
+      off -= extra;
+    }
+  }
+}
+
+void liveFeed(const uint8_t *tmp, int n)
+{
+  int off = 0;
+  while (off < n)
+  {
+    if (g_chunkLeft == -3)
+    {
+      liveIngest(tmp + off, n - off);
+      return;
+    }
+    if (g_chunkLeft == -2)
+    {
+      const uint8_t b0 = tmp[off];
+      if (b0 == 0xff || b0 == '-')
+      {
+        g_chunkLeft = -3;
+        continue;
+      }
+      g_chunkLeft = -1;
+      g_chunkHex = 0;
+    }
+    if (g_chunkLeft == -4)
+    {
+      const uint8_t b = tmp[off++];
+      if (b == '\n')
+      {
+        g_chunkLeft = -1;
+        g_chunkHex = 0;
+      }
+      continue;
+    }
+    if (g_chunkLeft == -1)
+    {
+      const uint8_t b = tmp[off++];
+      if (b == '\r')
+      {
+        continue;
+      }
+      if (b == '\n')
+      {
+        g_chunkLeft = g_chunkHex;
+        g_chunkHex = 0;
+        if (g_chunkLeft == 0)
+        {
+          liveDisconnect(200);
+          return;
         }
         continue;
       }
-      g_pendingFf = (b == 0xff);
-      continue;
-    }
-    if (g_drop)
-    {
-      if (g_prev == 0xff && b == 0xd9)
+      int d = -1;
+      if (b >= '0' && b <= '9')
       {
-        g_inJpeg = false;
-        g_drop = false;
+        d = b - '0';
       }
-      g_prev = b;
-      continue;
-    }
-    if (g_accLen >= g_jpegCap)
-    {
-      g_drop = true;
-      g_prev = b;
-      continue;
-    }
-    g_bufs[g_slot][g_accLen++] = b;
-    if (g_accLen >= 4 && g_bufs[g_slot][g_accLen - 2] == 0xff && g_bufs[g_slot][g_accLen - 1] == 0xd9)
-    {
-      g_lens[g_slot] = g_accLen;
-      g_ready = g_slot;
-      if (g_bufCount > 1)
+      else if (b >= 'a' && b <= 'f')
       {
-        g_fill = g_slot ^ 1;
+        d = b - 'a' + 10;
       }
-      g_inJpeg = false;
-      g_accLen = 0;
-      g_slot = -1;
+      else if (b >= 'A' && b <= 'F')
+      {
+        d = b - 'A' + 10;
+      }
+      if (d >= 0)
+      {
+        g_chunkHex = (g_chunkHex << 4) | d;
+      }
+      continue;
+    }
+    int take = n - off;
+    if (take > g_chunkLeft)
+    {
+      take = g_chunkLeft;
+    }
+    liveIngest(tmp + off, take);
+    off += take;
+    g_chunkLeft -= take;
+    if (g_chunkLeft == 0)
+    {
+      g_chunkLeft = -4;
     }
   }
 }
@@ -430,7 +611,7 @@ void livePump()
     g_live.setNoDelay(true);
     char req[256];
     snprintf(req, sizeof(req),
-             "GET /api/camera/cameras/%s/stream?w=%d&h=%d&fit=%s HTTP/1.1\r\n"
+             "GET /api/camera/cameras/%s/stream?w=%d&h=%d&fit=%s HTTP/1.0\r\n"
              "Host: %s:%u\r\n"
              "X-Vigia-Device: esp32\r\n"
              "Connection: close\r\n\r\n",
@@ -481,7 +662,9 @@ void livePump()
         }
         setStreamErr("");
         liveResetParser();
+        g_frameN = 0;
         g_livePhase = LIVE_BODY;
+        g_livePhaseAt = millis();
         return;
       }
     }
@@ -492,14 +675,8 @@ void livePump()
   {
     return;
   }
-  if (!g_live.connected() && !g_live.available())
-  {
-    setStreamErr("stream caiu");
-    liveDisconnect(250);
-    return;
-  }
   int got = 0;
-  while (g_live.available() && got < 1024)
+  while (g_live.available() && got < 4096)
   {
     uint8_t tmp[256];
     int want = g_live.available();
@@ -512,8 +689,26 @@ void livePump()
     {
       break;
     }
-    liveIngest(tmp, n);
+    liveFeed(tmp, n);
     got += n;
+  }
+  if (got > 0)
+  {
+    g_livePhaseAt = millis();
+  }
+  else if (!g_live.connected())
+  {
+    // ffmpeg no coletor pode sair sozinho (erro de decode em frame corrompido
+    // por perda de pacote UDP/RTP) e fechar o socket sem mais nenhum byte —
+    // sem checar isso aqui, só o timeout de 8s abaixo pegava, deixando o
+    // último frame "congelado" na tela por até 8s a cada queda.
+    setStreamErr("stream caiu");
+    liveDisconnect(250);
+  }
+  else if (millis() - g_livePhaseAt > 8000)
+  {
+    setStreamErr("stream caiu");
+    liveDisconnect(250);
   }
 }
 
@@ -703,7 +898,11 @@ void cameraClientOnShowList()
 
 void cameraClientPoll()
 {
-  if (g_view != VIEW_CAMERAS)
+  // Antes só buscava a lista com VIEW_CAMERAS aberta: o card de câmeras na
+  // home nunca via dado nenhum (ficava sempre "sem câmeras" até o usuário
+  // entrar na tela). VIEW_CAMERA fica de fora pra não brigar com o socket
+  // de live streaming.
+  if (g_view == VIEW_CAMERA)
   {
     return;
   }
@@ -831,12 +1030,6 @@ bool cameraClientSendPtz(const char *action)
 
 bool cameraClientConsumeFrame()
 {
-  static uint32_t lastMs = 0;
-  const uint32_t now = millis();
-  if (now - lastMs < 50)
-  {
-    return false;
-  }
   int idx = g_ready;
   if (idx < 0 || idx > 1 || !g_bufs[idx] || g_lens[idx] < 16)
   {
@@ -844,11 +1037,14 @@ bool cameraClientConsumeFrame()
   }
   g_ready = -1;
   g_busy = idx;
-  bool ok = drawJpegFullscreen(g_bufs[idx], g_lens[idx]);
+  const int nread = g_lens[idx];
+  bool ok = drawJpegFullscreen(g_bufs[idx], nread);
   g_busy = -1;
-  if (ok)
+  static uint32_t drawn = 0;
+  drawn++;
+  if ((drawn % 15) == 1)
   {
-    lastMs = now;
+    Serial.printf("[camera] draw %u %d B ok=%d\n", (unsigned)drawn, nread, (int)ok);
   }
   return ok;
 }

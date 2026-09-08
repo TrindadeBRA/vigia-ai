@@ -241,6 +241,7 @@ void paintCameraLive()
 {
   const UiStrings &t = uiTr();
   g_ptzVisible = false;
+  tft.resetViewport();
   tft.fillScreen(COL_BG);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(COL_TEXT_MUTED, COL_BG);
