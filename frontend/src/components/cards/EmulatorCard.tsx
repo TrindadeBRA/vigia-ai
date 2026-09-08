@@ -126,6 +126,8 @@ export function EmulatorBoardCard({
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [currentGame, setCurrentGame] = useState<string | null>(null);
     const [pendingKey, setPendingKey] = useState<string | null>(null);
+    const lastRomKeyRef = useRef<string | null>(null);
+    const loadTimeoutRef = useRef<number | null>(null);
     const loaderRef = useRef<HTMLScriptElement | null>(null);
     const activeRef = useRef(false);
     const loadingRef = useRef(false);
@@ -212,7 +214,113 @@ export function EmulatorBoardCard({
                 if (OrigWK) (window as unknown as Record<string, unknown>).webkitAudioContext = patch(OrigWK);
             } catch { }
         }
-        return () => { };
+        // Silencia Wake Lock negado (EmulatorJS tenta manter tela acesa — falha em HTTP/iframe sem permissão)
+        const onUnhandled = (e: PromiseRejectionEvent) => {
+            const msg = String(e.reason?.message ?? e.reason ?? "");
+            if (msg.includes("Wake Lock") || msg.includes("NotAllowedError")) {
+                e.preventDefault();
+                console.warn("[EmulatorJS] Wake Lock negado — ignorado (sem impacto no jogo)");
+            }
+        };
+        window.addEventListener("unhandledrejection", onUnhandled);
+        // Completa traduções pt-BR faltando no EmulatorJS (evita spam de \"Translation not found\")
+        const ptbrPatch: Record<string, string> = {
+            "Context Menu": "Menu de contexto",
+            "Note that some cheats require a restart to disable": "Alguns cheats precisam reiniciar para desativar",
+            "Click to resume Emulator": "Clique para retomar o emulador",
+            "Drop save state here to load": "Solte o save state aqui para carregar",
+            "Outdated graphics driver": "Driver gráfico desatualizado",
+            "Start Screen Recording": "Iniciar gravação de tela",
+            "Stop Screen Recording": "Parar gravação de tela",
+            "This project is powered by": "Este projeto usa",
+            "View the RetroArch license here": "Ver licença do RetroArch aqui",
+            "Disks": "Discos",
+            "Exit EmulatorJS": "Sair do emulador",
+            "Exit Emulation": "Sair da emulação",
+            "BUTTON_1": "Botão 1",
+            "BUTTON_2": "Botão 2",
+            "BUTTON_3": "Botão 3",
+            "BUTTON_4": "Botão 4",
+            "up arrow": "seta para cima",
+            "down arrow": "seta para baixo",
+            "left arrow": "seta para esquerda",
+            "right arrow": "seta para direita",
+            "LEFT_TOP_SHOULDER": "ombro superior esquerdo",
+            "RIGHT_TOP_SHOULDER": "ombro superior direito",
+            "CRT beam": "CRT beam",
+            "CRT caligari": "CRT caligari",
+            "CRT lottes": "CRT lottes",
+            "CRT yeetron": "CRT yeetron",
+            "CRT zfast": "CRT zfast",
+            "SABR": "SABR",
+            "Bicubic": "Bicúbico",
+            "Mix frames": "Misturar quadros",
+            "WebGL2": "WebGL2",
+            "Requires restart": "Requer reinício",
+            "VSync": "VSync",
+            "Video Rotation": "Rotação de vídeo",
+            "Rewind Enabled (Requires restart)": "Rebobinar (requer reinício)",
+            "System Save interval": "Intervalo de save do sistema",
+            "Menu Bar Button": "Botão da barra de menu",
+            "visible": "visível",
+            "hidden": "oculto",
+            "Screenshot Source": "Fonte da captura",
+            "Screenshot Format": "Formato da captura",
+            "Screenshot Upscale": "Ampliação da captura",
+            "Screen Recording FPS": "FPS da gravação",
+            "Screen Recording Format": "Formato da gravação",
+            "Screen Recording Upscale": "Ampliação da gravação",
+            "Screen Recording Video Bitrate": "Bitrate de vídeo",
+            "Screen Recording Audio Bitrate": "Bitrate de áudio",
+            "Menubar Mouse Trigger": "Gatilho do mouse na barra",
+            "Downward Movement": "Movimento para baixo",
+            "Movement Anywhere": "Movimento em qualquer lugar",
+            "Direct Keyboard Input": "Entrada direta do teclado",
+            "Forward Alt key": "Encaminhar tecla Alt",
+            "Lock Mouse": "Travar mouse",
+        };
+        const w2 = window as unknown as Record<string, unknown>;
+        // Injeta antes do EmulatorJS carregar o JSON de idioma — ele faz fetch e mescla com EJS_language
+        // Se já houver langJson carregado, mescla direto
+        const tryPatchLang = () => {
+            const langJson = w2.EJS_langJson as Record<string, string> | undefined;
+            if (langJson && typeof langJson === "object") {
+                for (const [k, v] of Object.entries(ptbrPatch)) {
+                    if (!(k in langJson)) langJson[k] = v;
+                }
+            }
+        };
+        tryPatchLang();
+        // Também intercepta fetch de localization/pt-BR.json para injetar as chaves faltando
+        const origFetch = window.fetch.bind(window);
+        (window as unknown as Record<string, unknown>).fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+            const url = typeof input === "string" ? input : input instanceof URL ? input.href : (input as Request).url;
+            const res = await origFetch(input as RequestInfo, init);
+            if (typeof url === "string" && url.includes("localization/pt-BR.json")) {
+                try {
+                    const clone = res.clone();
+                    const json = (await clone.json()) as Record<string, string>;
+                    for (const [k, v] of Object.entries(ptbrPatch)) {
+                        if (!(k in json)) json[k] = v;
+                    }
+                    return new Response(JSON.stringify(json), {
+                        status: res.status,
+                        statusText: res.statusText,
+                        headers: res.headers,
+                    });
+                } catch { /* fallback: retorna original */ }
+            }
+            return res;
+        };
+        return () => {
+            window.removeEventListener("unhandledrejection", onUnhandled);
+            // Restaura fetch original se ainda for o nosso wrapper
+            try {
+                if ((window as unknown as Record<string, unknown>).fetch !== origFetch) {
+                    (window as unknown as Record<string, unknown>).fetch = origFetch;
+                }
+            } catch { }
+        };
     }, []);
 
     // Remove overlay nativo do EmulatorJS — mas permite reabrir o editor de controles nativo quando solicitado
@@ -399,6 +507,10 @@ export function EmulatorBoardCard({
         try { sramCleanupRef.current?.(); } catch { /* ignore */ }
         sramFlushRef.current = null;
         sramCleanupRef.current = null;
+        if (loadTimeoutRef.current != null) {
+            window.clearTimeout(loadTimeoutRef.current);
+            loadTimeoutRef.current = null;
+        }
         loadingRef.current = false;
         resettingRef.current = false;
         setStatus("idle");
@@ -436,6 +548,7 @@ export function EmulatorBoardCard({
             await new Promise((r) => setTimeout(r, 100));
         }
         loadingRef.current = true;
+        lastRomKeyRef.current = romValue;
         setStatus("loading");
         setErrorMsg(null);
         setCurrentGame(rom.name);
@@ -471,10 +584,12 @@ export function EmulatorBoardCard({
 
         const gameUrl = `/api/emulator/rom/${encodeURIComponent(effectivePlatform)}/${encodeURIComponent(rom.file)}`;
 
-        const coreMap: Record<string, string> = { gb: "gambatte", gba: "mgba" };
-        const resolvedCore = coreMap[effectiveCore] ?? effectiveCore;
+        // EJS_core deve ser o ID da plataforma (system) — ex: "gb", "gba", "nds", "n64"
+        // O EmulatorJS resolve o core automaticamente (gb→gambatte, gba→mgba, nds→melonds, etc)
+        // Não mapear para nome do core aqui, senão o EmulatorJS pode não encontrar o system
+        void effectiveCore;
         w.EJS_player = `#${containerId.current}`;
-        w.EJS_core = resolvedCore;
+        w.EJS_core = effectivePlatform;
         w.EJS_gameUrl = gameUrl;
         w.EJS_pathtodata = dataPath;
         w.EJS_gameName = rom.name;
@@ -495,7 +610,6 @@ export function EmulatorBoardCard({
         w.EJS_disableBatchBootup = globalConfig?.disableBatchBootup ?? false;
         w.EJS_noAutoFocus = globalConfig?.noAutoFocus ?? false;
         w.EJS_hideSettings = globalConfig?.hideSettings ?? false;
-        w.EJS_noAutoFocus = true;
         // Desativa 100% do overlay nativo — todas as funções via nossa toolbar
         w.EJS_Buttons = {
             playPause: false,
@@ -674,16 +788,36 @@ export function EmulatorBoardCard({
         loaderRef.current = script;
         document.body.appendChild(script);
 
-        window.setTimeout(() => {
+        // Timeout proporcional ao tamanho da ROM: 15s base + 1s por MB (mín 15s, máx 60s)
+        const romSizeMb = rom.size ? rom.size / (1024 * 1024) : 1;
+        const timeoutMs = Math.min(60000, Math.max(15000, 15000 + Math.ceil(romSizeMb) * 1000));
+        if (loadTimeoutRef.current != null) window.clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = window.setTimeout(() => {
+            loadTimeoutRef.current = null;
             setStatus((prev) => {
                 if (prev === "loading") {
                     loadingRef.current = false;
-                    setErrorMsg("tempo esgotado ao carregar o jogo. Verifique o arquivo e tente novamente.");
+                    const isNds = effectivePlatform === "nds";
+                    const hint = isNds && !effectiveBiosPath
+                        ? " NDS requer BIOS — configure em Configurações → Emulador."
+                        : "";
+                    setErrorMsg(`tempo esgotado ao carregar o jogo.${hint} Verifique o arquivo e tente novamente.`);
                     return "error";
                 }
                 return prev;
             });
-        }, 15000);
+        }, timeoutMs);
+        // Cancela timeout quando o jogo inicia com sucesso
+        const origOnGameStart = onGameStart;
+        const wrappedOnGameStart = () => {
+            if (loadTimeoutRef.current != null) {
+                window.clearTimeout(loadTimeoutRef.current);
+                loadTimeoutRef.current = null;
+            }
+            origOnGameStart();
+        };
+        w.EJS_onGameStart = wrappedOnGameStart;
+        (window as unknown as Record<string, unknown>).EJS_onGameStart = wrappedOnGameStart;
     }, [roms, platform, core, biosPath, globalConfig, dataPath, destroyEmulator, isSmall, isUnified]);
 
     // pending play from library (localStorage + event)
@@ -835,7 +969,10 @@ export function EmulatorBoardCard({
                 {status === "error" ? (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black p-4 text-center">
                         <div className="text-[12px] text-bad">{errorMsg ?? "erro ao carregar"}</div>
-                        <button type="button" onClick={() => pendingKey && void loadGame(pendingKey)} className="rounded-lg bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20">tentar novamente</button>
+                        <button type="button" onClick={() => {
+                            const key = pendingKey ?? lastRomKeyRef.current;
+                            if (key) void loadGame(key);
+                        }} className="rounded-lg bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20">tentar novamente</button>
                     </div>
                 ) : null}
             </div>
