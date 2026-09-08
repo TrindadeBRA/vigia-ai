@@ -330,7 +330,7 @@ void usageClientPoll()
     else
     {
       g_sseLine += c;
-      if (g_sseLine.length() > 12000)
+      if (g_sseLine.length() > 32000)
       {
         Serial.println("coletor SSE: linha enorme, descarta");
         sseClose();
