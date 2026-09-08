@@ -186,6 +186,7 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
                     <Checkbox label="Iniciar ao carregar" checked={cfg.startOnLoaded} onChange={async (e) => { await saveReq.run(async () => patch({ startOnLoaded: e.target.checked }), { success: c.saved, error: c.fail }); }} />
                     <Checkbox label="Tela cheia ao carregar" checked={cfg.fullscreenOnLoad} onChange={async (e) => { await saveReq.run(async () => patch({ fullscreenOnLoad: e.target.checked }), { success: c.saved, error: c.fail }); }} />
                     <Checkbox label="Esconder configurações" checked={cfg.hideSettings} onChange={async (e) => { await saveReq.run(async () => patch({ hideSettings: e.target.checked }), { success: c.saved, error: c.fail }); }} />
+                    <Checkbox label="Não focar automaticamente ao carregar" checked={cfg.noAutoFocus} onChange={async (e) => { await saveReq.run(async () => patch({ noAutoFocus: e.target.checked }), { success: c.saved, error: c.fail }); }} />
                 </div>
                 <div className="mt-3">
                     <TextField

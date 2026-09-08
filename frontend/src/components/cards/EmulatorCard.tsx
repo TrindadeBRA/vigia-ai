@@ -264,53 +264,6 @@ export function EmulatorBoardCard({
     }, [menuOpen]);
 
     useEffect(() => {
-        if (status !== "ready") return;
-        const container = emulatorRef.current;
-        if (!container) return;
-        const ejsParent = container.querySelector('[id^="ejs-"]') as HTMLElement | null;
-        const target_el = ejsParent ?? container;
-        const blockMenuOpen = (e: Event) => {
-            const target = e.target as HTMLElement;
-            if (target.closest(".ejs_menu_button") || target.closest(".ejs_menu_bar") || target.closest("[data-emu-menu-btn]")) return;
-            const menuBar = container.querySelector(".ejs_menu_bar") as HTMLElement | null;
-            if (!menuBar) return;
-            if (menuBar.classList.contains("ejs_menu_bar_hidden")) {
-                e.stopPropagation();
-                if (e.type === "click" || e.type === "mousedown" || e.type === "touchstart") e.preventDefault();
-            } else {
-                if (e.type === "click" || e.type === "mousedown" || e.type === "touchstart") {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    menuBar.classList.add("ejs_menu_bar_hidden");
-                    setMenuOpen(false);
-                }
-            }
-        };
-        const blockMouseMove = (e: Event) => {
-            const target = e.target as HTMLElement;
-            if (target.closest(".ejs_menu_bar") || target.closest("[data-emu-menu-btn]")) return;
-            const menuBar = container.querySelector(".ejs_menu_bar") as HTMLElement | null;
-            if (menuBar?.classList.contains("ejs_menu_bar_hidden")) e.stopPropagation();
-        };
-        for (const el of [container, target_el]) {
-            if (!el) continue;
-            el.addEventListener("click", blockMenuOpen, true);
-            el.addEventListener("mousedown", blockMenuOpen, true);
-            el.addEventListener("touchstart", blockMenuOpen, true);
-            el.addEventListener("mousemove", blockMouseMove, true);
-        }
-        return () => {
-            for (const el of [container, target_el]) {
-                if (!el) continue;
-                el.removeEventListener("click", blockMenuOpen, true);
-                el.removeEventListener("mousedown", blockMenuOpen, true);
-                el.removeEventListener("touchstart", blockMenuOpen, true);
-                el.removeEventListener("mousemove", blockMouseMove, true);
-            }
-        };
-    }, [status]);
-
-    useEffect(() => {
         return () => {
             if (activeRef.current) {
                 setEmulatorActive(false);
@@ -509,7 +462,6 @@ export function EmulatorBoardCard({
         w.EJS_disableBatchBootup = globalConfig?.disableBatchBootup ?? false;
         w.EJS_noAutoFocus = globalConfig?.noAutoFocus ?? false;
         w.EJS_hideSettings = globalConfig?.hideSettings ?? false;
-        w.EJS_noAutoFocus = true;
 
         const onGameStart = () => {
             setStatus("ready");
@@ -626,28 +578,14 @@ export function EmulatorBoardCard({
         const container = gameContainerRef.current;
         if (!container) return;
         const ro = new ResizeObserver(() => {
+            // Sizing do canvas fica só por CSS ([&_canvas]:!w-full etc. no wrapper) — aqui
+            // só avisamos o EmulatorJS pra recalcular o buffer interno de renderização.
             const emu = (window as unknown as Record<string, unknown>).EJS_emulator as Record<string, unknown> | undefined;
             if (emu) {
                 try { (emu.handleResize as (() => void) | undefined)?.call(emu); } catch { }
                 try { (emu.resize as (() => void) | undefined)?.call(emu); } catch { }
             }
             window.dispatchEvent(new Event("resize"));
-            const canvas = emulatorRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
-            if (canvas && container) {
-                const rect = container.getBoundingClientRect();
-                canvas.style.maxWidth = "100%";
-                canvas.style.maxHeight = "100%";
-                canvas.style.width = "auto";
-                canvas.style.height = "auto";
-                canvas.style.objectFit = "contain";
-                if (canvas.width > rect.width || canvas.height > rect.height) {
-                    const scale = Math.min(rect.width / canvas.width, rect.height / canvas.height);
-                    if (scale < 1) {
-                        canvas.style.width = Math.floor(canvas.width * scale) + "px";
-                        canvas.style.height = Math.floor(canvas.height * scale) + "px";
-                    }
-                }
-            }
         });
         ro.observe(container);
         if (emulatorRef.current) ro.observe(emulatorRef.current);

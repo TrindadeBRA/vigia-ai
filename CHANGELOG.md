@@ -37,6 +37,8 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- **Emulador (EmulatorJS) nunca conseguia foco de teclado no Mac** — `EJS_noAutoFocus` era lido da config e, na linha seguinte, sobrescrito pra `true` incondicionalmente (config sem efeito, auto-foco sempre desligado). Um segundo efeito ainda interceptava clique/mousedown/touchstart em toda a área do jogo (fase de captura) com `preventDefault()`, achando que precisava bloquear cliques vazando pro menu interno escondido — só que o menu escondido já é `display:none` (não recebe clique nenhum), então esse bloqueio só engolia toque em controles virtuais e, por causa do `preventDefault()` no `mousedown`, cancelava o foco automático do navegador ao clicar no card. Removido o efeito (a lógica de "fechar menu ao clicar fora" já existia à parte, sem depender dele) e a config `noAutoFocus` passou a ser respeitada de verdade — com toggle próprio em Configurações → Emulador. Ver `.agents/APIS_EMULATOR.md`.
+- Resize do card de emulador escrevia `canvas.style.width/height` via JS a cada mudança de tamanho do tile, mas o wrapper já força o tamanho por CSS (`!w-full !h-full !object-contain`, Tailwind `!important` sempre vence sobre inline style) — o JS não tinha efeito visual, só gerava layout/repaint à toa. Removido; o `ResizeObserver` só avisa o EmulatorJS pra recalcular a resolução interna do canvas.
 - **`GET /docs` (Swagger) sempre voltava 404 no coletor Node** — `@fastify/swagger`/`@fastify/swagger-ui` estavam instalados mas nunca registrados (só um placeholder estático em `/openapi.json`); o Python original tinha Swagger funcional via FastAPI. Regressão silenciosa: o README, o log de boot e um link clicável no painel (`NetworkCard.tsx`) anunciavam a URL como disponível. Registrados os dois plugins em `backend/src/main.ts`; `/openapi.json` agora devolve o spec real gerado (`fastify.swagger()`), com `paths` de verdade em vez do stub `{openapi, info}`.
 - Dependência `@fastify/static` (não usada em lugar nenhum do código) removida do backend — tinha 2 CVEs (bypass de autorização + path traversal). `@fastify/swagger-ui` atualizado pra `^6.1.1`, que resolve a mesma dependência internamente (usada pra servir os assets estáticos do `/docs`).
 - **Claude no Windows**: `os.uname()` não existe fora de POSIX, e a leitura de credencial quebrava com `AttributeError` antes mesmo de tentar o `~/.claude/.credentials.json`. Trocado por `sys.platform`.
@@ -53,6 +55,7 @@ All notable changes to this project are documented here.
 
 ### Removed
 
+- Dependência `react-emulatorjs` (npm) do frontend — nunca era importada em lugar nenhum; a integração do emulador sempre carregou o EmulatorJS direto da CDN oficial via `<script>`, e o pacote só embrulharia a mesma CDN numa API de componente.
 - **Web Push** (VAPID, service worker `sw.js`, `/api/push`, `pywebpush`): notificações de alarme passam só pelo **Telegram** — ver `.agents/NOTIFICACOES.md`.
 - Scripts de instalação standalone (`install-scripts/`) — usar `./dev` ou Docker Compose.
 

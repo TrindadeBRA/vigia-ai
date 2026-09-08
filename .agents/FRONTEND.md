@@ -44,3 +44,7 @@ Todo campo que representa caminho de pasta ou arquivo (ex.: `saveFolder`, `biosF
 - Manter build único: nada de `ipcRenderer` direto no renderer, só via `window.vigia`.
 
 Campos já migrados: `EmulatorConfigCard` (`saveFolder`, `biosFolder`, `romPath`, `biosPath`) e `GitConfigCard` (`source`). Novos campos de caminho devem seguir o mesmo padrão.
+
+## Emulador (EmulatorJS)
+
+Cards de jogos retro (`EmulatorCard.tsx`) + biblioteca dedicada (`/display/emulator`) carregando o EmulatorJS direto da CDN oficial, sem pacote npm — arquitetura, rotas do backend, o bug de foco no Mac corrigido em 2026-09 e outras pegadinhas (menu interno, resize, `noAutoFocus`) estão em [APIS_EMULATOR.md](APIS_EMULATOR.md).
