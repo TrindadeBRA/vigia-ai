@@ -158,6 +158,8 @@ type Strings = {
   spotifyConnectHint: string;
   cameraNeedsConfigHint: string;
   cameraOfflineHint: string;
+  cameraReconnecting: string;
+  cameraRetryNow: string;
   cameraPtzUp: string;
   cameraPtzDown: string;
   cameraPtzLeft: string;
@@ -442,6 +444,8 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Conecte sua conta Spotify em Configurações",
     cameraNeedsConfigHint: "Configure a câmera em Configurações.",
     cameraOfflineHint: "Não foi possível carregar a imagem da câmera.",
+    cameraReconnecting: "tentando reconectar…",
+    cameraRetryNow: "Tentar agora",
     cameraPtzUp: "Mover para cima",
     cameraPtzDown: "Mover para baixo",
     cameraPtzLeft: "Mover para a esquerda",
@@ -718,6 +722,8 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Connect your Spotify account in Settings",
     cameraNeedsConfigHint: "Set up the camera in Settings.",
     cameraOfflineHint: "Could not load the camera image.",
+    cameraReconnecting: "reconnecting…",
+    cameraRetryNow: "Retry now",
     cameraPtzUp: "Move up",
     cameraPtzDown: "Move down",
     cameraPtzLeft: "Move left",
@@ -994,6 +1000,8 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Conecta tu cuenta de Spotify en Configuración",
     cameraNeedsConfigHint: "Configura la cámara en Configuración.",
     cameraOfflineHint: "No se pudo cargar la imagen de la cámara.",
+    cameraReconnecting: "reconectando…",
+    cameraRetryNow: "Reintentar ahora",
     cameraPtzUp: "Mover hacia arriba",
     cameraPtzDown: "Mover hacia abajo",
     cameraPtzLeft: "Mover a la izquierda",
