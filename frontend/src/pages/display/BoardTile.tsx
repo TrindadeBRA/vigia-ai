@@ -111,7 +111,10 @@ export function ProviderCard({
   }
   if (p.provider === "emulator" || p.kind === "emulator") {
     const emuCfg = (p as unknown as { _emulatorConfig?: import("../../components/cards/EmulatorCard").EmulatorGlobalConfig | null })._emulatorConfig ?? null;
-    return <EmulatorTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} emulatorConfig={emuCfg} />;
+    // Sem "Duplicar": o EmulatorJS só suporta uma instância por página (tudo
+    // via globais window.EJS_*) — dois cards ao mesmo tempo atropelam um ao
+    // outro assim que qualquer um deles carrega um jogo.
+    return <EmulatorTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} emulatorConfig={emuCfg} />;
   }
   // Widgets extras: sem "conta"/dados de backend, só visuais
   if (p.provider === "clock") {
@@ -313,10 +316,6 @@ export function BoardTile({
           document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
           e.currentTarget.setAttribute("data-gamepad-focused", "true");
         }
-      }}
-      onClick={() => {
-        document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
-        rootRef.current?.setAttribute("data-gamepad-focused", "true");
       }}
     >
       <ProviderCard

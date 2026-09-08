@@ -210,48 +210,39 @@ export function EmulatorBoardCard({
 
     const [menuOpen, setMenuOpen] = useState(false);
 
-    useEffect(() => {
-        const style = document.createElement("style");
-        style.id = "ejs-menu-fix";
-        style.textContent = `
-            .ejs_menu_bar.ejs_menu_bar_hidden { display: none !important; }
-            .ejs_menu_bar:not(.ejs_menu_bar_hidden) { display: flex !important; }
-            .ejs_canvas_parent { pointer-events: auto; }
-        `;
-        if (!document.getElementById("ejs-menu-fix")) {
-            document.head.appendChild(style);
-        }
-        return () => { };
+    // O EmulatorJS já tem seu próprio sistema de show/hide do menu (fade +
+    // slide animados via CSS, auto-esconde sozinho depois de 3s parado) e
+    // expõe isso como API pública em `EJS_emulator.menu` — nunca reimplementar
+    // isso por fora mexendo na classe `ejs_menu_bar_hidden` direto: é uma
+    // classe do próprio EmulatorJS (não é nossa), redefinir o CSS dela por
+    // cima (como um `display:none/flex !important`) briga com a transição
+    // nativa dele e é exatamente o que deixava o menu "quebrado" ao abrir.
+    const getEjsMenu = useCallback(() => {
+        const emu = (window as unknown as Record<string, unknown>).EJS_emulator as
+            | { menu?: { open?: (force?: boolean) => void; close?: () => void; toggle?: () => void } }
+            | undefined;
+        return emu?.menu ?? null;
     }, []);
 
     const toggleMenu = useCallback(() => {
-        const menuBar = emulatorRef.current?.querySelector(".ejs_menu_bar") as HTMLElement | null;
-        if (!menuBar) return;
-        const isHidden = menuBar.classList.contains("ejs_menu_bar_hidden");
-        if (isHidden) {
-            menuBar.classList.remove("ejs_menu_bar_hidden");
-            setMenuOpen(true);
-        } else {
-            menuBar.classList.add("ejs_menu_bar_hidden");
-            setMenuOpen(false);
-        }
-    }, []);
+        getEjsMenu()?.toggle?.();
+        setMenuOpen((v) => !v);
+    }, [getEjsMenu]);
 
     useEffect(() => {
         if (!menuOpen) return;
+        const closeMenu = () => {
+            getEjsMenu()?.close?.();
+            setMenuOpen(false);
+        };
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                const menuBar = emulatorRef.current?.querySelector(".ejs_menu_bar") as HTMLElement | null;
-                menuBar?.classList.add("ejs_menu_bar_hidden");
-                setMenuOpen(false);
-            }
+            if (e.key === "Escape") closeMenu();
         };
         const onClickOutside = (e: MouseEvent) => {
             const menuBar = emulatorRef.current?.querySelector(".ejs_menu_bar") as HTMLElement | null;
             const target = e.target as HTMLElement;
-            if (menuBar && !menuBar.contains(target) && !target.closest('[data-emu-menu-btn]')) {
-                menuBar.classList.add("ejs_menu_bar_hidden");
-                setMenuOpen(false);
+            if (menuBar && !menuBar.contains(target) && !target.closest("[data-emu-menu-btn]")) {
+                closeMenu();
             }
         };
         document.addEventListener("keydown", onKey);
@@ -261,7 +252,7 @@ export function EmulatorBoardCard({
             document.removeEventListener("click", onClickOutside);
             clearTimeout(timer);
         };
-    }, [menuOpen]);
+    }, [menuOpen, getEjsMenu]);
 
     useEffect(() => {
         return () => {
@@ -470,13 +461,9 @@ export function EmulatorBoardCard({
                 activeRef.current = true;
                 setEmulatorActive(true);
             }
-            setTimeout(() => {
-                const menuBar = emulatorRef.current?.querySelector(".ejs_menu_bar") as HTMLElement | null;
-                if (menuBar && !menuBar.classList.contains("ejs_menu_bar_hidden")) {
-                    menuBar.classList.add("ejs_menu_bar_hidden");
-                    setMenuOpen(false);
-                }
-            }, 300);
+            // Cada jogo novo começa com o menu fechado — o efeito de
+            // sincronização acima aplica isso na barra assim que ela aparecer.
+            setMenuOpen(false);
         };
         w.EJS_onSaveState = () => { };
         w.EJS_onSaveSave = () => { };
