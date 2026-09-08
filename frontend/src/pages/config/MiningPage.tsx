@@ -93,7 +93,7 @@ export default function MiningPage() {
 
       <Card title={c.statusTitle}>
         <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-[13.5px] sm:grid-cols-2">
-          <Row label={c.currentStatusLabel} value={c.status[status.status]} hint={c.hintCurrentStatus} />
+          <Row label={c.currentStatusLabel} value={status.stale ? c.status.idle : c.status[status.status]} hint={c.hintCurrentStatus} />
           <Row label={c.hashrateCurrent} value={fmtHashrate(status.hashrateCurrent)} hint={c.hintHashrateCurrent} />
           <Row label={c.hashrateAvg} value={fmtHashrate(status.hashrateAvg)} hint={c.hintHashrateAvg} />
           <Row label={c.sharesAccepted} value={String(status.sharesAccepted)} hint={c.hintSharesAccepted} />
