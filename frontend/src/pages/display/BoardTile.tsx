@@ -111,7 +111,10 @@ export function ProviderCard({
   }
   if (p.provider === "emulator" || p.kind === "emulator") {
     const emuCfg = (p as unknown as { _emulatorConfig?: import("../../components/cards/EmulatorCard").EmulatorGlobalConfig | null })._emulatorConfig ?? null;
-    return <EmulatorTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} emulatorConfig={emuCfg} />;
+    // Sem "Duplicar": o EmulatorJS só suporta uma instância por página (tudo
+    // via globais window.EJS_*) — dois cards ao mesmo tempo atropelam um ao
+    // outro assim que qualquer um deles carrega um jogo.
+    return <EmulatorTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} emulatorConfig={emuCfg} />;
   }
   // Widgets extras: sem "conta"/dados de backend, só visuais
   if (p.provider === "clock") {
@@ -284,7 +287,16 @@ export function BoardTile({
   useEffect(() => {
     if (!revealed) return;
     const onOutside = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setRevealed(false);
+      const target = e.target as HTMLElement;
+      if (rootRef.current?.contains(target)) return;
+      // O menu de tamanho e o seletor de cor renderizam via createPortal em
+      // document.body — ficam fora do card no DOM, mas não são "fora" pra
+      // essa lógica. Sem essa checagem, tocar numa opção deles conta como
+      // clique fora e fecha o "revealed" no pointerdown, antes do toque
+      // terminar — no iOS isso cancela o clique sintético (a UI muda no meio
+      // do toque), então a opção nunca chegava a ser selecionada.
+      if (target.closest('[role="menu"], [role="dialog"]')) return;
+      setRevealed(false);
     };
     document.addEventListener("pointerdown", onOutside, true);
     return () => document.removeEventListener("pointerdown", onOutside, true);
@@ -313,10 +325,6 @@ export function BoardTile({
           document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
           e.currentTarget.setAttribute("data-gamepad-focused", "true");
         }
-      }}
-      onClick={() => {
-        document.querySelectorAll('[data-gamepad-focused="true"]').forEach((el) => el.removeAttribute("data-gamepad-focused"));
-        rootRef.current?.setAttribute("data-gamepad-focused", "true");
       }}
     >
       <ProviderCard

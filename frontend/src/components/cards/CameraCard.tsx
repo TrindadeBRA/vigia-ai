@@ -101,21 +101,31 @@ function PtzPad({ cameraId, t }: { cameraId: string; t: T }) {
 export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null; t: T; size: CardSize }) {
   void size;
   const [tick, setTick] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [broken, setBroken] = useState(false);
+
+  const reconnect = () => {
+    setLoading(true);
+    setBroken(false);
+    setTick((n) => n + 1);
+  };
 
   // Reconecta (bump de key -> novo <img>, novo request, novo ffmpeg no
   // coletor) quando o stream anterior quebrou, ou quando a câmera trocou —
   // sem polling nenhum enquanto ele está saudável, o browser cuida de
   // repintar cada frame sozinho.
   useEffect(() => {
+    setLoading(true);
     setBroken(false);
     setTick((n) => n + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera?.id]);
 
   useEffect(() => {
     if (!camera?.configured || !broken) return;
-    const timer = window.setTimeout(() => setTick((n) => n + 1), RECONNECT_MS);
+    const timer = window.setTimeout(reconnect, RECONNECT_MS);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera?.configured, broken]);
 
   if (!camera) {
@@ -142,16 +152,34 @@ export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null
         key={tick}
         src={`/api/camera/cameras/${camera.id}/stream`}
         alt=""
-        className={cn("h-full w-full object-cover transition-opacity", broken && "opacity-30")}
-        onLoad={() => setBroken(false)}
-        onError={() => setBroken(true)}
+        className={cn("h-full w-full object-cover transition-opacity", loading && "opacity-0", broken && "opacity-30")}
+        onLoad={() => setLoading(false)}
+        onError={() => { setLoading(false); setBroken(true); }}
       />
-      {broken ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-panel/70 px-3 text-center text-[11px] leading-snug text-ink3">
-          {t.cameraOfflineHint}
+      {loading && !broken ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-chip">
+          <CameraIcon size={28} />
+          <div className="h-1.5 w-16 animate-pulse rounded-full bg-ink3/25" />
         </div>
       ) : null}
-      {!broken && camera.ptzEnabled ? <PtzPad cameraId={camera.id} t={t} /> : null}
+      {broken ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-panel/85 px-3 text-center">
+          <CameraIcon size={28} />
+          <div className={cn(emptyNote, "max-w-[26ch]")}>{t.cameraOfflineHint}</div>
+          <div className="flex items-center gap-1.5 text-[10px] text-ink3">
+            <span className="size-1.5 animate-pulse rounded-full bg-warn" />
+            {t.cameraReconnecting}
+          </div>
+          <button
+            type="button"
+            onClick={reconnect}
+            className="mt-0.5 rounded-lg border border-edge bg-chip px-2.5 py-1 text-[11px] font-medium text-ink2 hover:border-accent hover:text-ink"
+          >
+            {t.cameraRetryNow}
+          </button>
+        </div>
+      ) : null}
+      {!broken && !loading && camera.ptzEnabled ? <PtzPad cameraId={camera.id} t={t} /> : null}
     </div>
   );
 }
