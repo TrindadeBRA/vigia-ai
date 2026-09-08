@@ -231,7 +231,13 @@ function spawnFfmpegStream(
     "-i", url,
     "-an",
     "-vf", vf,
-    ...(forBoard ? [] : ["-r", "10"]),
+    // Sem "-r", com probesize/analyzeduration mínimos o ffmpeg costuma
+    // inferir um fps de saída errado (do tbr do RTSP) e duplica o último
+    // frame decodificado pra "completar" a taxa — a placa recebe bytes e
+    // desenha normal (nada acusa erro), mas é sempre a MESMA imagem: parece
+    // travado no primeiro frame. "passthrough" manda só frame decodificado
+    // de verdade, sem duplicar/dropar pra bater timing nenhum.
+    ...(forBoard ? ["-fps_mode", "passthrough"] : ["-r", "10"]),
     "-q:v", forBoard ? "16" : "6",
     "-f", "mjpeg",
     "-flush_packets", "1",
