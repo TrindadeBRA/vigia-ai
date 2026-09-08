@@ -1,9 +1,16 @@
-import type { GithubPayload, GithubRepo } from "../../api/types";
+import { useEffect, useState } from "react";
+import { fetchGithubTop, fetchGithubTrending } from "../../api/client";
+import type { GithubExploreRepo, GithubPayload, GithubRepo, GithubTopPeriod } from "../../api/types";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
+import { FlameIcon, TrophyIcon } from "../icons";
 import type { T } from "../../i18n";
+import { PROVIDER_ICON } from "../../theme";
 import { cardLabel, emptyNote, errorText, num } from "../../tw";
+
+type GithubView = "repo" | "trending" | "top";
+const GITHUB_TOP_LANGUAGES = ["", "JavaScript", "TypeScript", "Python", "Go", "Rust", "Java", "C++", "C#", "PHP", "Ruby", "Swift", "Kotlin"];
 
 /* ── Tamanhos ───────────────────────────────────────────────────────── */
 
@@ -46,16 +53,17 @@ function shortRepoName(repo: GithubRepo): string {
 /* ── Primitivos ─────────────────────────────────────────────────────── */
 
 function GithubIcon({ compact }: { compact?: boolean }) {
+    const hasIcon = Boolean(PROVIDER_ICON.github);
     if (compact) {
         return (
             <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
-                <span className="text-[13px]">🐙</span>
+                {hasIcon ? <img className="size-3.5 object-contain" src={PROVIDER_ICON.github} alt="github" draggable={false} /> : <span className="text-[13px]">🐙</span>}
             </div>
         );
     }
     return (
         <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
-            <span className="text-[20px]">🐙</span>
+            {hasIcon ? <img className="size-[23px] object-contain" src={PROVIDER_ICON.github} alt="github" draggable={false} /> : <span className="text-[20px]">🐙</span>}
         </div>
     );
 }
@@ -93,6 +101,128 @@ function StatChip({ label, value }: { label: string; value: string }) {
     );
 }
 
+/* ── Explorar (Em alta / Top repos) ────────────────────────────────── */
+
+function useGithubExplore(view: GithubView, language: string, period: GithubTopPeriod) {
+    const [repos, setRepos] = useState<GithubExploreRepo[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (view === "repo") return;
+        let cancelled = false;
+        setLoading(true);
+        const req = view === "trending" ? fetchGithubTrending() : fetchGithubTop(language, period);
+        req
+            .then((res) => {
+                if (cancelled) return;
+                setRepos(res.repos);
+                setError(res.error);
+            })
+            .catch((e: unknown) => {
+                if (cancelled) return;
+                setError(e instanceof Error ? e.message : String(e));
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [view, language, period]);
+
+    return { repos, error, loading };
+}
+
+function GithubViewTabs({ view, onChange, t }: { view: GithubView; onChange: (v: GithubView) => void; t: T }) {
+    const tabs: Array<{ id: GithubView; label: string; icon: React.ReactNode }> = [
+        { id: "repo", label: t.githubTabRepo, icon: null },
+        { id: "trending", label: t.githubTabTrending, icon: <FlameIcon size={12} /> },
+        { id: "top", label: t.githubTabTop, icon: <TrophyIcon size={12} /> },
+    ];
+    return (
+        <div className="mb-1.5 flex shrink-0 gap-1">
+            {tabs.map((tab) => (
+                <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => onChange(tab.id)}
+                    className={cn(
+                        "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-semibold transition-colors",
+                        view === tab.id ? "border-accent bg-accent text-accent-ink" : "border-edge bg-chip text-ink3 hover:text-ink2",
+                    )}
+                >
+                    {tab.icon}
+                    {tab.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+function GithubExploreRow({ repo }: { repo: GithubExploreRepo }) {
+    return (
+        <a
+            href={repo.html_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col gap-0.5 rounded-xl border border-edge bg-chip px-2.5 py-2 no-underline hover:border-accent"
+        >
+            <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-semibold text-ink">{repo.full_name}</span>
+                <span className={cn(num, "shrink-0 text-[11px] font-bold text-ink2")}>★ {fmtCompactNumber(repo.stars)}</span>
+            </div>
+            {repo.description ? <span className="line-clamp-1 text-[11px] leading-snug text-ink3">{repo.description}</span> : null}
+            {repo.language ? <span className="text-[10px] font-medium text-ink3">{repo.language}</span> : null}
+        </a>
+    );
+}
+
+function GithubExploreList({ repos, loading, error, t }: { repos: GithubExploreRepo[]; loading: boolean; error: string | null; t: T }) {
+    if (loading && repos.length === 0) {
+        return <div className="flex flex-1 items-center"><div className={emptyNote}>{t.githubExploreLoading}</div></div>;
+    }
+    if (error && repos.length === 0) {
+        return <div className="flex flex-1 items-center"><div className={errorText}>{error}</div></div>;
+    }
+    if (repos.length === 0) {
+        return <div className="flex flex-1 items-center"><div className={emptyNote}>{t.githubExploreEmpty}</div></div>;
+    }
+    return (
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
+            {repos.map((r) => <GithubExploreRow key={r.full_name} repo={r} />)}
+        </div>
+    );
+}
+
+function GithubTopFilters({ language, period, onLanguage, onPeriod, t }: { language: string; period: GithubTopPeriod; onLanguage: (v: string) => void; onPeriod: (v: GithubTopPeriod) => void; t: T }) {
+    const periods: Array<{ id: GithubTopPeriod; label: string }> = [
+        { id: "day", label: t.githubTopPeriodDay },
+        { id: "week", label: t.githubTopPeriodWeek },
+        { id: "month", label: t.githubTopPeriodMonth },
+        { id: "year", label: t.githubTopPeriodYear },
+        { id: "all", label: t.githubTopPeriodAll },
+    ];
+    return (
+        <div className="mb-1.5 flex shrink-0 gap-1.5">
+            <select
+                value={language}
+                onChange={(e) => onLanguage(e.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-edge bg-chip px-1.5 py-1 text-[11px] font-medium text-ink2"
+            >
+                {GITHUB_TOP_LANGUAGES.map((lang) => (
+                    <option key={lang || "any"} value={lang}>{lang || t.githubTopLanguageAny}</option>
+                ))}
+            </select>
+            <select
+                value={period}
+                onChange={(e) => onPeriod(e.target.value as GithubTopPeriod)}
+                className="shrink-0 rounded-lg border border-edge bg-chip px-1.5 py-1 text-[11px] font-medium text-ink2"
+            >
+                {periods.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+        </div>
+    );
+}
+
 /* ── Board (um card por repositório) ───────────────────────────────── */
 
 export function GithubBoardCard({
@@ -110,6 +240,11 @@ export function GithubBoardCard({
 }) {
     const ns = normalizeSize(size);
     const isCompact = ns === "sm";
+
+    const [view, setView] = useState<GithubView>("repo");
+    const [language, setLanguage] = useState("");
+    const [period, setPeriod] = useState<GithubTopPeriod>("all");
+    const explore = useGithubExplore(view, language, period);
 
     if (!repo) {
         const repos = github?.repos ?? [];
@@ -161,15 +296,23 @@ export function GithubBoardCard({
         return (
             <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
                 <GithubHeader repo={repo} onOpen={onOpen} />
-                <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
-                    <div className="flex gap-1.5">
-                        <StatChip label={t.githubStars} value={fmtCompactNumber(repo.stars)} />
-                        <StatChip label={t.githubForks} value={fmtCompactNumber(repo.forks)} />
-                    </div>
-                    <div className="flex gap-1.5">
-                        <StatChip label={t.githubIssues} value={fmtCompactNumber(repo.open_issues)} />
-                    </div>
-                </button>
+                <GithubViewTabs view={view} onChange={setView} t={t} />
+                {view === "repo" ? (
+                    <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
+                        <div className="flex gap-1.5">
+                            <StatChip label={t.githubStars} value={fmtCompactNumber(repo.stars)} />
+                            <StatChip label={t.githubForks} value={fmtCompactNumber(repo.forks)} />
+                        </div>
+                        <div className="flex gap-1.5">
+                            <StatChip label={t.githubIssues} value={fmtCompactNumber(repo.open_issues)} />
+                        </div>
+                    </button>
+                ) : (
+                    <>
+                        {view === "top" ? <GithubTopFilters language={language} period={period} onLanguage={setLanguage} onPeriod={setPeriod} t={t} /> : null}
+                        <GithubExploreList repos={explore.repos} loading={explore.loading} error={explore.error} t={t} />
+                    </>
+                )}
             </div>
         );
     }
@@ -178,15 +321,24 @@ export function GithubBoardCard({
     return (
         <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
             <GithubHeader repo={repo} onOpen={onOpen} />
-            <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
-                <div className="flex gap-1.5">
-                    <StatChip label={t.githubStars} value={fmtCompactNumber(repo.stars)} />
-                    <StatChip label={t.githubForks} value={fmtCompactNumber(repo.forks)} />
-                    <StatChip label={t.githubIssues} value={fmtCompactNumber(repo.open_issues)} />
-                </div>
-                {repo.description ? <div className="line-clamp-2 text-[12px] leading-snug text-ink2">{repo.description}</div> : null}
-                <div className="text-[11px] text-ink3">{t.githubLastPush}: {fmtPushDate(repo.pushed_at)}</div>
-            </button>
+            <GithubViewTabs view={view} onChange={setView} t={t} />
+            {view === "repo" ? (
+                <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
+                    <div className="flex gap-1.5">
+                        <StatChip label={t.githubStars} value={fmtCompactNumber(repo.stars)} />
+                        <StatChip label={t.githubForks} value={fmtCompactNumber(repo.forks)} />
+                        <StatChip label={t.githubIssues} value={fmtCompactNumber(repo.open_issues)} />
+                    </div>
+                    {repo.description ? <div className="line-clamp-2 text-[12px] leading-snug text-ink2">{repo.description}</div> : null}
+                    <div className="text-[11px] text-ink3">{t.githubLastPush}: {fmtPushDate(repo.pushed_at)}</div>
+                </button>
+            ) : (
+                <>
+                    {view === "top" ? <GithubTopFilters language={language} period={period} onLanguage={setLanguage} onPeriod={setPeriod} t={t} /> : null}
+                    {view === "trending" ? <div className="mb-1 shrink-0 text-[10px] text-ink3">{t.githubTrendingHint}</div> : null}
+                    <GithubExploreList repos={explore.repos} loading={explore.loading} error={explore.error} t={t} />
+                </>
+            )}
         </div>
     );
 }

@@ -24,8 +24,6 @@ export function cameraSizeLabel(size: CardSize, t: T): string {
   return s === "lg" ? t.cardLarge : t.cardNormal;
 }
 
-const RECONNECT_MS = 3000;
-
 function CameraIcon({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="opacity-60">
@@ -111,22 +109,16 @@ export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null
   };
 
   // Reconecta (bump de key -> novo <img>, novo request, novo ffmpeg no
-  // coletor) quando o stream anterior quebrou, ou quando a câmera trocou —
-  // sem polling nenhum enquanto ele está saudável, o browser cuida de
-  // repintar cada frame sozinho.
+  // coletor) quando a câmera trocou — sem polling nenhum enquanto ele está
+  // saudável, o browser cuida de repintar cada frame sozinho. Se o stream
+  // cair, a reconexão é manual (botão "tentar novamente"), sem retry
+  // automático em loop.
   useEffect(() => {
     setLoading(true);
     setBroken(false);
     setTick((n) => n + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera?.id]);
-
-  useEffect(() => {
-    if (!camera?.configured || !broken) return;
-    const timer = window.setTimeout(reconnect, RECONNECT_MS);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [camera?.configured, broken]);
 
   if (!camera) {
     return (
@@ -166,10 +158,6 @@ export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-panel/85 px-3 text-center">
           <CameraIcon size={28} />
           <div className={cn(emptyNote, "max-w-[26ch]")}>{t.cameraOfflineHint}</div>
-          <div className="flex items-center gap-1.5 text-[10px] text-ink3">
-            <span className="size-1.5 animate-pulse rounded-full bg-warn" />
-            {t.cameraReconnecting}
-          </div>
           <button
             type="button"
             onClick={reconnect}

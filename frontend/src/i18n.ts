@@ -158,7 +158,6 @@ type Strings = {
   spotifyConnectHint: string;
   cameraNeedsConfigHint: string;
   cameraOfflineHint: string;
-  cameraReconnecting: string;
   cameraRetryNow: string;
   cameraPtzUp: string;
   cameraPtzDown: string;
@@ -286,6 +285,18 @@ type Strings = {
   githubIssues: string;
   githubLastPush: string;
   githubNoRepos: string;
+  githubTabRepo: string;
+  githubTabTrending: string;
+  githubTabTop: string;
+  githubTrendingHint: string;
+  githubTopLanguageAny: string;
+  githubTopPeriodDay: string;
+  githubTopPeriodWeek: string;
+  githubTopPeriodMonth: string;
+  githubTopPeriodYear: string;
+  githubTopPeriodAll: string;
+  githubExploreLoading: string;
+  githubExploreEmpty: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -437,7 +448,6 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Conecte sua conta Spotify em Configurações",
     cameraNeedsConfigHint: "Configure a câmera em Configurações.",
     cameraOfflineHint: "Não foi possível carregar a imagem da câmera.",
-    cameraReconnecting: "tentando reconectar…",
     cameraRetryNow: "Tentar agora",
     cameraPtzUp: "Mover para cima",
     cameraPtzDown: "Mover para baixo",
@@ -560,6 +570,18 @@ export const STR: Record<Lang, Strings> = {
     githubIssues: "issues/PRs abertas",
     githubLastPush: "Último push",
     githubNoRepos: "Nenhum repositório configurado.",
+    githubTabRepo: "Meu repo",
+    githubTabTrending: "Em alta",
+    githubTabTop: "Top",
+    githubTrendingHint: "Criados nos últimos 7 dias, por estrelas",
+    githubTopLanguageAny: "Qualquer linguagem",
+    githubTopPeriodDay: "Hoje",
+    githubTopPeriodWeek: "Semana",
+    githubTopPeriodMonth: "Mês",
+    githubTopPeriodYear: "Ano",
+    githubTopPeriodAll: "Sempre",
+    githubExploreLoading: "Carregando…",
+    githubExploreEmpty: "Nenhum repositório encontrado.",
   },
   en: {
     overview: "Overview",
@@ -709,7 +731,6 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Connect your Spotify account in Settings",
     cameraNeedsConfigHint: "Set up the camera in Settings.",
     cameraOfflineHint: "Could not load the camera image.",
-    cameraReconnecting: "reconnecting…",
     cameraRetryNow: "Retry now",
     cameraPtzUp: "Move up",
     cameraPtzDown: "Move down",
@@ -832,6 +853,18 @@ export const STR: Record<Lang, Strings> = {
     githubIssues: "open issues/PRs",
     githubLastPush: "Last push",
     githubNoRepos: "No repository configured.",
+    githubTabRepo: "My repo",
+    githubTabTrending: "Trending",
+    githubTabTop: "Top",
+    githubTrendingHint: "Created in the last 7 days, by stars",
+    githubTopLanguageAny: "Any language",
+    githubTopPeriodDay: "Today",
+    githubTopPeriodWeek: "Week",
+    githubTopPeriodMonth: "Month",
+    githubTopPeriodYear: "Year",
+    githubTopPeriodAll: "All time",
+    githubExploreLoading: "Loading…",
+    githubExploreEmpty: "No repository found.",
   },
   es: {
     overview: "Resumen",
@@ -981,7 +1014,6 @@ export const STR: Record<Lang, Strings> = {
     spotifyConnectHint: "Conecta tu cuenta de Spotify en Configuración",
     cameraNeedsConfigHint: "Configura la cámara en Configuración.",
     cameraOfflineHint: "No se pudo cargar la imagen de la cámara.",
-    cameraReconnecting: "reconectando…",
     cameraRetryNow: "Reintentar ahora",
     cameraPtzUp: "Mover hacia arriba",
     cameraPtzDown: "Mover hacia abajo",
@@ -1104,6 +1136,18 @@ export const STR: Record<Lang, Strings> = {
     githubIssues: "issues/PRs abiertas",
     githubLastPush: "Último push",
     githubNoRepos: "Ningún repositorio configurado.",
+    githubTabRepo: "Mi repo",
+    githubTabTrending: "Tendencia",
+    githubTabTop: "Top",
+    githubTrendingHint: "Creados en los últimos 7 días, por estrellas",
+    githubTopLanguageAny: "Cualquier lenguaje",
+    githubTopPeriodDay: "Hoy",
+    githubTopPeriodWeek: "Semana",
+    githubTopPeriodMonth: "Mes",
+    githubTopPeriodYear: "Año",
+    githubTopPeriodAll: "Siempre",
+    githubExploreLoading: "Cargando…",
+    githubExploreEmpty: "Ningún repositorio encontrado.",
   },
 };
 

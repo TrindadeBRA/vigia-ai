@@ -113,6 +113,126 @@ export async function fetchGithubRepos(cfg: Record<string, unknown>): Promise<Gi
     return results;
 }
 
+/**
+ * Explorar GitHub: "em alta" e "top repos" via Search API pública
+ * (https://api.github.com/search/repositories), já que o GitHub não
+ * expõe endpoint oficial para a página trending.github.com. A Search
+ * API tem limite de 10 req/min sem token, então cacheamos cada query
+ * por EXPLORE_TTL_MS e devolvemos o último resultado bom em caso de
+ * erro/limite (fica "meio velho" em vez de vazio).
+ */
+export type GithubExploreRepo = {
+    full_name: string;
+    description: string | null;
+    stars: number;
+    forks: number;
+    language: string | null;
+    html_url: string;
+    owner_avatar: string | null;
+};
+
+export type GithubExploreResult = {
+    ok: boolean;
+    error: string | null;
+    repos: GithubExploreRepo[];
+    updated_at: string;
+};
+
+const EXPLORE_TTL_MS = 10 * 60 * 1000;
+type ExploreCacheEntry = { at: number; data: GithubExploreRepo[] };
+const exploreCache = new Map<string, ExploreCacheEntry>();
+
+async function searchGithubRepos(query: string, cacheKey: string): Promise<GithubExploreResult> {
+    const cached = exploreCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < EXPLORE_TTL_MS) {
+        return { ok: true, error: null, repos: cached.data, updated_at: utcNow() };
+    }
+    try {
+        const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=10`;
+        const resp = await fetch(url, {
+            headers: {
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "VigiaAI/1.0 (github-explore)",
+            },
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
+        if (resp.status === 403 || resp.status === 429) {
+            const error = "Limite de requisições do GitHub atingido (API pública sem token, tente novamente em alguns minutos)";
+            if (cached) return { ok: true, error, repos: cached.data, updated_at: utcNow() };
+            return { ok: false, error, repos: [], updated_at: utcNow() };
+        }
+        if (!resp.ok) {
+            const body = await resp.text().catch(() => "");
+            const error = `HTTP ${resp.status}: ${body.slice(0, 200)}`;
+            if (cached) return { ok: true, error, repos: cached.data, updated_at: utcNow() };
+            return { ok: false, error, repos: [], updated_at: utcNow() };
+        }
+        const data = await resp.json() as { items?: Array<Record<string, unknown>> };
+        const repos: GithubExploreRepo[] = (data.items ?? [])
+            .map((it): GithubExploreRepo | null => {
+                const fullName = typeof it.full_name === "string" ? it.full_name : "";
+                if (!fullName) return null;
+                const owner = (it.owner ?? {}) as Record<string, unknown>;
+                return {
+                    full_name: fullName,
+                    description: typeof it.description === "string" ? it.description : null,
+                    stars: typeof it.stargazers_count === "number" ? it.stargazers_count : 0,
+                    forks: typeof it.forks_count === "number" ? it.forks_count : 0,
+                    language: typeof it.language === "string" ? it.language : null,
+                    html_url: typeof it.html_url === "string" ? it.html_url : `https://github.com/${fullName}`,
+                    owner_avatar: typeof owner.avatar_url === "string" ? owner.avatar_url : null,
+                };
+            })
+            .filter((r): r is GithubExploreRepo => r !== null);
+        exploreCache.set(cacheKey, { at: Date.now(), data: repos });
+        return { ok: true, error: null, repos, updated_at: utcNow() };
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (cached) return { ok: true, error: msg.slice(0, 300), repos: cached.data, updated_at: utcNow() };
+        return { ok: false, error: msg.slice(0, 300), repos: [], updated_at: utcNow() };
+    }
+}
+
+export async function fetchGithubTrending(): Promise<GithubExploreResult> {
+    const sinceDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    return searchGithubRepos(`created:>${sinceDate}`, "trending:7d");
+}
+
+const TOP_PERIOD_DAYS: Record<string, number> = { day: 1, week: 7, month: 30, year: 365 };
+export const GITHUB_TOP_PERIODS = ["day", "week", "month", "year", "all"] as const;
+export type GithubTopPeriod = typeof GITHUB_TOP_PERIODS[number];
+
+export function isValidGithubLanguage(raw: string): boolean {
+    return /^[A-Za-z0-9+#. -]{0,40}$/.test(raw);
+}
+
+export async function fetchGithubTop(params: { language?: string | null; period?: string | null }): Promise<GithubExploreResult> {
+    const language = String(params.language ?? "").trim();
+    const period = (GITHUB_TOP_PERIODS as readonly string[]).includes(String(params.period)) ? String(params.period) as GithubTopPeriod : "all";
+    if (language && !isValidGithubLanguage(language)) {
+        return { ok: false, error: "Linguagem inválida", repos: [], updated_at: utcNow() };
+    }
+
+    let query = "stars:>1";
+    if (language) query += ` language:${language}`;
+    const days = TOP_PERIOD_DAYS[period];
+    if (days) {
+        const sinceDate = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+        query += ` created:>${sinceDate}`;
+    }
+    return searchGithubRepos(query, `top:${language || "any"}:${period}`);
+}
+
+export function mockGithubExplore(): GithubExploreResult {
+    const now = utcNow();
+    return {
+        ok: true, error: null, updated_at: now,
+        repos: [
+            { full_name: "TrindadeBRA/vigia-ai", description: "Painel de monitoramento de contas de IA", stars: 42, forks: 7, language: "TypeScript", html_url: "https://github.com/TrindadeBRA/vigia-ai", owner_avatar: null },
+        ],
+    };
+}
+
 export function mockGithubPayload(): Record<string, unknown> {
     const now = utcNow();
     return {

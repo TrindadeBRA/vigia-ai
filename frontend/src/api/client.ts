@@ -1,4 +1,4 @@
-import type { AlarmRule, AlarmsPublic, CameraCreate, CameraItem, CameraPatch, ConfigPublic, MiningConfig, MiningStatus, PtzAction, UsagePayload } from "./types";
+import type { AlarmRule, AlarmsPublic, CameraCreate, CameraItem, CameraPatch, ConfigPublic, GithubExploreResult, GithubTopPeriod, MiningConfig, MiningStatus, PtzAction, UsagePayload } from "./types";
 
 export async function fetchUsage(): Promise<UsagePayload> {
   const res = await fetch("/usage", { cache: "no-store" });
@@ -135,6 +135,21 @@ export async function sendCameraPtz(id: string, action: PtzAction): Promise<Muta
     body: JSON.stringify({ action }),
   });
   return readMutate(res);
+}
+
+export async function fetchGithubTrending(): Promise<GithubExploreResult> {
+  const res = await fetch("/api/github/trending", { cache: "no-store" });
+  if (!res.ok) throw new Error(`github trending HTTP ${res.status}`);
+  return res.json() as Promise<GithubExploreResult>;
+}
+
+export async function fetchGithubTop(language: string, period: GithubTopPeriod): Promise<GithubExploreResult> {
+  const params = new URLSearchParams();
+  if (language) params.set("language", language);
+  if (period) params.set("period", period);
+  const res = await fetch(`/api/github/top?${params.toString()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`github top HTTP ${res.status}`);
+  return res.json() as Promise<GithubExploreResult>;
 }
 
 // ── Android via ADB (scrcpy-like) ──────────────────────────────────

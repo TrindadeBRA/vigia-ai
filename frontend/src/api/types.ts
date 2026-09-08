@@ -516,6 +516,25 @@ export type GithubConfig = {
   repos: Array<{ id: string; repo: string; label: string }>;
 };
 
+export type GithubExploreRepo = {
+  full_name: string;
+  description: string | null;
+  stars: number;
+  forks: number;
+  language: string | null;
+  html_url: string;
+  owner_avatar: string | null;
+};
+
+export type GithubExploreResult = {
+  ok: boolean;
+  error: string | null;
+  repos: GithubExploreRepo[];
+  updated_at: string;
+};
+
+export type GithubTopPeriod = "day" | "week" | "month" | "year" | "all";
+
 export type UsagePayload = {
   updated_at: string;
   claude: ClaudeAccount[];

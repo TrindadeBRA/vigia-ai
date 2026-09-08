@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRequest } from "../../hooks/useRequest";
-import { cfgCard, iconChip } from "../../tw";
+import { PROVIDER_ICON } from "../../theme";
+import { cfgCard, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
 import { Button, FieldStatus, Fold, Switch, TextField } from "./ui";
 
@@ -103,7 +104,7 @@ export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>
-                        <span className="text-[18px]">🐙</span>
+                        {PROVIDER_ICON.github ? <img className={iconImg} src={PROVIDER_ICON.github} alt="" draggable={false} /> : <span className="text-[18px]">🐙</span>}
                     </div>
                     <div className="min-w-0">
                         <h3 className="m-0 text-[15.5px] font-bold">{c.githubTitle}</h3>

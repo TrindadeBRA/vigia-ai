@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { fetchGithubRepo, isValidGithubRepo } from "../providers/github.js";
+import { fetchGithubRepo, fetchGithubTop, fetchGithubTrending, isValidGithubRepo } from "../providers/github.js";
 import { load, updateSync as update } from "../store.js";
 
 export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
@@ -114,6 +114,27 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
             const { utcNow: now } = await import("../formatting.js");
             return { ok: false, error: String(e), updated_at: now(), repos: [] };
         }
+    });
+
+    // repositórios "em alta" (Search API, criados nos últimos 7 dias, mais estrelas primeiro)
+    app.get("/api/github/trending", async () => {
+        const cfg = load() as Record<string, unknown>;
+        if (cfg.mock) {
+            const { mockGithubExplore } = await import("../providers/github.js");
+            return mockGithubExplore();
+        }
+        return fetchGithubTrending();
+    });
+
+    // top repositórios por estrelas, com filtro opcional de linguagem/período
+    app.get("/api/github/top", async (request) => {
+        const query = request.query as { language?: string; period?: string };
+        const cfg = load() as Record<string, unknown>;
+        if (cfg.mock) {
+            const { mockGithubExplore } = await import("../providers/github.js");
+            return mockGithubExplore();
+        }
+        return fetchGithubTop({ language: query.language, period: query.period });
     });
 
     // preview: testa um repo sem salvar

@@ -273,6 +273,29 @@ export function HeartIcon(props: { size?: number; className?: string }) {
   );
 }
 
+export function FlameIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path
+        d="M12 21.5c-4 0-6.8-2.7-6.8-6.4 0-3 1.9-4.7 2.9-6.7.5 1 .6 2 1.6 2 1.1 0 1-3 .3-4.4-.3-.6.1-1.3.8-1.1 3.5 1 5.7 4.6 5.4 7.6-.1.9.7 1 1.2.3.5-.6.7-1.5.7-2.3 1.5 1.6 2.1 3.3 2.1 4.6 0 3.7-3.2 6.4-8.2 6.4Z"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function TrophyIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" />
+      <path d="M7 5H4.5A2.5 2.5 0 0 0 5.8 9.4L7 10M17 5h2.5a2.5 2.5 0 0 1-1.3 4.4L17 10" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 14v3M9 20.5h6M9.5 20.5c0-1.8.8-2.7 1.6-3.2.6-.35.6-1.05 0-1.4-.8-.5-1.6-1.4-1.6-3.2" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export function SearchIcon(props: { size?: number; className?: string }) {
   return (
     <Svg {...props} viewBox="0 0 192 192" fill="currentColor">
