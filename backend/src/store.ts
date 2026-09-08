@@ -127,11 +127,6 @@ const _GITHUB_DEFAULT: Record<string, unknown> = {
   repos: [],
 };
 
-const _ISS_DEFAULT: Record<string, unknown> = {
-  enabled: false,
-  hidden: false,
-};
-
 const _EMULATOR_DEFAULT: Record<string, unknown> = {
   enabled: false,
   hidden: false,
@@ -181,7 +176,6 @@ export function defaultConfig(): Record<string, unknown> {
     calendar: deepClone(_CALENDAR_DEFAULT),
     rss: deepClone(_RSS_DEFAULT),
     github: deepClone(_GITHUB_DEFAULT),
-    iss: deepClone(_ISS_DEFAULT),
     emulator: deepClone(_EMULATOR_DEFAULT),
   };
   const providers = cfg.providers as Record<string, unknown>;
@@ -661,12 +655,6 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
     }
     github.repos = cleaned;
   }
-
-  // iss
-  const rawIss = (typeof raw.iss === "object" && raw.iss !== null ? raw.iss : {}) as Record<string, unknown>;
-  const iss = cfg.iss as Record<string, unknown>;
-  iss.enabled = Boolean(rawIss.enabled ?? iss.enabled);
-  iss.hidden = Boolean(rawIss.hidden ?? iss.hidden);
 
   // emulator
   const rawEmu = (typeof raw.emulator === "object" && raw.emulator !== null ? raw.emulator : {}) as Record<string, unknown>;

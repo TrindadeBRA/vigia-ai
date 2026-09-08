@@ -236,7 +236,6 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
   const calendarRaw = (cfg.calendar ?? { enabled: false, hidden: false, calendars: [] }) as Record<string, unknown>;
   const rssRaw = (cfg.rss ?? { enabled: false, hidden: false, feeds: [] }) as Record<string, unknown>;
   const githubRaw = (cfg.github ?? { enabled: false, hidden: false, repos: [] }) as Record<string, unknown>;
-  const issRaw = (cfg.iss ?? { enabled: false, hidden: false }) as Record<string, unknown>;
   const emulatorRaw = (cfg.emulator ?? { enabled: false, hidden: false, cdnVersion: "stable", platforms: [] }) as Record<string, unknown>;
   return {
     in_docker: inDocker(),
@@ -273,7 +272,6 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
     calendar: calendarRaw,
     rss: rssRaw,
     github: githubRaw,
-    iss: issRaw,
     emulator: emulatorRaw,
     device: devicePublic(hub),
   };

@@ -141,7 +141,7 @@ export function MetricRow({ label, pct, sub, pal, compact, countdownAt, nowMs, t
 
 export function Icon({ id, large, compact }: { id: string; large?: boolean; compact?: boolean }) {
   const src = PROVIDER_ICON[id];
-  const EMOJI_FALLBACK: Record<string, string> = { git: "🌿", github: "🐙", iss: "🛰️" };
+  const EMOJI_FALLBACK: Record<string, string> = { git: "🌿", github: "🐙" };
   const fallback = EMOJI_FALLBACK[id] ?? null;
   if (compact) {
     return (

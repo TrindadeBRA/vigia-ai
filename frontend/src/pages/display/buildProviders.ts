@@ -408,26 +408,6 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       });
     }
   }
-  // ISS — widget único (o backend já filtra hidden/enabled)
-  const iss = data.iss;
-  if (iss) {
-    list.push({
-      id: "iss:main",
-      provider: "iss",
-      ok: iss.ok,
-      error: iss.error,
-      title: t.iss,
-      label: iss.visibility === "daylight" ? t.issDaylight : iss.visibility === "eclipsed" ? t.issEclipsed : "",
-      metrics: iss.ok
-        ? [
-          { label: t.issAltitude, pct: null, value: iss.altitude_km != null ? `${Math.round(iss.altitude_km)} km` : null, sub: null },
-          { label: t.issVelocity, pct: null, value: iss.velocity_kmh != null ? `${Math.round(iss.velocity_kmh)} km/h` : null, sub: null },
-        ]
-        : [],
-      kind: "iss",
-      iss,
-    });
-  }
   return list;
 }
 

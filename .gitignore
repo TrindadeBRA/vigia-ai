@@ -45,6 +45,7 @@ backend/data/theme_bg.raw
 backend/data/wallpapers/
 backend/data/wallpapers.json
 backend/data/emulator-saves/
+backend/data/calendars/
 !backend/data/.gitkeep
 backend/dist/
 

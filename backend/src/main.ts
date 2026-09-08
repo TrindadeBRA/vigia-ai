@@ -22,7 +22,6 @@ import { createEmulatorRoutes } from "./routers/emulator.js";
 import { createGitRoutes } from "./routers/git.js";
 import { createGithubRoutes } from "./routers/github.js";
 import { createImagesRoutes } from "./routers/images.js";
-import { createIssRoutes } from "./routers/iss.js";
 import { createMiningRoutes } from "./routers/mining.js";
 import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
@@ -175,7 +174,6 @@ export async function createApp() {
   await fastify.register(createCalendarRoutes, { prefix: "" });
   await fastify.register(createRssRoutes, { prefix: "" });
   await fastify.register(createGithubRoutes, { prefix: "" });
-  await fastify.register(createIssRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
   await fastify.register(createMiningRoutes, { prefix: "" });
   await fastify.register(createCameraRoutes, { prefix: "" });

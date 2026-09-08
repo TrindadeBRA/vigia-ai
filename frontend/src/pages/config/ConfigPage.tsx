@@ -13,7 +13,6 @@ import { DesktopCard } from "./DesktopCard";
 import { EmulatorConfigCard } from "./EmulatorConfigCard";
 import { GitConfigCard } from "./GitConfigCard";
 import { GithubConfigCard } from "./GithubConfigCard";
-import { IssConfigCard } from "./IssConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { RetroAchievementsConfigCard } from "./RetroAchievementsConfigCard";
 import { RssConfigCard } from "./RssConfigCard";
@@ -199,7 +198,6 @@ export default function ConfigPage() {
         <CalendarConfigCard calendar={cfg.calendar} c={c} onReload={reload} />
         <RssConfigCard rss={cfg.rss} c={c} onReload={reload} />
         <GithubConfigCard github={cfg.github} c={c} onReload={reload} />
-        <IssConfigCard iss={cfg.iss} c={c} onReload={reload} />
         <CameraConfigCard c={c} />
         <AndroidConfigCard c={c} />
         <SpotifyConfigCard p={cfg.providers.spotify} listenPort={cfg.listen.port} {...common} />

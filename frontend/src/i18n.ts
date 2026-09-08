@@ -286,13 +286,6 @@ type Strings = {
   githubIssues: string;
   githubLastPush: string;
   githubNoRepos: string;
-  // ISS
-  iss: string;
-  issAltitude: string;
-  issVelocity: string;
-  issDaylight: string;
-  issEclipsed: string;
-  issNextOrbit: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -567,12 +560,6 @@ export const STR: Record<Lang, Strings> = {
     githubIssues: "issues/PRs abertas",
     githubLastPush: "Último push",
     githubNoRepos: "Nenhum repositório configurado.",
-    iss: "ISS",
-    issAltitude: "Altitude",
-    issVelocity: "Velocidade",
-    issDaylight: "Sob o sol",
-    issEclipsed: "Na sombra",
-    issNextOrbit: "~92 min por volta",
   },
   en: {
     overview: "Overview",
@@ -845,12 +832,6 @@ export const STR: Record<Lang, Strings> = {
     githubIssues: "open issues/PRs",
     githubLastPush: "Last push",
     githubNoRepos: "No repository configured.",
-    iss: "ISS",
-    issAltitude: "Altitude",
-    issVelocity: "Velocity",
-    issDaylight: "In daylight",
-    issEclipsed: "In shadow",
-    issNextOrbit: "~92 min per orbit",
   },
   es: {
     overview: "Resumen",
@@ -1123,12 +1104,6 @@ export const STR: Record<Lang, Strings> = {
     githubIssues: "issues/PRs abiertas",
     githubLastPush: "Último push",
     githubNoRepos: "Ningún repositorio configurado.",
-    iss: "ISS",
-    issAltitude: "Altitud",
-    issVelocity: "Velocidad",
-    issDaylight: "Bajo el sol",
-    issEclipsed: "En la sombra",
-    issNextOrbit: "~92 min por vuelta",
   },
 };
 

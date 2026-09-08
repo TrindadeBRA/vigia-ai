@@ -11,6 +11,7 @@ import {
   AdsenseTileCard,
   AndroidTileCard,
   BitcoinTileCard,
+  CalendarTileCard,
   CameraTileCard,
   ClaudeTileCard,
   ClockTileCard,
@@ -23,7 +24,6 @@ import {
   GithubTileCard,
   GptTileCard,
   ImageTileCard,
-  IssTileCard,
   NoteTileCard,
   RetroAchievementsTileCard,
   RssTileCard,
@@ -100,14 +100,14 @@ export function ProviderCard({
   if (p.provider === "retroachievements" || p.kind === "retroachievements") {
     return <RetroAchievementsTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
+  if (p.provider === "calendar" || p.kind === "calendar") {
+    return <CalendarTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
   if (p.provider === "rss" || p.kind === "rss") {
     return <RssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "github" || p.kind === "github") {
     return <GithubTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
-  }
-  if (p.provider === "iss" || p.kind === "iss") {
-    return <IssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "emulator" || p.kind === "emulator") {
     const emuCfg = (p as unknown as { _emulatorConfig?: import("../../components/cards/EmulatorCard").EmulatorGlobalConfig | null })._emulatorConfig ?? null;

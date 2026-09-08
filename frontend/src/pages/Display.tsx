@@ -308,7 +308,7 @@ export default function Display() {
     // clones usam id "base::clone:N" — resolve para base para buscar ProviderMeta e conta
     const baseSelected = selectedId ? baseIdForProvider(selectedId) : null;
     meta = (baseSelected ? displayProviders.find((p) => p.id === selectedId) || providers.find((p) => p.id === baseSelected) : null) || null;
-    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss" && meta.provider !== "github" && meta.kind !== "github" && meta.provider !== "iss" && meta.kind !== "iss" && meta.provider !== "emulator" && meta.kind !== "emulator") {
+    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss" && meta.provider !== "github" && meta.kind !== "github" && meta.provider !== "emulator" && meta.kind !== "emulator") {
       const baseId = baseIdForProvider(meta.id);
       const idx = baseId.indexOf(":");
       const accountId = baseId.slice(idx + 1);

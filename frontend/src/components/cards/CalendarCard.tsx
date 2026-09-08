@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CalendarEvent, CalendarPayload, CalendarSource } from "../../api/types";
+import type { CalendarEvent, CalendarPayload } from "../../api/types";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
@@ -8,33 +8,38 @@ import { PROVIDER_ICON } from "../../theme";
 import { cardLabel, emptyNote, errorText, num } from "../../tw";
 
 /* ── Tamanhos ───────────────────────────────────────────────────────── */
-// Eventos e tarefas são subtipos diferentes: cada calendário tem kind próprio.
-// O card mostra 1 calendário por vez (o primeiro ok, ou o primeiro da lista).
-// Tamanhos: sm = próximo evento/tarefa em destaque; md = lista compacta;
-// lg = lista com detalhes; wl/wxl = lista expandida com mais itens.
+// 3 variantes, não uma por tamanho bruto do grid: "hero" (célula minúscula —
+// só o próximo evento/tarefa), "list" (card normal — lista compacta rolável,
+// sem cortar itens abaixo do limite configurado) e "feed" (cards grandes —
+// lista com data relativa/local/descrição). O grid tem ~13 tamanhos brutos
+// (xs/sm/sw/.../wxl/free); cada um cai numa dessas 3 pelo espaço que oferece,
+// não pelo nome.
 export function calendarAllowedSizes(payload?: CalendarPayload | null): CardSize[] {
   const count = payload?.calendars?.length ?? 0;
   if (count === 0) return ["md", "free"];
-  const hasEvents = payload?.calendars?.some((c) => c.kind === "events");
-  const hasTasks = payload?.calendars?.some((c) => c.kind === "tasks");
-  if (hasEvents && hasTasks) return ["sm", "md", "lg", "wl", "wxl", "free"];
-  if (hasEvents || hasTasks) return ["sm", "md", "lg", "wl", "free"];
-  return ["md", "lg", "free"];
+  return ["sm", "md", "lg", "wl", "wxl", "free"];
 }
 
 export const CALENDAR_ALLOWED_ALL: CardSize[] = ["sm", "md", "lg", "wl", "wxl"];
 
-export function calendarSizeLabel(size: CardSize, t: T, payload?: CalendarPayload | null): string {
+export function calendarSizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);
-  const first = payload?.calendars?.[0];
-  const kindLabel = first?.kind === "tasks" ? t.calendarTasks : t.calendarEvents;
-  if (s === "sm") return `${t.cardSmallPrefix} ${kindLabel}`;
+  if (s === "sm") return `${t.cardSmallPrefix} ${t.calendarEvents}`;
   if (s === "md") return t.cardNormal;
   if (s === "lg") return t.cardLarge;
   if (s === "wl") return t.cardWl;
   if (s === "wxl") return t.cardWxl;
   if (s === "free") return t.cardFree;
   return t.cardXl;
+}
+
+type Bucket = "hero" | "list" | "feed";
+
+function bucketFor(size: CardSize): Bucket {
+  const s = normalizeSize(size);
+  if (s === "xs" || s === "sm" || s === "sw" || s === "sx" || s === "sc" || s === "scw") return "hero";
+  if (s === "md" || s === "wm") return "list";
+  return "feed"; // lg, xl, wl, wxl, free
 }
 
 /* ── Helpers ────────────────────────────────────────────────────────── */
@@ -44,7 +49,7 @@ function fmtCalendarDate(iso: string | null, allDay?: boolean): string {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso.slice(0, 16);
-    if (allDay) return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    if (allDay) return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
     return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   } catch { return iso.slice(0, 16); }
 }
@@ -65,43 +70,64 @@ function fmtRelative(iso: string | null): string {
   } catch { return ""; }
 }
 
-function primaryCalendar(payload: CalendarPayload | null | undefined): CalendarSource | null {
-  if (!payload?.calendars?.length) return null;
-  return payload.calendars.find((c) => c.ok && c.events.length > 0) || payload.calendars[0] || null;
+function eventWhen(ev: CalendarEvent): string | null {
+  return ev.kind === "tasks" ? (ev.due || ev.dtstart) : ev.dtstart;
+}
+
+// Lista única, ordenada do agora pra frente — um calendário é uma agenda,
+// não faz sentido separar por fonte quando o card só tem espaço pra 1 lista.
+type MergedEvent = CalendarEvent & { calLabel: string };
+
+function mergeEvents(payload: CalendarPayload | null | undefined): MergedEvent[] {
+  const cals = payload?.calendars ?? [];
+  const merged: MergedEvent[] = [];
+  for (const c of cals) {
+    if (!c.ok) continue;
+    for (const ev of c.events ?? []) merged.push({ ...ev, calLabel: c.label || "" });
+  }
+  merged.sort((a, b) => {
+    const ta = eventWhen(a);
+    const tb = eventWhen(b);
+    const na = ta ? new Date(ta).getTime() : Infinity;
+    const nb = tb ? new Date(tb).getTime() : Infinity;
+    return (Number.isNaN(na) ? Infinity : na) - (Number.isNaN(nb) ? Infinity : nb);
+  });
+  return merged;
 }
 
 /* ── Primitivos ─────────────────────────────────────────────────────── */
 
-function CalendarIcon({ kind, compact }: { kind?: string; compact?: boolean }) {
-  const isTasks = kind === "tasks";
-  const icon = isTasks ? PROVIDER_ICON.calendarTasks || PROVIDER_ICON.calendar : PROVIDER_ICON.calendar || PROVIDER_ICON.git;
-  const fallback = isTasks ? "✓" : "📅";
+function CalendarIcon({ compact }: { compact?: boolean }) {
+  const icon = PROVIDER_ICON.calendar;
   if (compact) {
     return (
       <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
-        {icon ? <img className="size-3.5 object-contain" src={icon} alt="" draggable={false} /> : <span className="text-[13px]">{fallback}</span>}
+        {icon ? <img className="size-3.5 object-contain" src={icon} alt="" draggable={false} /> : <span className="text-[13px]">📅</span>}
       </div>
     );
   }
   return (
     <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]">
-      {icon ? <img className="size-[23px] object-contain" src={icon} alt="" draggable={false} /> : <span className="text-[20px]">{fallback}</span>}
+      {icon ? <img className="size-[23px] object-contain" src={icon} alt="" draggable={false} /> : <span className="text-[20px]">📅</span>}
     </div>
   );
 }
 
-function CalendarHeader({ cal, ok, compact, onOpen }: { cal: CalendarSource | null; ok: boolean; compact?: boolean; onOpen?: () => void }) {
-  const label = cal?.label || cal?.url?.replace(/^https?:\/\//, "").slice(0, 32) || "Calendário";
-  const kind = cal?.kind || "events";
+function CalendarHeader({ payload, compact, onOpen }: { payload: CalendarPayload | null | undefined; compact?: boolean; onOpen?: () => void }) {
+  const cals = payload?.calendars ?? [];
+  const totalEvents = cals.reduce((acc, c) => acc + (c.events?.length ?? 0), 0);
+  const single = cals.length === 1 ? cals[0] : null;
+  const label = single ? (single.label || single.url?.replace(/^https?:\/\//, "").slice(0, 32) || "Calendário") : cals.length > 1 ? `${cals.length} calendários` : "Calendário";
+  const ok = cals.some((c) => c.ok);
   const inner = (
     <>
       <div className="relative shrink-0">
-        <CalendarIcon kind={kind} compact={compact} />
+        <CalendarIcon compact={compact} />
         <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", ok ? "bg-good" : "bg-bad")} />
       </div>
       <div className="min-w-0 flex-1">
         <div className={cn("overflow-hidden text-ellipsis whitespace-nowrap font-[650] leading-none", compact ? "text-[12.5px]" : "text-[14px]")}>{label}</div>
-        <div className={cardLabel}>{kind === "tasks" ? "Tarefas" : "Eventos"} {cal?.events?.length ? `· ${cal.events.length}` : ""}</div>
+        <div className={cardLabel}>{totalEvents} {totalEvents === 1 ? "item" : "itens"}</div>
       </div>
     </>
   );
@@ -115,20 +141,21 @@ function CalendarHeader({ cal, ok, compact, onOpen }: { cal: CalendarSource | nu
   return <div className={cn("flex min-w-0 shrink-0 items-center", compact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")}>{inner}</div>;
 }
 
-function EventRow({ ev, compact }: { ev: CalendarEvent; compact?: boolean }) {
+function EventRow({ ev, showSource }: { ev: MergedEvent; showSource?: boolean }) {
   const [expanded, setExpanded] = useState(false);
-  const when = ev.kind === "tasks" ? (ev.due || ev.dtstart) : ev.dtstart;
+  const when = eventWhen(ev);
   const rel = fmtRelative(when);
   return (
-    <div className={cn("flex flex-col gap-1 rounded-xl border border-edge bg-chip px-3 py-2.5", compact && "px-2.5 py-2")}>
+    <div className="flex flex-col gap-1 rounded-xl border border-edge bg-chip px-3 py-2.5">
       <div className="flex items-start justify-between gap-2">
-        <span className={cn("min-w-0 flex-1 text-[13px] font-semibold leading-snug text-ink", compact && "text-[12.5px]")}>{ev.summary}</span>
+        <span className="min-w-0 flex-1 text-[13px] font-semibold leading-snug text-ink">{ev.summary}</span>
         {ev.allDay ? <span className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">dia todo</span> : null}
       </div>
       <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink3">
         <span className={cn(num, "text-[11px]")}>{fmtCalendarDate(when, ev.allDay)}</span>
         {rel ? <span className="rounded bg-canvas px-1 py-0.5 text-[10px] font-semibold text-ink2">{rel}</span> : null}
         {ev.location ? <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">· {ev.location}</span> : null}
+        {showSource && ev.calLabel ? <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-ink3">· {ev.calLabel}</span> : null}
       </div>
       {ev.description ? (
         <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-left" onClick={() => setExpanded((v) => !v)}>
@@ -136,6 +163,18 @@ function EventRow({ ev, compact }: { ev: CalendarEvent; compact?: boolean }) {
           {!expanded ? <span className="mt-1 text-[11px] text-accent">+ detalhes</span> : null}
         </button>
       ) : null}
+    </div>
+  );
+}
+
+function CompactRow({ ev, showSource }: { ev: MergedEvent; showSource?: boolean }) {
+  const when = eventWhen(ev);
+  return (
+    <div className="flex items-center gap-2 overflow-hidden rounded-lg border border-edge bg-chip px-2.5 py-2">
+      <span className={cn("size-1.5 shrink-0 rounded-full", ev.kind === "tasks" ? "bg-accent" : "bg-good")} />
+      <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-medium text-ink">{ev.summary}</span>
+      {showSource && ev.calLabel ? <span className="shrink-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-ink3">{ev.calLabel}</span> : null}
+      <span className={cn(num, "shrink-0 text-[11px] text-ink3")}>{fmtCalendarDate(when, ev.allDay)}</span>
     </div>
   );
 }
@@ -155,14 +194,15 @@ export function CalendarBoardCard({
 }) {
   const cals = calendar?.calendars ?? [];
   const ok = !!calendar?.ok && cals.length > 0;
-  const ns = normalizeSize(size);
-  const isCompact = ns === "sm";
-  const primary = primaryCalendar(calendar);
+  const bucket = bucketFor(size);
+  const isCompact = bucket === "hero";
+  const events = mergeEvents(calendar);
+  const showSource = cals.length > 1;
 
   if (!calendar || cals.length === 0) {
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
-        <CalendarHeader cal={null} ok={false} compact={isCompact} onOpen={onOpen} />
+        <CalendarHeader payload={null} compact={isCompact} onOpen={onOpen} />
         <div className="flex flex-1 items-center">
           <div className={cn(errorText, isCompact && "text-[11px] leading-snug")}>{calendar?.error || t.calendarEmpty}</div>
         </div>
@@ -170,18 +210,18 @@ export function CalendarBoardCard({
     );
   }
 
-  // sm: hero do próximo evento/tarefa
-  if (ns === "sm") {
-    const ev = primary?.events?.[0];
-    const when = ev ? (ev.kind === "tasks" ? (ev.due || ev.dtstart) : ev.dtstart) : null;
+  // hero: próximo evento/tarefa em destaque, sem lista.
+  if (bucket === "hero") {
+    const ev = events[0];
+    const when = ev ? eventWhen(ev) : null;
     return (
       <div className="flex h-full min-h-0 w-full items-center gap-2.5 overflow-hidden">
         <div className="relative shrink-0">
-          <CalendarIcon kind={primary?.kind} />
+          <CalendarIcon />
           <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", ok ? "bg-good" : "bg-bad")} />
         </div>
         <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
-          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-semibold leading-none text-ink3">{primary?.label || (primary?.kind === "tasks" ? t.calendarTasks : t.calendarEvents)} {when ? `· ${fmtRelative(when)}` : ""}</div>
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-semibold leading-none text-ink3">{when ? fmtRelative(when) : t.calendarEvents}</div>
           <div className={cn(num, "mt-1 line-clamp-2 text-[12px] font-[700] leading-tight")}>{ev?.summary || t.calendarNoEvents}</div>
           {when ? <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-ink3">{fmtCalendarDate(when, ev?.allDay)}</div> : null}
         </button>
@@ -189,67 +229,36 @@ export function CalendarBoardCard({
     );
   }
 
-  if (ns === "md") {
-    const events = primary?.events ?? [];
+  // list: card normal — lista compacta, rolável, sem cortar abaixo do que
+  // veio da API (que já respeita o limite configurado por calendário).
+  if (bucket === "list") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-        <CalendarHeader cal={primary} ok={!!primary?.ok} onOpen={onOpen} />
-        <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
-          {!primary?.ok ? (
-            <div className={errorText}>{primary?.error || t.noData}</div>
-          ) : events.length === 0 ? (
-            <div className={emptyNote}>{t.calendarNoEvents}</div>
-          ) : (
-            events.slice(0, 3).map((ev, idx) => {
-              const when = ev.kind === "tasks" ? (ev.due || ev.dtstart) : ev.dtstart;
-              return (
-                <div key={ev.uid || `${ev.summary}-${idx}`} className="flex items-center gap-2 overflow-hidden rounded-lg border border-edge bg-chip px-2.5 py-2">
-                  <span className={cn("size-1.5 shrink-0 rounded-full", ev.kind === "tasks" ? "bg-accent" : "bg-good")} />
-                  <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] font-medium text-ink">{ev.summary}</span>
-                  <span className={cn(num, "shrink-0 text-[11px] text-ink3")}>{fmtCalendarDate(when, ev.allDay).slice(0, 11)}</span>
-                </div>
-              );
-            })
-          )}
-        </button>
-      </div>
-    );
-  }
-
-  if (ns === "lg") {
-    const events = primary?.events ?? [];
-    return (
-      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-        <CalendarHeader cal={primary} ok={!!primary?.ok} onOpen={onOpen} />
+        <CalendarHeader payload={calendar} onOpen={onOpen} />
         <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
-          {!primary?.ok ? (
-            <div className={errorText}>{primary?.error || t.noData}</div>
+          {!ok ? (
+            <div className={errorText}>{calendar?.error || t.noData}</div>
           ) : events.length === 0 ? (
             <div className={emptyNote}>{t.calendarNoEvents}</div>
           ) : (
-            events.slice(0, 6).map((ev, idx) => (
-              <EventRow key={ev.uid || `${ev.summary}-${idx}`} ev={ev} />
-            ))
+            events.map((ev, idx) => <CompactRow key={ev.uid || `${ev.summary}-${idx}`} ev={ev} showSource={showSource} />)
           )}
         </div>
       </div>
     );
   }
 
-  // wl / wxl: lista expandida
-  const events = primary?.events ?? [];
+  // feed: cards grandes — lista com data relativa, local e descrição.
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <CalendarHeader cal={primary} ok={!!primary?.ok} onOpen={onOpen} />
+      <CalendarHeader payload={calendar} onOpen={onOpen} />
       <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
-        {!primary?.ok ? (
-          <div className={errorText}>{primary?.error || t.noData}</div>
+        {!ok ? (
+          <div className={errorText}>{calendar?.error || t.noData}</div>
         ) : events.length === 0 ? (
           <div className={emptyNote}>{t.calendarNoEvents}</div>
         ) : (
-          events.slice(0, ns === "wxl" ? 12 : 8).map((ev, idx) => (
-            <EventRow key={ev.uid || `${ev.summary}-${idx}`} ev={ev} />
-          ))
+          events.map((ev, idx) => <EventRow key={ev.uid || `${ev.summary}-${idx}`} ev={ev} showSource={showSource} />)
         )}
       </div>
     </div>
@@ -280,7 +289,7 @@ export function CalendarDetail({ calendar, t }: { calendar: CalendarPayload | nu
           ) : (
             <div className="flex flex-col gap-1.5">
               {cal.events.map((ev, idx) => (
-                <EventRow key={ev.uid || `${ev.summary}-${idx}`} ev={ev} />
+                <EventRow key={ev.uid || `${ev.summary}-${idx}`} ev={{ ...ev, calLabel: cal.label || "" }} />
               ))}
             </div>
           )}

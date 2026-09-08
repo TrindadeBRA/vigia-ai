@@ -10,7 +10,6 @@ import { falFail, fetchFalAccounts } from "./providers/fal.js";
 import { fetchGitRepos, mockGitPayload } from "./providers/git.js";
 import { fetchGithubRepos, mockGithubPayload } from "./providers/github.js";
 import { fetchGptAccounts, gptFail } from "./providers/gpt.js";
-import { fetchIssPosition, mockIssPayload } from "./providers/iss.js";
 import { fetchOpencodeAccounts, opencodeFail } from "./providers/opencode.js";
 import { fetchOpenrouterAccounts, openrouterFail } from "./providers/openrouter.js";
 import { fetchRetroachievementsAccounts, mockRetroPayload, retroFail } from "./providers/retroachievements.js";
@@ -162,7 +161,6 @@ export function mockPayload(): Record<string, unknown> {
     calendar: mockCalendarPayload(),
     rss: mockRssPayload(),
     github: mockGithubPayload(),
-    iss: mockIssPayload(),
     storage: getStorageInfo().map((d) => ({
       id: d.mount,
       label: d.name,
@@ -312,24 +310,6 @@ async function fetchGithub(cfg: Record<string, unknown>, force: boolean): Promis
   }
 }
 
-async function fetchIss(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
-  const issCfg = (cfg.iss ?? {}) as Record<string, unknown>;
-  if (issCfg.hidden || !issCfg.enabled) return null;
-  if (cfg.mock) return mockIssPayload() as Record<string, unknown>;
-  const fp = fingerprint(cfg, "iss");
-  if (!cache.due("iss", { fingerprint: fp, force })) {
-    const hit = cache.get("iss");
-    if (hit !== null && hit !== undefined) return hit as Record<string, unknown>;
-  }
-  try {
-    const value = await fetchIssPosition();
-    return cache.take("iss", value as unknown, { fingerprint: fp }) as Record<string, unknown>;
-  } catch (exc) {
-    const value = { ok: false, error: String(exc), updated_at: utcNow(), latitude: null, longitude: null, altitude_km: null, velocity_kmh: null, visibility: null, timestamp: null };
-    return cache.take("iss", value, { fingerprint: fp, error: exc }) as Record<string, unknown>;
-  }
-}
-
 async function fetchCalendar(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
   const calCfg = (cfg.calendar ?? {}) as Record<string, unknown>;
   if (calCfg.hidden || !calCfg.enabled) return null;
@@ -401,8 +381,6 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     if (ghCfg.hidden || !ghCfg.enabled || (Array.isArray(ghCfg.repos) && (ghCfg.repos as unknown[]).length === 0)) {
       if (!ghCfg.enabled || (Array.isArray(ghCfg.repos) && (ghCfg.repos as unknown[]).length === 0)) payload.github = null;
     }
-    const issCfg = (cfg.iss ?? {}) as Record<string, unknown>;
-    if (issCfg.hidden || !issCfg.enabled) payload.iss = null;
     return payload;
   }
 
@@ -449,18 +427,6 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     updated_at: utcNow(),
     repos: [],
   }));
-  const issPromise = fetchIss(cfg, forceQuota).catch((exc) => ({
-    ok: false,
-    error: String(exc),
-    updated_at: utcNow(),
-    latitude: null,
-    longitude: null,
-    altitude_km: null,
-    velocity_kmh: null,
-    visibility: null,
-    timestamp: null,
-  }));
-
   const resultsArray = await Promise.all(providerPromises);
   const results: Record<string, unknown> = {};
   for (const [name, value] of resultsArray) results[name] = value;
@@ -500,11 +466,6 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     results.github = await githubPromise;
   } catch (exc) {
     results.github = { ok: false, error: String(exc), updated_at: utcNow(), repos: [] };
-  }
-  try {
-    results.iss = await issPromise;
-  } catch (exc) {
-    results.iss = { ok: false, error: String(exc), updated_at: utcNow(), latitude: null, longitude: null, altitude_km: null, velocity_kmh: null, visibility: null, timestamp: null };
   }
 
   // storage + system are local, no external API — always fresh

@@ -516,23 +516,6 @@ export type GithubConfig = {
   repos: Array<{ id: string; repo: string; label: string }>;
 };
 
-export type IssPayload = {
-  ok: boolean;
-  error: string | null;
-  updated_at: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  altitude_km: number | null;
-  velocity_kmh: number | null;
-  visibility: "daylight" | "eclipsed" | null;
-  timestamp: number | null;
-};
-
-export type IssConfig = {
-  enabled: boolean;
-  hidden: boolean;
-};
-
 export type UsagePayload = {
   updated_at: string;
   claude: ClaudeAccount[];
@@ -551,7 +534,6 @@ export type UsagePayload = {
   calendar?: CalendarPayload | null;
   rss?: RssPayload | null;
   github?: GithubPayload | null;
-  iss?: IssPayload | null;
 };
 
 export type AccountPublic = { id: string; label: string; suffix: string | null };
@@ -791,7 +773,6 @@ export type ConfigPublic = {
   calendar: CalendarConfig;
   rss: RssConfig;
   github: GithubConfig;
-  iss: IssConfig;
   emulator: EmulatorConfig;
   device: DevicePublic;
 };

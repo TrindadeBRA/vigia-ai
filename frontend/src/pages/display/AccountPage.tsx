@@ -10,7 +10,6 @@ import { CursorDetail } from "../../components/cards/CursorCard";
 import { GitDetail } from "../../components/cards/GitCard";
 import { GithubDetail } from "../../components/cards/GithubCard";
 import { GptDetail } from "../../components/cards/GptCard";
-import { IssDetail } from "../../components/cards/IssCard";
 import { RetroAchievementsDetail } from "../../components/cards/RetroAchievementsCard";
 import { RssDetail } from "../../components/cards/RssCard";
 import { WeatherDetail } from "../../components/cards/WeatherCard";
@@ -166,20 +165,6 @@ function GithubAccountPage({ meta, t }: { meta: ProviderMeta; t: T }) {
   );
 }
 
-function IssAccountPage({ data, t }: { data: UsagePayload; t: T }) {
-  return (
-    <div className={`w-full ${viewFade}`}>
-      <div className="mb-4 flex items-center gap-3">
-        <Icon id="iss" large />
-        <div>
-          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.iss}</div>
-        </div>
-      </div>
-      <IssDetail iss={data.iss} t={t} />
-    </div>
-  );
-}
-
 export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | RetroAchievementsAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
   // Weather, Moedas, Git e RetroAchievements têm página própria
   if (meta.provider === "weather" || meta.kind === "weather") {
@@ -202,9 +187,6 @@ export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: Prov
   }
   if (meta.provider === "github" || meta.kind === "github") {
     return <GithubAccountPage meta={meta} t={t} />;
-  }
-  if (meta.provider === "iss" || meta.kind === "iss") {
-    return <IssAccountPage data={data} t={t} />;
   }
   let body: ReactNode = null;
   if (meta.ok && account) {

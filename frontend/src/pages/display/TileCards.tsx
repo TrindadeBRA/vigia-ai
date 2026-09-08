@@ -5,6 +5,7 @@ import { cn } from "../../cn";
 import { AdsenseBoardCard, adsenseAllowedSizes, adsenseSizeLabel } from "../../components/cards/AdsenseCard";
 import { AndroidBoardCard, androidAllowedSizes, androidSizeLabel } from "../../components/cards/AndroidCard";
 import { BitcoinBoardCard, bitcoinAllowedSizes, bitcoinSizeLabel } from "../../components/cards/BitcoinCard";
+import { CalendarBoardCard, calendarAllowedSizes, calendarSizeLabel } from "../../components/cards/CalendarCard";
 import { CameraBoardCard, cameraAllowedSizes, cameraSizeLabel } from "../../components/cards/CameraCard";
 import { ClaudeBoardCard, claudeAllowedSizes, claudeSizeLabel } from "../../components/cards/ClaudeCard";
 import { ClockBoardCard, clockAllowedSizes, clockSizeLabel } from "../../components/cards/ClockCard";
@@ -17,7 +18,6 @@ import { GitBoardCard, gitAllowedSizes, gitSizeLabel } from "../../components/ca
 import { GithubBoardCard, githubAllowedSizes, githubSizeLabel } from "../../components/cards/GithubCard";
 import { GptBoardCard, gptAllowedSizes, gptSizeLabel } from "../../components/cards/GptCard";
 import { ImageBoardCard, imageAllowedSizes, imageSizeLabel } from "../../components/cards/ImageCard";
-import { IssBoardCard, issAllowedSizes, issSizeLabel } from "../../components/cards/IssCard";
 import { NoteBoardCard, noteAllowedSizes, noteSizeLabel } from "../../components/cards/NoteCard";
 import { RetroAchievementsBoardCard, retroAllowedSizes, retroSizeLabel } from "../../components/cards/RetroAchievementsCard";
 import { RssBoardCard, rssAllowedSizes, rssSizeLabel } from "../../components/cards/RssCard";
@@ -346,6 +346,20 @@ export function RssTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, 
   );
 }
 
+export function CalendarTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = calendarAllowedSizes(p.calendar);
+  const isClone = isCloneId(p.id);
+  const style = useTileStyle(bg);
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => calendarSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <CalendarBoardCard calendar={p.calendar} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
 export function GithubTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
   const allowed = githubAllowedSizes(p.githubRepo ?? null);
   const isClone = isCloneId(p.id);
@@ -356,20 +370,6 @@ export function GithubTileCard({ p, size, dragging, lifted, t, grip, bg, readonl
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => githubSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <GithubBoardCard repo={p.githubRepo ?? null} github={p.github} t={t} size={size} onOpen={onOpen} />
-    </div>
-  );
-}
-
-export function IssTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
-  const allowed = issAllowedSizes();
-  const isClone = isCloneId(p.id);
-  const style = useTileStyle(bg);
-  return (
-    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
-      {!lifted && !readonly ? (
-        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => issSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
-      ) : null}
-      <IssBoardCard iss={p.iss} t={t} size={size} onOpen={onOpen} />
     </div>
   );
 }

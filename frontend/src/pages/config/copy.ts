@@ -363,8 +363,6 @@ export type ConfigCopy = {
   githubNoPreview: string;
   githubPreviewOk: string;
   githubPreviewFail: string;
-  issTitle: string;
-  issLead: string;
   // RetroAchievements
   retroTitle: string;
   retroLead: string;
@@ -786,8 +784,6 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Digite um repositório para testar.",
     githubPreviewOk: "Repositório acessível.",
     githubPreviewFail: "Não foi possível acessar.",
-    issTitle: "ISS — Estação Espacial Internacional",
-    issLead: "Widget único que mostra a posição, altitude e velocidade atuais da ISS. Usa a API pública wheretheiss.at, sem necessidade de login.",
     retroTitle: "RetroAchievements",
     retroLead: "Veja seu perfil de conquistas retrô no painel — pontos, ranking, jogos recentes e últimas conquistas desbloqueadas.",
     retroNotConfigured: "Nenhuma conta RetroAchievements configurada.",
@@ -1204,8 +1200,6 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Type a repository to test.",
     githubPreviewOk: "Repository reachable.",
     githubPreviewFail: "Could not reach repository.",
-    issTitle: "ISS — International Space Station",
-    issLead: "Single widget showing the ISS's current position, altitude and velocity. Uses the public wheretheiss.at API, no login required.",
     retroTitle: "RetroAchievements",
     retroLead: "See your retro achievement profile on the board — points, rank, recent games and latest unlocks.",
     retroNotConfigured: "No RetroAchievements account configured.",
@@ -1622,8 +1616,6 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Escribe un repositorio para probar.",
     githubPreviewOk: "Repositorio accesible.",
     githubPreviewFail: "No se pudo acceder.",
-    issTitle: "ISS — Estación Espacial Internacional",
-    issLead: "Widget único que muestra la posición, altitud y velocidad actuales de la ISS. Usa la API pública wheretheiss.at, sin necesidad de login.",
     retroTitle: "RetroAchievements",
     retroLead: "Mira tu perfil de logros retro en el panel — puntos, ranking, juegos recientes y últimos desbloqueos.",
     retroNotConfigured: "Ninguna cuenta de RetroAchievements configurada.",
