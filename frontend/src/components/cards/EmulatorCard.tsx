@@ -595,7 +595,7 @@ export function EmulatorBoardCard({
         try {
             const defOpts = globalConfig?.defaultOptions;
             if (defOpts && Object.keys(defOpts).length) frameUrl.searchParams.set("defaultOptions", JSON.stringify(defOpts));
-        } catch {}
+        } catch { }
         if (effectiveBiosPath) {
             frameUrl.searchParams.set("bios", new URL(`/api/emulator/bios/${encodeURIComponent(effectivePlatform)}`, window.location.origin).href);
         }
@@ -787,7 +787,7 @@ export function EmulatorBoardCard({
                 tabIndex={0}
                 className={cn(
                     "relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-edge bg-black",
-                    isSmall ? "min-h-[90px]" : "min-h-[120px]",
+                    isSmall ? "min-h-[60px]" : "min-h-[80px]",
                 )}
                 style={{ outline: "none" }}
             >
@@ -800,8 +800,8 @@ export function EmulatorBoardCard({
                             }}
                             src={isolatedFrameSrc}
                             title={currentGame ? `Emulador · ${currentGame}` : "Emulador"}
-                            sandbox="allow-scripts allow-same-origin allow-downloads allow-pointer-lock"
-                            allow="autoplay; fullscreen; gamepad"
+                            sandbox="allow-scripts allow-same-origin allow-downloads allow-pointer-lock allow-forms"
+                            allow="autoplay; fullscreen; gamepad; cross-origin-isolated"
                             className="size-full border-0"
                         />
                     ) : null}
@@ -834,7 +834,7 @@ export function EmulatorBoardCard({
                 ) : null}
             </div>
 
-            <div className={cn("flex shrink-0 items-center gap-1 overflow-hidden", isSmall ? "gap-1" : "gap-1.5")}>
+            <div className={cn("flex shrink-0 flex-wrap items-center gap-1", isSmall ? "gap-1" : "gap-1.5")}>
                 <button
                     type="button"
                     onClick={() => navigate("/display/emulator")}

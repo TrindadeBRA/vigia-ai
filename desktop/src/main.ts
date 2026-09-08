@@ -100,8 +100,30 @@ function createWindow(): BrowserWindow {
     }
   });
   window.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const u = new URL(url);
+      // Permite navegação interna do iframe do emulador (mesma origem do coletor)
+      if (u.hostname === "127.0.0.1" || u.hostname === "localhost") return { action: "allow" };
+    } catch { /* ignore */ }
     if (url.startsWith("http")) void shell.openExternal(url);
     return { action: "deny" };
+  });
+
+  // Evita que o Electron trate HTML do iframe como download
+  // O backend já envia Content-Type: text/html + Content-Disposition: inline,
+  // mas em algumas versões o Electron ainda dispara will-download para iframes.
+  window.webContents.session.on("will-download", (event, item) => {
+    const url = item.getURLChain()[0] ?? item.getURL();
+    try {
+      const u = new URL(url);
+      const isEmulatorFrame = u.pathname === "/emulator-frame.html" || u.pathname.endsWith("emulator-frame.html");
+      const mime = String(item.getMimeType() ?? "");
+      if (isEmulatorFrame || mime.includes("text/html")) {
+        event.preventDefault();
+        try { (item as unknown as { cancel: () => void }).cancel(); } catch { /* ignore */ }
+        return;
+      }
+    } catch { /* ignore */ }
   });
 
   // Fechar a janela não encerra o coletor — a placa continua sendo servida.

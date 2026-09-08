@@ -204,10 +204,11 @@ export async function createApp() {
       if (!existsSync(p) || !statSync(p).isFile()) return reply.code(404).send({ ok: false, error: "not found" });
       const data = readFileSync(p);
       if (ct) reply.header("Content-Type", ct);
-      else if (file.endsWith(".js")) reply.header("Content-Type", "application/javascript");
-      else if (file.endsWith(".css")) reply.header("Content-Type", "text/css");
-      else if (file.endsWith(".html")) reply.header("Content-Type", "text/html");
+      else if (file.endsWith(".html")) reply.header("Content-Type", "text/html; charset=utf-8");
+      else if (file.endsWith(".js")) reply.header("Content-Type", "application/javascript; charset=utf-8");
+      else if (file.endsWith(".css")) reply.header("Content-Type", "text/css; charset=utf-8");
       else if (file.endsWith(".webmanifest")) reply.header("Content-Type", "application/manifest+json");
+      if (file.endsWith(".html")) reply.header("Content-Disposition", "inline");
       return reply.send(data);
     };
     const serveIndex = (_req: any, reply: any) => {
@@ -270,9 +271,17 @@ export async function createApp() {
       if (!p.startsWith(root) || !existsSync(p) || !statSync(p).isFile()) {
         return reply.code(404).send({ ok: false, error: "not found" });
       }
-      const ct = name.endsWith(".webmanifest") ? "application/manifest+json" : imageContentType(name);
+      let ct: string | undefined;
+      if (name.endsWith(".html")) ct = "text/html; charset=utf-8";
+      else if (name.endsWith(".js")) ct = "application/javascript; charset=utf-8";
+      else if (name.endsWith(".css")) ct = "text/css; charset=utf-8";
+      else if (name.endsWith(".json")) ct = "application/json; charset=utf-8";
+      else if (name.endsWith(".webmanifest")) ct = "application/manifest+json";
+      else ct = imageContentType(name);
       const data = readFileSync(p);
       if (ct) reply.header("Content-Type", ct);
+      // Evita que o Electron trate HTML como download (octet-stream)
+      if (name.endsWith(".html")) reply.header("Content-Disposition", "inline");
       return reply.send(data);
     });
     fastify.setNotFoundHandler((req, reply) => {
