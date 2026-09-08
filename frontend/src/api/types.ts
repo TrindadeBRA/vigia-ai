@@ -740,10 +740,13 @@ export type EmulatorGameMeta = {
   updatedAt: string | null;
 };
 
+export type EmulatorIconTheme = "monochrome" | "flatux" | "daite";
+
 export type EmulatorConfig = {
   enabled: boolean;
   hidden: boolean;
   cdnVersion: "stable" | "latest" | "nightly";
+  iconTheme?: EmulatorIconTheme;
   cacheEnabled: boolean;
   volume: number;
   startOnLoaded: boolean;

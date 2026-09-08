@@ -208,7 +208,7 @@ export default function ConfigPage() {
 
       <div className="mt-2 w-full">
         <h2 className="mb-1 mt-0 text-base font-bold">Emulador</h2>
-        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">EmulatorJS via CDN — cada plataforma habilitada vira um card com seletor de jogos, reset e tela cheia. Saves em IndexedDB; configure pastas para backup.</p>
+        <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">EmulatorJS via CDN — cada plataforma habilitada vira um card com seletor de jogos, reset e tela cheia. Saves sincronizados no servidor (entre dispositivos).</p>
       </div>
       <div className={cfgGrid}>
         <EmulatorConfigCard c={c} onReload={reload} />

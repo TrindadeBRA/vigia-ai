@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, extname, join, resolve } from "node:path";
-import { getIgdbGameById, igdbConfigured, igdbCoverUrl, searchIgdbGames } from "../providers/igdb.js";
+import { dataDir } from "../config.js";
+import { getIgdbGameById, igdbArtworkUrl, igdbConfigured, igdbCoverUrl, igdbScreenshotUrl, searchIgdbGames } from "../providers/igdb.js";
 import { EMULATOR_PLATFORMS } from "../schemas/emulator.js";
 import { load, updateSync as update } from "../store.js";
 
@@ -32,6 +33,31 @@ function gameKey(platform: string, file: string): string {
     return `${platform}::${file}`;
 }
 
+function savesDir(): string {
+    return join(dataDir(), "emulator-saves");
+}
+
+function ensureSavesDir(): void {
+    try { mkdirSync(savesDir(), { recursive: true }); } catch { /* ignore */ }
+}
+
+function sanitizeSegment(s: string): string {
+    // remove path separators and control chars, keep safe filename chars
+    return s.replace(/[\/\\:\0]/g, "_").replace(/[^a-zA-Z0-9._\-+()\[\] ]/g, "_").slice(0, 120) || "_";
+}
+
+function saveFileName(platform: string, game: string, kind: "sram" | "state"): string {
+    // game = ROM file name without ext or with ext — use as-is sanitized
+    const base = sanitizeSegment(game.replace(/\.[^.]+$/, ""));
+    const plat = sanitizeSegment(platform);
+    const ext = kind === "state" ? ".state" : ".srm";
+    return `${plat}__${base}${ext}`;
+}
+
+function saveFilePath(platform: string, game: string, kind: "sram" | "state"): string {
+    return join(savesDir(), saveFileName(platform, game, kind));
+}
+
 export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> {
     // GET config
     app.get("/api/emulator/config", async () => {
@@ -57,6 +83,12 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
                 return reply.code(400).send({ ok: false, error: "volume deve ser 0..1" });
             }
         }
+        if (body.iconTheme !== undefined && body.iconTheme !== null) {
+            const t = String(body.iconTheme);
+            if (!["monochrome", "flatux", "daite"].includes(t)) {
+                return reply.code(400).send({ ok: false, error: "iconTheme inválido" });
+            }
+        }
 
         update((cfg: Record<string, unknown>) => {
             const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
@@ -66,6 +98,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
                 ["enabled", body.enabled],
                 ["hidden", body.hidden],
                 ["cdnVersion", body.cdnVersion],
+                ["iconTheme", body.iconTheme],
                 ["cacheEnabled", body.cacheEnabled],
                 ["volume", body.volume],
                 ["startOnLoaded", body.startOnLoaded],
@@ -343,16 +376,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
         const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(20, Math.floor(limitRaw))) : 10;
         try {
             const results = await searchIgdbGames(q, limit);
-            const mapped = results.map((g) => ({
-                id: g.id,
-                name: g.name,
-                summary: g.summary ?? null,
-                coverImageId: g.cover?.image_id ?? null,
-                coverUrl: g.cover?.image_id ? igdbCoverUrl(g.cover.image_id, "cover_big") : null,
-                firstReleaseDate: g.first_release_date ?? null,
-                rating: g.rating ?? null,
-                platforms: g.platforms ?? null,
-            }));
+            const mapped = results.map((g) => mapIgdbGame(g));
             return { ok: true, results: mapped };
         } catch (e) {
             return reply.code(500).send({ ok: false, error: String(e) });
@@ -366,23 +390,41 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
         try {
             const g = await getIgdbGameById(id);
             if (!g) return reply.code(404).send({ ok: false, error: "jogo não encontrado" });
-            return {
-                ok: true,
-                game: {
-                    id: g.id,
-                    name: g.name,
-                    summary: g.summary ?? null,
-                    coverImageId: g.cover?.image_id ?? null,
-                    coverUrl: g.cover?.image_id ? igdbCoverUrl(g.cover.image_id, "cover_big") : null,
-                    firstReleaseDate: g.first_release_date ?? null,
-                    rating: g.rating ?? null,
-                    platforms: g.platforms ?? null,
-                },
-            };
+            return { ok: true, game: mapIgdbGame(g) };
         } catch (e) {
             return reply.code(500).send({ ok: false, error: String(e) });
         }
     });
+
+    function mapIgdbGame(g: import("../providers/igdb.js").IgdbGame) {
+        const developers = (g.involved_companies ?? []).filter((c) => c.developer).map((c) => c.company.name);
+        const publishers = (g.involved_companies ?? []).filter((c) => c.publisher).map((c) => c.company.name);
+        return {
+            id: g.id,
+            name: g.name,
+            summary: g.summary ?? null,
+            storyline: g.storyline ?? null,
+            coverImageId: g.cover?.image_id ?? null,
+            coverUrl: g.cover?.image_id ? igdbCoverUrl(g.cover.image_id, "cover_big") : null,
+            firstReleaseDate: g.first_release_date ?? null,
+            rating: g.rating ?? null,
+            aggregatedRating: g.aggregated_rating ?? null,
+            totalRating: g.total_rating ?? null,
+            ratingCount: g.rating_count ?? null,
+            url: g.url ?? null,
+            genres: g.genres?.map((x) => x.name) ?? null,
+            themes: g.themes?.map((x) => x.name) ?? null,
+            gameModes: g.game_modes?.map((x) => x.name) ?? null,
+            playerPerspectives: g.player_perspectives?.map((x) => x.name) ?? null,
+            platforms: g.platforms ?? null,
+            developers: developers.length ? developers : null,
+            publishers: publishers.length ? publishers : null,
+            screenshots: g.screenshots?.map((s) => igdbScreenshotUrl(s.image_id, "screenshot_big")) ?? null,
+            artworks: g.artworks?.map((a) => igdbArtworkUrl(a.image_id, "720p")) ?? null,
+            videos: g.videos?.map((v) => ({ name: v.name, videoId: v.video_id })) ?? null,
+            releaseDates: g.release_dates?.map((r) => ({ human: r.human, region: r.region ?? null, date: r.date ?? null })) ?? null,
+        };
+    }
 
     // ── Game meta (capas IGDB por ROM) ───────────────────────────────────
     app.get("/api/emulator/game-meta", async () => {
@@ -411,8 +453,24 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
         const coverImageId = body.coverImageId != null ? String(body.coverImageId) : null;
         const coverUrl = body.coverUrl != null ? String(body.coverUrl) : (coverImageId ? igdbCoverUrl(coverImageId, "cover_big") : null);
         const summary = body.summary != null ? String(body.summary) : null;
+        const storyline = body.storyline != null ? String(body.storyline) : null;
         const firstReleaseDate = body.firstReleaseDate != null ? Number(body.firstReleaseDate) : null;
         const rating = body.rating != null ? Number(body.rating) : null;
+        const aggregatedRating = body.aggregatedRating != null ? Number(body.aggregatedRating) : null;
+        const totalRating = body.totalRating != null ? Number(body.totalRating) : null;
+        const ratingCount = body.ratingCount != null ? Number(body.ratingCount) : null;
+        const url = body.url != null ? String(body.url) : null;
+        const genres = Array.isArray(body.genres) ? (body.genres as unknown[]).map(String) : null;
+        const themes = Array.isArray(body.themes) ? (body.themes as unknown[]).map(String) : null;
+        const gameModes = Array.isArray(body.gameModes) ? (body.gameModes as unknown[]).map(String) : null;
+        const playerPerspectives = Array.isArray(body.playerPerspectives) ? (body.playerPerspectives as unknown[]).map(String) : null;
+        const platforms = Array.isArray(body.platforms) ? body.platforms as unknown as Array<{ id: number; name: string; abbreviation?: string }> : null;
+        const developers = Array.isArray(body.developers) ? (body.developers as unknown[]).map(String) : null;
+        const publishers = Array.isArray(body.publishers) ? (body.publishers as unknown[]).map(String) : null;
+        const screenshots = Array.isArray(body.screenshots) ? (body.screenshots as unknown[]).map(String) : null;
+        const artworks = Array.isArray(body.artworks) ? (body.artworks as unknown[]).map(String) : null;
+        const videos = Array.isArray(body.videos) ? body.videos as unknown as Array<{ name: string; videoId: string }> : null;
+        const releaseDates = Array.isArray(body.releaseDates) ? body.releaseDates as unknown as Array<{ human: string; region: number | null; date: number | null }> : null;
         update((cfg) => {
             const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
             const gm = (emu.gameMeta ?? {}) as Record<string, unknown>;
@@ -424,8 +482,24 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
                 coverUrl,
                 coverImageId,
                 summary,
+                storyline,
                 firstReleaseDate: Number.isFinite(firstReleaseDate as number) ? firstReleaseDate : null,
                 rating: Number.isFinite(rating as number) ? rating : null,
+                aggregatedRating: Number.isFinite(aggregatedRating as number) ? aggregatedRating : null,
+                totalRating: Number.isFinite(totalRating as number) ? totalRating : null,
+                ratingCount: Number.isFinite(ratingCount as number) ? ratingCount : null,
+                url,
+                genres,
+                themes,
+                gameModes,
+                playerPerspectives,
+                platforms,
+                developers,
+                publishers,
+                screenshots,
+                artworks,
+                videos,
+                releaseDates,
                 updatedAt: new Date().toISOString(),
             };
             emu.gameMeta = gm;
@@ -445,5 +519,97 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
             emu.gameMeta = gm;
         });
         return { ok: true, cleared: true };
+    });
+
+    // ── Saves (sincronizados no servidor) ────────────────────────────────
+    // Lista saves existentes
+    app.get("/api/emulator/saves", async () => {
+        ensureSavesDir();
+        let files: string[] = [];
+        try { files = readdirSync(savesDir()); } catch { files = []; }
+        const saves: Array<{ platform: string; game: string; kind: "sram" | "state"; file: string; size: number; mtime: string | null }> = [];
+        for (const f of files) {
+            const full = join(savesDir(), f);
+            let st: ReturnType<typeof statSync> | null = null;
+            try { st = statSync(full); } catch { continue; }
+            if (!st.isFile()) continue;
+            const isState = f.endsWith(".state");
+            const isSrm = f.endsWith(".srm");
+            if (!isState && !isSrm) continue;
+            const kind: "sram" | "state" = isState ? "state" : "sram";
+            // parse platform__game.ext
+            const sep = f.indexOf("__");
+            const platform = sep >= 0 ? f.slice(0, sep) : "unknown";
+            const game = sep >= 0 ? f.slice(sep + 2).replace(/\.(state|srm)$/, "") : f.replace(/\.(state|srm)$/, "");
+            saves.push({ platform, game, kind, file: f, size: st.size, mtime: st.mtime.toISOString() });
+        }
+        saves.sort((a, b) => (b.mtime ?? "").localeCompare(a.mtime ?? ""));
+        return { ok: true, saves };
+    });
+
+    // Baixa um save específico
+    app.get("/api/emulator/saves/:platform/:game/:kind", async (request, reply) => {
+        const { platform, game, kind } = request.params as { platform: string; game: string; kind: string };
+        if (kind !== "sram" && kind !== "state") return reply.code(400).send({ ok: false, error: "kind deve ser sram ou state" });
+        const plat = sanitizeSegment(platform);
+        const g = sanitizeSegment(game);
+        if (!plat || !g) return reply.code(400).send({ ok: false, error: "parâmetros inválidos" });
+        const filePath = saveFilePath(plat, g, kind as "sram" | "state");
+        if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+            return reply.code(404).send({ ok: false, error: "save não encontrado" });
+        }
+        const st = statSync(filePath);
+        reply.header("Content-Length", String(st.size));
+        reply.header("Content-Type", "application/octet-stream");
+        reply.header("Content-Disposition", `attachment; filename="${basename(filePath)}"`);
+        reply.header("Cache-Control", "no-store");
+        return reply.send(createReadStream(filePath));
+    });
+
+    // Faz upload/salva um save (body = bytes brutos)
+    app.put("/api/emulator/saves/:platform/:game/:kind", async (request, reply) => {
+        const { platform, game, kind } = request.params as { platform: string; game: string; kind: string };
+        if (kind !== "sram" && kind !== "state") return reply.code(400).send({ ok: false, error: "kind deve ser sram ou state" });
+        const plat = sanitizeSegment(platform);
+        const g = sanitizeSegment(game);
+        if (!plat || !g) return reply.code(400).send({ ok: false, error: "parâmetros inválidos" });
+        ensureSavesDir();
+        const filePath = saveFilePath(plat, g, kind as "sram" | "state");
+        // body pode vir como Buffer (catch-all parser) ou objeto
+        const body = (request as unknown as { body?: unknown }).body;
+        let buf: Buffer | null = null;
+        if (Buffer.isBuffer(body)) buf = body;
+        else if (body instanceof Uint8Array) buf = Buffer.from(body);
+        else if (typeof body === "string") buf = Buffer.from(body, "binary");
+        else if (body && typeof body === "object" && "data" in (body as Record<string, unknown>)) {
+            // fallback: JSON com base64
+            const b64 = String((body as Record<string, unknown>).data ?? "");
+            try { buf = Buffer.from(b64, "base64"); } catch { buf = null; }
+        }
+        if (!buf || buf.length === 0) {
+            return reply.code(400).send({ ok: false, error: "corpo vazio — envie bytes do save" });
+        }
+        if (buf.length > 64 * 1024 * 1024) {
+            return reply.code(413).send({ ok: false, error: "save muito grande (limite 64 MB)" });
+        }
+        try {
+            writeFileSync(filePath, buf);
+        } catch (e) {
+            return reply.code(500).send({ ok: false, error: String(e) });
+        }
+        const st = statSync(filePath);
+        return { ok: true, platform: plat, game: g, kind, size: st.size, mtime: st.mtime.toISOString() };
+    });
+
+    // Deleta um save
+    app.delete("/api/emulator/saves/:platform/:game/:kind", async (request, reply) => {
+        const { platform, game, kind } = request.params as { platform: string; game: string; kind: string };
+        if (kind !== "sram" && kind !== "state") return reply.code(400).send({ ok: false, error: "kind deve ser sram ou state" });
+        const plat = sanitizeSegment(platform);
+        const g = sanitizeSegment(game);
+        const filePath = saveFilePath(plat, g, kind as "sram" | "state");
+        if (!existsSync(filePath)) return reply.code(404).send({ ok: false, error: "save não encontrado" });
+        try { unlinkSync(filePath); } catch (e) { return reply.code(500).send({ ok: false, error: String(e) }); }
+        return { ok: true, deleted: true };
     });
 }

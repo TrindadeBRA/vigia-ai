@@ -37,6 +37,7 @@ export type DesktopBridge = {
   checkForUpdates(): Promise<{ ok: boolean; status: string; version?: string }>;
   pickFolder(defaultPath?: string): Promise<string | null>;
   pickFile(defaultPath?: string): Promise<string | null>;
+  pickImage(): Promise<string | null>;
   pickPath(opts?: { defaultPath?: string; kind?: "folder" | "file" | "both" }): Promise<string | null>;
 };
 

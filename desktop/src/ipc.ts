@@ -87,10 +87,28 @@ export function registerIpc(deps: IpcDeps): void {
   ipcMain.handle("vigia:pick-file", async (_e, defaultPath: unknown) => {
     const res = await dialog.showOpenDialog({
       properties: ["openFile"],
+      filters: [{ name: "Imagens", extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"] }, { name: "Todos", extensions: ["*"] }],
       defaultPath: typeof defaultPath === "string" && defaultPath.trim() ? defaultPath : undefined,
     });
     if (res.canceled || !res.filePaths[0]) return null;
     return res.filePaths[0];
+  });
+
+  ipcMain.handle("vigia:pick-image", async () => {
+    const res = await dialog.showOpenDialog({
+      properties: ["openFile"],
+      filters: [{ name: "Imagens", extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"] }],
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    try {
+      const { readFileSync } = await import("node:fs");
+      const buf = readFileSync(res.filePaths[0]);
+      const ext = res.filePaths[0].split(".").pop()?.toLowerCase() ?? "png";
+      const mime = ext === "jpg" || ext === "jpeg" ? "jpeg" : ext === "webp" ? "webp" : ext === "gif" ? "gif" : ext === "svg" ? "svg+xml" : ext === "bmp" ? "bmp" : "png";
+      return `data:image/${mime};base64,${buf.toString("base64")}`;
+    } catch {
+      return res.filePaths[0];
+    }
   });
 
   ipcMain.handle("vigia:pick-path", async (_e, opts: unknown) => {

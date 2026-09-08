@@ -45,6 +45,7 @@ const api = {
     ipcRenderer.invoke("vigia:pick-folder", defaultPath),
   pickFile: (defaultPath?: string): Promise<string | null> =>
     ipcRenderer.invoke("vigia:pick-file", defaultPath),
+  pickImage: (): Promise<string | null> => ipcRenderer.invoke("vigia:pick-image"),
   pickPath: (opts?: { defaultPath?: string; kind?: "folder" | "file" | "both" }): Promise<string | null> =>
     ipcRenderer.invoke("vigia:pick-path", opts),
 };

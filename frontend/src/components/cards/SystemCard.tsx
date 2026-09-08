@@ -355,34 +355,52 @@ function Gauge({ pct, label, value }: { pct: number; label: string; value: strin
 
 function StorageSection({ storage, compact }: { storage: DiskInfo[]; compact?: boolean }) {
   if (!storage || storage.length === 0) return null;
-  const disks = storage.slice(0, compact ? 2 : 6);
+  const disks = storage.slice(0, compact ? 1 : 3);
   return (
-    <div className={cn("space-y-2", compact ? "mt-2" : "mt-1")}>
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-ink3">Armazenamento</div>
-      <div className="space-y-2">
+    <div className={cn(compact ? "mt-1.5 space-y-1" : "mt-2 space-y-1.5")}>
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">Armazenamento</div>
+      <div className={cn(compact ? "space-y-1" : "space-y-1.5")}>
         {disks.map((d) => (
           <div key={d.mount} className="min-w-0">
-            <div className="mb-1 flex items-baseline justify-between gap-1.5 text-[11px] leading-none">
+            <div className="flex items-baseline justify-between gap-1 text-[11px] leading-none">
               <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-medium text-ink2" title={`${d.name} · ${d.mount}`}>
                 {fmtDiskLabel(d)}
               </span>
-              <span className={cn(num, "shrink-0 text-[11px] font-bold text-ink")}>
-                {fmtGb(d.free_gb)} livre
-              </span>
+              <span className={cn(num, "shrink-0 text-[10px] font-bold text-ink")}>{fmtGb(d.free_gb)} livre</span>
             </div>
-            <div className={cn(barTrack, "h-[5px]")}>
-              <div
-                className={barFill}
-                style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent), boxShadow: barGlowVar(d.use_percent) } as React.CSSProperties}
-              />
+            <div className={cn(barTrack, compact ? "mt-1 h-[3px]" : "mt-1 h-[4px]")}>
+              <div className={barFill} style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent) } as React.CSSProperties} />
             </div>
-            <div className={cn(num, "mt-1 flex justify-between text-[11px] font-[500] text-ink2")}>
-              <span>{fmtGb(d.used_gb)} usados</span>
-              <span>{fmtGb(d.total_gb)} total · {d.use_percent}%</span>
-            </div>
+            {!compact ? (
+              <div className={cn(num, "mt-0.5 flex justify-between text-[10px] leading-none text-ink3")}>
+                <span>{fmtGb(d.used_gb)} usados</span>
+                <span>{d.use_percent}% · {fmtGb(d.total_gb)}</span>
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+export function StorageInline({ storage }: { storage: DiskInfo[] }) {
+  if (!storage || storage.length === 0) return null;
+  const disks = storage.slice(0, 2);
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {disks.map((d) => (
+        <div key={d.mount} className="min-w-0 rounded-lg border border-edge bg-chip/40 px-2 py-1.5">
+          <div className="truncate text-[10px] font-semibold leading-none text-ink2" title={`${d.name} · ${d.mount}`}>{fmtDiskLabel(d)}</div>
+          <div className={cn(barTrack, "mt-1 h-[3px]")}>
+            <div className={barFill} style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent) } as React.CSSProperties} />
+          </div>
+          <div className={cn(num, "mt-1 flex justify-between text-[10px] leading-none text-ink3")}>
+            <span>{fmtGb(d.free_gb)} livre</span>
+            <span>{d.use_percent}%</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -520,89 +538,85 @@ export function SystemBoardCard({ t, size }: { t: T; size: CardSize }) {
     );
   }
 
-  // ── md: 2×2 compacto — 2 barras + storage resumido
+  // ── md: 2×2 compacto — sem scroll, storage só se couber (1 disco ultra-compacto)
   if (ns === "md") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <Header state={state} compact />
-        <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 overflow-y-auto [scrollbar-width:thin]">
+        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5">
           <BarRow label={t.systemMemory} value={fmtMb(state.memory.rss_mb)} pct={mp} sub={`heap ${fmtMb(state.memory.heap_used_mb)}/${fmtMb(state.memory.heap_total_mb)}`} />
           <BarRow label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} pct={cp} sub={`${state.cpu.cores} ${t.systemCores} · 5m ${fmtLoad(state.cpu.load5)}`} />
-          {state.storage?.length ? <StorageSection storage={state.storage} compact /> : null}
+          {state.storage?.length ? (
+            <div className="flex items-center gap-1.5 rounded-lg border border-edge bg-chip/30 px-2 py-1">
+              <span className="min-w-0 flex-1 truncate text-[10px] font-medium leading-none text-ink2" title={`${state.storage[0].name} · ${state.storage[0].mount}`}>{fmtDiskLabel(state.storage[0])}</span>
+              <span className={cn(num, "shrink-0 text-[10px] font-bold leading-none text-ink")}>{fmtGb(state.storage[0].free_gb)} livre</span>
+              <span className={cn(barTrack, "h-[3px] w-10 shrink-0")}><span className={barFill} style={{ width: `${state.storage[0].use_percent}%`, background: barColorVar(state.storage[0].use_percent) } as React.CSSProperties} /></span>
+            </div>
+          ) : null}
         </div>
       </div>
     );
   }
 
-  // ── lg: 4×2 largo — grade 2×2 + storage inline
+  // ── lg: 4×2 largo — 2 colunas, sem scroll, storage inline em linha única
   if (ns === "lg") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <Header state={state} />
-        <div className="grid min-h-0 flex-1 grid-cols-2 gap-x-4 gap-y-2 content-center">
-          <Row label={t.systemUptime} value={fmtUptime(state.uptime_s)} />
-          <Row label={t.systemMemory} value={fmtMb(state.memory.rss_mb)} sub={`${Math.round(mp)}%`} />
-          <Row label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} sub={`×${state.cpu.cores}`} />
-          <Row label={t.systemLastCycle} value={fmtLastCycleShort(state.last_cycle, t)} />
-        </div>
-        {state.storage?.length ? (
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {state.storage.slice(0, 2).map((d) => (
-              <div key={d.mount} className="min-w-0 rounded-lg border border-edge bg-chip/40 px-2 py-1.5">
-                <div className="truncate text-[11px] font-semibold leading-none text-ink2" title={`${d.name} · ${d.mount}`}>{fmtDiskLabel(d)}</div>
-                <div className={cn(num, "mt-1 text-[11px] leading-none text-ink3")}>{fmtGb(d.free_gb)} livre · {fmtGb(d.total_gb)} total</div>
-                <div className={cn(barTrack, "mt-1.5 h-[4px]")}>
-                  <div className={barFill} style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent) } as React.CSSProperties} />
-                </div>
-              </div>
-            ))}
+        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <Row label={t.systemUptime} value={fmtUptime(state.uptime_s)} />
+            <Row label={t.systemMemory} value={fmtMb(state.memory.rss_mb)} sub={`${Math.round(mp)}%`} />
+            <Row label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} sub={`×${state.cpu.cores}`} />
+            <Row label={t.systemLastCycle} value={fmtLastCycleShort(state.last_cycle, t)} />
           </div>
-        ) : null}
-        {state.last_cycle?.error ? <div className={cn(errorText, "mt-2 line-clamp-2")}>{state.last_cycle.error}</div> : null}
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-chip px-2 py-0.5 text-[11px] font-medium text-ink3">heap {fmtMb(state.memory.heap_used_mb)}/{fmtMb(state.memory.heap_total_mb)}</span>
-          <span className="rounded-full bg-chip px-2 py-0.5 text-[11px] font-medium text-ink3">{state.node_version}</span>
+          {state.storage?.length ? (
+            <div className="flex items-center gap-2 rounded-lg border border-edge bg-chip/30 px-2 py-1">
+              <span className="min-w-0 flex-1 truncate text-[10px] font-medium leading-none text-ink2" title={`${state.storage[0].name} · ${state.storage[0].mount}`}>{fmtDiskLabel(state.storage[0])}</span>
+              <span className={cn(num, "shrink-0 text-[10px] font-bold leading-none text-ink")}>{fmtGb(state.storage[0].free_gb)} livre · {state.storage[0].use_percent}%</span>
+              <span className={cn(barTrack, "h-[3px] w-12 shrink-0")}><span className={barFill} style={{ width: `${state.storage[0].use_percent}%`, background: barColorVar(state.storage[0].use_percent) } as React.CSSProperties} /></span>
+            </div>
+          ) : null}
+          <div className="flex flex-wrap gap-1">
+            <span className="rounded-full bg-chip px-2 py-0.5 text-[10px] font-medium text-ink3">heap {fmtMb(state.memory.heap_used_mb)}/{fmtMb(state.memory.heap_total_mb)}</span>
+            <span className="rounded-full bg-chip px-2 py-0.5 text-[10px] font-medium text-ink3">{state.node_version}</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ── xl: 4×4 — gauges + barras + storage + meta
+  // ── xl: 4×4 — gauges à esquerda, métricas à direita, storage compacto
   if (ns === "xl") {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
         <Header state={state} subtitle={`${t.systemUptime} ${fmtUptime(state.uptime_s)} · ${state.node_version}`} />
-        <div className="flex min-h-0 flex-1 gap-4 overflow-hidden">
-          <div className="flex min-w-[132px] shrink-0 flex-col items-center justify-center gap-3 rounded-xl border border-edge bg-chip px-3 py-3">
-            <div className="flex items-center justify-center gap-3">
+        <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
+          <div className="flex w-[148px] shrink-0 flex-col items-center justify-center gap-2 rounded-xl border border-edge bg-chip px-3 py-2.5">
+            <div className="flex items-center justify-center gap-2.5">
               <Gauge pct={mp} label="HEAP" value={`${Math.round(mp)}%`} />
               <Gauge pct={cp} label="CPU" value={fmtLoad(state.cpu.load1)} />
             </div>
             {state.storage?.length ? (
-              <div className="w-full space-y-1.5 border-t border-edge pt-2">
-                {state.storage.slice(0, 2).map((d) => (
-                  <div key={d.mount} className="min-w-0">
-                    <div className="truncate text-[10px] font-semibold leading-none text-ink2" title={`${d.name} · ${d.mount}`}>{fmtDiskLabel(d)}</div>
-                    <div className={cn(barTrack, "mt-1 h-[3px]")}>
-                      <div className={barFill} style={{ width: `${d.use_percent}%`, background: barColorVar(d.use_percent) } as React.CSSProperties} />
-                    </div>
-                    <div className={cn(num, "mt-0.5 text-[10px] leading-none text-ink3")}>{fmtGb(d.free_gb)} livre</div>
-                  </div>
-                ))}
+              <div className="w-full border-t border-edge pt-2">
+                <div className="truncate text-[10px] font-semibold leading-none text-ink2" title={`${state.storage[0].name} · ${state.storage[0].mount}`}>{fmtDiskLabel(state.storage[0])}</div>
+                <div className={cn(barTrack, "mt-1 h-[3px]")}>
+                  <div className={barFill} style={{ width: `${state.storage[0].use_percent}%`, background: barColorVar(state.storage[0].use_percent) } as React.CSSProperties} />
+                </div>
+                <div className={cn(num, "mt-0.5 text-[10px] leading-none text-ink3")}>{fmtGb(state.storage[0].free_gb)} livre · {state.storage[0].use_percent}%</div>
               </div>
             ) : null}
           </div>
-          <div className="flex min-h-0 flex-1 flex-col justify-center gap-2.5 overflow-y-auto [scrollbar-width:thin]">
-            <Row label={t.systemMemory} value={`${fmtMb(state.memory.rss_mb)}`} sub={`heap ${fmtMb(state.memory.heap_used_mb)}/${fmtMb(state.memory.heap_total_mb)}`} />
-            <div className={cn(barTrack, "h-[6px]")}>
+          <div className="flex min-h-0 flex-1 flex-col justify-center gap-1.5">
+            <Row label={t.systemMemory} value={fmtMb(state.memory.rss_mb)} sub={`heap ${fmtMb(state.memory.heap_used_mb)}/${fmtMb(state.memory.heap_total_mb)}`} />
+            <div className={cn(barTrack, "h-[4px]")}>
               <div className={barFill} style={{ width: `${mp}%`, background: barColorVar(mp), boxShadow: barGlowVar(mp) } as React.CSSProperties} />
             </div>
-            <Row label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} sub={`${state.cpu.cores} ${t.systemCores} · load5 ${fmtLoad(state.cpu.load5)}`} />
-            <div className={cn(barTrack, "h-[6px]")}>
+            <Row label={t.systemCpuLoad} value={fmtLoad(state.cpu.load1)} sub={`${state.cpu.cores} ${t.systemCores} · 5m ${fmtLoad(state.cpu.load5)}`} />
+            <div className={cn(barTrack, "h-[4px]")}>
               <div className={barFill} style={{ width: `${cp}%`, background: barColorVar(cp), boxShadow: barGlowVar(cp) } as React.CSSProperties} />
             </div>
             <Row label={t.systemLastCycle} value={fmtLastCycleShort(state.last_cycle, t)} sub={state.last_cycle?.ok === false ? "erro" : `a cada ${state.last_cycle?.interval_s ?? "--"}s`} />
-            {state.last_cycle?.error ? <div className={cn(errorText, "line-clamp-2 text-[11px]")}>{state.last_cycle.error}</div> : null}
           </div>
         </div>
       </div>

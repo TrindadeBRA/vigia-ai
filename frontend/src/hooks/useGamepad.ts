@@ -414,13 +414,13 @@ export function findNearestCard(
 
 export const GAMEPAD_CSS = `
   [data-gamepad-focused="true"] {
-    outline: 2px solid var(--accent) !important;
-    outline-offset: 2px !important;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), var(--shadow, 0 4px 12px rgba(0,0,0,.2)) !important;
+    outline: none !important;
+    box-shadow: none !important;
     z-index: 2;
   }
-  [data-gamepad-focused="true"] .group\\/tile {
+  [data-gamepad-focused="true"] .group\/tile {
     border-color: var(--accent) !important;
+    border-width: 2px !important;
   }
   .gamepad-hint {
     position: fixed;

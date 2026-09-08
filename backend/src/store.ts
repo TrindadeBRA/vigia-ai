@@ -152,6 +152,7 @@ const _EMULATOR_DEFAULT: Record<string, unknown> = {
   disableBatchBootup: false,
   noAutoFocus: false,
   hideSettings: false,
+  iconTheme: "monochrome",
   igdb: { clientId: "", clientSecret: "" },
   platforms: [],
   gameMeta: {},
@@ -694,12 +695,15 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
     emu.igdb = igdb;
   }
   if (Array.isArray(rawEmu.platforms)) {
+    const REMOVED_PLATFORMS = new Set(["psp", "segaSaturn", "jaguar", "3do", "amiga", "3ds", "dos"]);
     const cleaned: Array<Record<string, unknown>> = [];
     for (const it of rawEmu.platforms) {
       if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
       const r = it as Record<string, unknown>;
+      const id = String(r.id);
+      if (REMOVED_PLATFORMS.has(id)) continue;
       cleaned.push({
-        id: String(r.id),
+        id,
         enabled: Boolean(r.enabled),
         romPath: String(r.romPath ?? ""),
         biosPath: r.biosPath != null ? String(r.biosPath) : null,
@@ -709,20 +713,40 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
     emu.platforms = cleaned;
   }
   if (typeof rawEmu.gameMeta === "object" && rawEmu.gameMeta !== null && !Array.isArray(rawEmu.gameMeta)) {
+    const REMOVED_PLATFORMS_GM = new Set(["psp", "segaSaturn", "jaguar", "3do", "amiga", "3ds", "dos"]);
     const cleaned: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(rawEmu.gameMeta as Record<string, unknown>)) {
       if (typeof v !== "object" || v === null) continue;
       const r = v as Record<string, unknown>;
+      const plat = String(r.platform ?? k.split("::")[0] ?? "");
+      if (REMOVED_PLATFORMS_GM.has(plat)) continue;
+      if (REMOVED_PLATFORMS_GM.has(k.split("::")[0] ?? "")) continue;
       cleaned[k] = {
-        platform: String(r.platform ?? k.split("::")[0] ?? ""),
+        platform: plat,
         file: String(r.file ?? k.split("::")[1] ?? ""),
         igdbId: r.igdbId != null ? Number(r.igdbId) : null,
         name: r.name != null ? String(r.name) : null,
         coverUrl: r.coverUrl != null ? String(r.coverUrl) : null,
         coverImageId: r.coverImageId != null ? String(r.coverImageId) : null,
         summary: r.summary != null ? String(r.summary) : null,
+        storyline: r.storyline != null ? String(r.storyline) : null,
         firstReleaseDate: r.firstReleaseDate != null ? Number(r.firstReleaseDate) : null,
         rating: r.rating != null ? Number(r.rating) : null,
+        aggregatedRating: r.aggregatedRating != null ? Number(r.aggregatedRating) : null,
+        totalRating: r.totalRating != null ? Number(r.totalRating) : null,
+        ratingCount: r.ratingCount != null ? Number(r.ratingCount) : null,
+        url: r.url != null ? String(r.url) : null,
+        genres: Array.isArray(r.genres) ? (r.genres as unknown[]).map(String) : null,
+        themes: Array.isArray(r.themes) ? (r.themes as unknown[]).map(String) : null,
+        gameModes: Array.isArray(r.gameModes) ? (r.gameModes as unknown[]).map(String) : null,
+        playerPerspectives: Array.isArray(r.playerPerspectives) ? (r.playerPerspectives as unknown[]).map(String) : null,
+        platforms: Array.isArray(r.platforms) ? r.platforms as unknown as Array<{ id: number; name: string; abbreviation?: string }> : null,
+        developers: Array.isArray(r.developers) ? (r.developers as unknown[]).map(String) : null,
+        publishers: Array.isArray(r.publishers) ? (r.publishers as unknown[]).map(String) : null,
+        screenshots: Array.isArray(r.screenshots) ? (r.screenshots as unknown[]).map(String) : null,
+        artworks: Array.isArray(r.artworks) ? (r.artworks as unknown[]).map(String) : null,
+        videos: Array.isArray(r.videos) ? r.videos as unknown as Array<{ name: string; videoId: string }> : null,
+        releaseDates: Array.isArray(r.releaseDates) ? r.releaseDates as unknown as Array<{ human: string; region: number | null; date: number | null }> : null,
         updatedAt: r.updatedAt != null ? String(r.updatedAt) : null,
       };
     }

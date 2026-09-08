@@ -265,6 +265,62 @@ export function TextField({
   );
 }
 
+export function SliderField({
+  label,
+  hint,
+  min = 0,
+  max = 1,
+  step = 0.05,
+  value,
+  onChange,
+  onCommit,
+  disabled,
+  className,
+}: {
+  label?: string;
+  hint?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  value: number;
+  onChange: (v: number) => void;
+  onCommit?: (v: number) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
+  return (
+    <label className={cn("flex min-w-[140px] flex-1 flex-col gap-1.5", className)}>
+      {label ? <span className={cfgFieldLabel}>{label}</span> : null}
+      <span className="flex items-center gap-3">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(Number(e.target.value))}
+          onPointerUp={(e) => onCommit?.(Number((e.target as HTMLInputElement).value))}
+          onKeyUp={(e) => {
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+              onCommit?.(Number((e.target as HTMLInputElement).value));
+            }
+          }}
+          className="h-2 w-full cursor-pointer appearance-none rounded-full accent-accent disabled:cursor-not-allowed disabled:opacity-55"
+          style={{
+            background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--chip) ${pct}%, var(--chip) 100%)`,
+          }}
+        />
+        <span className="min-w-[3.5ch] shrink-0 rounded-[8px] border border-edge bg-canvas px-2 py-1 text-center text-[12.5px] font-bold tabular-nums text-ink">
+          {value.toFixed(2)}
+        </span>
+      </span>
+      {hint ? <span className="text-xs leading-[1.45] text-ink3">{hint}</span> : null}
+    </label>
+  );
+}
+
 /** Campo de caminho/arquivo com botão "…" que só aparece no Electron. */
 export function PathField({
   label,

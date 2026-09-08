@@ -186,6 +186,8 @@ export default function Display() {
     setNextFetchAt(nextFetchAtMs(json.updated_at, intervalMs));
     const age = payloadAgeMs(json.updated_at);
     if (isNew && (age == null || age < FRESH_PAYLOAD_MS)) setOkFlashAt(Date.now());
+    // ciclo do dashboard — usado para flush de SRAM do emulador (save games)
+    window.dispatchEvent(new CustomEvent("vigia:dashboard-cycle", { detail: { updated_at: json.updated_at } }));
   }
 
   useEffect(() => {

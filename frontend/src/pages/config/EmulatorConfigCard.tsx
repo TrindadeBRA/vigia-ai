@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import type { EmulatorConfig } from "../../api/types";
+import { RetroarchIconBadge } from "../../components/RetroarchIcon";
 import { useRequest } from "../../hooks/useRequest";
+import type { RetroarchTheme } from "../../lib/retroarchIcons";
+import { RETROARCH_THEMES } from "../../lib/retroarchIcons";
 import { cfgCard, cfgHint, iconChip } from "../../tw";
 import type { ConfigCopy } from "./copy";
-import { Button, Checkbox, Fold, PathField, SelectField, Switch, TextField } from "./ui";
+import { Button, Checkbox, Fold, PathField, SelectField, SliderField, Switch, TextField } from "./ui";
 
 const PLATFORM_LABELS: Record<string, string> = {
     nes: "NES / Famicom", snes: "SNES", n64: "Nintendo 64", gb: "Game Boy / Game Boy Color", gba: "GBA", nds: "NDS",
-    psx: "PlayStation", psp: "PSP", segaMD: "Mega Drive", segaMS: "Master System",
-    segaGG: "Game Gear", segaCD: "Sega CD", sega32x: "32X", segaSaturn: "Saturn",
-    atari2600: "Atari 2600", atari7800: "Atari 7800", lynx: "Lynx", jaguar: "Jaguar",
-    arcade: "Arcade", mame2003: "MAME 2003", "3do": "3DO", vb: "Virtual Boy", coleco: "ColecoVision",
-    pce: "PC Engine", ngp: "Neo Geo Pocket", ws: "WonderSwan", c64: "C64", amiga: "Amiga",
-    "3ds": "3DS", dos: "DOS",
+    psx: "PlayStation", segaMD: "Mega Drive", segaMS: "Master System",
+    segaGG: "Game Gear", segaCD: "Sega CD", sega32x: "32X",
+    atari2600: "Atari 2600", atari7800: "Atari 7800", lynx: "Lynx",
+    arcade: "Arcade", mame2003: "MAME 2003", vb: "Virtual Boy", coleco: "ColecoVision",
+    pce: "PC Engine", ngp: "Neo Geo Pocket", ws: "WonderSwan", c64: "C64",
 };
 
 const ALL_PLATFORMS = Object.keys(PLATFORM_LABELS);
@@ -20,7 +22,7 @@ const ALL_PLATFORMS = Object.keys(PLATFORM_LABELS);
 export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: () => Promise<void> }) {
     const [cfg, setCfg] = useState<EmulatorConfig | null>(null);
     const [loading, setLoading] = useState(true);
-    const [platformsMeta, setPlatformsMeta] = useState<Array<{ id: string; label: string; core: string; exts: string[]; needsBios: boolean }>>([]);
+    const [platformsMeta, setPlatformsMeta] = useState<Array<{ id: string; label: string; core: string; exts: string[]; needsBios: boolean; warning?: string }>>([]);
     const toggleReq = useRequest();
     const saveReq = useRequest();
     const [editingRomPath, setEditingRomPath] = useState<Record<string, string>>({});
@@ -45,7 +47,7 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
         return (
             <article className={cfgCard}>
                 <div className="flex items-center gap-3">
-                    <div className={iconChip}><span className="text-[18px]">🎮</span></div>
+                    <div className={iconChip}><RetroarchIconBadge platform="all" theme="monochrome" size={32} alt="Emulador" /></div>
                     <div><h3 className="m-0 text-[15.5px] font-bold">Emulador</h3><p className={cfgHint}>carregando...</p></div>
                 </div>
             </article>
@@ -109,7 +111,7 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
         <article className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
-                    <div className={iconChip}><span className="text-[18px]">🎮</span></div>
+                    <div className={iconChip}><RetroarchIconBadge platform="all" theme={(cfg.iconTheme as RetroarchTheme) ?? "monochrome"} size={32} alt="Emulador" /></div>
                     <div className="min-w-0">
                         <h3 className="m-0 text-[15.5px] font-bold">Emulador (EmulatorJS)</h3>
                         <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">
@@ -133,6 +135,16 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
             {/* Global settings */}
             <Fold summary="Configurações globais (CDN, BIOS, saves, gamepad)">
                 <div className="grid grid-cols-2 gap-3 max-[520px]:grid-cols-1">
+                    <SelectField
+                        label="Tema dos ícones"
+                        value={(cfg.iconTheme as string) ?? "monochrome"}
+                        onChange={async (e) => {
+                            const v = e.target.value as RetroarchTheme;
+                            setCfg({ ...cfg, iconTheme: v } as EmulatorConfig);
+                            await saveReq.run(async () => patch({ iconTheme: v }), { success: c.saved, error: c.fail });
+                        }}
+                        options={RETROARCH_THEMES.map((t) => ({ value: t.value, label: t.label }))}
+                    />
                     <SelectField
                         label="Versão CDN"
                         value={cfg.cdnVersion}
@@ -188,19 +200,18 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
                     <Checkbox label="Esconder configurações" checked={cfg.hideSettings} onChange={async (e) => { await saveReq.run(async () => patch({ hideSettings: e.target.checked }), { success: c.saved, error: c.fail }); }} />
                 </div>
                 <div className="mt-3">
-                    <TextField
-                        label="Volume (0..1)"
-                        placeholder="1"
-                        value={String(cfg.volume)}
-                        onChange={(e) => {
-                            const v = Number(e.target.value);
-                            if (!Number.isNaN(v)) setCfg({ ...cfg, volume: Math.max(0, Math.min(1, v)) });
-                        }}
-                        onBlur={async () => { await saveReq.run(async () => patch({ volume: cfg.volume }), { success: c.saved, error: c.fail }); }}
+                    <SliderField
+                        label="Volume"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={cfg.volume}
+                        onChange={(v) => setCfg({ ...cfg, volume: Math.max(0, Math.min(1, v)) })}
+                        onCommit={(v) => { void saveReq.run(async () => patch({ volume: v }), { success: c.saved, error: c.fail }); }}
                     />
                 </div>
                 <div className="mt-3">
-                    <p className={cfgHint}>Saves: o EmulatorJS salva em IndexedDB no navegador. Configure a pasta de saves para backup manual. BIOS: necessária para PSX, NDS, Sega CD, Saturn, 3DO, etc.</p>
+                    <p className={cfgHint}>Saves: sincronizados automaticamente no servidor (<code className="rounded bg-chip px-1 py-0.5 text-[11px]">backend/data/emulator-saves/</code>) — funcionam entre dispositivos. O IndexedDB local é usado apenas como cache. BIOS: necessária para PSX, NDS, Sega CD, Saturn, 3DO, etc.</p>
                 </div>
             </Fold>
 
@@ -256,12 +267,14 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
                         const romPath = pCfg?.romPath ?? "";
                         const biosPath = pCfg?.biosPath ?? "";
                         const extsLabel = plat.exts?.length ? plat.exts.join(", ") : "";
+                        const platWarning = (plat as { warning?: string }).warning;
                         return (
                             <div key={plat.id} className={`rounded-xl border px-3 py-2.5 ${enabled ? "border-accent bg-chip" : "border-edge bg-canvas"}`}>
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="min-w-0">
-                                        <div className="text-[13px] font-semibold">{plat.label} <span className="font-normal text-ink3">({plat.id})</span></div>
+                                        <div className="text-[13px] font-semibold">{plat.label} <span className="font-normal text-ink3">({plat.id})</span>{platWarning ? <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold leading-none text-amber-600 dark:text-amber-400" title={platWarning}>⚠ desempenho limitado</span> : null}</div>
                                         <div className="text-[11px] text-ink3">{extsLabel ? `extensões: ${extsLabel}` : ""} {plat.needsBios ? "· precisa BIOS" : ""}</div>
+                                        {platWarning ? <div className="mt-1 text-[11px] leading-[1.4] text-amber-600 dark:text-amber-400">{platWarning}</div> : null}
                                     </div>
                                     <Switch
                                         label={enabled ? "Ativo" : "Inativo"}
