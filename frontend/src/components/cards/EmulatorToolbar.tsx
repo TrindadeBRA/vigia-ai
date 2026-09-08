@@ -139,7 +139,7 @@ export function EmulatorToolbar({
                 const iframe = getIframe(iframeRef as React.RefObject<HTMLDivElement | null>);
                 if (iframe?.contentWindow) {
                     // Pede estado ao frame (frame responde com postMessage type=state)
-                    try { iframe.contentWindow.postMessage({ source: "vigia-emulator-host", type: "getState" }, "*"); } catch {}
+                    try { iframe.contentWindow.postMessage({ source: "vigia-emulator-host", type: "getState" }, "*"); } catch { }
                     // Também tenta ler EJS_emulator do iframe se same-origin
                     try {
                         const w = iframe.contentWindow as unknown as Record<string, unknown>;
@@ -156,7 +156,7 @@ export function EmulatorToolbar({
                             if (s) setSlot(s);
                             return;
                         }
-                    } catch {}
+                    } catch { }
                 }
             }
             const emu = getEmu();
@@ -458,7 +458,7 @@ export function EmulatorToolbar({
 
     return (
         <>
-            <div className={cn("flex min-w-0 flex-1 items-center overflow-hidden", compact ? "gap-1" : "gap-1.5")}>
+            <div className={cn("flex min-w-0 flex-1 flex-wrap items-center", compact ? "gap-1" : "gap-1.5")}>
                 <button type="button" onClick={togglePause} title={paused ? "Continuar" : "Pausar"} className={cn(btnBase, paused ? btnAccent : btnChip)}>
                     {paused ? <IconPlay /> : <IconPause />}
                 </button>
