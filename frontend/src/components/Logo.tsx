@@ -15,6 +15,44 @@ const DIZZY_MS = 3400;
 const DIZZY_REQUIRED = Math.PI * 2 * 2.2;
 const DIZZY_WINDOW_MS = 2800;
 
+const HURT_CLICK_COUNT = 10;
+const HURT_CLICK_WINDOW_MS = 3000;
+const HURT_MS = 2600;
+const HURT_SCLERA_COLOR = "#ffab9c";
+const VEIN_COLOR = "#c2141e";
+
+/**
+ * Vasinho do olho machucado — traço fino e (quase) reto, irradiando da íris até perto da
+ * borda. Testado visualmente: linhas grossas e quebradas leem como "vermes", não veias.
+ * Fino + numeroso + reto (uma curva sutil só) é o que de fato parece olho vermelho.
+ */
+function veinPath(angleDeg: number, bend: number, startR: number, endR: number): string {
+  const rad = (angleDeg * Math.PI) / 180;
+  const perp = rad + Math.PI / 2;
+  const sx = Math.cos(rad) * startR;
+  const sy = Math.sin(rad) * startR;
+  const ex = Math.cos(rad) * endR;
+  const ey = Math.sin(rad) * endR;
+  const midR = (startR + endR) / 2;
+  const cx = Math.cos(rad) * midR + Math.cos(perp) * bend;
+  const cy = Math.sin(rad) * midR + Math.sin(perp) * bend;
+  return `M ${sx.toFixed(2)} ${sy.toFixed(2)} Q ${cx.toFixed(2)} ${cy.toFixed(2)} ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+}
+
+type Vein = { d: string; width: number; opacity: number };
+
+const VEINS: Vein[] = [
+  { d: veinPath(8, 2.2, 20, 43), width: 1.9, opacity: 0.85 },
+  { d: veinPath(48, -1.8, 22, 40), width: 1.5, opacity: 0.65 },
+  { d: veinPath(95, 2.0, 21, 44), width: 1.8, opacity: 0.8 },
+  { d: veinPath(132, -2.4, 20, 42), width: 2.0, opacity: 0.9 },
+  { d: veinPath(168, 1.6, 22, 39), width: 1.4, opacity: 0.6 },
+  { d: veinPath(205, -2.0, 21, 43), width: 1.9, opacity: 0.85 },
+  { d: veinPath(250, 2.3, 20, 41), width: 1.6, opacity: 0.7 },
+  { d: veinPath(295, -1.9, 22, 44), width: 2.0, opacity: 0.9 },
+  { d: veinPath(322, 1.7, 21, 39), width: 1.4, opacity: 0.6 },
+];
+
 type Gaze = { x: number; y: number };
 
 function easeOutCubic(t: number): number {
@@ -56,22 +94,43 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
   const botLidRef = useRef<SVGRectElement>(null);
   const spiralRef = useRef<SVGGElement>(null);
   const spiralInnerRef = useRef<SVGGElement>(null);
+  const scleraRef = useRef<SVGCircleElement>(null);
+  const veinsRef = useRef<SVGGElement>(null);
   const dizzyUntilRef = useRef(0);
   const dizzyStartRef = useRef(0);
+  const hurtUntilRef = useRef(0);
+  const hurtClicksRef = useRef<number[]>([]);
   const hoverRef = useRef(false);
   const dilationRef = useRef(0);
   const [tears, setTears] = useState<number[]>([]);
+
+  const spawnTear = useCallback(() => {
+    const id = Date.now() + Math.random();
+    setTears((prev) => [...prev, id]);
+    window.setTimeout(() => {
+      setTears((prev) => prev.filter((t) => t !== id));
+    }, 1150);
+  }, []);
 
   const triggerTear = useCallback(() => {
     if (prefersReducedMotion()) return;
     if (!hoverRef.current) return;
     // só dispara se estiver dilatado (hover)
     if (dilationRef.current < 0.25) return;
-    const id = Date.now() + Math.random();
-    setTears((prev) => [...prev, id]);
-    window.setTimeout(() => {
-      setTears((prev) => prev.filter((t) => t !== id));
-    }, 1150);
+    spawnTear();
+  }, [spawnTear]);
+
+  /** 10 cliques seguidos e rápidos (janela de 3s) deixam o olho vermelho/machucado — em toda instância aberta. */
+  const registerHurtClick = useCallback(() => {
+    const now = Date.now();
+    const recent = hurtClicksRef.current.filter((t) => now - t < HURT_CLICK_WINDOW_MS);
+    recent.push(now);
+    if (recent.length >= HURT_CLICK_COUNT) {
+      hurtClicksRef.current = [];
+      window.dispatchEvent(new CustomEvent("vigia:eye-hurt", { detail: { at: now } }));
+    } else {
+      hurtClicksRef.current = recent;
+    }
   }, []);
 
   useEffect(() => {
@@ -154,6 +213,15 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
     }
     window.addEventListener("vigia:eye-dizzy", onDizzy as EventListener);
 
+    function onHurt() {
+      hurtUntilRef.current = performance.now() + HURT_MS;
+      if (!reduced) {
+        spawnTear();
+        window.setTimeout(spawnTear, 240);
+      }
+    }
+    window.addEventListener("vigia:eye-hurt", onHurt as EventListener);
+
     function tracked(now: number): Gaze | null {
       if (!pointer || now - pointer.at > POINTER_HOLD_MS) return null;
       const box = svgRef.current?.getBoundingClientRect();
@@ -167,6 +235,7 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
 
     function tick(now: number) {
       const isDizzy = now < dizzyUntilRef.current;
+      const isHurt = now < hurtUntilRef.current;
 
       // dilatação: interpola suavemente até o alvo (hover)
       const targetDilation = !reduced && hoverRef.current && !isDizzy ? 1 : 0;
@@ -197,11 +266,14 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
 
       spiralRef.current?.setAttribute("opacity", "0");
       irisRef.current?.setAttribute("opacity", "1");
+      if (scleraRef.current) scleraRef.current.style.fill = isHurt ? HURT_SCLERA_COLOR : "";
+      veinsRef.current?.setAttribute("opacity", isHurt ? "1" : "0");
 
       if (reduced) {
         irisRef.current?.setAttribute("transform", `translate(50 50)`);
-        topLidRef.current?.setAttribute("transform", `translate(0 0)`);
-        botLidRef.current?.setAttribute("transform", `translate(0 0)`);
+        const hurtSquint = isHurt ? LID_TRAVEL * 0.4 : 0;
+        topLidRef.current?.setAttribute("transform", `translate(0 ${hurtSquint.toFixed(2)})`);
+        botLidRef.current?.setAttribute("transform", `translate(0 ${(-hurtSquint).toFixed(2)})`);
         raf = requestAnimationFrame(tick);
         return;
       }
@@ -241,6 +313,8 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
           lid = p < 0.4 ? p / 0.4 : 1 - (p - 0.4) / 0.6;
         }
       }
+      // olho semicerrado de irritação enquanto machucado, sem impedir a piscada normal
+      if (isHurt) lid = Math.max(lid, 0.4);
 
       const driftX = Math.sin(now / 700) * 0.5;
       const driftY = Math.cos(now / 900) * 0.4;
@@ -261,6 +335,7 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("vigia:eye-dizzy", onDizzy as EventListener);
+      window.removeEventListener("vigia:eye-hurt", onHurt as EventListener);
     };
   }, [follow, size]);
 
@@ -285,6 +360,7 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
         onClick={(e) => {
           e.stopPropagation();
           triggerTear();
+          registerHurtClick();
         }}
       >
         <defs>
@@ -292,8 +368,13 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
             <circle cx={50} cy={50} r={EYE_R} />
           </clipPath>
         </defs>
-        <circle className="fill-white" cx={50} cy={50} r={EYE_R} />
+        <circle ref={scleraRef} className="fill-white transition-[fill] duration-300" cx={50} cy={50} r={EYE_R} />
         <g clipPath={`url(#${clipId})`}>
+          <g ref={veinsRef} opacity={0} className="pointer-events-none transition-opacity duration-300" transform="translate(50 50)">
+            {VEINS.map((v, i) => (
+              <path key={i} d={v.d} fill="none" stroke={VEIN_COLOR} strokeWidth={v.width} strokeLinecap="round" opacity={v.opacity} />
+            ))}
+          </g>
           <g className="drop-shadow-[0_0_4px_var(--glow)] [.flat_&]:drop-shadow-none" ref={irisRef} transform="translate(50 50)">
             <circle ref={irisCircleRef} className="fill-accent" r={IRIS_R} />
             <circle ref={pupilCircleRef} className="fill-black/55" r={PUPIL_R} />
