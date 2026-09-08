@@ -287,7 +287,16 @@ export function BoardTile({
   useEffect(() => {
     if (!revealed) return;
     const onOutside = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setRevealed(false);
+      const target = e.target as HTMLElement;
+      if (rootRef.current?.contains(target)) return;
+      // O menu de tamanho e o seletor de cor renderizam via createPortal em
+      // document.body — ficam fora do card no DOM, mas não são "fora" pra
+      // essa lógica. Sem essa checagem, tocar numa opção deles conta como
+      // clique fora e fecha o "revealed" no pointerdown, antes do toque
+      // terminar — no iOS isso cancela o clique sintético (a UI muda no meio
+      // do toque), então a opção nunca chegava a ser selecionada.
+      if (target.closest('[role="menu"], [role="dialog"]')) return;
+      setRevealed(false);
     };
     document.addEventListener("pointerdown", onOutside, true);
     return () => document.removeEventListener("pointerdown", onOutside, true);
