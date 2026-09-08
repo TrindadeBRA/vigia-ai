@@ -8,7 +8,7 @@ import { cursorFail, fetchCursorAccounts } from "./providers/cursor.js";
 import { deepseekFail, fetchDeepseekAccounts } from "./providers/deepseek.js";
 import { falFail, fetchFalAccounts } from "./providers/fal.js";
 import { fetchGitRepos, mockGitPayload } from "./providers/git.js";
-import { fetchGithubRepos, mockGithubPayload } from "./providers/github.js";
+import { fetchGithubProfiles, fetchGithubRepos, mockGithubPayload } from "./providers/github.js";
 import { fetchGptAccounts, gptFail } from "./providers/gpt.js";
 import { fetchOpencodeAccounts, opencodeFail } from "./providers/opencode.js";
 import { fetchOpenrouterAccounts, openrouterFail } from "./providers/openrouter.js";
@@ -293,7 +293,8 @@ async function fetchGithub(cfg: Record<string, unknown>, force: boolean): Promis
   const ghCfg = (cfg.github ?? {}) as Record<string, unknown>;
   if (ghCfg.hidden || !ghCfg.enabled) return null;
   const repos = Array.isArray(ghCfg.repos) ? ghCfg.repos as unknown[] : [];
-  if (repos.length === 0) return { ok: true, error: null, updated_at: utcNow(), repos: [] };
+  const profiles = Array.isArray(ghCfg.profiles) ? ghCfg.profiles as unknown[] : [];
+  if (repos.length === 0 && profiles.length === 0) return { ok: true, error: null, updated_at: utcNow(), repos: [], profiles: [] };
   if (cfg.mock) return mockGithubPayload() as Record<string, unknown>;
   const fp = fingerprint(cfg, "github");
   if (!cache.due("github", { fingerprint: fp, force })) {
@@ -301,11 +302,11 @@ async function fetchGithub(cfg: Record<string, unknown>, force: boolean): Promis
     if (hit !== null && hit !== undefined) return hit as Record<string, unknown>;
   }
   try {
-    const reposData = await fetchGithubRepos(cfg);
-    const value = { ok: true, error: null, updated_at: utcNow(), repos: reposData };
+    const [reposData, profilesData] = await Promise.all([fetchGithubRepos(cfg), fetchGithubProfiles(cfg)]);
+    const value = { ok: true, error: null, updated_at: utcNow(), repos: reposData, profiles: profilesData };
     return cache.take("github", value, { fingerprint: fp }) as Record<string, unknown>;
   } catch (exc) {
-    const value = { ok: false, error: String(exc), updated_at: utcNow(), repos: [] };
+    const value = { ok: false, error: String(exc), updated_at: utcNow(), repos: [], profiles: [] };
     return cache.take("github", value, { fingerprint: fp, error: exc }) as Record<string, unknown>;
   }
 }
@@ -378,9 +379,8 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
       if (!rssCfg.enabled || (Array.isArray(rssCfg.feeds) && (rssCfg.feeds as unknown[]).length === 0)) payload.rss = null;
     }
     const ghCfg = (cfg.github ?? {}) as Record<string, unknown>;
-    if (ghCfg.hidden || !ghCfg.enabled || (Array.isArray(ghCfg.repos) && (ghCfg.repos as unknown[]).length === 0)) {
-      if (!ghCfg.enabled || (Array.isArray(ghCfg.repos) && (ghCfg.repos as unknown[]).length === 0)) payload.github = null;
-    }
+    const ghHasItems = (Array.isArray(ghCfg.repos) && (ghCfg.repos as unknown[]).length > 0) || (Array.isArray(ghCfg.profiles) && (ghCfg.profiles as unknown[]).length > 0);
+    if (!ghCfg.enabled || ghCfg.hidden || !ghHasItems) payload.github = null;
     return payload;
   }
 
@@ -426,6 +426,7 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     error: String(exc),
     updated_at: utcNow(),
     repos: [],
+    profiles: [],
   }));
   const resultsArray = await Promise.all(providerPromises);
   const results: Record<string, unknown> = {};
@@ -465,7 +466,7 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
   try {
     results.github = await githubPromise;
   } catch (exc) {
-    results.github = { ok: false, error: String(exc), updated_at: utcNow(), repos: [] };
+    results.github = { ok: false, error: String(exc), updated_at: utcNow(), repos: [], profiles: [] };
   }
 
   // storage + system are local, no external API — always fresh

@@ -363,6 +363,8 @@ export type ConfigCopy = {
   githubNoPreview: string;
   githubPreviewOk: string;
   githubPreviewFail: string;
+  githubProfileTitle: string;
+  githubProfileLead: string;
   githubProfileLabel: string;
   githubProfilePh: string;
   githubProfileHint: string;
@@ -793,6 +795,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Digite um repositório para testar.",
     githubPreviewOk: "Repositório acessível.",
     githubPreviewFail: "Não foi possível acessar.",
+    githubProfileTitle: "GitHub — perfis",
+    githubProfileLead: "Adicione perfis públicos do GitHub para ver bio, seguidores e os repositórios fixados direto no painel. Usa a API pública do GitHub, sem necessidade de login.",
     githubProfileLabel: "Perfil (usuário do GitHub)",
     githubProfilePh: "ex.: torvalds",
     githubProfileHint: "Mostra bio, seguidores e os repositórios fixados no perfil público. Também via API pública, sem login.",
@@ -1218,6 +1222,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Type a repository to test.",
     githubPreviewOk: "Repository reachable.",
     githubPreviewFail: "Could not reach repository.",
+    githubProfileTitle: "GitHub — profiles",
+    githubProfileLead: "Add public GitHub profiles to see bio, followers and pinned repositories right on the board. Uses the public GitHub API, no login required.",
     githubProfileLabel: "Profile (GitHub username)",
     githubProfilePh: "e.g. torvalds",
     githubProfileHint: "Shows bio, followers and the pinned repositories on the public profile. Also via public API, no login.",
@@ -1643,6 +1649,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Escribe un repositorio para probar.",
     githubPreviewOk: "Repositorio accesible.",
     githubPreviewFail: "No se pudo acceder.",
+    githubProfileTitle: "GitHub — perfiles",
+    githubProfileLead: "Agrega perfiles públicos de GitHub para ver bio, seguidores y los repositorios fijados en el panel. Usa la API pública de GitHub, sin necesidad de login.",
     githubProfileLabel: "Perfil (usuario de GitHub)",
     githubProfilePh: "ej.: torvalds",
     githubProfileHint: "Muestra bio, seguidores y los repositorios fijados en el perfil público. También vía API pública, sin login.",

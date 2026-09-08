@@ -10,7 +10,6 @@ import {
   dropTarget,
   duplicateBoard,
   emptyCells,
-  getCustomRect,
   isCloneId,
   normalizeSize,
   packBoard,
@@ -642,7 +641,7 @@ export function Overview({
         open={Boolean(freeTarget)}
         onClose={() => setFreeTarget(null)}
         cols={cols}
-        initial={freeTarget ? getCustomRect(layout, freeTarget) : null}
+        initial={freeTarget ? cardRect(layout, freeTarget, cols) : null}
         t={t}
         onApply={(rect) => {
           if (!freeTarget) return;

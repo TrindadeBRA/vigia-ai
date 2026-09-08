@@ -97,45 +97,8 @@ export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig
     const add = useRequest();
     const doPreview = useRequest();
 
-    const [username, setUsername] = useState("");
-    const [profileLabel, setProfileLabel] = useState("");
-    const [profilePreview, setProfilePreview] = useState<{ ok: boolean; error?: string; followers?: number | null } | null>(null);
-    const addProfile = useRequest();
-    const doProfilePreview = useRequest();
-
     const hint = github.repos.length ? `${github.repos.length} repositório${github.repos.length === 1 ? "" : "s"}` : c.githubEmpty;
     const listSummary = github.repos.length ? `${c.githubListLabel} (${github.repos.length})` : c.githubListLabel;
-    const profileListSummary = github.profiles.length ? `${c.githubProfileListLabel} (${github.profiles.length})` : c.githubProfileListLabel;
-
-    async function handleProfilePreview() {
-        const u = username.trim();
-        if (!u) { setProfilePreview({ ok: false, error: c.githubProfileNoPreview }); return; }
-        setProfilePreview(null);
-        await doProfilePreview.run(async () => {
-            try {
-                const data = await apiPost("/api/github/profiles/preview", { username: u, label: profileLabel.trim() }) as { ok: boolean; error?: string; followers?: number | null };
-                setProfilePreview(data);
-                return { ok: data.ok, error: data.error } as { ok: boolean; error?: string };
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : String(e);
-                setProfilePreview({ ok: false, error: msg });
-                return { ok: false, error: msg };
-            }
-        }, { success: c.githubProfilePreviewOk, error: c.githubProfilePreviewFail });
-    }
-
-    async function handleAddProfile() {
-        const u = username.trim();
-        if (!u) return;
-        await addProfile.run(async () => {
-            const res = await apiPost("/api/github/profiles", { username: u, label: profileLabel.trim() });
-            if ((res as { ok?: boolean }).ok) {
-                await onReload();
-                setUsername(""); setProfileLabel(""); setProfilePreview(null);
-            }
-            return res as { ok: boolean; error?: string };
-        }, { success: c.added, error: c.offline });
-    }
 
     async function handlePreview() {
         const r = repo.trim();
@@ -237,6 +200,81 @@ export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig
                     {add.message ? <FieldStatus status={add.status} message={add.message} /> : null}
                 </div>
             </Fold>
+        </article>
+    );
+}
+
+export function GithubProfilesConfigCard({ github, c, onReload }: { github: GithubConfig; c: ConfigCopy; onReload: () => Promise<void> }) {
+    const [username, setUsername] = useState("");
+    const [profileLabel, setProfileLabel] = useState("");
+    const [profilePreview, setProfilePreview] = useState<{ ok: boolean; error?: string; followers?: number | null } | null>(null);
+
+    const toggleEnabled = useRequest();
+    const addProfile = useRequest();
+    const doProfilePreview = useRequest();
+
+    const hint = github.profiles.length ? `${github.profiles.length} perfil${github.profiles.length === 1 ? "" : "is"}` : c.githubProfilesEmpty;
+    const profileListSummary = github.profiles.length ? `${c.githubProfileListLabel} (${github.profiles.length})` : c.githubProfileListLabel;
+
+    async function handleProfilePreview() {
+        const u = username.trim();
+        if (!u) { setProfilePreview({ ok: false, error: c.githubProfileNoPreview }); return; }
+        setProfilePreview(null);
+        await doProfilePreview.run(async () => {
+            try {
+                const data = await apiPost("/api/github/profiles/preview", { username: u, label: profileLabel.trim() }) as { ok: boolean; error?: string; followers?: number | null };
+                setProfilePreview(data);
+                return { ok: data.ok, error: data.error } as { ok: boolean; error?: string };
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setProfilePreview({ ok: false, error: msg });
+                return { ok: false, error: msg };
+            }
+        }, { success: c.githubProfilePreviewOk, error: c.githubProfilePreviewFail });
+    }
+
+    async function handleAddProfile() {
+        const u = username.trim();
+        if (!u) return;
+        await addProfile.run(async () => {
+            const res = await apiPost("/api/github/profiles", { username: u, label: profileLabel.trim() });
+            if ((res as { ok?: boolean }).ok) {
+                await onReload();
+                setUsername(""); setProfileLabel(""); setProfilePreview(null);
+            }
+            return res as { ok: boolean; error?: string };
+        }, { success: c.added, error: c.offline });
+    }
+
+    return (
+        <article className={`${cfgCard} gap-3`}>
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                    <div className={iconChip}>
+                        {PROVIDER_ICON.github ? <img className={iconImg} src={PROVIDER_ICON.github} alt="" draggable={false} /> : <span className="text-[18px]">🐙</span>}
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="m-0 text-[15.5px] font-bold">{c.githubProfileTitle}</h3>
+                        <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
+                    </div>
+                </div>
+                <Switch
+                    label={c.showOnBoard}
+                    checked={github.enabled && !github.hidden}
+                    busy={toggleEnabled.busy}
+                    onChange={async (e) => {
+                        const next = e.target.checked;
+                        await toggleEnabled.run(async () => {
+                            const res = await apiPatch("/api/github/config", { enabled: next, hidden: !next });
+                            await onReload();
+                            return res as { ok: boolean; error?: string };
+                        }, { success: c.saved, error: c.offline });
+                    }}
+                />
+            </div>
+            {toggleEnabled.message ? <FieldStatus status={toggleEnabled.status} message={toggleEnabled.message} /> : null}
+
+            <p className="m-0 text-[12.5px] leading-[1.5] text-ink2">{c.githubProfileLead}</p>
 
             <Fold summary={profileListSummary}>
                 {github.profiles.length ? (
