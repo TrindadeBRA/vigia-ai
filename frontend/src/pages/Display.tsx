@@ -39,6 +39,12 @@ import NowPage from "./NowPage";
 export default function Display() {
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
+
+  // O scroll acontece dentro do <main>, não no document — sem isso, trocar
+  // de rota (ex.: voltar pra "Visão geral") mantém a posição antiga.
+  useEffect(() => {
+    document.querySelector("main")?.scrollTo(0, 0);
+  }, [pathname]);
   const isKiosk = (() => {
     const v = new URLSearchParams(search).get("kiosk");
     return v === "1" || v?.toLowerCase() === "true";

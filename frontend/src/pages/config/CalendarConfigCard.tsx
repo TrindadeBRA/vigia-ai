@@ -1,15 +1,21 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, iconChip, iconImg } from "../../tw";
 import type { ConfigCopy } from "./copy";
 import { Button, FieldStatus, Fold, SelectField, Switch, TextField } from "./ui";
 
-type CalendarItem = { id: string; url: string; label: string; kind: "events" | "tasks"; limit: number };
+type CalendarItem = { id: string; url: string; label: string; kind: "events" | "tasks"; limit: number; sourceType?: "url" | "file" };
 type CalendarConfig = { enabled: boolean; hidden: boolean; calendars: CalendarItem[] };
 
 async function apiPost(path: string, body: unknown) {
     const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as { error?: string }).error || `HTTP ${res.status}`);
+    return data;
+}
+async function apiUpload(path: string, fd: FormData) {
+    const res = await fetch(path, { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error((data as { error?: string }).error || `HTTP ${res.status}`);
     return data;
@@ -44,7 +50,7 @@ function CalendarRow({ item, c, onReload }: { item: CalendarItem; c: ConfigCopy;
                         {item.label || item.url.slice(0, 32)}
                         <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${item.kind === "tasks" ? "bg-accent text-accent-ink" : "bg-chip text-ink2"}`}>{item.kind === "tasks" ? "Tarefas" : "Eventos"}</span>
                     </p>
-                    <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{item.url} · {item.limit} itens</p>
+                    <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{item.sourceType === "file" ? c.calendarFileSourceNote : item.url} · {item.limit} itens</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                     <Button variant="ghost" className="px-2 py-1 text-[11px]" onClick={() => setEditing((v) => !v)}>{editing ? "Cancelar" : "Editar"}</Button>
@@ -53,13 +59,15 @@ function CalendarRow({ item, c, onReload }: { item: CalendarItem; c: ConfigCopy;
             </div>
             {editing ? (
                 <div className="flex flex-col gap-2 border-t border-edge pt-2">
-                    <TextField label={c.calendarUrlLabel} value={url} onChange={(e) => setUrl(e.target.value)} placeholder={c.calendarUrlPh} />
+                    {item.sourceType === "file" ? <p className="m-0 text-[11px] leading-snug text-ink3">{c.calendarFileSourceNote}</p> : (
+                        <TextField label={c.calendarUrlLabel} value={url} onChange={(e) => setUrl(e.target.value)} placeholder={c.calendarUrlPh} />
+                    )}
                     <TextField label={c.calendarLabelLabel} value={label} onChange={(e) => setLabel(e.target.value)} placeholder={c.calendarLabelPh} />
                     <div className="flex gap-2">
                         <SelectField label={c.calendarKindLabel} value={kind} onChange={(e) => setKind(e.target.value as "events" | "tasks")} options={[{ value: "events", label: c.calendarKindEvents }, { value: "tasks", label: c.calendarKindTasks }]} />
                         <SelectField label={c.calendarLimitLabel} value={limit} onChange={(e) => setLimit(e.target.value)} options={["3", "5", "10", "15", "20", "30", "50"].map((v) => ({ value: v, label: v }))} />
                     </div>
-                    <Button loading={save.busy} onClick={() => save.run(async () => { const r = await apiPatch(`/api/calendar/calendars/${item.id}`, { url, label, kind, limit: Number(limit) }); await onReload(); setEditing(false); return r; }, { success: c.saved, error: c.offline })}>{save.busy ? c.saving : c.save}</Button>
+                    <Button loading={save.busy} onClick={() => save.run(async () => { const body = item.sourceType === "file" ? { label, kind, limit: Number(limit) } : { url, label, kind, limit: Number(limit) }; const r = await apiPatch(`/api/calendar/calendars/${item.id}`, body); await onReload(); setEditing(false); return r; }, { success: c.saved, error: c.offline })}>{save.busy ? c.saving : c.save}</Button>
                     {save.message ? <FieldStatus status={save.status} message={save.message} /> : null}
                 </div>
             ) : null}
@@ -74,10 +82,12 @@ export function CalendarConfigCard({ calendar, c, onReload }: { calendar: Calend
     const [kind, setKind] = useState<"events" | "tasks">("events");
     const [limit, setLimit] = useState("5");
     const [preview, setPreview] = useState<{ ok: boolean; error?: string; events?: unknown[] } | null>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
 
     const toggleEnabled = useRequest();
     const add = useRequest();
     const doPreview = useRequest();
+    const upload = useRequest();
 
     const hint = calendar.calendars.length ? `${calendar.calendars.length} calendário${calendar.calendars.length === 1 ? "" : "s"}` : c.calendarEmpty;
     const listSummary = calendar.calendars.length ? `${c.calendarListLabel} (${calendar.calendars.length})` : c.calendarListLabel;
@@ -110,6 +120,22 @@ export function CalendarConfigCard({ calendar, c, onReload }: { calendar: Calend
             }
             return res as { ok: boolean; error?: string };
         }, { success: c.added, error: c.offline });
+    }
+
+    async function handleUploadFile(file: File) {
+        await upload.run(async () => {
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("label", label.trim());
+            fd.append("kind", kind);
+            fd.append("limit", limit);
+            const res = await apiUpload("/api/calendar/calendars/upload", fd);
+            if ((res as { ok?: boolean }).ok) {
+                await onReload();
+                setUrl(""); setLabel(""); setPreview(null);
+            }
+            return res as { ok: boolean; error?: string };
+        }, { success: c.added, error: c.calendarUploadError });
     }
 
     return (
@@ -185,6 +211,28 @@ export function CalendarConfigCard({ calendar, c, onReload }: { calendar: Calend
                     ) : null}
                     {doPreview.message ? <FieldStatus status={doPreview.status} message={doPreview.message} /> : null}
                     {add.message ? <FieldStatus status={add.status} message={add.message} /> : null}
+
+                    <div className="flex items-center gap-2 text-[11px] text-ink3">
+                        <span className="h-px flex-1 bg-edge" />
+                        {c.calendarUploadDivider}
+                        <span className="h-px flex-1 bg-edge" />
+                    </div>
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        accept=".ics,text/calendar"
+                        className="hidden"
+                        onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void handleUploadFile(f);
+                            e.target.value = "";
+                        }}
+                    />
+                    <Button variant="secondary" loading={upload.busy} onClick={() => fileRef.current?.click()}>
+                        {upload.busy ? c.calendarUploading : c.calendarUploadButton}
+                    </Button>
+                    <p className="m-0 text-[11px] leading-snug text-ink3">{c.calendarUploadHint}</p>
+                    {upload.message ? <FieldStatus status={upload.status} message={upload.message} /> : null}
                 </div>
             </Fold>
         </article>

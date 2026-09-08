@@ -3,13 +3,45 @@
  * Aceita qualquer URL que retorne text/calendar — normaliza webcal:// -> https://
  * e valida SSRF antes de buscar.
  */
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { dataDir } from "../config.js";
 import { utcNow } from "../formatting.js";
 
 const FETCH_TIMEOUT_MS = 15_000;
-const MAX_ICS_BYTES = 2_000_000;
+export const MAX_ICS_BYTES = 2_000_000;
 const MAX_EVENTS_PER_SOURCE = 50;
 
 export type CalendarKind = "events" | "tasks";
+export type CalendarSourceType = "url" | "file";
+
+// ── Arquivo .ics enviado direto (sem link público) ──────────────────
+// Guardado como bytes crus em disco; o "url" do item de config fica vazio
+// para esses calendários — ver CalendarConfigItemSchema.sourceType.
+
+export function calendarsDir(): string {
+    return join(dataDir(), "calendars");
+}
+
+function calendarIcsPath(id: string): string {
+    return join(calendarsDir(), `${id}.ics`);
+}
+
+export function saveCalendarIcsFile(id: string, buf: Buffer): void {
+    mkdirSync(calendarsDir(), { recursive: true });
+    writeFileSync(calendarIcsPath(id), buf);
+}
+
+export function deleteCalendarIcsFile(id: string): void {
+    try {
+        const p = calendarIcsPath(id);
+        if (existsSync(p)) unlinkSync(p);
+    } catch { /* best-effort */ }
+}
+
+function readCalendarIcsFile(id: string): string {
+    return readFileSync(calendarIcsPath(id), "utf-8");
+}
 
 export type CalendarEvent = {
     uid: string | null;
@@ -377,12 +409,27 @@ function filterAndSort(events: CalendarEvent[], kind: CalendarKind, limit: numbe
     return filtered.slice(0, clampLimit(limit));
 }
 
-export async function fetchCalendarSource(cfg: { id: string; url: string; label?: string; kind?: CalendarKind; limit?: number }): Promise<CalendarSourceResult> {
+export async function fetchCalendarSource(cfg: { id: string; url: string; label?: string; kind?: CalendarKind; limit?: number; sourceType?: CalendarSourceType }): Promise<CalendarSourceResult> {
     const id = String(cfg.id);
     const url = normalizeCalendarUrl(String(cfg.url ?? "").trim());
     const label = String(cfg.label ?? "").trim();
     const kind: CalendarKind = cfg.kind === "tasks" ? "tasks" : "events";
     const limit = clampLimit(cfg.limit ?? 5);
+    const sourceType: CalendarSourceType = cfg.sourceType === "file" ? "file" : "url";
+
+    if (sourceType === "file") {
+        try {
+            const icsText = readCalendarIcsFile(id);
+            if (!icsText.trim()) throw new Error("arquivo .ics vazio");
+            if (!/BEGIN:VCALENDAR/i.test(icsText)) throw new Error("arquivo não é um calendário ICS válido");
+            const parsed = parseIcs(icsText, kind);
+            const sliced = filterAndSort(parsed, kind, limit);
+            return { id, label, url, kind, limit, ok: true, error: null, events: sliced, updated_at: utcNow() };
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            return { id, label, url, kind, limit, ok: false, error: msg.slice(0, 500), events: [], updated_at: utcNow() };
+        }
+    }
 
     if (!url) {
         return { id, label, url, kind, limit, ok: false, error: "URL vazia", events: [], updated_at: utcNow() };
@@ -417,6 +464,7 @@ export async function fetchCalendarSources(cfg: Record<string, unknown>): Promis
                 label: String(c.label ?? ""),
                 kind: (c.kind === "tasks" ? "tasks" : "events") as CalendarKind,
                 limit: clampLimit(c.limit ?? 5),
+                sourceType: (c.sourceType === "file" ? "file" : "url") as CalendarSourceType,
             }),
         ),
     );

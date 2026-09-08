@@ -389,6 +389,12 @@ export type ConfigCopy = {
   calendarUrlLabel: string;
   calendarUrlPh: string;
   calendarUrlHint: string;
+  calendarUploadDivider: string;
+  calendarUploadButton: string;
+  calendarUploading: string;
+  calendarUploadHint: string;
+  calendarUploadError: string;
+  calendarFileSourceNote: string;
   calendarLabelLabel: string;
   calendarLabelPh: string;
   calendarKindLabel: string;
@@ -804,6 +810,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     calendarUrlLabel: "Link público (ICS)",
     calendarUrlPh: "https://calendar.google.com/calendar/ical/.../public/basic.ics",
     calendarUrlHint: "Google: Configurações do calendário → Integrar calendário → Endereço secreto em formato iCal. Outlook: Compartilhar → Publicar → link ICS. iCloud: Compartilhar calendário → Público → Copiar link. Também aceita webcal://.",
+    calendarUploadDivider: "ou envie um arquivo .ics",
+    calendarUploadButton: "Escolher arquivo .ics",
+    calendarUploading: "Enviando…",
+    calendarUploadHint: "Use quando não houver link público disponível (ex.: agenda corporativa sem endereço secreto liberado pelo admin). O arquivo fica congelado no momento do envio — não atualiza sozinho.",
+    calendarUploadError: "Não foi possível importar o arquivo .ics.",
+    calendarFileSourceNote: "Arquivo enviado (sem link — não atualiza sozinho)",
     calendarLabelLabel: "Nome (opcional)",
     calendarLabelPh: "ex.: Trabalho, Pessoal",
     calendarKindLabel: "Tipo",
@@ -1216,6 +1228,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     calendarUrlLabel: "Public link (ICS)",
     calendarUrlPh: "https://calendar.google.com/calendar/ical/.../public/basic.ics",
     calendarUrlHint: "Google: Calendar settings → Integrate calendar → Secret address in iCal format. Outlook: Share → Publish → ICS link. iCloud: Share calendar → Public → Copy link. Also accepts webcal://.",
+    calendarUploadDivider: "or upload an .ics file",
+    calendarUploadButton: "Choose .ics file",
+    calendarUploading: "Uploading…",
+    calendarUploadHint: "Use this when no public link is available (e.g. a corporate calendar whose admin hasn't enabled the secret address). The file is frozen at upload time — it won't refresh on its own.",
+    calendarUploadError: "Could not import the .ics file.",
+    calendarFileSourceNote: "Uploaded file (no link — won't refresh on its own)",
     calendarLabelLabel: "Name (optional)",
     calendarLabelPh: "e.g. Work, Personal",
     calendarKindLabel: "Type",
@@ -1628,6 +1646,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     calendarUrlLabel: "Enlace público (ICS)",
     calendarUrlPh: "https://calendar.google.com/calendar/ical/.../public/basic.ics",
     calendarUrlHint: "Google: Ajustes del calendario → Integrar calendario → Dirección secreta en formato iCal. Outlook: Compartir → Publicar → enlace ICS. iCloud: Compartir calendario → Público → Copiar enlace. También acepta webcal://.",
+    calendarUploadDivider: "o sube un archivo .ics",
+    calendarUploadButton: "Elegir archivo .ics",
+    calendarUploading: "Subiendo…",
+    calendarUploadHint: "Úsalo cuando no haya un enlace público disponible (ej.: agenda corporativa sin la dirección secreta habilitada por el admin). El archivo queda congelado al momento de subirlo — no se actualiza solo.",
+    calendarUploadError: "No se pudo importar el archivo .ics.",
+    calendarFileSourceNote: "Archivo subido (sin enlace — no se actualiza solo)",
     calendarLabelLabel: "Nombre (opcional)",
     calendarLabelPh: "ej.: Trabajo, Personal",
     calendarKindLabel: "Tipo",

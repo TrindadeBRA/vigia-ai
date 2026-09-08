@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { fetchCalendarSource } from "../providers/calendar.js";
+import { deleteCalendarIcsFile, fetchCalendarSource, MAX_ICS_BYTES, saveCalendarIcsFile } from "../providers/calendar.js";
 import { load, updateSync as update } from "../store.js";
 
 function clampLimit(v: unknown): number {
@@ -60,7 +60,64 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
       const c = (cfg.calendar ?? {}) as Record<string, unknown>;
       if (!cfg.calendar) cfg.calendar = c;
       const list = Array.isArray(c.calendars) ? [...(c.calendars as unknown[])] : [];
-      list.push({ id, url, label, kind, limit });
+      list.push({ id, url, label, kind, limit, sourceType: "url" });
+      c.calendars = list;
+      c.enabled = true;
+      c.hidden = false;
+    });
+    const cfg = load() as Record<string, unknown>;
+    return { ok: true, id, config: cfg.calendar };
+  });
+
+  // POST — envia um arquivo .ics local (sem link público disponível, ex.:
+  // agenda corporativa cujo admin do Workspace desabilitou o endereço secreto).
+  app.post("/api/calendar/calendars/upload", async (request, reply) => {
+    const contentType = String(request.headers["content-type"] ?? "");
+    if (!contentType.includes("multipart/form-data")) {
+      return reply.code(400).send({ ok: false, error: "envie como multipart/form-data (campo file)" });
+    }
+    const anyRequest = request as unknown as {
+      parts: () => AsyncIterableIterator<
+        | { type: "file"; fieldname: string; toBuffer: () => Promise<Buffer> }
+        | { type: "field"; fieldname: string; value: unknown }
+      >;
+    };
+    let fileBuf: Buffer | null = null;
+    let label = "";
+    let kind: "events" | "tasks" = "events";
+    let limit = 5;
+    for await (const part of anyRequest.parts()) {
+      if (part.type === "file") {
+        if (!fileBuf && part.fieldname === "file") fileBuf = await part.toBuffer();
+        else await part.toBuffer();
+      } else if (part.fieldname === "label") {
+        label = String(part.value ?? "").trim();
+      } else if (part.fieldname === "kind") {
+        kind = String(part.value ?? "") === "tasks" ? "tasks" : "events";
+      } else if (part.fieldname === "limit") {
+        limit = clampLimit(part.value);
+      }
+    }
+    if (!fileBuf || fileBuf.length === 0) {
+      return reply.code(400).send({ ok: false, error: "campo file (.ics) obrigatório" });
+    }
+    if (fileBuf.length > MAX_ICS_BYTES) {
+      return reply.code(413).send({ ok: false, error: "arquivo .ics muito grande" });
+    }
+
+    const id = randomBytes(4).toString("hex");
+    saveCalendarIcsFile(id, fileBuf);
+    const validated = await fetchCalendarSource({ id, url: "", label, kind, limit, sourceType: "file" });
+    if (!validated.ok) {
+      deleteCalendarIcsFile(id);
+      return reply.code(400).send({ ok: false, error: validated.error || "arquivo .ics inválido" });
+    }
+
+    update((cfg: Record<string, unknown>) => {
+      const c = (cfg.calendar ?? {}) as Record<string, unknown>;
+      if (!cfg.calendar) cfg.calendar = c;
+      const list = Array.isArray(c.calendars) ? [...(c.calendars as unknown[])] : [];
+      list.push({ id, url: "", label, kind, limit, sourceType: "file" });
       c.calendars = list;
       c.enabled = true;
       c.hidden = false;
@@ -81,16 +138,31 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
     if (idx === -1) return reply.code(404).send({ ok: false, error: "calendário não encontrado" });
 
     const current = list[idx];
-    const nextUrl = body.url != null ? normalizeUrl(String(body.url).trim()) : String(current.url);
+    const isFile = current.sourceType === "file";
     const nextLabel = body.label != null ? String(body.label).trim() : String(current.label ?? "");
     const nextKind = body.kind != null ? (body.kind === "tasks" ? "tasks" : "events") : String(current.kind ?? "events");
     const nextLimit = body.limit != null ? clampLimit(body.limit) : Number(current.limit ?? 5);
 
+    // Calendário enviado como arquivo: sem link pra editar/revalidar, só label/kind/limit.
+    if (isFile) {
+      update((cfg2: Record<string, unknown>) => {
+        const cc = (cfg2.calendar ?? {}) as Record<string, unknown>;
+        const ll = Array.isArray(cc.calendars) ? cc.calendars as Array<Record<string, unknown>> : [];
+        const i = ll.findIndex((r) => String(r.id) === id);
+        if (i === -1) return;
+        ll[i] = { ...ll[i], label: nextLabel, kind: nextKind, limit: nextLimit };
+        cc.calendars = ll;
+      });
+      const updated = load() as Record<string, unknown>;
+      return { ok: true, config: updated.calendar };
+    }
+
+    const nextUrl = body.url != null ? normalizeUrl(String(body.url).trim()) : String(current.url);
     if (!nextUrl) return reply.code(400).send({ ok: false, error: "url não pode ser vazia" });
     try { new URL(nextUrl); } catch { return reply.code(400).send({ ok: false, error: "URL inválida" }); }
 
     if (nextUrl !== String(current.url)) {
-      const probe = await fetchCalendarSource({ id, url: nextUrl, label: nextLabel, kind: nextKind as "events" | "tasks", limit: nextLimit });
+      const probe = await fetchCalendarSource({ id, url: nextUrl, label: nextLabel, kind: nextKind as "events" | "tasks", limit: nextLimit, sourceType: "url" });
       if (!probe.ok) return reply.code(400).send({ ok: false, error: probe.error || "Não foi possível acessar o calendário" });
     }
 
@@ -99,7 +171,7 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
       const ll = Array.isArray(cc.calendars) ? cc.calendars as Array<Record<string, unknown>> : [];
       const i = ll.findIndex((r) => String(r.id) === id);
       if (i === -1) return;
-      ll[i] = { ...ll[i], url: nextUrl, label: nextLabel, kind: nextKind, limit: nextLimit };
+      ll[i] = { ...ll[i], url: nextUrl, label: nextLabel, kind: nextKind, limit: nextLimit, sourceType: "url" };
       cc.calendars = ll;
     });
     const updated = load() as Record<string, unknown>;
@@ -112,6 +184,8 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
       const c = (cfg.calendar ?? {}) as Record<string, unknown>;
       if (!cfg.calendar) cfg.calendar = c;
       const list = Array.isArray(c.calendars) ? c.calendars as Array<Record<string, unknown>> : [];
+      const removed = list.find((r) => String(r.id) === id);
+      if (removed && removed.sourceType === "file") deleteCalendarIcsFile(id);
       c.calendars = list.filter((r) => String(r.id) !== id);
     });
     return { ok: true };

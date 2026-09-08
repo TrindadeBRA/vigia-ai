@@ -596,17 +596,20 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
     for (const it of rawCals) {
       if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
       const r = it as Record<string, unknown>;
+      const sourceType = r.sourceType === "file" ? "file" : "url";
       const url = String(r.url ?? "").trim();
-      if (!url) continue;
+      // "file": conteúdo vive em disco (calendarsDir), sem link — url fica vazia de propósito.
+      if (sourceType === "url" && !url) continue;
       let limit = 5;
       try { const v = parseInt(String(r.limit ?? 5), 10); if (!Number.isNaN(v)) limit = Math.max(1, Math.min(50, v)); } catch { }
       const kind = r.kind === "tasks" ? "tasks" : "events";
       cleaned.push({
         id: String(r.id),
-        url,
+        url: sourceType === "file" ? "" : url,
         label: String(r.label ?? ""),
         kind,
         limit,
+        sourceType,
       });
     }
     cal.calendars = cleaned;

@@ -3,6 +3,9 @@ import { z } from "zod";
 export const CalendarKindSchema = z.enum(["events", "tasks"]);
 export type CalendarKind = z.infer<typeof CalendarKindSchema>;
 
+export const CalendarSourceTypeSchema = z.enum(["url", "file"]);
+export type CalendarSourceType = z.infer<typeof CalendarSourceTypeSchema>;
+
 export const CalendarEventSchema = z.object({
     uid: z.string().nullable().default(null),
     summary: z.string().default(""),
@@ -41,7 +44,9 @@ export type CalendarPayload = z.infer<typeof CalendarPayloadSchema>;
 export const CalendarConfigItemSchema = z.object({
     id: z.string(),
     label: z.string().default(""),
-    url: z.string().min(1),
+    // vazio quando sourceType === "file" (o conteúdo fica em disco, não aqui)
+    url: z.string().default(""),
+    sourceType: CalendarSourceTypeSchema.default("url"),
     kind: CalendarKindSchema.default("events"),
     limit: z.number().int().min(1).max(50).default(5),
 });
