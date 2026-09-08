@@ -63,8 +63,17 @@ void loop()
   if (g_view == VIEW_CAMERA)
   {
     inputPoll();
+    cameraClientTickLive();
     uiTickCamera();
     delay(1);
+    return;
+  }
+  if (g_view == VIEW_CAMERAS)
+  {
+    inputPoll();
+    uiTickClock();
+    cameraClientPoll();
+    delay(20);
     return;
   }
 
@@ -88,7 +97,10 @@ void loop()
       g_requestRefresh = false;
       usageClientFetch();
     }
-    usageClientPoll();
+    if (g_view != VIEW_CAMERAS)
+    {
+      usageClientPoll();
+    }
   }
   else if (now - g_lastFetchMs > 5000)
   {

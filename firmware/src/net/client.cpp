@@ -156,6 +156,7 @@ static String usageEventsUrl()
 static HTTPClient g_http;
 static WiFiClient *g_stream = nullptr;
 static bool g_sseOpen = false;
+static bool g_ssePaused = false;
 static String g_sseLine;
 static String g_sseData;
 static uint32_t g_sseLastByteMs = 0;
@@ -179,6 +180,30 @@ static void sseClose()
   }
   g_sseLine = "";
   g_sseData = "";
+}
+
+void usageClientPauseSse()
+{
+  if (g_ssePaused)
+  {
+    sseClose();
+    return;
+  }
+  g_ssePaused = true;
+  sseClose();
+  Serial.println("coletor SSE: pausado (camera)");
+}
+
+void usageClientResumeSse()
+{
+  if (!g_ssePaused)
+  {
+    return;
+  }
+  g_ssePaused = false;
+  g_sseRetryAt = 0;
+  g_sseRetryWait = 2000;
+  Serial.println("coletor SSE: retomado");
 }
 
 static void sseHandleLine(const String &raw)
@@ -280,6 +305,10 @@ static void sseOpen()
 
 void usageClientPoll()
 {
+  if (g_ssePaused)
+  {
+    return;
+  }
   uint32_t now = millis();
   if (!g_sseOpen)
   {

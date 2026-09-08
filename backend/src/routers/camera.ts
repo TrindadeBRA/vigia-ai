@@ -179,7 +179,7 @@ function spawnFfmpegStream(
     "-an",
     "-vf", vf,
     ...(forBoard ? [] : ["-r", "10"]),
-    "-q:v", forBoard ? "14" : "6",
+    "-q:v", forBoard ? "16" : "6",
     "-f", "mjpeg",
     "-flush_packets", "1",
     "-",

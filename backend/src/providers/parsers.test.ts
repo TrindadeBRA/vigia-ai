@@ -98,7 +98,16 @@ describe("parsers — cursor", () => {
     expect(parsed!.ok).toBe(true);
     expect(parsed!.percent).toBe(35.0);
     expect(parsed!.used_cents).toBe(700);
-    expect(parsed!.plan).toBe("pro");
+    expect(parsed!.plan).toBe("PRO");
+  });
+
+  it("membershipType pro vira PRO mesmo sem plan local", () => {
+    const parsed = parseCursorDashboard(
+      { planUsage: { autoPercentUsed: 10, apiPercentUsed: 0 }, spendLimitUsage: { individualLimit: 1000, individualRemaining: 1000 }, membershipType: "pro" } as Record<string, unknown>,
+      null,
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed!.plan).toBe("PRO");
   });
 
   it("new cycle 1 percent", () => {

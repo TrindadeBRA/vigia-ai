@@ -18,10 +18,11 @@
 #include <HTTPClient.h>
 #include <TJpg_Decoder.h>
 #include <WiFi.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 
 #include <ArduinoJson.h>
+#include <cstdio>
+#include <cstring>
+#include <esp_task_wdt.h>
 
 namespace
 {
@@ -31,6 +32,9 @@ int g_count = 0;
 int g_selected = 0;
 bool g_ptzHeld = false;
 uint32_t g_lastListMs = 0;
+uint32_t g_nextListMs = 0;
+bool g_wantLive = false;
+uint32_t g_liveStartAt = 0;
 
 String apiBase()
 {
@@ -55,6 +59,27 @@ void addDeviceHeaders(HTTPClient &http)
 
 int g_jpgOffX = 0;
 int g_jpgOffY = 0;
+int g_jpgScale = 2;
+
+int streamReqW()
+{
+  int w = tft.width() / 2;
+  if (w & 1)
+  {
+    w--;
+  }
+  return w < 80 ? tft.width() : w;
+}
+
+int streamReqH()
+{
+  int h = tft.height() / 2;
+  if (h & 1)
+  {
+    h--;
+  }
+  return h < 80 ? tft.height() : h;
+}
 
 struct OverlayHole
 {
@@ -63,19 +88,6 @@ struct OverlayHole
 constexpr int kMaxHoles = 9;
 OverlayHole g_holes[kMaxHoles];
 int g_holeCount = 0;
-
-bool pointInHole(int x, int y)
-{
-  for (int i = 0; i < g_holeCount; i++)
-  {
-    const OverlayHole &r = g_holes[i];
-    if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h)
-    {
-      return true;
-    }
-  }
-  return false;
-}
 
 bool tileHitsHole(int dx, int dy, int w, int h)
 {
@@ -90,62 +102,65 @@ bool tileHitsHole(int dx, int dy, int w, int h)
   return false;
 }
 
-void pushTile(int dx, int dy, int w, int h, uint16_t *bitmap)
+void pushTile(int x, int y, int w, int h, uint16_t *bitmap)
 {
+  const int s = g_jpgScale < 1 ? 1 : g_jpgScale;
+  const int dx = g_jpgOffX + x * s;
+  const int dy = g_jpgOffY + y * s;
+  const int dw = w * s;
+  const int dh = h * s;
   const int scrW = tft.width();
   const int scrH = tft.height();
-  if (w <= 0 || h <= 0)
+  if (w <= 0 || h <= 0 || dw <= 0 || dh <= 0)
   {
     return;
   }
-  if (dx >= scrW || dy >= scrH || dx + w <= 0 || dy + h <= 0)
+  if (dx >= scrW || dy >= scrH || dx + dw <= 0 || dy + dh <= 0)
   {
     return;
   }
-  const bool clip = dx < 0 || dy < 0 || dx + w > scrW || dy + h > scrH;
-  if (!clip && !tileHitsHole(dx, dy, w, h))
+  if (tileHitsHole(dx, dy, dw, dh))
+  {
+    return;
+  }
+  if (dx < 0 || dy < 0 || dx + dw > scrW || dy + dh > scrH)
+  {
+    return;
+  }
+  if (s == 1)
   {
     tft.pushImage(dx, dy, w, h, bitmap);
     return;
   }
+  if (w * 2 > 64)
+  {
+    return;
+  }
+  uint16_t line[64];
   for (int row = 0; row < h; row++)
   {
-    const int sy = dy + row;
-    if (sy < 0 || sy >= scrH)
+    int n = 0;
+    const uint16_t *src = bitmap + row * w;
+    for (int col = 0; col < w; col++)
     {
-      continue;
+      const uint16_t p = src[col];
+      line[n++] = p;
+      line[n++] = p;
     }
-    int col = 0;
-    while (col < w)
-    {
-      const int sx = dx + col;
-      if (sx < 0 || sx >= scrW || pointInHole(sx, sy))
-      {
-        col++;
-        continue;
-      }
-      const int start = col;
-      while (col < w)
-      {
-        const int xx = dx + col;
-        if (xx < 0 || xx >= scrW || pointInHole(xx, sy))
-        {
-          break;
-        }
-        col++;
-      }
-      tft.pushImage(dx + start, sy, col - start, 1, bitmap + row * w + start);
-    }
+    const int sy = dy + row * 2;
+    tft.pushImage(dx, sy, dw, 1, line);
+    tft.pushImage(dx, sy + 1, dw, 1, line);
   }
 }
 
 bool jpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t *bitmap)
 {
+  esp_task_wdt_reset();
   if (w == 0 || h == 0 || !bitmap)
   {
     return true;
   }
-  pushTile(g_jpgOffX + x, g_jpgOffY + y, (int)w, (int)h, bitmap);
+  pushTile(x, y, (int)w, (int)h, bitmap);
   return true;
 }
 
@@ -155,25 +170,29 @@ bool drawJpegFullscreen(const uint8_t *buf, int nread)
   {
     return false;
   }
-  TJpgDec.setJpgScale(1);
   TJpgDec.setSwapBytes(true);
   TJpgDec.setCallback(jpgOutput);
-  uint16_t jw = 0, jh = 0;
-  if (TJpgDec.getJpgSize(&jw, &jh, buf, (uint32_t)nread) != 0)
-  {
-    return false;
-  }
   const int scrW = tft.width();
   const int scrH = tft.height();
-  TJpgDec.setJpgScale(1);
-  const int dw = (int)jw;
-  const int dh = (int)jh;
-  g_jpgOffX = (scrW - dw) / 2;
-  g_jpgOffY = (scrH - dh) / 2;
-  return TJpgDec.drawJpg(0, 0, buf, (uint32_t)nread) == 0;
+  if (nread > 20000)
+  {
+    TJpgDec.setJpgScale(2);
+  }
+  else
+  {
+    TJpgDec.setJpgScale(1);
+  }
+  const int rw = streamReqW();
+  const int rh = streamReqH();
+  g_jpgScale = (rw * 2 <= scrW && rh * 2 <= scrH) ? 2 : 1;
+  g_jpgOffX = (scrW - rw * g_jpgScale) / 2;
+  g_jpgOffY = (scrH - rh * g_jpgScale) / 2;
+  const bool ok = TJpgDec.drawJpg(0, 0, buf, (uint32_t)nread) == 0;
+  yield();
+  return ok;
 }
 
-constexpr int kJpegTry[] = {32 * 1024, 24 * 1024, 16 * 1024};
+constexpr int kJpegTry[] = {16 * 1024, 12 * 1024, 8 * 1024};
 uint8_t *g_bufs[2] = {nullptr, nullptr};
 int g_lens[2] = {0, 0};
 int g_jpegCap = 0;
@@ -183,9 +202,7 @@ volatile int g_busy = -1;
 int g_fill = 0;
 volatile bool g_streamStop = false;
 volatile bool g_streamKick = false;
-volatile bool g_streamRunning = false;
 volatile bool g_fitCover = true;
-TaskHandle_t g_streamTask = nullptr;
 char g_streamErr[64] = "";
 char g_streamCamId[16] = "";
 
@@ -269,179 +286,235 @@ int pickFillSlot()
   return slot;
 }
 
-void streamTask(void * /*arg*/)
+enum LivePhase
 {
-  g_streamRunning = true;
+  LIVE_IDLE,
+  LIVE_HDR,
+  LIVE_BODY,
+  LIVE_WAIT
+};
 
-  while (!g_streamStop)
+WiFiClient g_live;
+LivePhase g_livePhase = LIVE_IDLE;
+char g_liveHdr[384];
+int g_liveHdrLen = 0;
+uint32_t g_livePhaseAt = 0;
+int g_slot = -1;
+int g_accLen = 0;
+bool g_inJpeg = false;
+bool g_drop = false;
+bool g_pendingFf = false;
+uint8_t g_prev = 0;
+
+void liveResetParser()
+{
+  g_slot = -1;
+  g_accLen = 0;
+  g_inJpeg = false;
+  g_drop = false;
+  g_pendingFf = false;
+  g_prev = 0;
+}
+
+void liveDisconnect(uint32_t retryMs)
+{
+  g_live.stop();
+  g_liveHdrLen = 0;
+  g_liveHdr[0] = 0;
+  liveResetParser();
+  g_livePhase = LIVE_WAIT;
+  g_livePhaseAt = millis() + retryMs;
+}
+
+void liveIngest(const uint8_t *tmp, int n)
+{
+  for (int i = 0; i < n; i++)
+  {
+    uint8_t b = tmp[i];
+    if (!g_inJpeg)
+    {
+      if (g_pendingFf && b == 0xd8)
+      {
+        g_pendingFf = false;
+        g_slot = pickFillSlot();
+        g_drop = g_slot < 0;
+        g_inJpeg = true;
+        g_prev = 0xd8;
+        if (!g_drop)
+        {
+          g_bufs[g_slot][0] = 0xff;
+          g_bufs[g_slot][1] = 0xd8;
+          g_accLen = 2;
+        }
+        continue;
+      }
+      g_pendingFf = (b == 0xff);
+      continue;
+    }
+    if (g_drop)
+    {
+      if (g_prev == 0xff && b == 0xd9)
+      {
+        g_inJpeg = false;
+        g_drop = false;
+      }
+      g_prev = b;
+      continue;
+    }
+    if (g_accLen >= g_jpegCap)
+    {
+      g_drop = true;
+      g_prev = b;
+      continue;
+    }
+    g_bufs[g_slot][g_accLen++] = b;
+    if (g_accLen >= 4 && g_bufs[g_slot][g_accLen - 2] == 0xff && g_bufs[g_slot][g_accLen - 1] == 0xd9)
+    {
+      g_lens[g_slot] = g_accLen;
+      g_ready = g_slot;
+      if (g_bufCount > 1)
+      {
+        g_fill = g_slot ^ 1;
+      }
+      g_inJpeg = false;
+      g_accLen = 0;
+      g_slot = -1;
+    }
+  }
+}
+
+void livePump()
+{
+  if (g_streamKick)
+  {
+    g_streamKick = false;
+    liveDisconnect(80);
+  }
+
+  if (g_livePhase == LIVE_WAIT)
+  {
+    if (millis() < g_livePhaseAt)
+    {
+      return;
+    }
+    g_livePhase = LIVE_IDLE;
+  }
+
+  if (g_livePhase == LIVE_IDLE)
   {
     if (WiFi.status() != WL_CONNECTED || !g_streamCamId[0])
     {
       setStreamErr("sem Wi-Fi");
-      vTaskDelay(pdMS_TO_TICKS(400));
-      continue;
+      liveDisconnect(400);
+      return;
     }
-
     String host;
     uint16_t port = 80;
     if (!parseCollector(host, port))
     {
       setStreamErr("USAGE_URL");
-      vTaskDelay(pdMS_TO_TICKS(800));
-      continue;
+      liveDisconnect(800);
+      return;
     }
-
-    WiFiClient client;
-    client.setNoDelay(true);
-    client.setTimeout(80);
 #ifdef WOKWI_SIM
-    if (!client.connect(host.c_str(), port, 8000))
+    const bool ok = g_live.connect(host.c_str(), port, 8000);
 #else
-    if (!client.connect(host.c_str(), port, 3000))
+    const bool ok = g_live.connect(host.c_str(), port, 2000);
 #endif
+    if (!ok)
     {
       setStreamErr("connect falhou");
-      vTaskDelay(pdMS_TO_TICKS(500));
-      continue;
+      liveDisconnect(500);
+      return;
     }
-
-    String req = String("GET /api/camera/cameras/") + g_streamCamId + "/stream?w=" +
-                 String(tft.width()) + "&h=" + String(tft.height()) +
-                 "&fit=" + (g_fitCover ? "cover" : "contain") + " HTTP/1.1\r\n" +
-                 "Host: " + host + ":" + String(port) + "\r\n" +
-                 "X-Vigia-Device: esp32\r\n" +
-                 "Connection: close\r\n\r\n";
-    client.print(req);
-
-    char headers[512];
-    int hdrLen = 0;
-    headers[0] = 0;
-    uint32_t hdrStart = millis();
-    while (client.connected() && !g_streamStop && !g_streamKick && millis() - hdrStart < 8000)
-    {
-      while (client.available())
-      {
-        int c = client.read();
-        if (c < 0)
-        {
-          break;
-        }
-        if (hdrLen < (int)sizeof(headers) - 1)
-        {
-          headers[hdrLen++] = (char)c;
-          headers[hdrLen] = 0;
-        }
-        if (hdrLen >= 4 && strcmp(headers + hdrLen - 4, "\r\n\r\n") == 0)
-        {
-          goto headers_done;
-        }
-      }
-      vTaskDelay(1);
-    }
-  headers_done:
-    if (!strstr(headers, "200"))
-    {
-      Serial.printf("[camera] stream hdr: %.80s\n", headers);
-      setStreamErr("HTTP stream");
-      client.stop();
-      vTaskDelay(pdMS_TO_TICKS(600));
-      continue;
-    }
-
-    setStreamErr("");
-    int slot = -1;
-    int accLen = 0;
-    bool inJpeg = false;
-    bool drop = false;
-    bool pendingFf = false;
-    uint8_t prev = 0;
-
-    while (!g_streamStop && !g_streamKick && client.connected())
-    {
-      int avail = client.available();
-      if (avail <= 0)
-      {
-        vTaskDelay(0);
-        continue;
-      }
-      uint8_t tmp[512];
-      int want = avail > (int)sizeof(tmp) ? (int)sizeof(tmp) : avail;
-      int n = client.read(tmp, want);
-      if (n <= 0)
-      {
-        vTaskDelay(0);
-        continue;
-      }
-      for (int i = 0; i < n; i++)
-      {
-        uint8_t b = tmp[i];
-        if (!inJpeg)
-        {
-          if (pendingFf && b == 0xd8)
-          {
-            pendingFf = false;
-            slot = pickFillSlot();
-            drop = slot < 0;
-            inJpeg = true;
-            prev = 0xd8;
-            if (!drop)
-            {
-              g_bufs[slot][0] = 0xff;
-              g_bufs[slot][1] = 0xd8;
-              accLen = 2;
-            }
-            continue;
-          }
-          pendingFf = (b == 0xff);
-          continue;
-        }
-        if (drop)
-        {
-          if (prev == 0xff && b == 0xd9)
-          {
-            inJpeg = false;
-            drop = false;
-          }
-          prev = b;
-          continue;
-        }
-        if (accLen >= g_jpegCap)
-        {
-          drop = true;
-          prev = b;
-          continue;
-        }
-        g_bufs[slot][accLen++] = b;
-        if (accLen >= 4 && g_bufs[slot][accLen - 2] == 0xff && g_bufs[slot][accLen - 1] == 0xd9)
-        {
-          g_lens[slot] = accLen;
-          g_ready = slot;
-          if (g_bufCount > 1)
-          {
-            g_fill = slot ^ 1;
-          }
-          inJpeg = false;
-          accLen = 0;
-          slot = -1;
-        }
-      }
-    }
-    client.stop();
-    if (g_streamKick)
-    {
-      g_streamKick = false;
-      continue;
-    }
-    if (!g_streamStop)
-    {
-      setStreamErr("stream caiu");
-      vTaskDelay(pdMS_TO_TICKS(250));
-    }
+    g_live.setNoDelay(true);
+    char req[256];
+    snprintf(req, sizeof(req),
+             "GET /api/camera/cameras/%s/stream?w=%d&h=%d&fit=%s HTTP/1.1\r\n"
+             "Host: %s:%u\r\n"
+             "X-Vigia-Device: esp32\r\n"
+             "Connection: close\r\n\r\n",
+             g_streamCamId, streamReqW(), streamReqH(), g_fitCover ? "cover" : "contain", host.c_str(),
+             (unsigned)port);
+    g_live.print(req);
+    g_liveHdrLen = 0;
+    g_liveHdr[0] = 0;
+    g_livePhase = LIVE_HDR;
+    g_livePhaseAt = millis();
+    return;
   }
 
-  g_streamRunning = false;
-  g_streamTask = nullptr;
-  vTaskDelete(nullptr);
+  if (g_livePhase == LIVE_HDR)
+  {
+    if (!g_live.connected() && !g_live.available())
+    {
+      setStreamErr("HTTP stream");
+      liveDisconnect(600);
+      return;
+    }
+    if (millis() - g_livePhaseAt > 5000)
+    {
+      setStreamErr("HTTP stream");
+      liveDisconnect(600);
+      return;
+    }
+    while (g_live.available())
+    {
+      int c = g_live.read();
+      if (c < 0)
+      {
+        break;
+      }
+      if (g_liveHdrLen < (int)sizeof(g_liveHdr) - 1)
+      {
+        g_liveHdr[g_liveHdrLen++] = (char)c;
+        g_liveHdr[g_liveHdrLen] = 0;
+      }
+      if (g_liveHdrLen >= 4 && strcmp(g_liveHdr + g_liveHdrLen - 4, "\r\n\r\n") == 0)
+      {
+        if (!strstr(g_liveHdr, "200"))
+        {
+          Serial.printf("[camera] stream hdr: %.80s\n", g_liveHdr);
+          setStreamErr("HTTP stream");
+          liveDisconnect(600);
+          return;
+        }
+        setStreamErr("");
+        liveResetParser();
+        g_livePhase = LIVE_BODY;
+        return;
+      }
+    }
+    return;
+  }
+
+  if (g_livePhase != LIVE_BODY)
+  {
+    return;
+  }
+  if (!g_live.connected() && !g_live.available())
+  {
+    setStreamErr("stream caiu");
+    liveDisconnect(250);
+    return;
+  }
+  int got = 0;
+  while (g_live.available() && got < 1024)
+  {
+    uint8_t tmp[256];
+    int want = g_live.available();
+    if (want > (int)sizeof(tmp))
+    {
+      want = (int)sizeof(tmp);
+    }
+    int n = g_live.read(tmp, want);
+    if (n <= 0)
+    {
+      break;
+    }
+    liveIngest(tmp, n);
+    got += n;
+  }
 }
 
 } // namespace
@@ -496,36 +569,101 @@ int cameraPtzCount()
 
 void cameraClientFetchList()
 {
+  g_nextListMs = millis() + 20000;
   if (WiFi.status() != WL_CONNECTED)
   {
     return;
   }
-  HTTPClient http;
+  String host;
+  uint16_t port = 80;
+  if (!parseCollector(host, port))
+  {
+    return;
+  }
+
+  WiFiClient client;
+  client.setTimeout(40);
 #ifdef WOKWI_SIM
-  http.setTimeout(8000);
-  http.setConnectTimeout(8000);
+  if (!client.connect(host.c_str(), port, 8000))
 #else
-  http.setTimeout(4000);
-  http.setConnectTimeout(2500);
+  if (!client.connect(host.c_str(), port, 2000))
 #endif
-  String url = apiBase() + "api/camera/cameras";
-  if (!http.begin(url))
   {
+    Serial.println("[camera] lista: connect falhou");
     return;
   }
-  addDeviceHeaders(http);
-  int code = http.GET();
-  if (code != 200)
+
+  char req[192];
+  snprintf(req, sizeof(req),
+           "GET /api/camera/cameras HTTP/1.1\r\n"
+           "Host: %s:%u\r\n"
+           "X-Vigia-Device: esp32\r\n"
+           "Connection: close\r\n\r\n",
+           host.c_str(), (unsigned)port);
+  client.print(req);
+
+  char hdr[320];
+  int hl = 0;
+  hdr[0] = 0;
+  uint32_t t0 = millis();
+  bool hdrDone = false;
+  while (client.connected() && millis() - t0 < 2500 && !hdrDone)
   {
-    Serial.printf("[camera] GET /api/camera/cameras -> HTTP %d\n", code);
-    http.end();
+    while (client.available())
+    {
+      int c = client.read();
+      if (c < 0)
+      {
+        break;
+      }
+      if (hl < (int)sizeof(hdr) - 1)
+      {
+        hdr[hl++] = (char)c;
+        hdr[hl] = 0;
+      }
+      if (hl >= 4 && strcmp(hdr + hl - 4, "\r\n\r\n") == 0)
+      {
+        hdrDone = true;
+        break;
+      }
+    }
+    if (!hdrDone)
+    {
+      delay(1);
+    }
+  }
+  if (!strstr(hdr, "200"))
+  {
+    Serial.printf("[camera] lista hdr: %.80s\n", hdr);
+    client.stop();
     return;
   }
-  String body = http.getString();
-  http.end();
+
+  char body[1280];
+  int bl = 0;
+  t0 = millis();
+  while (millis() - t0 < 2000 && bl < (int)sizeof(body) - 1)
+  {
+    while (client.available() && bl < (int)sizeof(body) - 1)
+    {
+      int c = client.read();
+      if (c < 0)
+      {
+        break;
+      }
+      body[bl++] = (char)c;
+    }
+    if (!client.connected() && !client.available())
+    {
+      break;
+    }
+    delay(1);
+  }
+  client.stop();
+  body[bl] = 0;
 
   JsonDocument doc;
-  if (deserializeJson(doc, body))
+  if (deserializeJson(doc, body, (size_t)bl))
   {
     Serial.println("[camera] lista invalida");
     return;
@@ -538,7 +676,6 @@ void cameraClientFetchList()
     {
       if (n >= MAX_CAMERAS)
       {
-        Serial.printf("[camera] ignorando cameras alem de %d\n", MAX_CAMERAS);
         break;
       }
       CameraListItem &c = g_cameras[n];
@@ -558,9 +695,15 @@ void cameraClientFetchList()
   g_lastListMs = millis();
 }
 
+void cameraClientOnShowList()
+{
+  const uint32_t now = millis();
+  g_nextListMs = now + (g_count > 0 ? 12000 : 400);
+}
+
 void cameraClientPoll()
 {
-  if (g_view == VIEW_CAMERA)
+  if (g_view != VIEW_CAMERAS)
   {
     return;
   }
@@ -568,14 +711,19 @@ void cameraClientPoll()
   {
     return;
   }
-  uint32_t now = millis();
-  if (g_lastListMs != 0 && now - g_lastListMs < 20000)
+  const uint32_t now = millis();
+  if (g_nextListMs == 0)
+  {
+    g_nextListMs = now + 400;
+    return;
+  }
+  if (now < g_nextListMs)
   {
     return;
   }
   const int before = g_count;
   cameraClientFetchList();
-  if (g_count != before && (g_view == VIEW_HOME || g_view == VIEW_CAMERAS))
+  if (g_count != before)
   {
     uiRefreshData();
   }
@@ -584,6 +732,7 @@ void cameraClientPoll()
 void cameraClientEnterLive()
 {
   g_ptzHeld = false;
+  g_wantLive = false;
   cameraClientExitLive();
   const CameraListItem *c = cameraAt(g_selected);
   if (!c || !c->id.length())
@@ -593,39 +742,48 @@ void cameraClientEnterLive()
   }
   strncpy(g_streamCamId, c->id.c_str(), sizeof(g_streamCamId) - 1);
   g_streamCamId[sizeof(g_streamCamId) - 1] = 0;
-  if (!allocJpegBufs())
-  {
-    setStreamErr("sem RAM");
-    return;
-  }
   g_ready = -1;
   g_busy = -1;
   g_fill = 0;
   g_streamStop = false;
   g_streamKick = false;
   setStreamErr("");
-  BaseType_t ok = xTaskCreatePinnedToCore(streamTask, "camstream", 8192, nullptr, 5, &g_streamTask, 0);
-  if (ok != pdPASS)
+  g_wantLive = true;
+  g_liveStartAt = millis() + 400;
+}
+
+void cameraClientTickLive()
+{
+  if (!g_wantLive || g_view != VIEW_CAMERA)
   {
-    g_streamTask = nullptr;
-    setStreamErr("task falhou");
+    return;
   }
+  if ((int32_t)(millis() - g_liveStartAt) < 0)
+  {
+    return;
+  }
+  if (!allocJpegBufs())
+  {
+    setStreamErr("sem RAM");
+    g_wantLive = false;
+    return;
+  }
+  livePump();
 }
 
 void cameraClientExitLive()
 {
+  g_wantLive = false;
   if (g_ptzHeld)
   {
     cameraClientSendPtz("stop");
   }
   g_ptzHeld = false;
   g_streamStop = true;
-  uint32_t t0 = millis();
-  while (g_streamRunning && millis() - t0 < 2500)
-  {
-    delay(10);
-  }
-  g_streamTask = nullptr;
+  g_live.stop();
+  g_livePhase = LIVE_IDLE;
+  g_liveHdrLen = 0;
+  liveResetParser();
   g_ready = -1;
   g_busy = -1;
   g_streamCamId[0] = 0;
@@ -673,6 +831,12 @@ bool cameraClientSendPtz(const char *action)
 
 bool cameraClientConsumeFrame()
 {
+  static uint32_t lastMs = 0;
+  const uint32_t now = millis();
+  if (now - lastMs < 50)
+  {
+    return false;
+  }
   int idx = g_ready;
   if (idx < 0 || idx > 1 || !g_bufs[idx] || g_lens[idx] < 16)
   {
@@ -682,6 +846,10 @@ bool cameraClientConsumeFrame()
   g_busy = idx;
   bool ok = drawJpegFullscreen(g_bufs[idx], g_lens[idx]);
   g_busy = -1;
+  if (ok)
+  {
+    lastMs = now;
+  }
   return ok;
 }
 

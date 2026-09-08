@@ -27,6 +27,14 @@ export function cursorFail(msg: string): Record<string, unknown> {
   };
 }
 
+function normalizeCursorPlan(plan: string | null): string | null {
+  if (!plan) return null;
+  const trimmed = plan.trim();
+  if (!trimmed) return null;
+  if (trimmed.toLowerCase() === "pro") return "PRO";
+  return trimmed;
+}
+
 export function parseCursorDashboard(data: Record<string, unknown>, plan: string | null): Record<string, unknown> | null {
   const usageRaw = (data.planUsage ?? data.plan_usage ?? {}) as unknown;
   const usage = usageRaw !== null && typeof usageRaw === "object" && !Array.isArray(usageRaw) ? (usageRaw as Record<string, unknown>) : {};
@@ -70,7 +78,7 @@ export function parseCursorDashboard(data: Record<string, unknown>, plan: string
     remaining_cents: ondemandRemain,
     bonus_cents: bonus !== null ? bonus : 0,
     cycle_end: cycleEnd,
-    plan: (plan ?? String(data.membershipType ?? "").trim()) || null,
+    plan: normalizeCursorPlan((plan ?? String(data.membershipType ?? "").trim()) || null),
     requests_used: null,
     requests_limit: null,
   };
@@ -114,7 +122,7 @@ export function parseCursorAuthUsage(data: Record<string, unknown>, plan: string
     remaining_cents: null,
     bonus_cents: null,
     cycle_end: null,
-    plan,
+    plan: normalizeCursorPlan(plan),
     requests_used: used,
     requests_limit: limit,
   };

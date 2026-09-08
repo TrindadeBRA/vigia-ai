@@ -48,6 +48,11 @@ static bool viewProviderVisible(View v)
   }
 }
 
+static bool isCameraView(View v)
+{
+  return v == VIEW_CAMERAS || v == VIEW_CAMERA;
+}
+
 void uiSetView(View v)
 {
   if (v >= VIEW_COUNT)
@@ -72,9 +77,13 @@ void uiSetView(View v)
   {
     miningClientExitView();
   }
+  if (isCameraView(v) && !isCameraView(g_view))
+  {
+    usageClientPauseSse();
+  }
   if (v == VIEW_CAMERAS)
   {
-    cameraClientFetchList();
+    cameraClientOnShowList();
   }
   if (v == VIEW_CAMERA)
   {
@@ -84,6 +93,10 @@ void uiSetView(View v)
   else if (g_view == VIEW_CAMERA)
   {
     cameraClientExitLive();
+  }
+  if (!isCameraView(v) && isCameraView(g_view))
+  {
+    usageClientResumeSse();
   }
   // Entrando numa view de detalhe vinda de outra: comeca pela conta que mais
   // precisa de atencao. Reabrir a mesma view (idx ja escolhido pelo

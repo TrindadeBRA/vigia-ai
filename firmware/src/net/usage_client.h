@@ -10,6 +10,12 @@ void usageClientPoll();
 // Log de diagnóstico do snapshot atual (g_snap).
 void usageClientLogSnapshot(const char *why);
 
+// Fecha GET /events e não reconecta até resume. Usado nas views de câmera
+// (lista + live): um socket SSE + MJPEG/HTTP ao mesmo tempo estoura heap e
+// reseta a ESP32.
+void usageClientPauseSse();
+void usageClientResumeSse();
+
 // Marca todas as contas já conhecidas (de qualquer provedor) como falha, sem
 // mexer em id/label/contagem — usado tanto pelo fetch real (Wi-Fi/HTTP fora
 // do ar) quanto por main.cpp enquanto aguarda a Wi-Fi conectar.
