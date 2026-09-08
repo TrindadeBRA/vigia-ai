@@ -15,7 +15,7 @@ import { CursorBoardCard, cursorAllowedSizes, cursorSizeLabel } from "../../comp
 import { EmulatorBoardCard, emulatorAllowedSizes, emulatorSizeLabel } from "../../components/cards/EmulatorCard";
 import { EyeBoardCard, eyeAllowedSizes, eyeSizeLabel } from "../../components/cards/EyeCard";
 import { GitBoardCard, gitAllowedSizes, gitSizeLabel } from "../../components/cards/GitCard";
-import { GithubBoardCard, githubAllowedSizes, githubSizeLabel } from "../../components/cards/GithubCard";
+import { GithubBoardCard, githubAllowedSizes, GithubProfileBoardCard, githubProfileAllowedSizes, githubProfileSizeLabel, githubSizeLabel } from "../../components/cards/GithubCard";
 import { GptBoardCard, gptAllowedSizes, gptSizeLabel } from "../../components/cards/GptCard";
 import { ImageBoardCard, imageAllowedSizes, imageSizeLabel } from "../../components/cards/ImageCard";
 import { NoteBoardCard, noteAllowedSizes, noteSizeLabel } from "../../components/cards/NoteCard";
@@ -361,15 +361,20 @@ export function CalendarTileCard({ p, size, dragging, lifted, t, grip, bg, reado
 }
 
 export function GithubTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
-  const allowed = githubAllowedSizes(p.githubRepo ?? null);
+  const isProfile = Boolean(p.githubProfile);
+  const allowed = isProfile ? githubProfileAllowedSizes(p.githubProfile ?? null) : githubAllowedSizes(p.githubRepo ?? null);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
       {!lifted && !readonly ? (
-        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => githubSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => (isProfile ? githubProfileSizeLabel(s, t) : githubSizeLabel(s, t))} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
-      <GithubBoardCard repo={p.githubRepo ?? null} github={p.github} t={t} size={size} onOpen={onOpen} />
+      {isProfile ? (
+        <GithubProfileBoardCard profile={p.githubProfile ?? null} t={t} size={size} onOpen={onOpen} />
+      ) : (
+        <GithubBoardCard repo={p.githubRepo ?? null} github={p.github} t={t} size={size} onOpen={onOpen} />
+      )}
     </div>
   );
 }

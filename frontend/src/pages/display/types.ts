@@ -1,4 +1,4 @@
-import type { AndroidDevice, CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubRepo, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
+import type { AndroidDevice, CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubProfile, GithubRepo, RetroAchievementsAccount, RssPayload, WeatherConfig, WeatherPayload } from "../../api/types";
 import type { PALETTES, ResolvedThemeName } from "../../theme";
 
 export type Pal = (typeof PALETTES)[ResolvedThemeName];
@@ -24,6 +24,7 @@ export type ProviderMeta = {
   rss?: RssPayload | null;
   github?: GithubPayload | null;
   githubRepo?: GithubRepo | null;
+  githubProfile?: GithubProfile | null;
   imageSrc?: string | null;
   imageFit?: "cover" | "contain";
   imageTransform?: { x: number; y: number; scale: number } | null;

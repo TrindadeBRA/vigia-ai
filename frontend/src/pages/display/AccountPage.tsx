@@ -8,7 +8,7 @@ import { CreditsDetail } from "../../components/cards/CreditsCard";
 import { CurrenciesDetail } from "../../components/cards/CurrenciesCard";
 import { CursorDetail } from "../../components/cards/CursorCard";
 import { GitDetail } from "../../components/cards/GitCard";
-import { GithubDetail } from "../../components/cards/GithubCard";
+import { GithubDetail, GithubProfileDetail } from "../../components/cards/GithubCard";
 import { GptDetail } from "../../components/cards/GptCard";
 import { RetroAchievementsDetail } from "../../components/cards/RetroAchievementsCard";
 import { RssDetail } from "../../components/cards/RssCard";
@@ -149,6 +149,22 @@ function RssAccountPage({ data, t }: { data: UsagePayload; t: T }) {
 }
 
 function GithubAccountPage({ meta, t }: { meta: ProviderMeta; t: T }) {
+  if (meta.githubProfile) {
+    const profile = meta.githubProfile;
+    const name = profile.label || profile.name || profile.username;
+    return (
+      <div className={`w-full ${viewFade}`}>
+        <div className="mb-4 flex items-center gap-3">
+          <Icon id="github" large />
+          <div>
+            <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{name}</div>
+            <div className={cardLabel}>@{profile.username}</div>
+          </div>
+        </div>
+        <GithubProfileDetail profile={profile} t={t} />
+      </div>
+    );
+  }
   const repo = meta.githubRepo ?? meta.github?.repos?.find((r) => `github:${r.id}` === meta.id) ?? meta.github?.repos?.[0] ?? null;
   const name = repo ? (repo.label || repo.full_name || repo.repo) : t.github;
   return (

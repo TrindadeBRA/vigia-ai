@@ -6,7 +6,8 @@ import type { ConfigCopy } from "./copy";
 import { Button, FieldStatus, Fold, Switch, TextField } from "./ui";
 
 type GithubRepoConfig = { id: string; repo: string; label: string };
-type GithubConfig = { enabled: boolean; hidden: boolean; repos: GithubRepoConfig[] };
+type GithubProfileConfig = { id: string; username: string; label: string };
+type GithubConfig = { enabled: boolean; hidden: boolean; repos: GithubRepoConfig[]; profiles: GithubProfileConfig[] };
 
 async function apiPost(path: string, body: unknown) {
     const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -57,6 +58,36 @@ function RepoRow({ repo, c, onReload }: { repo: GithubRepoConfig; c: ConfigCopy;
     );
 }
 
+function ProfileRow({ profile, c, onReload }: { profile: GithubProfileConfig; c: ConfigCopy; onReload: () => Promise<void> }) {
+    const remove = useRequest();
+    const [editing, setEditing] = useState(false);
+    const [label, setLabel] = useState(profile.label);
+    const save = useRequest();
+
+    return (
+        <li className="flex flex-col gap-2 rounded-[10px] border border-edge bg-canvas px-3 py-2.5">
+            <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                    <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">{profile.label || profile.username}</p>
+                    <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">@{profile.username}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                    <Button variant="ghost" className="px-2 py-1 text-[11px]" onClick={() => setEditing((v) => !v)}>{editing ? "Cancelar" : "Editar"}</Button>
+                    <Button variant="ghost" className="px-2 py-1 text-[11px]" loading={remove.busy} onClick={() => remove.run(async () => { const r = await apiDelete(`/api/github/profiles/${profile.id}`); await onReload(); return r; }, { success: c.removed, error: c.offline })}>{remove.busy ? c.removing : c.remove}</Button>
+                </div>
+            </div>
+            {editing ? (
+                <div className="flex flex-col gap-2 border-t border-edge pt-2">
+                    <TextField label={c.githubLabelLabel} value={label} onChange={(e) => setLabel(e.target.value)} placeholder={c.githubLabelPh} />
+                    <Button loading={save.busy} onClick={() => save.run(async () => { const r = await apiPatch(`/api/github/profiles/${profile.id}`, { label }); await onReload(); setEditing(false); return r; }, { success: c.saved, error: c.offline })}>{save.busy ? c.saving : c.save}</Button>
+                    {save.message ? <FieldStatus status={save.status} message={save.message} /> : null}
+                </div>
+            ) : null}
+            {remove.message ? <FieldStatus status={remove.status} message={remove.message} /> : null}
+        </li>
+    );
+}
+
 export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig; c: ConfigCopy; onReload: () => Promise<void> }) {
     const [repo, setRepo] = useState("");
     const [label, setLabel] = useState("");
@@ -66,8 +97,45 @@ export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig
     const add = useRequest();
     const doPreview = useRequest();
 
+    const [username, setUsername] = useState("");
+    const [profileLabel, setProfileLabel] = useState("");
+    const [profilePreview, setProfilePreview] = useState<{ ok: boolean; error?: string; followers?: number | null } | null>(null);
+    const addProfile = useRequest();
+    const doProfilePreview = useRequest();
+
     const hint = github.repos.length ? `${github.repos.length} repositório${github.repos.length === 1 ? "" : "s"}` : c.githubEmpty;
     const listSummary = github.repos.length ? `${c.githubListLabel} (${github.repos.length})` : c.githubListLabel;
+    const profileListSummary = github.profiles.length ? `${c.githubProfileListLabel} (${github.profiles.length})` : c.githubProfileListLabel;
+
+    async function handleProfilePreview() {
+        const u = username.trim();
+        if (!u) { setProfilePreview({ ok: false, error: c.githubProfileNoPreview }); return; }
+        setProfilePreview(null);
+        await doProfilePreview.run(async () => {
+            try {
+                const data = await apiPost("/api/github/profiles/preview", { username: u, label: profileLabel.trim() }) as { ok: boolean; error?: string; followers?: number | null };
+                setProfilePreview(data);
+                return { ok: data.ok, error: data.error } as { ok: boolean; error?: string };
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setProfilePreview({ ok: false, error: msg });
+                return { ok: false, error: msg };
+            }
+        }, { success: c.githubProfilePreviewOk, error: c.githubProfilePreviewFail });
+    }
+
+    async function handleAddProfile() {
+        const u = username.trim();
+        if (!u) return;
+        await addProfile.run(async () => {
+            const res = await apiPost("/api/github/profiles", { username: u, label: profileLabel.trim() });
+            if ((res as { ok?: boolean }).ok) {
+                await onReload();
+                setUsername(""); setProfileLabel(""); setProfilePreview(null);
+            }
+            return res as { ok: boolean; error?: string };
+        }, { success: c.added, error: c.offline });
+    }
 
     async function handlePreview() {
         const r = repo.trim();
@@ -167,6 +235,47 @@ export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig
                     ) : null}
                     {doPreview.message ? <FieldStatus status={doPreview.status} message={doPreview.message} /> : null}
                     {add.message ? <FieldStatus status={add.status} message={add.message} /> : null}
+                </div>
+            </Fold>
+
+            <Fold summary={profileListSummary}>
+                {github.profiles.length ? (
+                    <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                        {github.profiles.map((profile) => (
+                            <ProfileRow key={profile.id} profile={profile} c={c} onReload={onReload} />
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="m-0 text-xs text-ink3">{c.githubProfilesEmpty}</p>
+                )}
+            </Fold>
+
+            <Fold summary={c.githubAddProfile}>
+                <div className="flex flex-col gap-3">
+                    <TextField label={c.githubProfileLabel} value={username} onChange={(e) => setUsername(e.target.value)} placeholder={c.githubProfilePh} autoComplete="off" />
+                    <p className="m-0 text-[11px] leading-snug text-ink3">{c.githubProfileHint}</p>
+                    <TextField label={c.githubLabelLabel} value={profileLabel} onChange={(e) => setProfileLabel(e.target.value)} placeholder={c.githubLabelPh} />
+
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="secondary" loading={doProfilePreview.busy} onClick={() => void handleProfilePreview()} disabled={!username.trim()}>
+                            {doProfilePreview.busy ? c.githubPreviewing : c.githubPreview}
+                        </Button>
+                        <Button loading={addProfile.busy} onClick={() => void handleAddProfile()} disabled={!username.trim()}>
+                            {addProfile.busy ? c.adding : c.githubAddProfile}
+                        </Button>
+                    </div>
+
+                    {profilePreview ? (
+                        <div className={`rounded-[10px] border px-3 py-2.5 text-[12px] ${profilePreview.ok ? "border-good/30 bg-good/10 text-ink" : "border-bad/30 bg-bad/10 text-bad"}`}>
+                            {profilePreview.ok ? (
+                                <span>{c.githubProfilePreviewOk} {profilePreview.followers != null ? `· 👥 ${profilePreview.followers}` : ""}</span>
+                            ) : (
+                                <span>{profilePreview.error || c.githubProfilePreviewFail}</span>
+                            )}
+                        </div>
+                    ) : null}
+                    {doProfilePreview.message ? <FieldStatus status={doProfilePreview.status} message={doProfilePreview.message} /> : null}
+                    {addProfile.message ? <FieldStatus status={addProfile.status} message={addProfile.message} /> : null}
                 </div>
             </Fold>
         </article>

@@ -125,6 +125,7 @@ const _GITHUB_DEFAULT: Record<string, unknown> = {
   enabled: false,
   hidden: false,
   repos: [],
+  profiles: [],
 };
 
 const _EMULATOR_DEFAULT: Record<string, unknown> = {
@@ -654,6 +655,22 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
       });
     }
     github.repos = cleaned;
+  }
+  const rawGhProfiles = rawGithub.profiles;
+  if (Array.isArray(rawGhProfiles)) {
+    const cleaned: Array<Record<string, unknown>> = [];
+    for (const it of rawGhProfiles) {
+      if (typeof it !== "object" || it === null || !(it as Record<string, unknown>).id) continue;
+      const p = it as Record<string, unknown>;
+      const username = String(p.username ?? "").trim();
+      if (!username) continue;
+      cleaned.push({
+        id: String(p.id),
+        username,
+        label: String(p.label ?? ""),
+      });
+    }
+    github.profiles = cleaned;
   }
 
   // emulator

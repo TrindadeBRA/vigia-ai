@@ -503,17 +503,44 @@ export type GithubRepo = {
   updated_at: string | null;
 };
 
+export type GithubPinnedRepo = {
+  full_name: string;
+  description: string | null;
+  stars: number;
+  forks: number;
+  language: string | null;
+  html_url: string;
+};
+
+export type GithubProfile = {
+  id: string;
+  label: string;
+  username: string;
+  ok: boolean;
+  error: string | null;
+  name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  followers: number | null;
+  public_repos: number | null;
+  html_url: string;
+  pinned: GithubPinnedRepo[];
+  updated_at: string | null;
+};
+
 export type GithubPayload = {
   ok: boolean;
   error: string | null;
   updated_at: string | null;
   repos: GithubRepo[];
+  profiles: GithubProfile[];
 };
 
 export type GithubConfig = {
   enabled: boolean;
   hidden: boolean;
   repos: Array<{ id: string; repo: string; label: string }>;
+  profiles: Array<{ id: string; username: string; label: string }>;
 };
 
 export type GithubExploreRepo = {

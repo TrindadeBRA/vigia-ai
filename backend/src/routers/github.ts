@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { fetchGithubRepo, fetchGithubTop, fetchGithubTrending, isValidGithubRepo } from "../providers/github.js";
+import { fetchGithubProfile, fetchGithubRepo, fetchGithubTop, fetchGithubTrending, isValidGithubRepo, isValidGithubUsername } from "../providers/github.js";
 import { load, updateSync as update } from "../store.js";
 
 export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
     app.get("/api/github/config", async () => {
         const cfg = load() as Record<string, unknown>;
-        return (cfg.github ?? { enabled: false, hidden: false, repos: [] }) as Record<string, unknown>;
+        return (cfg.github ?? { enabled: false, hidden: false, repos: [], profiles: [] }) as Record<string, unknown>;
     });
 
     app.patch("/api/github/config", async (request, reply) => {
@@ -97,22 +97,109 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true };
     });
 
+    // ── Perfis (para ver bio + repositórios fixados) ──────────────────
+
+    app.post("/api/github/profiles", async (request, reply) => {
+        const body = request.body as Record<string, unknown> | null;
+        if (!body || typeof body.username !== "string" || !String(body.username).trim()) {
+            return reply.code(400).send({ ok: false, error: "usuário é obrigatório" });
+        }
+        const username = String(body.username).trim();
+        const label = String(body.label ?? "").trim();
+        if (!isValidGithubUsername(username)) return reply.code(400).send({ ok: false, error: "Nome de usuário inválido" });
+
+        const probe = await fetchGithubProfile(username);
+        if (!probe.ok) {
+            return reply.code(400).send({ ok: false, error: probe.error || "Não foi possível acessar o perfil" });
+        }
+
+        const id = randomBytes(4).toString("hex");
+        update((cfg: Record<string, unknown>) => {
+            const g = (cfg.github ?? {}) as Record<string, unknown>;
+            if (!cfg.github) cfg.github = g;
+            const profiles = Array.isArray(g.profiles) ? [...(g.profiles as unknown[])] : [];
+            profiles.push({ id, username, label });
+            g.profiles = profiles;
+            g.enabled = true;
+            g.hidden = false;
+        });
+        const cfg = load() as Record<string, unknown>;
+        return { ok: true, id, config: cfg.github };
+    });
+
+    app.patch("/api/github/profiles/:id", async (request, reply) => {
+        const { id } = request.params as { id: string };
+        const body = request.body as Record<string, unknown> | null;
+        if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
+
+        const cfg = load() as Record<string, unknown>;
+        const g = (cfg.github ?? {}) as Record<string, unknown>;
+        const profiles = Array.isArray(g.profiles) ? g.profiles as Array<Record<string, unknown>> : [];
+        const idx = profiles.findIndex((p) => String(p.id) === id);
+        if (idx === -1) return reply.code(404).send({ ok: false, error: "perfil não encontrado" });
+
+        const current = profiles[idx];
+        const nextUsername = body.username != null ? String(body.username).trim() : String(current.username);
+        const nextLabel = body.label != null ? String(body.label).trim() : String(current.label ?? "");
+
+        if (!nextUsername) return reply.code(400).send({ ok: false, error: "usuário não pode ser vazio" });
+        if (!isValidGithubUsername(nextUsername)) return reply.code(400).send({ ok: false, error: "Nome de usuário inválido" });
+
+        if (nextUsername !== String(current.username)) {
+            const probe = await fetchGithubProfile(nextUsername);
+            if (!probe.ok) return reply.code(400).send({ ok: false, error: probe.error || "Não foi possível acessar o perfil" });
+        }
+
+        update((c: Record<string, unknown>) => {
+            const gg = (c.github ?? {}) as Record<string, unknown>;
+            const pp = Array.isArray(gg.profiles) ? gg.profiles as Array<Record<string, unknown>> : [];
+            const i = pp.findIndex((p) => String(p.id) === id);
+            if (i === -1) return;
+            pp[i] = { ...pp[i], username: nextUsername, label: nextLabel };
+            gg.profiles = pp;
+        });
+        const updated = load() as Record<string, unknown>;
+        return { ok: true, config: updated.github };
+    });
+
+    app.delete("/api/github/profiles/:id", async (request) => {
+        const { id } = request.params as { id: string };
+        update((cfg: Record<string, unknown>) => {
+            const g = (cfg.github ?? {}) as Record<string, unknown>;
+            if (!cfg.github) cfg.github = g;
+            const profiles = Array.isArray(g.profiles) ? g.profiles as Array<Record<string, unknown>> : [];
+            g.profiles = profiles.filter((p) => String(p.id) !== id);
+        });
+        return { ok: true };
+    });
+
+    // preview: testa um perfil sem salvar
+    app.post("/api/github/profiles/preview", async (request, reply) => {
+        const body = request.body as Record<string, unknown> | null;
+        if (!body || typeof body.username !== "string" || !String(body.username).trim()) {
+            return reply.code(400).send({ ok: false, error: "usuário é obrigatório" });
+        }
+        const username = String(body.username).trim();
+        const result = await fetchGithubProfile(username);
+        return result;
+    });
+
     app.get("/api/github", async () => {
         const cfg = load() as Record<string, unknown>;
         const g = (cfg.github ?? {}) as Record<string, unknown>;
-        if (g.hidden || !g.enabled) return { ok: true, error: null, updated_at: null, repos: [] };
+        if (g.hidden || !g.enabled) return { ok: true, error: null, updated_at: null, repos: [], profiles: [] };
         if (cfg.mock) {
             const { mockGithubPayload } = await import("../providers/github.js");
             return mockGithubPayload();
         }
-        const { fetchGithubRepos } = await import("../providers/github.js");
+        const { fetchGithubRepos, fetchGithubProfiles } = await import("../providers/github.js");
         const { utcNow } = await import("../formatting.js");
         try {
-            const repos = await fetchGithubRepos(cfg);
-            return { ok: true, error: null, updated_at: utcNow(), repos };
+            const [repos, profiles] = await Promise.all([fetchGithubRepos(cfg), fetchGithubProfiles(cfg)]);
+            return { ok: true, error: null, updated_at: utcNow(), repos, profiles };
         } catch (e) {
             const { utcNow: now } = await import("../formatting.js");
-            return { ok: false, error: String(e), updated_at: now(), repos: [] };
+            return { ok: false, error: String(e), updated_at: now(), repos: [], profiles: [] };
         }
     });
 

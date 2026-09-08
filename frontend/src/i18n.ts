@@ -297,6 +297,10 @@ type Strings = {
   githubTopPeriodAll: string;
   githubExploreLoading: string;
   githubExploreEmpty: string;
+  githubProfileFollowers: string;
+  githubProfilePublicRepos: string;
+  githubProfilePinned: string;
+  githubProfileNoPinned: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -582,6 +586,10 @@ export const STR: Record<Lang, Strings> = {
     githubTopPeriodAll: "Sempre",
     githubExploreLoading: "Carregando…",
     githubExploreEmpty: "Nenhum repositório encontrado.",
+    githubProfileFollowers: "seguidores",
+    githubProfilePublicRepos: "repos públicos",
+    githubProfilePinned: "Fixados",
+    githubProfileNoPinned: "Nenhum repositório fixado no perfil.",
   },
   en: {
     overview: "Overview",
@@ -865,6 +873,10 @@ export const STR: Record<Lang, Strings> = {
     githubTopPeriodAll: "All time",
     githubExploreLoading: "Loading…",
     githubExploreEmpty: "No repository found.",
+    githubProfileFollowers: "followers",
+    githubProfilePublicRepos: "public repos",
+    githubProfilePinned: "Pinned",
+    githubProfileNoPinned: "No repository pinned on the profile.",
   },
   es: {
     overview: "Resumen",
@@ -1148,6 +1160,10 @@ export const STR: Record<Lang, Strings> = {
     githubTopPeriodAll: "Siempre",
     githubExploreLoading: "Cargando…",
     githubExploreEmpty: "Ningún repositorio encontrado.",
+    githubProfileFollowers: "seguidores",
+    githubProfilePublicRepos: "repos públicos",
+    githubProfilePinned: "Fijados",
+    githubProfileNoPinned: "Ningún repositorio fijado en el perfil.",
   },
 };
 

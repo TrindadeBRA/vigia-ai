@@ -223,6 +223,173 @@ export async function fetchGithubTop(params: { language?: string | null; period?
     return searchGithubRepos(query, `top:${language || "any"}:${period}`);
 }
 
+/**
+ * Perfil GitHub: dados básicos (nome, bio, seguidores) via REST API oficial
+ * (/users/:username) + repositórios fixados via scraping da página pública
+ * do perfil, já que o GitHub só expõe "pinned items" pela API GraphQL
+ * autenticada (sem token aqui). O HTML é razoavelmente estável
+ * (classe `pinned-item-list-item`), mas é scraping mesmo — se a página
+ * mudar de marcação, cai para "sem fixados" em vez de quebrar.
+ */
+export type GithubPinnedRepo = {
+    full_name: string;
+    description: string | null;
+    stars: number;
+    forks: number;
+    language: string | null;
+    html_url: string;
+};
+
+export type GithubProfileResult = {
+    ok: boolean;
+    error: string | null;
+    username: string;
+    name: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+    followers: number | null;
+    public_repos: number | null;
+    html_url: string;
+    pinned: GithubPinnedRepo[];
+    updated_at: string;
+};
+
+const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+export function isValidGithubUsername(raw: string): boolean {
+    return USERNAME_RE.test(raw.trim());
+}
+
+function parseCompactCount(raw: string): number {
+    const s = raw.trim().toLowerCase().replace(/,/g, "");
+    const m = /^([\d.]+)([km]?)$/.exec(s);
+    if (!m) return 0;
+    const n = parseFloat(m[1]);
+    if (Number.isNaN(n)) return 0;
+    if (m[2] === "k") return Math.round(n * 1_000);
+    if (m[2] === "m") return Math.round(n * 1_000_000);
+    return Math.round(n);
+}
+
+function parsePinnedItems(html: string): GithubPinnedRepo[] {
+    const items: GithubPinnedRepo[] = [];
+    const liRe = /<li\s[^>]*\bpinned-item-list-item\b[^>]*>([\s\S]*?)<\/li>/g;
+    let m: RegExpExecArray | null;
+    while ((m = liRe.exec(html)) !== null) {
+        const block = m[1];
+        const hrefM = /href="\/([^"/]+)\/([^"/?#]+)"[^>]*>\s*<span class="repo">([^<]+)<\/span>/.exec(block);
+        if (!hrefM) continue;
+        const owner = hrefM[1];
+        const repoSlug = hrefM[2];
+        const descM = /pinned-item-desc[^>]*>([\s\S]*?)<\/p>/.exec(block);
+        const description = descM ? descM[1].replace(/\s+/g, " ").trim() || null : null;
+        const langM = /itemprop="programmingLanguage">([^<]+)</.exec(block);
+        const language = langM ? langM[1].trim() : null;
+        const starsM = /stargazers"[^>]*>[\s\S]*?<\/svg>\s*([\d.,km]+)/i.exec(block);
+        const forksM = /\/forks"[^>]*>[\s\S]*?<\/svg>\s*([\d.,km]+)/i.exec(block);
+        items.push({
+            full_name: `${owner}/${repoSlug}`,
+            description,
+            stars: starsM ? parseCompactCount(starsM[1]) : 0,
+            forks: forksM ? parseCompactCount(forksM[1]) : 0,
+            language,
+            html_url: `https://github.com/${owner}/${repoSlug}`,
+        });
+    }
+    return items;
+}
+
+const PROFILE_TTL_MS = 10 * 60 * 1000;
+type ProfileCacheEntry = { at: number; data: GithubProfileResult };
+const profileCache = new Map<string, ProfileCacheEntry>();
+
+function profileFail(username: string, error: string): GithubProfileResult {
+    return {
+        ok: false, error, username,
+        name: null, avatar_url: null, bio: null, followers: null, public_repos: null,
+        html_url: username ? `https://github.com/${username}` : "",
+        pinned: [], updated_at: utcNow(),
+    };
+}
+
+export async function fetchGithubProfile(usernameRaw: string): Promise<GithubProfileResult> {
+    const username = String(usernameRaw ?? "").trim();
+    if (!username) return profileFail(username, "Usuário vazio");
+    if (!isValidGithubUsername(username)) return profileFail(username, "Nome de usuário inválido");
+
+    const cacheKey = username.toLowerCase();
+    const cached = profileCache.get(cacheKey);
+    if (cached && Date.now() - cached.at < PROFILE_TTL_MS) return cached.data;
+
+    try {
+        const [userResp, htmlResp] = await Promise.all([
+            fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
+                headers: { "Accept": "application/vnd.github+json", "User-Agent": "VigiaAI/1.0 (github-profile)" },
+                signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+            }),
+            fetch(`https://github.com/${encodeURIComponent(username)}`, {
+                headers: { "User-Agent": "Mozilla/5.0 (compatible; VigiaAI/1.0; +https://github.com)" },
+                signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+            }).catch(() => null),
+        ]);
+
+        if (userResp.status === 404) return profileFail(username, "Usuário não encontrado");
+        if (userResp.status === 403 || userResp.status === 429) {
+            const error = "Limite de requisições do GitHub atingido (API pública sem token, tente novamente em alguns minutos)";
+            if (cached) return { ...cached.data, error };
+            return profileFail(username, error);
+        }
+        if (!userResp.ok) {
+            const body = await userResp.text().catch(() => "");
+            const error = `HTTP ${userResp.status}: ${body.slice(0, 200)}`;
+            if (cached) return { ...cached.data, error };
+            return profileFail(username, error);
+        }
+
+        const userData = await userResp.json() as Record<string, unknown>;
+        const html = htmlResp && htmlResp.ok ? await htmlResp.text().catch(() => "") : "";
+        const pinned = html ? parsePinnedItems(html) : [];
+
+        const result: GithubProfileResult = {
+            ok: true, error: null, username,
+            name: typeof userData.name === "string" ? userData.name : null,
+            avatar_url: typeof userData.avatar_url === "string" ? userData.avatar_url : null,
+            bio: typeof userData.bio === "string" ? userData.bio : null,
+            followers: typeof userData.followers === "number" ? userData.followers : null,
+            public_repos: typeof userData.public_repos === "number" ? userData.public_repos : null,
+            html_url: typeof userData.html_url === "string" ? userData.html_url : `https://github.com/${username}`,
+            pinned,
+            updated_at: utcNow(),
+        };
+        profileCache.set(cacheKey, { at: Date.now(), data: result });
+        return result;
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (cached) return { ...cached.data, error: msg.slice(0, 300) };
+        return profileFail(username, msg.slice(0, 300));
+    }
+}
+
+export async function fetchGithubProfiles(cfg: Record<string, unknown>): Promise<GithubProfileResult[]> {
+    const ghCfg = (cfg.github ?? {}) as Record<string, unknown>;
+    const profiles = Array.isArray(ghCfg.profiles) ? ghCfg.profiles as Array<Record<string, unknown>> : [];
+    if (profiles.length === 0) return [];
+    return Promise.all(profiles.map((p) => fetchGithubProfile(String(p.username ?? ""))));
+}
+
+export function mockGithubProfile(): GithubProfileResult {
+    const now = utcNow();
+    return {
+        ok: true, error: null, username: "octocat",
+        name: "The Octocat", avatar_url: "https://avatars.githubusercontent.com/u/583231?v=4",
+        bio: "Mascote do GitHub", followers: 12345, public_repos: 8,
+        html_url: "https://github.com/octocat",
+        pinned: [
+            { full_name: "octocat/Hello-World", description: "My first repository on GitHub!", stars: 2800, forks: 2600, language: "JavaScript", html_url: "https://github.com/octocat/Hello-World" },
+        ],
+        updated_at: now,
+    };
+}
+
 export function mockGithubExplore(): GithubExploreResult {
     const now = utcNow();
     return {
@@ -251,6 +418,7 @@ export function mockGithubPayload(): Record<string, unknown> {
                 pushed_at: now, updated_at: now,
             },
         ],
+        profiles: [mockGithubProfile()],
     };
 }
 

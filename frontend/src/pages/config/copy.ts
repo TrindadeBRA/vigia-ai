@@ -363,6 +363,15 @@ export type ConfigCopy = {
   githubNoPreview: string;
   githubPreviewOk: string;
   githubPreviewFail: string;
+  githubProfileLabel: string;
+  githubProfilePh: string;
+  githubProfileHint: string;
+  githubAddProfile: string;
+  githubProfileListLabel: string;
+  githubProfilesEmpty: string;
+  githubProfileNoPreview: string;
+  githubProfilePreviewOk: string;
+  githubProfilePreviewFail: string;
   // RetroAchievements
   retroTitle: string;
   retroLead: string;
@@ -784,6 +793,15 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Digite um repositório para testar.",
     githubPreviewOk: "Repositório acessível.",
     githubPreviewFail: "Não foi possível acessar.",
+    githubProfileLabel: "Perfil (usuário do GitHub)",
+    githubProfilePh: "ex.: torvalds",
+    githubProfileHint: "Mostra bio, seguidores e os repositórios fixados no perfil público. Também via API pública, sem login.",
+    githubAddProfile: "Adicionar perfil",
+    githubProfileListLabel: "Perfis monitorados",
+    githubProfilesEmpty: "Nenhum perfil adicionado ainda.",
+    githubProfileNoPreview: "Digite um usuário para testar.",
+    githubProfilePreviewOk: "Perfil acessível.",
+    githubProfilePreviewFail: "Não foi possível acessar.",
     retroTitle: "RetroAchievements",
     retroLead: "Veja seu perfil de conquistas retrô no painel — pontos, ranking, jogos recentes e últimas conquistas desbloqueadas.",
     retroNotConfigured: "Nenhuma conta RetroAchievements configurada.",
@@ -1200,6 +1218,15 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Type a repository to test.",
     githubPreviewOk: "Repository reachable.",
     githubPreviewFail: "Could not reach repository.",
+    githubProfileLabel: "Profile (GitHub username)",
+    githubProfilePh: "e.g. torvalds",
+    githubProfileHint: "Shows bio, followers and the pinned repositories on the public profile. Also via public API, no login.",
+    githubAddProfile: "Add profile",
+    githubProfileListLabel: "Monitored profiles",
+    githubProfilesEmpty: "No profile added yet.",
+    githubProfileNoPreview: "Type a username to test.",
+    githubProfilePreviewOk: "Profile reachable.",
+    githubProfilePreviewFail: "Could not reach profile.",
     retroTitle: "RetroAchievements",
     retroLead: "See your retro achievement profile on the board — points, rank, recent games and latest unlocks.",
     retroNotConfigured: "No RetroAchievements account configured.",
@@ -1616,6 +1643,15 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     githubNoPreview: "Escribe un repositorio para probar.",
     githubPreviewOk: "Repositorio accesible.",
     githubPreviewFail: "No se pudo acceder.",
+    githubProfileLabel: "Perfil (usuario de GitHub)",
+    githubProfilePh: "ej.: torvalds",
+    githubProfileHint: "Muestra bio, seguidores y los repositorios fijados en el perfil público. También vía API pública, sin login.",
+    githubAddProfile: "Añadir perfil",
+    githubProfileListLabel: "Perfiles monitoreados",
+    githubProfilesEmpty: "Ningún perfil añadido aún.",
+    githubProfileNoPreview: "Escribe un usuario para probar.",
+    githubProfilePreviewOk: "Perfil accesible.",
+    githubProfilePreviewFail: "No se pudo acceder.",
     retroTitle: "RetroAchievements",
     retroLead: "Mira tu perfil de logros retro en el panel — puntos, ranking, juegos recientes y últimos desbloqueos.",
     retroNotConfigured: "Ninguna cuenta de RetroAchievements configurada.",

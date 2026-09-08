@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchGithubTop, fetchGithubTrending } from "../../api/client";
-import type { GithubExploreRepo, GithubPayload, GithubRepo, GithubTopPeriod } from "../../api/types";
+import type { GithubExploreRepo, GithubPayload, GithubProfile, GithubRepo, GithubTopPeriod } from "../../api/types";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
@@ -22,6 +22,20 @@ export function githubAllowedSizes(repo?: GithubRepo | null): CardSize[] {
 export function githubSizeLabel(size: CardSize, t: T): string {
     const s = normalizeSize(size);
     if (s === "sm") return `${t.cardSmallPrefix} ${t.githubStars}`;
+    if (s === "md") return t.cardNormal;
+    if (s === "lg") return t.cardLarge;
+    if (s === "free") return t.cardFree;
+    return t.cardXl;
+}
+
+export function githubProfileAllowedSizes(profile?: GithubProfile | null): CardSize[] {
+    if (!profile || !profile.ok) return ["sm", "md", "free"];
+    return ["sm", "md", "lg", "free"];
+}
+
+export function githubProfileSizeLabel(size: CardSize, t: T): string {
+    const s = normalizeSize(size);
+    if (s === "sm") return `${t.cardSmallPrefix} ${t.githubProfileFollowers}`;
     if (s === "md") return t.cardNormal;
     if (s === "lg") return t.cardLarge;
     if (s === "free") return t.cardFree;
@@ -158,7 +172,9 @@ function GithubViewTabs({ view, onChange, t }: { view: GithubView; onChange: (v:
     );
 }
 
-function GithubExploreRow({ repo }: { repo: GithubExploreRepo }) {
+type GithubListItem = { full_name: string; description: string | null; stars: number; forks: number; language: string | null; html_url: string };
+
+function GithubExploreRow({ repo }: { repo: GithubListItem }) {
     return (
         <a
             href={repo.html_url}
@@ -176,7 +192,7 @@ function GithubExploreRow({ repo }: { repo: GithubExploreRepo }) {
     );
 }
 
-function GithubExploreList({ repos, loading, error, t }: { repos: GithubExploreRepo[]; loading: boolean; error: string | null; t: T }) {
+function GithubExploreList({ repos, loading, error, t, emptyLabel }: { repos: GithubListItem[]; loading: boolean; error: string | null; t: T; emptyLabel?: string }) {
     if (loading && repos.length === 0) {
         return <div className="flex flex-1 items-center"><div className={emptyNote}>{t.githubExploreLoading}</div></div>;
     }
@@ -184,7 +200,7 @@ function GithubExploreList({ repos, loading, error, t }: { repos: GithubExploreR
         return <div className="flex flex-1 items-center"><div className={errorText}>{error}</div></div>;
     }
     if (repos.length === 0) {
-        return <div className="flex flex-1 items-center"><div className={emptyNote}>{t.githubExploreEmpty}</div></div>;
+        return <div className="flex flex-1 items-center"><div className={emptyNote}>{emptyLabel ?? t.githubExploreEmpty}</div></div>;
     }
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
@@ -343,6 +359,126 @@ export function GithubBoardCard({
     );
 }
 
+/* ── Board (um card por perfil — bio + fixados) ────────────────────── */
+
+function GithubProfileAvatar({ profile, compact }: { profile: GithubProfile; compact?: boolean }) {
+    const size = compact ? "size-7" : "size-[42px]";
+    if (profile.avatar_url) {
+        return <img className={cn(size, "shrink-0 rounded-full object-cover shadow-[inset_0_0_0_1px_var(--card-border)]")} src={profile.avatar_url} alt="" draggable={false} />;
+    }
+    return (
+        <div className={cn("flex shrink-0 items-center justify-center rounded-full bg-chip shadow-[inset_0_0_0_1px_var(--card-border)]", size)}>
+            {PROVIDER_ICON.github ? <img className={compact ? "size-3.5 object-contain" : "size-[23px] object-contain"} src={PROVIDER_ICON.github} alt="" draggable={false} /> : <span className={compact ? "text-[13px]" : "text-[20px]"}>🐙</span>}
+        </div>
+    );
+}
+
+function GithubProfileHeader({ profile, compact, onOpen }: { profile: GithubProfile; compact?: boolean; onOpen?: () => void }) {
+    const name = profile.label || profile.name || profile.username;
+    const inner = (
+        <>
+            <div className="relative shrink-0">
+                <GithubProfileAvatar profile={profile} compact={compact} />
+                <span className={cn("absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full shadow-[0_0_0_2px_var(--panel)]", profile.ok ? "bg-good" : "bg-bad")} />
+            </div>
+            <div className="min-w-0 flex-1">
+                <div className={cn("overflow-hidden text-ellipsis whitespace-nowrap font-[650] leading-none", compact ? "text-[12.5px]" : "text-[14px]")}>{name}</div>
+                <div className={cardLabel}>@{profile.username}</div>
+            </div>
+        </>
+    );
+    if (onOpen) {
+        return (
+            <button type="button" className={cn("flex min-w-0 shrink-0 cursor-pointer items-center border-0 bg-transparent p-0 text-left text-ink", compact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")} onClick={onOpen}>
+                {inner}
+            </button>
+        );
+    }
+    return <div className={cn("flex min-w-0 shrink-0 items-center", compact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")}>{inner}</div>;
+}
+
+export function GithubProfileBoardCard({
+    profile,
+    t,
+    size,
+    onOpen,
+}: {
+    profile: GithubProfile | null | undefined;
+    t: T;
+    size: CardSize;
+    onOpen: () => void;
+}) {
+    const ns = normalizeSize(size);
+    const isCompact = ns === "sm";
+
+    if (!profile) {
+        return (
+            <div className="flex h-full min-h-0 w-full flex-col">
+                <div className={cn("flex min-w-0 shrink-0 items-center", isCompact ? "mb-1.5 gap-2" : "mb-2.5 gap-2.5")}>
+                    <GithubIcon compact={isCompact} />
+                    <div className="min-w-0 flex-1">
+                        <div className={cn("overflow-hidden text-ellipsis whitespace-nowrap font-[650] leading-none", isCompact ? "text-[12.5px]" : "text-[14px]")}>{t.github}</div>
+                    </div>
+                </div>
+                <div className="flex flex-1 items-center">
+                    <div className={cn(errorText, isCompact && "text-[11px] leading-snug")}>{t.githubEmpty}</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!profile.ok) {
+        return (
+            <div className="flex h-full min-h-0 w-full flex-col">
+                <GithubProfileHeader profile={profile} compact={isCompact} onOpen={onOpen} />
+                <div className="flex flex-1 items-center">
+                    <div className={cn(errorText, isCompact && "text-[11px] leading-snug")}>{profile.error || t.noData}</div>
+                </div>
+            </div>
+        );
+    }
+
+    // sm: hero de seguidores
+    if (ns === "sm") {
+        return (
+            <div className="flex h-full min-h-0 w-full items-center gap-2.5 overflow-hidden">
+                <div className="relative shrink-0">
+                    <GithubProfileAvatar profile={profile} />
+                    <span className="absolute -bottom-0.5 -right-0.5 size-[7px] rounded-full bg-good shadow-[0_0_0_2px_var(--panel)]" />
+                </div>
+                <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
+                    <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-semibold leading-none text-ink3">{profile.label || profile.name || profile.username}</div>
+                    <div className={cn(num, "mt-1 text-[16px] font-[750] leading-tight")}>{fmtCompactNumber(profile.followers)} {t.githubProfileFollowers}</div>
+                    <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] text-ink3">{profile.pinned.length} {t.githubProfilePinned.toLowerCase()}</div>
+                </button>
+            </div>
+        );
+    }
+
+    const pinnedLabel = t.githubProfileNoPinned;
+    if (ns === "md") {
+        return (
+            <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+                <GithubProfileHeader profile={profile} onOpen={onOpen} />
+                <GithubExploreList repos={profile.pinned.slice(0, 3)} loading={false} error={null} t={t} emptyLabel={pinnedLabel} />
+            </div>
+        );
+    }
+
+    // lg / free: bio + fixados completos
+    return (
+        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+            <GithubProfileHeader profile={profile} onOpen={onOpen} />
+            {profile.bio ? <div className="mb-1.5 shrink-0 line-clamp-2 text-[11.5px] leading-snug text-ink2">{profile.bio}</div> : null}
+            <div className="mb-1 flex shrink-0 gap-1.5">
+                <StatChip label={t.githubProfileFollowers} value={fmtCompactNumber(profile.followers)} />
+                <StatChip label={t.githubProfilePublicRepos} value={fmtCompactNumber(profile.public_repos)} />
+            </div>
+            <GithubExploreList repos={profile.pinned} loading={false} error={null} t={t} emptyLabel={pinnedLabel} />
+        </div>
+    );
+}
+
 /* ── Detail (página da conta) ─────────────────────────────────────── */
 
 export function GithubDetail({ repo, github, t }: { repo?: GithubRepo | null; github?: GithubPayload | null | undefined; t: T }) {
@@ -380,6 +516,53 @@ export function GithubDetail({ repo, github, t }: { repo?: GithubRepo | null; gi
                             {target.html_url}
                         </a>
                     ) : null}
+                </div>
+            )}
+        </div>
+    );
+}
+
+export function GithubProfileDetail({ profile, t }: { profile?: GithubProfile | null; t: T }) {
+    if (!profile) {
+        return (
+            <div className="rounded-2xl border border-edge bg-panel p-4">
+                <div className={emptyNote}>{t.githubEmpty}</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-2xl border border-edge bg-panel p-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2.5">
+                <GithubProfileAvatar profile={profile} />
+                <div className="min-w-0 flex-1">
+                    <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-bold text-ink">{profile.label || profile.name || profile.username}</h3>
+                    <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">@{profile.username}</div>
+                </div>
+                <span className={cn("size-2.5 shrink-0 rounded-full", profile.ok ? "bg-good" : "bg-bad")} />
+            </div>
+            {!profile.ok ? (
+                <div className={errorText}>{profile.error || t.noData}</div>
+            ) : (
+                <div className="flex flex-col gap-3">
+                    {profile.bio ? <div className="text-[13px] leading-relaxed text-ink2">{profile.bio}</div> : null}
+                    <div className="flex flex-wrap gap-2">
+                        <StatChip label={t.githubProfileFollowers} value={fmtCompactNumber(profile.followers)} />
+                        <StatChip label={t.githubProfilePublicRepos} value={fmtCompactNumber(profile.public_repos)} />
+                    </div>
+                    <div>
+                        <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-ink3">{t.githubProfilePinned}</div>
+                        {profile.pinned.length ? (
+                            <div className="flex flex-col gap-1.5">
+                                {profile.pinned.map((r) => <GithubExploreRow key={r.full_name} repo={r} />)}
+                            </div>
+                        ) : (
+                            <div className={emptyNote}>{t.githubProfileNoPinned}</div>
+                        )}
+                    </div>
+                    <a className="text-[12px] font-medium text-accent no-underline hover:underline" href={profile.html_url} target="_blank" rel="noopener noreferrer">
+                        {profile.html_url}
+                    </a>
                 </div>
             )}
         </div>

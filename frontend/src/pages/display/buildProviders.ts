@@ -408,6 +408,30 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       });
     }
   }
+  // GitHub — um card por perfil (bio + repositórios fixados)
+  if (github && github.profiles) {
+    for (const profile of github.profiles) {
+      const profileName = profile.label || profile.name || profile.username;
+      const metrics: Metric[] = profile.ok
+        ? [
+          { label: t.githubProfileFollowers, pct: null, value: profile.followers != null ? String(profile.followers) : null, sub: null },
+          { label: t.githubProfilePublicRepos, pct: null, value: profile.public_repos != null ? String(profile.public_repos) : null, sub: null },
+        ]
+        : [{ label: profileName, pct: null, value: null, sub: profile.error ?? t.noData }];
+      list.push({
+        id: `github-profile:${profile.id}`,
+        provider: "github",
+        ok: profile.ok,
+        error: profile.error,
+        title: profileName,
+        label: profile.username,
+        metrics,
+        kind: "github",
+        github,
+        githubProfile: profile,
+      });
+    }
+  }
   return list;
 }
 
