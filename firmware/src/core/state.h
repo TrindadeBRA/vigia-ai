@@ -28,7 +28,12 @@ enum View : uint8_t
   // desliga. Faz parte do swipe normal a partir da Início (ver uiNext/uiPrev
   // em ui/nav.cpp), mas nunca minera sozinha fora desta tela.
   VIEW_MINER = 15,
-  VIEW_COUNT = 16
+  // Cameras IP (protótipo): card unico na Inicio abre a lista; toque numa
+  // camera abre live + PTZ. Fora do contrato /usage — o firmware busca
+  // GET /api/camera/cameras (e snapshot/ptz) no coletor.
+  VIEW_CAMERAS = 16,
+  VIEW_CAMERA = 17,
+  VIEW_COUNT = 18
 };
 
 // Cada provedor pode ter varias contas (ex.: Claude pessoal + Claude da

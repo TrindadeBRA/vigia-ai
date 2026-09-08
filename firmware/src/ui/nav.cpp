@@ -1,5 +1,6 @@
 #include "ui/ui.h"
 
+#include "net/camera_client.h"
 #include "net/mining_client.h"
 #include "net/usage_client.h"
 #include "ui/customtheme.h"
@@ -71,6 +72,19 @@ void uiSetView(View v)
   {
     miningClientExitView();
   }
+  if (v == VIEW_CAMERAS)
+  {
+    cameraClientFetchList();
+  }
+  if (v == VIEW_CAMERA)
+  {
+    cameraClientEnterLive();
+    cameraLiveOnEnter();
+  }
+  else if (g_view == VIEW_CAMERA)
+  {
+    cameraClientExitLive();
+  }
   // Entrando numa view de detalhe vinda de outra: comeca pela conta que mais
   // precisa de atencao. Reabrir a mesma view (idx ja escolhido pelo
   // paginador) nao passa por aqui, pois o "if (v == g_view) return;" acima
@@ -123,7 +137,7 @@ static bool viewHasScroll()
          g_view == VIEW_CURSOR || g_view == VIEW_OPENROUTER || g_view == VIEW_DEEPSEEK ||
          g_view == VIEW_OPENCODE || g_view == VIEW_FAL || g_view == VIEW_BITCOIN ||
          g_view == VIEW_ADSENSE || g_view == VIEW_CURRENCIES || g_view == VIEW_WEATHER ||
-         g_view == VIEW_STATUS || g_view == VIEW_MINER;
+         g_view == VIEW_STATUS || g_view == VIEW_MINER || g_view == VIEW_CAMERAS;
 }
 
 bool uiCanScroll() { return viewHasScroll() && g_detailCanScroll; }
@@ -185,6 +199,12 @@ void uiRefreshData()
     paintCustomHome();
     return;
   }
+  if (g_view == VIEW_CAMERA)
+  {
+    // O MJPEG em tela cheia e o tick da live donos da TFT — um refresh de
+    // /usage nao pode apagar o video.
+    return;
+  }
   drawHeader();
   switch (g_view)
   {
@@ -227,6 +247,12 @@ void uiRefreshData()
   case VIEW_MINER:
     paintMiner();
     break;
+  case VIEW_CAMERAS:
+    paintCameras();
+    break;
+  case VIEW_CAMERA:
+    paintCameraLive();
+    break;
   default:
     paintHome();
     break;
@@ -238,8 +264,21 @@ void uiRefreshData()
 // residuo da tela anterior poderia ficar visivel sem o fillScreen.
 void uiPaint()
 {
+  if (g_view == VIEW_CAMERA)
+  {
+    paintCameraLive();
+    return;
+  }
   tft.fillScreen(COL_BG);
   uiRefreshData();
+}
+
+void uiHandlePointerUp(int16_t x, int16_t y)
+{
+  if (g_view == VIEW_CAMERA)
+  {
+    cameraLiveHandlePointer(false, x, y);
+  }
 }
 
 void uiHandleSwipe(int16_t dx)
@@ -247,6 +286,11 @@ void uiHandleSwipe(int16_t dx)
   if (g_view == VIEW_NOW || g_view == VIEW_THEME)
   {
     uiSetView(VIEW_HOME);
+    return;
+  }
+  if (g_view == VIEW_CAMERA)
+  {
+    uiSetView(VIEW_CAMERAS);
     return;
   }
   if (dx <= -40)
@@ -279,11 +323,16 @@ void uiHandleTap(int16_t x, int16_t y)
     uiSetView(VIEW_HOME);
     return;
   }
+  if (g_view == VIEW_CAMERA)
+  {
+    cameraLiveHandlePointer(true, x, y);
+    return;
+  }
   if (x >= g_hdrX0 && x < g_hdrX1 && y >= g_hdrY0 && y < g_hdrY1)
   {
     if (x >= g_headerHomeX0 && x < g_headerHomeX1 && y >= g_headerHomeY0 && y < g_headerHomeY1)
     {
-      uiSetView(VIEW_HOME);
+      uiSetView(g_view == VIEW_CAMERA ? VIEW_CAMERAS : VIEW_HOME);
       return;
     }
     if (x >= g_headerInfoX0 && x < g_headerInfoX1 && y >= g_headerInfoY0 && y < g_headerInfoY1)
@@ -373,6 +422,16 @@ void uiHandleTap(int16_t x, int16_t y)
         return;
       }
     }
+    return;
+  }
+  if (g_view == VIEW_CAMERAS)
+  {
+    cameraPickerHandleTap(x, y);
+    return;
+  }
+  if (g_view == VIEW_CAMERA)
+  {
+    cameraLiveHandlePointer(true, x, y);
     return;
   }
   if (g_view == VIEW_STATUS)
@@ -476,6 +535,10 @@ void uiHandleTap(int16_t x, int16_t y)
 // sem repintar a tela inteira — chamado a cada volta do loop() em main.cpp.
 void uiTickClock()
 {
+  if (g_view == VIEW_CAMERA)
+  {
+    return;
+  }
   if (g_view == VIEW_NOW)
   {
     int year, mo, dd, hh, mi, ss;
@@ -516,7 +579,7 @@ void uiTickClock()
 // header pra dar movimento continuo. VIEW_NOW e tela cheia sem header.
 void uiTickEye()
 {
-  if (g_view == VIEW_NOW || g_view == VIEW_THEME || g_eyeR <= 0)
+  if (g_view == VIEW_NOW || g_view == VIEW_THEME || g_view == VIEW_CAMERA || g_eyeR <= 0)
   {
     return;
   }

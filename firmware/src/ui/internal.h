@@ -65,7 +65,7 @@ extern float g_eyeLid;
 // paintHomeGrid() a cada pintura — só os provedores com pelo menos uma conta
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta
 // lista em vez de assumir posições fixas.
-constexpr int MAX_HOME_CARDS = 12;
+constexpr int MAX_HOME_CARDS = 16;
 extern View g_homeCardView[MAX_HOME_CARDS];
 extern int g_homeCardX[MAX_HOME_CARDS];
 extern int g_homeCardY[MAX_HOME_CARDS];
@@ -178,6 +178,12 @@ void paintCurrencies();
 void paintWeather();
 void paintStatus();
 void paintMiner();
+void paintCameras();
+void paintCameraLive();
+void cameraLiveOnEnter();
+void uiTickCamera();
+bool cameraPickerHandleTap(int16_t x, int16_t y);
+bool cameraLiveHandlePointer(bool down, int16_t x, int16_t y);
 // Compartilhadas entre ui/views/miner.cpp e o card da Início (home.cpp).
 String miningFmtHashrate(double hs);
 const char *miningStatusLabel(MiningStatus s, const UiStrings &t);

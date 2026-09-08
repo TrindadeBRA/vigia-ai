@@ -42,6 +42,9 @@ void onPointer(bool down, uint16_t x, uint16_t y) {
     }
     return;
   }
+  if (g_wasDown) {
+    uiHandlePointerUp((int16_t)g_lastX, (int16_t)g_lastY);
+  }
   if (g_wasDown && !g_didTap && uiCanScroll() && now - g_lastTapMs > 160) {
     int16_t dx = (int16_t)g_lastX - (int16_t)g_startX;
     int16_t dy = (int16_t)g_lastY - (int16_t)g_startY;

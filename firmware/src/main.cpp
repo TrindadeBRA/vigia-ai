@@ -5,6 +5,7 @@
 // Árvore: core/ (estado) · net/ (Wi-Fi/SSE/JSON) · input/ (toque/serial) · ui/ (tema, nav, views/).
 #include "input/input.h"
 #include "mining/mining_task.h"
+#include "net/camera_client.h"
 #include "net/mining_client.h"
 #include "net/theme_server.h"
 #include "net/usage_client.h"
@@ -59,13 +60,23 @@ void setup()
 
 void loop()
 {
+  if (g_view == VIEW_CAMERA)
+  {
+    inputPoll();
+    uiTickCamera();
+    delay(1);
+    return;
+  }
+
   inputPoll();
   uiTickClock();
   uiTickEye();
   uiTickMiner();
+  uiTickCamera();
   themeServerHandle();
   miningTaskTick();
   miningClientPoll();
+  cameraClientPoll();
 
   usageClientEnsureWifi();
   uint32_t now = millis();

@@ -103,6 +103,12 @@ static const UiStrings kPt = {
     "Shares rejeitadas",
     "Melhor dificuldade",
     "Tempo minerando",
+    "Cameras",
+    "Nenhuma camera",
+    "Cadastre no painel do coletor",
+    "Carregando...",
+    "Camera offline",
+    "PTZ",
 };
 
 static const UiStrings kEn = {
@@ -206,6 +212,12 @@ static const UiStrings kEn = {
     "Rejected shares",
     "Best difficulty",
     "Mining uptime",
+    "Cameras",
+    "No cameras",
+    "Add one in the collector panel",
+    "Loading...",
+    "Camera offline",
+    "PTZ",
 };
 
 static const UiStrings kEs = {
@@ -309,6 +321,12 @@ static const UiStrings kEs = {
     "Shares rechazadas",
     "Mejor dificultad",
     "Tiempo minando",
+    "Camaras",
+    "Ninguna camara",
+    "Registre en el panel del colector",
+    "Cargando...",
+    "Camara offline",
+    "PTZ",
 };
 
 const UiStrings &uiTr()

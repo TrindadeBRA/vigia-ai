@@ -12,7 +12,9 @@
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
 #include "assets/icons/icon_weather.h"
+#include "assets/icons/icon_camera.h"
 #include "mining/mining_task.h"
+#include "net/camera_client.h"
 
 static void paintHomeMetric(int x, int y, int w, const char *label, float pct, const String &sub,
                             uint8_t font, int labelH, int barH)
@@ -226,6 +228,11 @@ static int buildHomeProviders(HomeProvider out[MAX_HOME_CARDS])
   // menu, reusa ICON_BITCOIN (afinidade tematica, sem asset novo) — nao
   // depende de contagem de contas como os outros provedores.
   add(VIEW_MINER, uiTr().miningTitle, ICON_BITCOIN, 1, "");
+  {
+    const UiStrings &t = uiTr();
+    String suffix = cameraCount() > 0 ? String(cameraCount()) : "";
+    add(VIEW_CAMERAS, t.cameras, ICON_CAMERA, 1, suffix);
+  }
   return n;
 }
 
@@ -308,6 +315,8 @@ static void paintHomeList()
       else if (v == VIEW_WEATHER)
         two = true;
       else if (v == VIEW_MINER)
+        two = true;
+      else if (v == VIEW_CAMERAS)
         two = true;
       else
         two = false;
@@ -669,6 +678,17 @@ static void paintHomeList()
       l2 = t.miningHashrateCurrent;
       p2 = -1;
       s2 = miningFmtHashrate(mr.hashrateCurrent);
+      isTwo = true;
+    }
+    else if (v == VIEW_CAMERAS)
+    {
+      ok = true;
+      l1 = t.cameras;
+      p1 = -1;
+      s1 = cameraCount() > 0 ? String(cameraCount()) : String(t.camerasEmpty);
+      l2 = t.cameraPtz;
+      p2 = -1;
+      s2 = String(cameraPtzCount());
       isTwo = true;
     }
     else if (v == VIEW_CURRENCIES)
@@ -1096,6 +1116,17 @@ static void paintHomeGrid()
       s2 = miningFmtHashrate(mr.hashrateCurrent);
       metricCount = 2;
     }
+    else if (v == VIEW_CAMERAS)
+    {
+      ok = true;
+      l1 = t.cameras;
+      p1 = -1;
+      s1 = cameraCount() > 0 ? String(cameraCount()) : String(t.camerasEmpty);
+      l2 = t.cameraPtz;
+      p2 = -1;
+      s2 = String(cameraPtzCount());
+      metricCount = 2;
+    }
     else if (v == VIEW_CURRENCIES)
     {
       ok = g_snap.currencies.ok;
@@ -1339,7 +1370,7 @@ void paintHome()
                    (g_snap.deepseekCount > 0 ? 16 : 0) | (g_snap.opencodeCount > 0 ? 32 : 0) |
                    (g_snap.falCount > 0 ? 64 : 0) | (g_snap.bitcoinCount > 0 ? 128 : 0) |
                    (g_snap.adsenseCount > 0 ? 256 : 0) | (weatherVisible() ? 512 : 0) |
-                   (currenciesVisible() ? 1024 : 0) | 2048; // Mineracao: sempre presente
+                   (currenciesVisible() ? 1024 : 0) | 2048 | 4096; // Mineracao + cameras: sempre presentes
   int sizeMask = 0;
   if (g_snap.claudeCount > 0)
     sizeMask |= (int)uiCardSize(VIEW_CLAUDE) << 0;

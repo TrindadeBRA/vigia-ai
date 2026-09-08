@@ -76,6 +76,7 @@ void uiTickEye();
 // Repinta a VIEW_MINER periodicamente (hashrate/uptime mudam sem toque
 // nenhum) — no-op fora dela. Ver ui/views/miner.cpp.
 void uiTickMiner();
+void uiTickCamera();
 void uiNext();
 void uiPrev();
 void uiSetView(View v);
@@ -98,5 +99,6 @@ void uiDetailScrollBy(int dy);
 // True quando a view atual tem conteúdo maior que a tela (setas ↑↓ visíveis).
 bool uiCanScroll();
 void uiHandleTap(int16_t x, int16_t y);
+void uiHandlePointerUp(int16_t x, int16_t y);
 void uiHandleSwipe(int16_t dx);
 void uiHandleVerticalSwipe(int16_t dy);

@@ -50,3 +50,33 @@ void drawBrand(int x, int y, uint8_t font);
 // o olho verticalmente com palpebras deslizando de cima/baixo, igual ao blink
 // do logo do frontend (0 = aberto, 1 = fechado).
 void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f);
+
+// Mesmo desenho, mas parametrizado no alvo grafico (TFT_eSPI ou TFT_eSprite,
+// que herda de TFT_eSPI) — usado pelo splash pra montar o frame inteiro num
+// sprite off-screen antes de mandar pro display de uma vez (pushSprite),
+// evitando o "cortes/flicker" de compor o olho direto na tela primitiva a
+// primitiva (ver ui/splash.cpp).
+template <typename T>
+void drawEyeIconOn(T &gfx, int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f) {
+  gfx.fillCircle(cx, cy, r, TFT_WHITE);
+  gfx.drawCircle(cx, cy, r, COL_TEXT_DIM);
+  const int pupilR = r * 2 / 5;
+  const int px = cx + gazeX;
+  const int py = cy + gazeY;
+  gfx.fillCircle(px, py, pupilR, COL_ACCENT);
+  if (pupilR >= 4) {
+    gfx.fillCircle(px - pupilR / 3, py - pupilR / 3, 2, TFT_WHITE);
+  }
+  if (lid > 0.001f) {
+    int coverage = (int)(r * 2 * lid + 0.5f);
+    if (coverage > r * 2) coverage = r * 2;
+    const int topH = coverage / 2;
+    const int botH = coverage - topH;
+    if (topH > 0) {
+      gfx.fillRect(cx - r - 1, cy - r, r * 2 + 2, topH, COL_BG);
+    }
+    if (botH > 0) {
+      gfx.fillRect(cx - r - 1, cy + r - botH + 1, r * 2 + 2, botH, COL_BG);
+    }
+  }
+}

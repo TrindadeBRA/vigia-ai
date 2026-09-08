@@ -63,7 +63,8 @@ void handleSerial()
     {
       // Cicla tamanho do card da view atual (ou do primeiro provider visível se em HOME)
       View v = g_view;
-      if (v == VIEW_HOME || v == VIEW_STATUS || v == VIEW_NOW || v == VIEW_THEME || v == VIEW_MINER)
+      if (v == VIEW_HOME || v == VIEW_STATUS || v == VIEW_NOW || v == VIEW_THEME || v == VIEW_MINER ||
+          v == VIEW_CAMERAS || v == VIEW_CAMERA)
       {
         if (g_snap.claudeCount > 0)
           v = VIEW_CLAUDE;

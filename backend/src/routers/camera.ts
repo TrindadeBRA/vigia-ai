@@ -75,7 +75,19 @@ const SNAPSHOT_TIMEOUT_MS = 8000;
 const snapshotCache = new Map<string, { at: number; jpeg: Buffer }>();
 const snapshotInFlight = new Map<string, Promise<Buffer>>();
 
-function grabSnapshot(config: CameraItem): Promise<Buffer> {
+function snapshotCacheKey(id: string, width: number): string {
+  return `${id}:${width}`;
+}
+
+function parseSnapshotWidth(raw: unknown): number {
+  const n = typeof raw === "string" ? Number(raw) : typeof raw === "number" ? raw : 0;
+  if (!Number.isFinite(n)) return 0;
+  const w = Math.round(n);
+  if (w < 80 || w > 640) return 0;
+  return w;
+}
+
+function grabSnapshot(config: CameraItem, width = 0): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const url = rtspUrl(config);
     // UDP em vez de TCP: várias câmeras clone (HiIP/Yoosee) devolvem o
@@ -86,10 +98,18 @@ function grabSnapshot(config: CameraItem): Promise<Buffer> {
       "-timeout", String(SNAPSHOT_TIMEOUT_MS * 1000),
       "-y", "-i", url,
       "-frames:v", "1",
+    ];
+    // A placa (ESP32) pede `?w=` pra caber JPEG pequeno na RAM e no SPI da
+    // TFT; o board web continua no tamanho nativo da câmera (width=0).
+    if (width > 0) {
+      args.push("-vf", `scale=${width}:-2`);
+    }
+    args.push(
+      "-q:v", width > 0 ? "8" : "3",
       "-f", "image2pipe",
       "-vcodec", "mjpeg",
       "-",
-    ];
+    );
     const proc = spawn("ffmpeg", args, { stdio: ["ignore", "pipe", "pipe"] });
     const chunks: Buffer[] = [];
     let stderr = "";
@@ -116,18 +136,52 @@ const STREAM_BOUNDARY = "vigiaframe";
 const SOI = Buffer.from([0xff, 0xd8]);
 const EOI = Buffer.from([0xff, 0xd9]);
 
-function spawnFfmpegStream(config: CameraItem, onFrame: (jpeg: Buffer) => void, onEnd: (err: Error | null) => void): () => void {
+type StreamFit = "cover" | "contain";
+
+function parseStreamFit(raw: unknown): StreamFit {
+  return raw === "contain" ? "contain" : "cover";
+}
+
+function boardScaleFilter(size: { w: number; h: number }, fit: StreamFit): string {
+  const { w, h } = size;
+  if (fit === "contain") {
+    return `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:black`;
+  }
+  return `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`;
+}
+
+function spawnFfmpegStream(
+  config: CameraItem,
+  onFrame: (jpeg: Buffer) => void,
+  onEnd: (err: Error | null) => void,
+  size?: { w: number; h: number },
+  fit: StreamFit = "cover",
+): () => void {
   const url = rtspUrl(config);
+  // Board web: 640 @ 10fps. Firmware (size): baixa latência — sem -r (o
+  // filtro fps do ffmpeg empilha frames) e com nobuffer/low_delay pra o
+  // RTSP não ficar segundos atrás do relógio da câmera.
+  const forBoard = Boolean(size);
+  const vf = forBoard ? boardScaleFilter(size!, fit) : "scale=640:-2";
   const args = [
+    ...(forBoard
+      ? [
+          "-fflags", "nobuffer+discardcorrupt",
+          "-flags", "low_delay",
+          "-probesize", "32",
+          "-analyzeduration", "0",
+          "-max_delay", "0",
+        ]
+      : []),
     "-rtsp_transport", "udp",
     "-timeout", "8000000",
     "-i", url,
     "-an",
-    "-vf", "scale=640:-2",
-    "-r", "10",
-    "-q:v", "6",
-    "-f", "image2pipe",
-    "-vcodec", "mjpeg",
+    "-vf", vf,
+    ...(forBoard ? [] : ["-r", "10"]),
+    "-q:v", forBoard ? "14" : "6",
+    "-f", "mjpeg",
+    "-flush_packets", "1",
     "-",
   ];
   const proc = spawn("ffmpeg", args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -176,16 +230,28 @@ const STOP_GRACE_MS = 5000;
 type StreamEntry = { stop: () => void; subs: Set<StreamSub>; stopTimer: NodeJS.Timeout | null };
 const sharedStreams = new Map<string, StreamEntry>();
 
-function killStream(cameraId: string): void {
-  const entry = sharedStreams.get(cameraId);
-  if (!entry) return;
-  if (entry.stopTimer) clearTimeout(entry.stopTimer);
-  entry.stop();
-  sharedStreams.delete(cameraId);
+function streamMapKey(cameraId: string, size?: { w: number; h: number }, fit: StreamFit = "cover"): string {
+  return size ? `${cameraId}:${size.w}x${size.h}:${fit}` : cameraId;
 }
 
-function subscribeStream(cameraId: string, config: CameraItem, sub: StreamSub): () => void {
-  let entry = sharedStreams.get(cameraId);
+function killStream(cameraId: string): void {
+  for (const [key, entry] of [...sharedStreams.entries()]) {
+    if (key !== cameraId && !key.startsWith(`${cameraId}:`)) continue;
+    if (entry.stopTimer) clearTimeout(entry.stopTimer);
+    entry.stop();
+    sharedStreams.delete(key);
+  }
+}
+
+function subscribeStream(
+  cameraId: string,
+  config: CameraItem,
+  sub: StreamSub,
+  size?: { w: number; h: number },
+  fit: StreamFit = "cover",
+): () => void {
+  const key = streamMapKey(cameraId, size, fit);
+  let entry = sharedStreams.get(key);
   if (entry) {
     if (entry.stopTimer) {
       clearTimeout(entry.stopTimer);
@@ -200,22 +266,24 @@ function subscribeStream(cameraId: string, config: CameraItem, sub: StreamSub): 
       (err) => {
         for (const s of subs) s.onEnd(err);
         subs.clear();
-        if (sharedStreams.get(cameraId) === created) sharedStreams.delete(cameraId);
+        if (sharedStreams.get(key) === created) sharedStreams.delete(key);
       },
+      size,
+      fit,
     );
-    sharedStreams.set(cameraId, created);
+    sharedStreams.set(key, created);
     entry = created;
   }
   entry.subs.add(sub);
   return () => {
-    const cur = sharedStreams.get(cameraId);
+    const cur = sharedStreams.get(key);
     if (!cur || cur !== entry) return;
     cur.subs.delete(sub);
     if (cur.subs.size === 0) {
       cur.stopTimer = setTimeout(() => {
-        if (sharedStreams.get(cameraId) === cur && cur.subs.size === 0) {
+        if (sharedStreams.get(key) === cur && cur.subs.size === 0) {
           cur.stop();
-          sharedStreams.delete(cameraId);
+          sharedStreams.delete(key);
         }
       }, STOP_GRACE_MS);
     }
@@ -256,8 +324,12 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     save(file);
     if (rtspFieldsChanged(prev, next)) {
       killStream(id);
-      snapshotCache.delete(id);
-      snapshotInFlight.delete(id);
+      for (const key of [...snapshotCache.keys()]) {
+        if (key.startsWith(`${id}:`)) snapshotCache.delete(key);
+      }
+      for (const key of [...snapshotInFlight.keys()]) {
+        if (key.startsWith(`${id}:`)) snapshotInFlight.delete(key);
+      }
     }
     if (prev.host !== next.host || prev.username !== next.username || prev.password !== next.password || prev.onvifPort !== next.onvifPort) {
       invalidatePtzCache(id);
@@ -273,32 +345,38 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     file.cameras.splice(idx, 1);
     save(file);
     killStream(id);
-    snapshotCache.delete(id);
-    snapshotInFlight.delete(id);
+    for (const key of [...snapshotCache.keys()]) {
+      if (key.startsWith(`${id}:`)) snapshotCache.delete(key);
+    }
+    for (const key of [...snapshotInFlight.keys()]) {
+      if (key.startsWith(`${id}:`)) snapshotInFlight.delete(key);
+    }
     invalidatePtzCache(id);
     return { ok: true };
   });
 
   app.get("/api/camera/cameras/:id/snapshot", async (request, reply) => {
     const { id } = request.params as { id: string };
+    const width = parseSnapshotWidth((request.query as { w?: string }).w);
     const config = load().cameras.find((c) => c.id === id);
     if (!config) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });
     if (!config.host.trim()) {
       return reply.code(400).send({ ok: false, error: "Câmera não configurada — preencha o IP em Configurações." });
     }
+    const key = snapshotCacheKey(id, width);
     const now = Date.now();
-    const cached = snapshotCache.get(id);
+    const cached = snapshotCache.get(key);
     if (cached && now - cached.at < SNAPSHOT_TTL_MS) {
       return reply.type("image/jpeg").send(cached.jpeg);
     }
     try {
-      let inFlight = snapshotInFlight.get(id);
+      let inFlight = snapshotInFlight.get(key);
       if (!inFlight) {
-        inFlight = grabSnapshot(config).finally(() => { snapshotInFlight.delete(id); });
-        snapshotInFlight.set(id, inFlight);
+        inFlight = grabSnapshot(config, width).finally(() => { snapshotInFlight.delete(key); });
+        snapshotInFlight.set(key, inFlight);
       }
       const jpeg = await inFlight;
-      snapshotCache.set(id, { at: Date.now(), jpeg });
+      snapshotCache.set(key, { at: Date.now(), jpeg });
       return reply.type("image/jpeg").send(jpeg);
     } catch (e) {
       return reply.code(502).send({ ok: false, error: e instanceof Error ? e.message : String(e) });
@@ -307,6 +385,11 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/api/camera/cameras/:id/stream", async (request, reply) => {
     const { id } = request.params as { id: string };
+    const q = request.query as { w?: string; h?: string; fit?: string };
+    const sw = parseSnapshotWidth(q.w);
+    const sh = parseSnapshotWidth(q.h);
+    const size = sw && sh ? { w: sw, h: sh } : undefined;
+    const fit = parseStreamFit(q.fit);
     const config = load().cameras.find((c) => c.id === id);
     if (!config) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });
     if (!config.host.trim()) {
@@ -332,7 +415,7 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
         ended = true;
         res.end();
       },
-    });
+    }, size, fit);
     request.raw.on("close", () => {
       ended = true;
       unsubscribe();

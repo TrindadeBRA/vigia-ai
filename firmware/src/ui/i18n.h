@@ -103,6 +103,12 @@ struct UiStrings
   const char *miningSharesRejected;
   const char *miningBestDifficulty;
   const char *miningUptime;
+  const char *cameras;
+  const char *camerasEmpty;
+  const char *camerasHint;
+  const char *cameraLoading;
+  const char *cameraOffline;
+  const char *cameraPtz;
 };
 
 const UiStrings &uiTr();
