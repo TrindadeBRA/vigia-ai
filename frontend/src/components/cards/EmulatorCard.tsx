@@ -480,17 +480,32 @@ export function EmulatorBoardCard({
                 }
             } catch { }
         }
+        // Libera o contexto WebGL explicitamente antes de descartar o canvas — sem isso o
+        // navegador só libera a GPU quando o GC roda, e trocas rápidas de jogo esgotam o
+        // limite de contextos WebGL simultâneos (causa tela preta / crash da aba)
+        const releaseCanvasGl = (c: HTMLCanvasElement) => {
+            try {
+                const gl = (c.getContext("webgl2") ?? c.getContext("webgl")) as WebGLRenderingContext | WebGL2RenderingContext | null;
+                gl?.getExtension("WEBGL_lose_context")?.loseContext();
+            } catch { /* ignore */ }
+        };
         if (emulatorRef.current) {
+            emulatorRef.current.querySelectorAll("canvas").forEach((c) => releaseCanvasGl(c as HTMLCanvasElement));
             emulatorRef.current.innerHTML = "";
         }
         document.querySelectorAll('[id^="ejs-"], .ejs--menu, .ejs--settings, [class*="ejs"]').forEach((el) => {
             if (el === emulatorRef.current || el === gameContainerRef.current) return;
             if (emulatorRef.current?.contains(el)) return;
             const isEmulatorEl = el.querySelector("canvas") || el.tagName === "CANVAS" || el.className?.toString().includes("ejs");
-            if (isEmulatorEl) el.remove();
+            if (isEmulatorEl) {
+                el.querySelectorAll("canvas").forEach((c) => releaseCanvasGl(c as HTMLCanvasElement));
+                if (el.tagName === "CANVAS") releaseCanvasGl(el as HTMLCanvasElement);
+                el.remove();
+            }
         });
         document.querySelectorAll("canvas").forEach((c) => {
             if (c.closest('[id^="ejs-"]') && !emulatorRef.current?.contains(c)) {
+                releaseCanvasGl(c as HTMLCanvasElement);
                 c.remove();
             }
         });
