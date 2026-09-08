@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageBreadcrumb } from "../components/PageBreadcrumb";
 import { RetroarchIcon, RetroarchIconBadge } from "../components/RetroarchIcon";
+import { SearchIcon } from "../components/icons";
 import { desktop } from "../desktop";
 import { STR } from "../i18n";
 import type { RetroarchTheme } from "../lib/retroarchIcons";
@@ -645,11 +646,11 @@ export default function EmulatorLibraryPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setDetailMeta(meta)}
-                                                        className="absolute bottom-2 right-2 flex size-7 items-center justify-center rounded-full bg-black/70 text-[13px] text-white backdrop-blur hover:bg-black/85"
+                                                        className="absolute bottom-2 right-2 flex size-7 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur hover:bg-black/85"
                                                         title="Ver detalhes"
                                                         aria-label="Ver detalhes"
                                                     >
-                                                        🔍
+                                                        <SearchIcon size={14} className="text-white" />
                                                     </button>
                                                 ) : null}
                                             </div>

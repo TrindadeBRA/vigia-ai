@@ -100,6 +100,8 @@ export function EmulatorToolbar({
     const [paused, setPaused] = useState(false);
     const [volume, setVolume] = useState(1);
     const [muted, setMuted] = useState(false);
+    const lastVolumeRef = useRef(1);
+    const draggingRef = useRef(false);
     const [slot, setSlot] = useState("1");
     const [showMore, setShowMore] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -114,10 +116,15 @@ export function EmulatorToolbar({
     useEffect(() => {
         if (!isReady) return;
         const id = window.setInterval(() => {
+            if (draggingRef.current) return;
             const emu = getEmu();
             if (!emu) return;
             setPaused(Boolean(emu.paused));
-            if (typeof emu.volume === "number") setVolume(emu.volume);
+            if (typeof emu.volume === "number") {
+                const v = emu.volume;
+                setVolume(v);
+                if (v > 0) lastVolumeRef.current = v;
+            }
             setMuted(Boolean(emu.muted));
             const s = emu.getSettingValue?.("save-state-slot");
             if (s) setSlot(s);
@@ -309,26 +316,37 @@ export function EmulatorToolbar({
     }, [withEmu, recording]);
 
     const setVol = useCallback((v: number) => {
+        const clamped = Math.max(0, Math.min(1, v));
+        if (clamped > 0) lastVolumeRef.current = clamped;
+        setVolume(clamped);
+        setMuted(clamped === 0);
         withEmu((emu) => {
-            emu.setVolume?.(v);
-            setVolume(v);
-            setMuted(v === 0);
+            emu.volume = clamped;
+            emu.setVolume?.(clamped);
         });
     }, [withEmu]);
 
     const toggleMute = useCallback(() => {
-        withEmu((emu) => {
-            if (emu.muted || volume === 0) {
-                const nv = volume === 0 ? 0.5 : volume;
+        const isMuted = muted || volume === 0;
+        if (isMuted) {
+            const nv = lastVolumeRef.current > 0 ? lastVolumeRef.current : 0.5;
+            setVolume(nv);
+            setMuted(false);
+            withEmu((emu) => {
+                emu.volume = nv;
+                emu.muted = false;
                 emu.setVolume?.(nv);
-                setMuted(false);
-                setVolume(nv);
-            } else {
+            });
+        } else {
+            if (volume > 0) lastVolumeRef.current = volume;
+            setVolume(0);
+            setMuted(true);
+            withEmu((emu) => {
+                emu.muted = true;
                 emu.setVolume?.(0);
-                setMuted(true);
-            }
-        });
-    }, [withEmu, volume]);
+            });
+        }
+    }, [withEmu, muted, volume]);
 
     const doFullscreen = useCallback(() => {
         withEmu((emu) => {
@@ -344,42 +362,47 @@ export function EmulatorToolbar({
 
     if (!isReady) return null;
 
-    const btnBase = "flex size-8 shrink-0 items-center justify-center rounded-xl border text-ink2 hover:text-ink transition";
+    const sz = compact ? "size-7" : "size-8";
+    const btnBase = cn("flex shrink-0 items-center justify-center rounded-xl border text-ink2 hover:text-ink transition", sz);
     const btnChip = "border-edge bg-chip hover:border-accent";
     const btnAccent = "border-accent bg-accent text-white hover:brightness-110";
 
     return (
         <>
-            <div className={cn("flex flex-wrap items-center gap-1.5", compact && "gap-1")}>
+            <div className={cn("flex min-w-0 flex-1 items-center overflow-hidden", compact ? "gap-1" : "gap-1.5")}>
                 <button type="button" onClick={togglePause} title={paused ? "Continuar" : "Pausar"} className={cn(btnBase, paused ? btnAccent : btnChip)}>
                     {paused ? <IconPlay /> : <IconPause />}
                 </button>
                 <button type="button" onClick={doRestart} title="Reiniciar" className={cn(btnBase, btnChip)}>
                     <IconRestart />
                 </button>
-                <div className="flex items-center gap-1 rounded-xl border border-edge bg-chip p-1">
-                    <button type="button" onClick={doQuickSave} title={`Salvar rápido (slot ${slot})`} className="flex size-7 items-center justify-center rounded-lg bg-panel text-ink2 hover:text-ink">
+                <div className={cn("flex shrink-0 items-center rounded-xl border border-edge bg-chip", compact ? "gap-0.5 p-0.5" : "gap-1 p-1")}>
+                    <button type="button" onClick={doQuickSave} title={`Salvar rápido (slot ${slot})`} className={cn("flex items-center justify-center rounded-lg bg-panel text-ink2 hover:text-ink", compact ? "size-6" : "size-7")}>
                         <IconSave />
                     </button>
-                    <select value={slot} onChange={(e) => changeSlot(e.target.value)} title="Slot de save state" className="h-7 rounded-lg border border-edge bg-panel px-1 text-[11px] font-medium outline-none focus:border-accent">
+                    <select value={slot} onChange={(e) => changeSlot(e.target.value)} title="Slot de save state" className={cn("rounded-lg border border-edge bg-panel font-medium outline-none focus:border-accent", compact ? "h-6 px-0.5 text-[10px]" : "h-7 px-1 text-[11px]")}>
                         {Array.from({ length: 9 }, (_, i) => String(i + 1)).map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <button type="button" onClick={doQuickLoad} title={`Carregar rápido (slot ${slot})`} className="flex size-7 items-center justify-center rounded-lg bg-panel text-ink2 hover:text-ink">
+                    <button type="button" onClick={doQuickLoad} title={`Carregar rápido (slot ${slot})`} className={cn("flex items-center justify-center rounded-lg bg-panel text-ink2 hover:text-ink", compact ? "size-6" : "size-7")}>
                         <IconLoad />
                     </button>
                 </div>
-                <button type="button" onClick={doSaveState} title="Salvar estado (download)" className={cn(btnBase, btnChip, "hidden sm:flex")}>
-                    <span className="text-[10px] font-bold">S</span>
-                </button>
-                <button type="button" onClick={doLoadState} title="Carregar estado (arquivo)" className={cn(btnBase, btnChip, "hidden sm:flex")}>
-                    <span className="text-[10px] font-bold">L</span>
-                </button>
-                <div className="hidden items-center gap-1 rounded-xl border border-edge bg-chip px-2 py-1 sm:flex">
-                    <button type="button" onClick={toggleMute} title={muted ? "Ativar som" : "Silenciar"} className="flex size-7 items-center justify-center rounded-lg text-ink2 hover:text-ink">
-                        {muted || volume === 0 ? <IconMute /> : <IconVolume />}
-                    </button>
-                    <input type="range" min={0} max={1} step={0.01} value={muted ? 0 : volume} onChange={(e) => setVol(parseFloat(e.target.value))} className="h-1 w-16 accent-accent sm:w-20" aria-label="Volume" />
-                </div>
+                {!compact ? (
+                    <>
+                        <button type="button" onClick={doSaveState} title="Salvar estado (download)" className={cn(btnBase, btnChip)}>
+                            <span className="text-[10px] font-bold">S</span>
+                        </button>
+                        <button type="button" onClick={doLoadState} title="Carregar estado (arquivo)" className={cn(btnBase, btnChip)}>
+                            <span className="text-[10px] font-bold">L</span>
+                        </button>
+                        <div className="flex items-center gap-1 rounded-xl border border-edge bg-chip px-1.5 py-1">
+                            <button type="button" onClick={toggleMute} title={muted ? "Ativar som" : "Silenciar"} className="flex size-6 items-center justify-center rounded-lg text-ink2 hover:text-ink">
+                                {muted || volume === 0 ? <IconMute /> : <IconVolume />}
+                            </button>
+                            <input type="range" min={0} max={1} step={0.01} value={muted ? 0 : volume} onInput={(e) => setVol(parseFloat((e.target as HTMLInputElement).value))} onChange={(e) => setVol(parseFloat((e.target as HTMLInputElement).value))} onPointerDown={() => { draggingRef.current = true; }} onPointerUp={() => { draggingRef.current = false; }} onPointerCancel={() => { draggingRef.current = false; }} className="h-1 w-14 accent-accent lg:w-16" aria-label="Volume" />
+                        </div>
+                    </>
+                ) : null}
                 <button type="button" onClick={doScreenshot} title="Screenshot" className={cn(btnBase, btnChip)}>
                     <IconScreenshot />
                 </button>
@@ -389,12 +412,23 @@ export function EmulatorToolbar({
                 <button type="button" onClick={() => setShowSettings(true)} title="Configurações" className={cn(btnBase, btnChip)}>
                     <IconSettings />
                 </button>
-                <div className="relative" ref={moreRef}>
+                <div className="relative shrink-0" ref={moreRef}>
                     <button type="button" onClick={() => setShowMore((v) => !v)} title="Mais opções" className={cn(btnBase, showMore ? btnAccent : btnChip)}>
                         <IconMore />
                     </button>
                     {showMore ? (
                         <div className="absolute bottom-full right-0 z-30 mb-2 flex min-w-[220px] flex-col gap-1 rounded-2xl border border-edge bg-panel p-2 shadow-card-hover">
+                            {compact ? (
+                                <>
+                                    <button type="button" onClick={() => { setShowMore(false); doSaveState(); }} className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] hover:bg-chip">⬇ Salvar estado (S)</button>
+                                    <button type="button" onClick={() => { setShowMore(false); doLoadState(); }} className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] hover:bg-chip">⬆ Carregar estado (L)</button>
+                                    <div className="flex items-center gap-2 rounded-xl bg-chip px-3 py-2">
+                                        <button type="button" onClick={toggleMute} className="flex size-7 items-center justify-center rounded-lg bg-panel text-ink2 hover:text-ink">{muted || volume === 0 ? <IconMute /> : <IconVolume />}</button>
+                                        <input type="range" min={0} max={1} step={0.01} value={muted ? 0 : volume} onInput={(e) => setVol(parseFloat((e.target as HTMLInputElement).value))} onChange={(e) => setVol(parseFloat((e.target as HTMLInputElement).value))} onPointerDown={() => { draggingRef.current = true; }} onPointerUp={() => { draggingRef.current = false; }} onPointerCancel={() => { draggingRef.current = false; }} className="h-1 flex-1 accent-accent" aria-label="Volume" />
+                                    </div>
+                                    <div className="my-1 h-px bg-edge" />
+                                </>
+                            ) : null}
                             <button type="button" onClick={() => { setShowMore(false); doExportSram(); }} className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] hover:bg-chip">⬇ Exportar save (SRAM)</button>
                             <button type="button" onClick={() => { setShowMore(false); doImportSram(); }} className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] hover:bg-chip">⬆ Importar save (SRAM)</button>
                             <button type="button" onClick={() => { setShowMore(false); toggleRecording(); }} className="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] hover:bg-chip">{recording ? "⏹ Parar gravação" : "● Gravar tela"}</button>
@@ -595,16 +629,46 @@ function EmulatorControlsModal({ onClose }: { onClose: () => void }) {
                 if (portInfo) lines.push(portInfo);
             } catch { /* ignore */ }
         }
-        setInfo(lines.join("\n") || "Controles padrão ativos. Use o menu nativo de controles para remapear (em breve: editor visual).");
+        setInfo(lines.join("\n") || "Controles padrão ativos. Use o editor nativo para remapear.");
+    }, []);
+    const openNative = useCallback(() => {
+        const emu = getEmu() as unknown as Record<string, unknown> | null;
+        if (!emu) return;
+        const parent = (emu.elements as { parent?: HTMLElement } | undefined)?.parent ?? document.querySelector(".ejs_parent") as HTMLElement | null;
+        if (parent) parent.classList.add("vigia-allow-ejs-popup");
+        const menu = (emu as Record<string, unknown>).controlMenu as HTMLElement | undefined;
+        if (menu) {
+            menu.style.display = "";
+            // garante que o container do popup também apareça
+            const popup = menu.closest(".ejs_popup_container") as HTMLElement | null;
+            if (popup) popup.style.display = "";
+            // foca para capturar teclas
+            try { menu.focus(); } catch { /* ignore */ }
+        } else {
+            // fallback: tenta encontrar qualquer popup de controles no DOM
+            const fallback = document.querySelector(".ejs_control_body") as HTMLElement | null;
+            if (fallback) {
+                const container = fallback.closest(".ejs_popup_container") as HTMLElement | null;
+                if (container) container.style.display = "";
+                fallback.style.display = "";
+            }
+        }
+        onClose();
+    }, [onClose]);
+    useEffect(() => {
+        return () => {
+            // ao fechar nosso modal sem abrir o nativo, garante que não fica com a classe presa
+            // (quando o nativo abre, ele mesmo se fecha via botão Fechar dele)
+        };
     }, []);
     return (
         <ModalShell title="Controles" onClose={onClose}>
             <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink2">{info}</p>
             <div className="flex gap-2">
-                <button type="button" onClick={() => { const emu = getEmu(); (emu as unknown as Record<string, unknown>).controlMenu && (((emu as unknown as Record<string, unknown>).controlMenu as HTMLElement).style.display = ""); onClose(); }} className="rounded-xl bg-accent px-4 py-2 text-[13px] font-bold text-white">Abrir editor nativo (temporário)</button>
+                <button type="button" onClick={openNative} className="rounded-xl bg-accent px-4 py-2 text-[13px] font-bold text-white">Abrir editor nativo</button>
                 <button type="button" onClick={onClose} className="rounded-xl border border-edge bg-chip px-4 py-2 text-[13px] font-medium">Fechar</button>
             </div>
-            <p className="text-[11px] text-ink3">O editor visual completo de controles será portado na próxima iteração — por enquanto o botão acima abre o painel nativo sem overlay da barra.</p>
+            <p className="text-[11px] text-ink3">O editor nativo abrirá sobre o jogo. Use Esc ou o botão Fechar dele para sair — ele fecha sozinho e remove o overlay.</p>
         </ModalShell>
     );
 }

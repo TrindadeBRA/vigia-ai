@@ -1,3 +1,6 @@
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../cn";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
@@ -20,29 +23,35 @@ export function GridWallpaperModal({
   lang,
   parallax,
   onToggleParallax,
+  autoRotate,
+  onToggleAutoRotate,
 }: {
   open: boolean;
   onClose: () => void;
   lang: Lang;
   parallax: boolean;
   onToggleParallax: (v: boolean) => void;
+  autoRotate: boolean;
+  onToggleAutoRotate: (v: boolean) => void;
 }) {
   if (!open) return null;
   return (
     <Modal title="Wallpaper do grid" onClose={onClose} wide>
-      <GridWallpaperContent lang={lang} parallax={parallax} onToggleParallax={onToggleParallax} />
+      <GridWallpaperContent lang={lang} parallax={parallax} onToggleParallax={onToggleParallax} autoRotate={autoRotate} onToggleAutoRotate={onToggleAutoRotate} />
     </Modal>
   );
 }
 
-function GridWallpaperContent({ lang, parallax, onToggleParallax }: { lang: Lang; parallax: boolean; onToggleParallax: (v: boolean) => void }) {
+function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, onToggleAutoRotate }: { lang: Lang; parallax: boolean; onToggleParallax: (v: boolean) => void; autoRotate: boolean; onToggleAutoRotate: (v: boolean) => void }) {
   const c = THEME_STR[lang];
-  const { wallpapers, gridId, fetchAll, setGridWallpaper } = useGridWallpaper();
+  const { wallpapers, gridId, fetchAll, setGridWallpaper, reorder } = useGridWallpaper();
   const selectReq = useRequest();
   const uploadReq = useRequest();
   const importReq = useRequest();
   const searchReq = useRequest();
   const deleteReq = useRequest();
+  const reorderReq = useRequest();
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const [providers, setProviders] = useState<ProviderStatus | null>(null);
   const [searchProvider, setSearchProvider] = useState<"pexels" | "wallhaven" | "unsplash">("wallhaven");
   const [searchQuery, setSearchQuery] = useState("");
@@ -148,6 +157,14 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax }: { lang: Lang
         <Switch compact checked={parallax} onChange={(e) => onToggleParallax(e.currentTarget.checked)} label="Efeito parallax" />
       </div>
 
+      <div className="flex items-center justify-between gap-3 rounded-[10px] border border-edge bg-canvas px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Trocar automaticamente</p>
+          <p className="text-xs text-ink3">Quando ativo, a cada ciclo do dashboard pula para o próximo wallpaper da biblioteca (em ordem circular).</p>
+        </div>
+        <Switch compact checked={autoRotate} onChange={(e) => onToggleAutoRotate(e.currentTarget.checked)} label="Trocar automaticamente" />
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <input
           ref={fileRef}
@@ -179,54 +196,51 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax }: { lang: Lang
       {wallpapers.length === 0 ? (
         <p className="text-sm text-ink3">{c.wallpapersEmpty}</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {/* Tile para remover / sem background - sempre visível como primeira opção */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" })}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" }); } }}
-            className={cn("group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border bg-canvas p-4 text-center aspect-[16/10]", !gridId ? "border-accent ring-2 ring-accent/40 bg-chip" : "border-dashed border-edge hover:border-accent/50 hover:bg-chip/50")}
+        <>
+          <p className="text-xs text-ink3">Arraste para reordenar — a ordem define a sequência da troca automática.</p>
+          <FieldStatus status={reorderReq.status} message={reorderReq.message} />
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(e: DragEndEvent) => {
+              const { active, over } = e;
+              if (!over || active.id === over.id) return;
+              const oldIndex = wallpapers.findIndex((w) => w.id === String(active.id));
+              const newIndex = wallpapers.findIndex((w) => w.id === String(over.id));
+              if (oldIndex === -1 || newIndex === -1) return;
+              const nextIds = arrayMove(wallpapers.map((w) => w.id), oldIndex, newIndex);
+              void reorderReq.run(() => reorder(nextIds).then(() => ({ ok: true })), { error: "falha ao reordenar" });
+            }}
           >
-            <div className={cn("flex size-10 items-center justify-center rounded-full border", !gridId ? "bg-accent text-accent-ink border-accent" : "bg-chip text-ink3 border-edge")}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
-            </div>
-            <span className="text-xs font-bold leading-tight">{!gridId ? "Sem background ✓" : "Remover background"}</span>
-            <span className="text-[11px] leading-tight text-ink3">Nenhum wallpaper no grid</span>
-          </div>
-          {wallpapers.map((w) => {
-            const active = w.id === gridId;
-            return (
-              <div
-                key={w.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => void selectReq.run(() => setGridWallpaper(w.id).then(() => ({ ok: true })), { success: "Wallpaper do grid atualizado", error: "falha" })}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void selectReq.run(() => setGridWallpaper(w.id).then(() => ({ ok: true })), { success: "Wallpaper do grid atualizado", error: "falha" }); } }}
-                className={cn("group relative cursor-pointer overflow-hidden rounded-[12px] border bg-canvas text-left", active ? "border-accent ring-2 ring-accent/40" : "border-edge hover:border-accent/50")}
-              >
-                <div className="aspect-[16/10] overflow-hidden bg-black/10">
-                  <img src={`/api/wallpapers/${w.id}/preview`} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <SortableContext items={wallpapers.map((w) => w.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {/* Tile para remover / sem background - sempre visível como primeira opção, não arrastável */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" })}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" }); } }}
+                  className={cn("group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border bg-canvas p-4 text-center aspect-[16/10]", !gridId ? "border-accent ring-2 ring-accent/40 bg-chip" : "border-dashed border-edge hover:border-accent/50 hover:bg-chip/50")}
+                >
+                  <div className={cn("flex size-10 items-center justify-center rounded-full border", !gridId ? "bg-accent text-accent-ink border-accent" : "bg-chip text-ink3 border-edge")}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>
+                  </div>
+                  <span className="text-xs font-bold leading-tight">{!gridId ? "Sem background ✓" : "Remover background"}</span>
+                  <span className="text-[11px] leading-tight text-ink3">Nenhum wallpaper no grid</span>
                 </div>
-                <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                  <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}</span>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-full bg-bad px-1.5 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Remover wallpaper ${w.id.slice(0, 8)} da biblioteca?`)) void deleteReq.run(() => handleDelete(w.id), { success: "Removido", error: "falha ao remover" });
-                    }}
-                    title="Remover da biblioteca"
-                  >
-                    ×
-                  </button>
-                </div>
-                {active ? <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">No grid</span> : null}
+                {wallpapers.map((w) => (
+                  <SortableWallpaperTile
+                    key={w.id}
+                    w={w}
+                    active={w.id === gridId}
+                    onSelect={() => void selectReq.run(() => setGridWallpaper(w.id).then(() => ({ ok: true })), { success: "Wallpaper do grid atualizado", error: "falha" })}
+                    onDelete={() => { if (confirm(`Remover wallpaper ${w.id.slice(0, 8)} da biblioteca?`)) void deleteReq.run(() => handleDelete(w.id), { success: "Removido", error: "falha ao remover" }); }}
+                  />
+                ))}
               </div>
-            );
-          })}
-        </div>
+            </SortableContext>
+          </DndContext>
+        </>
       )}
 
       <div className="border-t border-edge pt-4">
@@ -289,6 +303,55 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax }: { lang: Lang
           </>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function SortableWallpaperTile({ w, active, onSelect, onDelete }: { w: { id: string; provider?: string | null; external_id?: string | null }; active: boolean; onSelect: () => void; onDelete: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: w.id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
+      className={cn("group relative cursor-pointer overflow-hidden rounded-[12px] border bg-canvas text-left", active ? "border-accent ring-2 ring-accent/40" : "border-edge hover:border-accent/50", isDragging && "ring-2 ring-accent/30")}
+    >
+      <div className="aspect-[16/10] overflow-hidden bg-black/10">
+        <img src={`/api/wallpapers/${w.id}/preview`} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+      </div>
+      <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+        <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}</span>
+        <div className="flex shrink-0 items-center gap-1">
+          <span
+            aria-label="Arrastar para reordenar"
+            title="Arrastar para reordenar"
+            className="flex size-6 cursor-grab items-center justify-center rounded-full border border-edge bg-canvas text-ink3 hover:bg-chip active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            {...attributes}
+            {...listeners}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden><circle cx="3" cy="3" r="1.2" fill="currentColor" /><circle cx="9" cy="3" r="1.2" fill="currentColor" /><circle cx="3" cy="6" r="1.2" fill="currentColor" /><circle cx="9" cy="6" r="1.2" fill="currentColor" /><circle cx="3" cy="9" r="1.2" fill="currentColor" /><circle cx="9" cy="9" r="1.2" fill="currentColor" /></svg>
+          </span>
+          <button
+            type="button"
+            className="shrink-0 rounded-full bg-bad px-1.5 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            title="Remover da biblioteca"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+      {active ? <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">No grid</span> : null}
     </div>
   );
 }

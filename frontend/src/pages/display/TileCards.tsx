@@ -131,8 +131,10 @@ export function EyeTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, 
   const allowed = eyeAllowedSizes();
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
+  // overflow-visible para a lágrima cair para fora do olho sem ser cortada pelo card
+  const eyeTileBase = TILE_BASE.replace("overflow-hidden", "overflow-visible");
   return (
-    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+    <div className={cn(eyeTileBase, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
       {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => eyeSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}

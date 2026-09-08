@@ -65,7 +65,31 @@ export function useGridWallpaper() {
     return next;
   }, []);
 
-  return { wallpapers, gridId, loading, fetchAll, setGridWallpaper };
+  const reorder = useCallback(async (orderedIds: string[]) => {
+    const prev = wallpapers;
+    // otimista
+    const byId = new Map(prev.map((w) => [w.id, w] as const));
+    const next = orderedIds.map((id) => byId.get(id)).filter(Boolean) as WallpaperItem[];
+    if (next.length === prev.length) setWallpapers(next);
+    try {
+      const r = await fetch("/api/wallpapers/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: orderedIds, scope: "grid" }),
+      });
+      const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; wallpapers?: WallpaperItem[] };
+      if (!r.ok || j.ok === false) throw new Error(j.error || "falha ao reordenar");
+      if (Array.isArray(j.wallpapers)) setWallpapers(j.wallpapers);
+      else await fetchAll();
+      window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
+      window.dispatchEvent(new CustomEvent("vigia:grid-wallpaper-updated"));
+    } catch (e) {
+      setWallpapers(prev);
+      throw e;
+    }
+  }, [wallpapers, fetchAll]);
+
+  return { wallpapers, gridId, loading, fetchAll, setGridWallpaper, reorder };
 }
 
 export function gridWallpaperUrl(id: string | null): string | null {

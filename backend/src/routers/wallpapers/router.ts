@@ -578,6 +578,43 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
   });
 
   app.get("/api/wallpapers/providers/status", async () => providerStatus());
+
+  app.put("/api/wallpapers/reorder", async (request, reply) => {
+    const body = request.body as Record<string, unknown> | null;
+    if (!body) return reply.code(400).send({ ok: false, error: "JSON inválido" });
+    const idsRaw = body.ids as unknown;
+    const scopeRaw = body.scope as unknown;
+    if (!Array.isArray(idsRaw)) return reply.code(400).send({ ok: false, error: "ids deve ser array" });
+    const ids = idsRaw.map((v) => String(v).trim()).filter(Boolean);
+    if (ids.length === 0) return reply.code(400).send({ ok: false, error: "ids vazio" });
+    if (new Set(ids).size !== ids.length) return reply.code(400).send({ ok: false, error: "ids duplicados" });
+    let scope: string | null = typeof scopeRaw === "string" ? String(scopeRaw).trim() : null;
+    if (scope !== "theme" && scope !== "grid") scope = null;
+    // scope é obrigatório para reordenar apenas a biblioteca correspondente
+    if (!scope) return reply.code(400).send({ ok: false, error: "scope deve ser theme ou grid" });
+    const meta = loadMeta();
+    const all = (meta.wallpapers ?? []) as Array<Record<string, unknown>>;
+    const scopeItems = all.filter((w) => String((w as Record<string, unknown>).scope ?? "theme") === scope);
+    const scopeIds = new Set(scopeItems.map((w) => String(w.id)));
+    if (ids.length !== scopeIds.size) return reply.code(400).send({ ok: false, error: `ids deve conter todos os ${scopeIds.size} wallpapers de ${scope}` });
+    for (const id of ids) if (!scopeIds.has(id)) return reply.code(400).send({ ok: false, error: `id desconhecido: ${id}` });
+    const byId = new Map(all.map((w) => [String(w.id), w] as const));
+    const orderedScope = ids.map((id) => byId.get(id)!);
+    // Reconstrói mantendo posições dos itens do scope, mas na nova ordem; itens de outro scope ficam onde estavam
+    let cursor = 0;
+    const next: Array<Record<string, unknown>> = [];
+    for (const w of all) {
+      const wScope = String((w as Record<string, unknown>).scope ?? "theme");
+      if (wScope === scope) {
+        next.push(orderedScope[cursor++]!);
+      } else {
+        next.push(w);
+      }
+    }
+    meta.wallpapers = next;
+    saveMeta(meta);
+    return { ok: true, wallpapers: listWallpapers(scope), scope };
+  });
 }
 
 async function getRawBody(request: unknown): Promise<Buffer> {

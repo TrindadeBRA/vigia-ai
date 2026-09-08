@@ -61,6 +61,7 @@ export type WallpaperApi = {
     selectReq: ReturnType<typeof useRequest>;
     searchReq: ReturnType<typeof useRequest>;
     importReq: ReturnType<typeof useRequest>;
+    reorderReq: ReturnType<typeof useRequest>;
     canSearch: boolean;
     fetchAll: () => Promise<void>;
     handleUpload: (file: File) => Promise<{ ok: boolean }>;
@@ -68,6 +69,7 @@ export type WallpaperApi = {
     handleSelect: (id: string) => Promise<{ ok: boolean }>;
     handleSearch: (page?: number) => Promise<{ ok: boolean; error?: string }>;
     handleImport: (item: SearchResult) => Promise<{ ok: boolean }>;
+    reorder: (orderedIds: string[]) => Promise<void>;
 };
 
 const WallpaperCtx = createContext<WallpaperApi | null>(null);
@@ -106,6 +108,7 @@ export function WallpaperManager({
     const selectReq = useRequest();
     const searchReq = useRequest();
     const importReq = useRequest();
+    const reorderReq = useRequest();
 
     const fetchAll = useCallback(async () => {
         try {
@@ -230,6 +233,28 @@ export function WallpaperManager({
         return false;
     })();
 
+    const reorder = useCallback(async (orderedIds: string[]) => {
+        const prev = wallpapers;
+        const byId = new Map(prev.map((w) => [w.id, w] as const));
+        const next = orderedIds.map((id) => byId.get(id)).filter(Boolean) as WallpaperItem[];
+        if (next.length === prev.length) setWallpapers(next);
+        try {
+            const r = await fetch("/api/wallpapers/reorder", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids: orderedIds, scope: "theme" }),
+            });
+            const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; wallpapers?: WallpaperItem[] };
+            if (!r.ok || j.ok === false) throw new Error(apiFail(j, "falha ao reordenar"));
+            if (Array.isArray(j.wallpapers)) setWallpapers(j.wallpapers);
+            else await fetchAll();
+            window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
+        } catch (e) {
+            setWallpapers(prev);
+            throw e;
+        }
+    }, [wallpapers, fetchAll]);
+
     const api: WallpaperApi = {
         c,
         wallpapers,
@@ -249,6 +274,7 @@ export function WallpaperManager({
         selectReq,
         searchReq,
         importReq,
+        reorderReq,
         canSearch: Boolean(canSearch),
         fetchAll,
         handleUpload,
@@ -256,6 +282,7 @@ export function WallpaperManager({
         handleSelect,
         handleSearch,
         handleImport,
+        reorder,
     };
 
     return <WallpaperCtx.Provider value={api}>{children}</WallpaperCtx.Provider>;

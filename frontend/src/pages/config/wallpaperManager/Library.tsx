@@ -1,3 +1,6 @@
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useRef } from "react";
 import { cn } from "../../../cn";
 import { cfgStatus } from "../../../tw";
@@ -32,8 +35,11 @@ export function WallpaperLibrary() {
         handleSelect,
         handleSearch,
         handleImport,
+        reorder,
+        reorderReq,
     } = useWp();
     const fileRef = useRef<HTMLInputElement>(null);
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
     // Wallhaven: carrega 9 wallpapers automaticamente ao abrir (mesmo sem busca)
     useEffect(() => {
@@ -74,61 +80,38 @@ export function WallpaperLibrary() {
                 {wallpapers.length === 0 ? (
                     <p className={cfgStatus}>{c.wallpapersEmpty}</p>
                 ) : (
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        {wallpapers.map((w) => {
-                            const active = w.id === selectedId;
-                            return (
-                                <div
-                                    key={w.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => void selectReq.run(() => handleSelect(w.id), { error: c.wallpaperSelectError })}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            void selectReq.run(() => handleSelect(w.id), { error: c.wallpaperSelectError });
-                                        }
-                                    }}
-                                    className={cn(
-                                        "group relative cursor-pointer overflow-hidden rounded-[12px] border bg-canvas text-left",
-                                        active ? "border-accent ring-2 ring-accent/40" : "border-edge hover:border-accent/50",
-                                    )}
-                                >
-                                    <div className="aspect-[16/10] overflow-hidden bg-black/10">
-                                        <img
-                                            src={`/api/wallpapers/${w.id}/preview`}
-                                            alt={w.id}
-                                            className="size-full object-cover"
-                                            loading="lazy"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.display = "none";
-                                            }}
+                    <>
+                        <p className={`${cfgStatus} text-ink3`}>Arraste para reordenar.</p>
+                        <FieldStatus status={reorderReq.status} message={reorderReq.message} />
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(e: DragEndEvent) => {
+                                const { active, over } = e;
+                                if (!over || active.id === over.id) return;
+                                const oldIndex = wallpapers.findIndex((w) => w.id === String(active.id));
+                                const newIndex = wallpapers.findIndex((w) => w.id === String(over.id));
+                                if (oldIndex === -1 || newIndex === -1) return;
+                                const nextIds = arrayMove(wallpapers.map((w) => w.id), oldIndex, newIndex);
+                                void reorderReq.run(() => reorder(nextIds).then(() => ({ ok: true })), { error: "falha ao reordenar" });
+                            }}
+                        >
+                            <SortableContext items={wallpapers.map((w) => w.id)} strategy={rectSortingStrategy}>
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                    {wallpapers.map((w) => (
+                                        <SortableThemeWallpaperTile
+                                            key={w.id}
+                                            w={w}
+                                            active={w.id === selectedId}
+                                            selectedLabel={c.wallpaperSelected}
+                                            onSelect={() => void selectReq.run(() => handleSelect(w.id), { error: c.wallpaperSelectError })}
+                                            onDelete={() => { if (confirm(`Remover ${w.id}?`)) void uploadReq.run(() => handleDelete(w.id), { success: c.imported, error: c.importError }); }}
                                         />
-                                    </div>
-                                    <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-                                        <span className="truncate text-[11px] font-medium text-ink2">
-                                            {w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            className="shrink-0 rounded-full bg-bad px-2 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (confirm(`Remover ${w.id}?`)) void uploadReq.run(() => handleDelete(w.id), { success: c.imported, error: c.importError });
-                                            }}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                    {active ? (
-                                        <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">
-                                            {c.wallpaperSelected}
-                                        </span>
-                                    ) : null}
+                                    ))}
                                 </div>
-                            );
-                        })}
-                    </div>
+                            </SortableContext>
+                        </DndContext>
+                    </>
                 )}
             </Card>
 
@@ -217,6 +200,36 @@ export function WallpaperLibrary() {
                     ) : null}
                 </div>
             </Card>
+        </div>
+    );
+}
+
+function SortableThemeWallpaperTile({ w, active, selectedLabel, onSelect, onDelete }: { w: { id: string; provider?: string | null; external_id?: string | null }; active: boolean; selectedLabel: string; onSelect: () => void; onDelete: () => void }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: w.id });
+    const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            role="button"
+            tabIndex={0}
+            onClick={onSelect}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
+            className={cn("group relative cursor-pointer overflow-hidden rounded-[12px] border bg-canvas text-left", active ? "border-accent ring-2 ring-accent/40" : "border-edge hover:border-accent/50", isDragging && "ring-2 ring-accent/30")}
+        >
+            <div className="aspect-[16/10] overflow-hidden bg-black/10">
+                <img src={`/api/wallpapers/${w.id}/preview`} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            </div>
+            <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}</span>
+                <div className="flex shrink-0 items-center gap-1">
+                    <span aria-label="Arrastar para reordenar" title="Arrastar para reordenar" className="flex size-6 cursor-grab items-center justify-center rounded-full border border-edge bg-canvas text-ink3 hover:bg-chip active:cursor-grabbing" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} {...attributes} {...listeners}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden><circle cx="3" cy="3" r="1.2" fill="currentColor" /><circle cx="9" cy="3" r="1.2" fill="currentColor" /><circle cx="3" cy="6" r="1.2" fill="currentColor" /><circle cx="9" cy="6" r="1.2" fill="currentColor" /><circle cx="3" cy="9" r="1.2" fill="currentColor" /><circle cx="9" cy="9" r="1.2" fill="currentColor" /></svg>
+                    </span>
+                    <button type="button" className="shrink-0 rounded-full bg-bad px-2 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90" onClick={(e) => { e.stopPropagation(); onDelete(); }}>×</button>
+                </div>
+            </div>
+            {active ? <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">{selectedLabel}</span> : null}
         </div>
     );
 }

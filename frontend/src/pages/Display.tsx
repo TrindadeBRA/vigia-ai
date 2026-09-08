@@ -74,7 +74,7 @@ export default function Display() {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [pixModalOpen, setPixModalOpen] = useState(false);
-  const { gridId: gridWallpaperId } = useGridWallpaper();
+  const { gridId: gridWallpaperId, wallpapers: gridWallpapers, setGridWallpaper: setGridWallpaperId } = useGridWallpaper();
   const imageWidgets = useImageWidgets();
   const serverNotes = useServerNotes();
   const cameras = useCameras();
@@ -82,6 +82,38 @@ export default function Display() {
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
+
+  // Troca automática de wallpaper do grid a cada ciclo do dashboard
+  const gridWallpapersRef = useRef(gridWallpapers);
+  const gridIdRef = useRef(gridWallpaperId);
+  const setGridWallpaperRef = useRef(setGridWallpaperId);
+  useEffect(() => { gridWallpapersRef.current = gridWallpapers; }, [gridWallpapers]);
+  useEffect(() => { gridIdRef.current = gridWallpaperId; }, [gridWallpaperId]);
+  useEffect(() => { setGridWallpaperRef.current = setGridWallpaperId; }, [setGridWallpaperId]);
+  const autoRotateRef = useRef(prefs.wallpaperAutoRotate);
+  useEffect(() => { autoRotateRef.current = prefs.wallpaperAutoRotate; }, [prefs.wallpaperAutoRotate]);
+  useEffect(() => {
+    const onCycle = () => {
+      if (!autoRotateRef.current) return;
+      const list = gridWallpapersRef.current;
+      if (!list || list.length === 0) return;
+      if (list.length === 1 && gridIdRef.current === list[0].id) return;
+      const currentId = gridIdRef.current;
+      let nextId: string | null = null;
+      if (!currentId) {
+        nextId = list[0].id;
+      } else {
+        const idx = list.findIndex((w) => w.id === currentId);
+        if (idx === -1) nextId = list[0].id;
+        else nextId = list[(idx + 1) % list.length].id;
+      }
+      if (nextId && nextId !== currentId) {
+        void setGridWallpaperRef.current(nextId).catch(() => { });
+      }
+    };
+    window.addEventListener("vigia:dashboard-cycle", onCycle as EventListener);
+    return () => window.removeEventListener("vigia:dashboard-cycle", onCycle as EventListener);
+  }, []);
 
   const [emulatorConfig, setEmulatorConfig] = useState<import("../api/types").EmulatorConfig | null>(null);
   useEffect(() => {
@@ -881,6 +913,8 @@ export default function Display() {
         lang={prefs.lang}
         parallax={prefs.wallpaperParallax !== false}
         onToggleParallax={(v) => setPrefs((p) => ({ ...p, wallpaperParallax: v }))}
+        autoRotate={Boolean(prefs.wallpaperAutoRotate)}
+        onToggleAutoRotate={(v) => setPrefs((p) => ({ ...p, wallpaperAutoRotate: v }))}
       />
       <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} onAddImage={() => { setEditingImageId(null); setImageModalOpen(true); }} onAddNote={() => void serverNotes.add("", "yellow")} />
       <ImageWidgetModal

@@ -3,7 +3,7 @@ import type { WidgetKind } from "../../components/AddWidgetModal";
 import type { Lang } from "../../i18n";
 import type { ThemeName } from "../../theme";
 
-export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; wallpaperParallax?: boolean };
+export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; wallpaperParallax?: boolean; wallpaperAutoRotate?: boolean };
 
 const DEFAULT_PREFS: Prefs = { theme: "dark", accent: 0, lang: "pt" };
 const LEGACY_LS_KEY = "vigia_display_prefs";

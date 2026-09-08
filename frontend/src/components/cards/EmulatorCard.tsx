@@ -215,7 +215,7 @@ export function EmulatorBoardCard({
         return () => { };
     }, []);
 
-    // Remove completamente qualquer overlay nativo do EmulatorJS — tudo via nossa UI
+    // Remove overlay nativo do EmulatorJS — mas permite reabrir o editor de controles nativo quando solicitado
     useEffect(() => {
         const style = document.createElement("style");
         style.id = "ejs-no-overlay";
@@ -223,15 +223,27 @@ export function EmulatorBoardCard({
             .ejs_menu_bar,
             .ejs_context_menu,
             .ejs_settings_parent,
-            .ejs_control_body,
             .ejs_cheat_parent,
-            .ejs_popup_container,
             .ejs_virtualGamepad_open,
             .ejs_ad_iframe,
             .ejs_message {
                 display: none !important;
                 opacity: 0 !important;
                 pointer-events: none !important;
+            }
+            /* Popups nativos (controles/cheats) ficam ocultos por padrão, mas podem ser reexibidos via .vigia-allow-ejs-popup */
+            .ejs_popup_container {
+                display: none !important;
+            }
+            .vigia-allow-ejs-popup .ejs_popup_container {
+                display: block !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+            .vigia-allow-ejs-popup .ejs_control_body {
+                display: block !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
             }
             .ejs_canvas_parent { pointer-events: auto; }
             .ejs_parent { --ejs-primary-color: 26,175,255; }
@@ -244,12 +256,39 @@ export function EmulatorBoardCard({
     }, []);
 
     // Bloqueia menu de contexto nativo (clique direito) — tudo via nossa toolbar
+    // mas libera quando o editor nativo de controles está aberto
     useEffect(() => {
         const container = gameContainerRef.current;
         if (!container) return;
-        const onContext = (e: MouseEvent) => e.preventDefault();
+        const onContext = (e: MouseEvent) => {
+            const parent = document.querySelector(".ejs_parent.vigia-allow-ejs-popup");
+            if (parent) return;
+            e.preventDefault();
+        };
         container.addEventListener("contextmenu", onContext);
         return () => container.removeEventListener("contextmenu", onContext);
+    }, [status]);
+
+    // Quando o popup nativo de controles fecha, remove a permissão de overlay
+    useEffect(() => {
+        if (status !== "ready") return;
+        const parent = emulatorRef.current?.querySelector(".ejs_parent") as HTMLElement | null;
+        if (!parent) return;
+        const obs = new MutationObserver(() => {
+            const popup = parent.querySelector(".ejs_popup_container") as HTMLElement | null;
+            const visible = popup && popup.style.display !== "none" && !popup.hasAttribute("hidden");
+            if (!visible) parent.classList.remove("vigia-allow-ejs-popup");
+        });
+        obs.observe(parent, { attributes: true, subtree: true, attributeFilter: ["style", "hidden", "class"] });
+        // também fecha com Esc
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") parent.classList.remove("vigia-allow-ejs-popup");
+        };
+        document.addEventListener("keydown", onKey);
+        return () => {
+            obs.disconnect();
+            document.removeEventListener("keydown", onKey);
+        };
     }, [status]);
 
     useEffect(() => {
@@ -758,7 +797,7 @@ export function EmulatorBoardCard({
     const totalPlatforms = groups.length;
 
     return (
-        <div className={cn("flex h-full min-h-0 w-full flex-col", isSmall ? "gap-1.5" : "gap-2")}>
+        <div className={cn("flex h-full min-h-0 w-full flex-col overflow-hidden", isSmall ? "gap-1" : "gap-1.5")}>
             <div
                 ref={gameContainerRef}
                 onFocus={handleContainerFocus}
@@ -766,9 +805,8 @@ export function EmulatorBoardCard({
                 onMouseLeave={handleContainerBlur}
                 tabIndex={0}
                 className={cn(
-                    "relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border bg-black",
-                    status === "ready" ? "border-accent" : "border-edge",
-                    isSmall ? "min-h-[180px]" : "min-h-[260px]",
+                    "relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl border border-edge bg-black",
+                    isSmall ? "min-h-[90px]" : "min-h-[120px]",
                 )}
                 style={{ outline: "none" }}
             >
@@ -800,47 +838,28 @@ export function EmulatorBoardCard({
                         <button type="button" onClick={() => pendingKey && void loadGame(pendingKey)} className="rounded-lg bg-white/10 px-3 py-1 text-[12px] text-white hover:bg-white/20">tentar novamente</button>
                     </div>
                 ) : null}
-                {status === "ready" && currentGame ? (
-                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
-                        ● {currentGame}
-                    </div>
-                ) : null}
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                {isSmall ? (
-                    <button
-                        type="button"
-                        onClick={() => navigate("/display/emulator")}
-                        title={`Biblioteca${totalGames ? ` · ${totalGames} jogos` : ""}`}
-                        aria-label="Biblioteca"
-                        className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-accent text-[14px] font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
-                    >
-                        ▦
-                    </button>
-                ) : (
-                    <button
-                        type="button"
-                        onClick={() => navigate("/display/emulator")}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-[13px] font-bold text-white transition hover:brightness-110 active:scale-[0.98]"
-                    >
-                        <span className="text-[14px]">▦</span> Biblioteca
-                        {totalGames ? <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[11px]">{totalGames}</span> : null}
-                    </button>
-                )}
-                {status === "ready" ? <EmulatorToolbar status={status} onExit={destroyEmulator} compact={isSmall} /> : null}
+            <div className={cn("flex shrink-0 items-center gap-1 overflow-hidden", isSmall ? "gap-1" : "gap-1.5")}>
                 <button
                     type="button"
-                    onClick={() => void fetchRoms()}
-                    title="Atualizar lista"
-                    className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-edge bg-chip text-ink2 hover:border-accent hover:text-ink"
+                    onClick={() => navigate("/display/emulator")}
+                    title={`Biblioteca${totalGames ? ` · ${totalGames} jogos` : ""}`}
+                    aria-label="Biblioteca"
+                    className={cn(
+                        "flex shrink-0 items-center justify-center rounded-xl bg-accent font-bold text-white transition hover:brightness-110 active:scale-[0.98]",
+                        isSmall ? "size-7 text-[12px]" : "h-8 px-2.5 text-[12px] gap-1",
+                    )}
                 >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9" /><path d="M21 12H12M12 12V3" /></svg>
+                    <span className={isSmall ? "text-[12px]" : "text-[13px]"}>▦</span>
+                    {!isSmall ? <span className="hidden sm:inline">Biblioteca</span> : null}
+                    {totalGames ? <span className={cn("rounded-full bg-white/20 font-bold", isSmall ? "px-1 py-0 text-[9px]" : "px-1.5 py-0.5 text-[10px]")}>{totalGames}</span> : null}
                 </button>
+                {status === "ready" ? <EmulatorToolbar status={status} onExit={destroyEmulator} compact={isSmall} /> : null}
             </div>
 
-            <div className="flex shrink-0 items-center justify-between gap-2 text-[11px] text-ink3">
-                <span className="truncate">
+            <div className={cn("flex shrink-0 items-center justify-between gap-1 overflow-hidden text-ink3", isSmall ? "text-[10px]" : "text-[11px]")}>
+                <span className="min-w-0 flex-1 truncate">
                     {status === "ready" && currentGame ? `jogando · ${currentGame}` : isUnified ? `${totalPlatforms} plataformas · ${totalGames} jogos` : `${core} · ${dataPath.replace("https://", "")}`}
                 </span>
                 {status === "ready" ? <span className="shrink-0 text-good">● jogando</span> : loadingRoms ? <span className="shrink-0">carregando…</span> : romError ? <span className="shrink-0 truncate text-warn">{romError}</span> : null}

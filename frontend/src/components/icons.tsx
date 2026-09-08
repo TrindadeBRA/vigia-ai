@@ -272,3 +272,11 @@ export function HeartIcon(props: { size?: number; className?: string }) {
     </Svg>
   );
 }
+
+export function SearchIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props} viewBox="0 0 192 192" fill="currentColor">
+      <path d="M111.9,104.9h-3.7l-1.3-1.3c4.5-5.3,7.3-12.1,7.3-19.6c0-16.6-13.5-30.1-30.1-30.1S54,67.5,54,84.1 s13.5,30.1,30.1,30.1c7.5,0,14.3-2.7,19.6-7.2l1.3,1.3v3.7l23.2,23.1l6.9-6.9L111.9,104.9z M84.1,104.9c-11.5,0-20.8-9.3-20.8-20.8 s9.3-20.8,20.8-20.8s20.8,9.3,20.8,20.8S95.6,104.9,84.1,104.9z" />
+    </Svg>
+  );
+}

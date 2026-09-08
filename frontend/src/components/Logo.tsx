@@ -1,8 +1,11 @@
-import { useEffect, useId, useRef } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { prefersReducedMotion } from "../format";
 
 const EYE_R = 46;
 const IRIS_R = 18;
+const DILATED_IRIS_R = 26;
+const PUPIL_R = 7.5;
+const DILATED_PUPIL_R = 13.2;
 const MAX_GAZE = 22;
 const LID_TRAVEL = 52;
 const POINTER_REACH = 260;
@@ -47,12 +50,29 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
   const clipId = `eye-clip-${useId().replace(/:/g, "")}`;
   const svgRef = useRef<SVGSVGElement>(null);
   const irisRef = useRef<SVGGElement>(null);
+  const irisCircleRef = useRef<SVGCircleElement>(null);
+  const pupilCircleRef = useRef<SVGCircleElement>(null);
   const topLidRef = useRef<SVGRectElement>(null);
   const botLidRef = useRef<SVGRectElement>(null);
   const spiralRef = useRef<SVGGElement>(null);
   const spiralInnerRef = useRef<SVGGElement>(null);
   const dizzyUntilRef = useRef(0);
   const dizzyStartRef = useRef(0);
+  const hoverRef = useRef(false);
+  const dilationRef = useRef(0);
+  const [tears, setTears] = useState<number[]>([]);
+
+  const triggerTear = useCallback(() => {
+    if (prefersReducedMotion()) return;
+    if (!hoverRef.current) return;
+    // só dispara se estiver dilatado (hover)
+    if (dilationRef.current < 0.25) return;
+    const id = Date.now() + Math.random();
+    setTears((prev) => [...prev, id]);
+    window.setTimeout(() => {
+      setTears((prev) => prev.filter((t) => t !== id));
+    }, 1150);
+  }, []);
 
   useEffect(() => {
     const reduced = prefersReducedMotion();
@@ -97,9 +117,7 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
       const ang = Math.atan2(dy, dx);
       if (lastAngle !== null) {
         let delta = ang - lastAngle;
-        // normaliza para [-PI, PI]
         delta = ((delta + Math.PI) % (2 * Math.PI)) - Math.PI;
-        // ignora saltos grandes (teleporte do ponteiro)
         if (Math.abs(delta) > 1.2) {
           lastAngle = ang;
           return;
@@ -116,7 +134,6 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
           cooldownUntil = now + DIZZY_MS + 600;
           dizzyStartRef.current = now;
           dizzyUntilRef.current = now + DIZZY_MS;
-          // avisa todos os olhos + dashboard
           window.dispatchEvent(new CustomEvent("vigia:eye-dizzy", { detail: { at: now } }));
         }
       }
@@ -126,13 +143,11 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
 
     function onDizzy(e: Event) {
       const now = performance.now();
-      // se já está tonto, estende um pouco
       if (now < dizzyUntilRef.current) {
         dizzyUntilRef.current = Math.max(dizzyUntilRef.current, now + DIZZY_MS * 0.7);
         return;
       }
       const detail = (e as CustomEvent).detail as { at?: number } | undefined;
-      // evita loop infinito: se o evento veio deste mesmo olho há <50ms, já tratamos acima
       dizzyStartRef.current = now;
       dizzyUntilRef.current = now + DIZZY_MS;
       void detail;
@@ -153,6 +168,17 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
     function tick(now: number) {
       const isDizzy = now < dizzyUntilRef.current;
 
+      // dilatação: interpola suavemente até o alvo (hover)
+      const targetDilation = !reduced && hoverRef.current && !isDizzy ? 1 : 0;
+      let d = dilationRef.current;
+      d += (targetDilation - d) * 0.13;
+      if (Math.abs(targetDilation - d) < 0.001) d = targetDilation;
+      dilationRef.current = d;
+      const irisR = IRIS_R + (DILATED_IRIS_R - IRIS_R) * d;
+      const pupilR = PUPIL_R + (DILATED_PUPIL_R - PUPIL_R) * d;
+      if (irisCircleRef.current) irisCircleRef.current.setAttribute("r", irisR.toFixed(2));
+      if (pupilCircleRef.current) pupilCircleRef.current.setAttribute("r", pupilR.toFixed(2));
+
       if (isDizzy) {
         const elapsed = now - dizzyStartRef.current;
         const rot = reduced ? 0 : (elapsed * 0.62) % 360;
@@ -163,14 +189,12 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
         irisRef.current?.setAttribute("opacity", "0");
         spiralRef.current?.setAttribute("transform", `translate(${(50 + wobbleX).toFixed(2)} ${(50 + wobbleY).toFixed(2)})`);
         spiralInnerRef.current?.setAttribute("transform", `rotate(${rot.toFixed(1)}) scale(${pulse.toFixed(3)})`);
-        // pálpebras levemente entreabertas quando tonto
         topLidRef.current?.setAttribute("transform", `translate(0 ${(LID_TRAVEL * 0.08).toFixed(2)})`);
         botLidRef.current?.setAttribute("transform", `translate(0 ${(-LID_TRAVEL * 0.08).toFixed(2)})`);
         raf = requestAnimationFrame(tick);
         return;
       }
 
-      // volta ao normal
       spiralRef.current?.setAttribute("opacity", "0");
       irisRef.current?.setAttribute("opacity", "1");
 
@@ -218,13 +242,14 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
         }
       }
 
-      // deriva de fixação: o olho nunca fica perfeitamente parado
       const driftX = Math.sin(now / 700) * 0.5;
       const driftY = Math.cos(now / 900) * 0.4;
       const breath = 1 + Math.sin(now / 1400) * 0.025;
+      // quando dilatado, a íris já está maior via raio, então reduz levemente o breath pra não estourar
+      const dilateBreath = breath * (1 - d * 0.015);
       irisRef.current?.setAttribute(
         "transform",
-        `translate(${(50 + gaze.x + driftX).toFixed(2)} ${(50 + gaze.y + driftY).toFixed(2)}) scale(${breath.toFixed(3)})`,
+        `translate(${(50 + gaze.x + driftX).toFixed(2)} ${(50 + gaze.y + driftY).toFixed(2)}) scale(${dilateBreath.toFixed(3)})`,
       );
       topLidRef.current?.setAttribute("transform", `translate(0 ${(LID_TRAVEL * lid).toFixed(2)})`);
       botLidRef.current?.setAttribute("transform", `translate(0 ${(-LID_TRAVEL * lid).toFixed(2)})`);
@@ -240,41 +265,84 @@ export function EyeMark({ size = 28, follow = true }: { size?: number; follow?: 
   }, [follow, size]);
 
   return (
-    <svg
-      ref={svgRef}
-      className="block shrink-0 overflow-visible drop-shadow-[0_2px_4px_var(--shadow)] transition-transform duration-[180ms] ease-out group-hover/brand:scale-[1.08] [.flat_&]:drop-shadow-none cursor-pointer"
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      role="img"
+    <span
+      className="relative inline-flex shrink-0 overflow-visible"
+      style={{ width: size, height: size }}
+      onPointerEnter={() => { hoverRef.current = true; }}
+      onPointerLeave={() => { hoverRef.current = false; }}
+      onMouseEnter={() => { hoverRef.current = true; }}
+      onMouseLeave={() => { hoverRef.current = false; }}
     >
-      <defs>
-        <clipPath id={clipId}>
-          <circle cx={50} cy={50} r={EYE_R} />
-        </clipPath>
-      </defs>
-      <circle className="fill-white" cx={50} cy={50} r={EYE_R} />
-      <g clipPath={`url(#${clipId})`}>
-        <g className="drop-shadow-[0_0_4px_var(--glow)] [.flat_&]:drop-shadow-none" ref={irisRef} transform="translate(50 50)">
-          <circle className="fill-accent" r={IRIS_R} />
-          <circle className="fill-black/55" r={7.5} />
-          <circle className="fill-white opacity-[.92]" cx={-6} cy={-6.5} r={4.4} />
-          <circle className="fill-white opacity-45" cx={6.5} cy={7} r={2.1} />
-        </g>
-        <g ref={spiralRef} opacity={0} transform="translate(50 50)">
-          <circle className="fill-accent" r={IRIS_R} />
-          <g ref={spiralInnerRef} transform="rotate(0)">
-            <path d={SPIRAL_D} fill="none" stroke="white" strokeWidth={2.4} strokeLinecap="round" opacity={0.96} />
-            <circle r={2.6} fill="white" opacity={0.95} />
+      <svg
+        ref={svgRef}
+        className="block shrink-0 overflow-visible drop-shadow-[0_2px_4px_var(--shadow)] transition-transform duration-[180ms] ease-out group-hover/brand:scale-[1.08] [.flat_&]:drop-shadow-none cursor-pointer"
+        width={size}
+        height={size}
+        viewBox="0 0 100 100"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        role="img"
+        onClick={(e) => {
+          e.stopPropagation();
+          triggerTear();
+        }}
+      >
+        <defs>
+          <clipPath id={clipId}>
+            <circle cx={50} cy={50} r={EYE_R} />
+          </clipPath>
+        </defs>
+        <circle className="fill-white" cx={50} cy={50} r={EYE_R} />
+        <g clipPath={`url(#${clipId})`}>
+          <g className="drop-shadow-[0_0_4px_var(--glow)] [.flat_&]:drop-shadow-none" ref={irisRef} transform="translate(50 50)">
+            <circle ref={irisCircleRef} className="fill-accent" r={IRIS_R} />
+            <circle ref={pupilCircleRef} className="fill-black/55" r={PUPIL_R} />
+            <circle className="fill-white opacity-[.92]" cx={-6} cy={-6.5} r={4.4} />
+            <circle className="fill-white opacity-45" cx={6.5} cy={7} r={2.1} />
           </g>
+          <g ref={spiralRef} opacity={0} transform="translate(50 50)">
+            <circle className="fill-accent" r={IRIS_R} />
+            <g ref={spiralInnerRef} transform="rotate(0)">
+              <path d={SPIRAL_D} fill="none" stroke="white" strokeWidth={2.4} strokeLinecap="round" opacity={0.96} />
+              <circle r={2.6} fill="white" opacity={0.95} />
+            </g>
+          </g>
+          <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={topLidRef} x={-10} y={-104} width={120} height={104} />
+          <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={botLidRef} x={-10} y={100} width={120} height={104} />
         </g>
-        <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={topLidRef} x={-10} y={-104} width={120} height={104} />
-        <rect className="fill-canvas stroke-ink2 [stroke-width:2.5]" ref={botLidRef} x={-10} y={100} width={120} height={104} />
-      </g>
-      <circle className="fill-none stroke-ink2 [stroke-width:2.5]" cx={50} cy={50} r={EYE_R} />
-    </svg>
+        <circle className="fill-none stroke-ink2 [stroke-width:2.5]" cx={50} cy={50} r={EYE_R} />
+        {/* lágrimas — fora do clip pra cair pra fora do olho */}
+        {tears.map((id) => (
+          <g key={id} className="eye-tear" style={{ transform: "translate(50px, 78px)" } as any}>
+            <path
+              d="M 0 -7 C -3.8 -2.2 -3.8 4.2 0 7.2 C 3.8 4.2 3.8 -2.2 0 -7 Z"
+              fill="#7ec8e8"
+              stroke="white"
+              strokeWidth={0.9}
+              strokeOpacity={0.85}
+              opacity={0.96}
+            />
+            <ellipse cx={-1.1} cy={-1.2} rx={1.15} ry={1.6} fill="white" opacity={0.78} transform="rotate(-18)" />
+          </g>
+        ))}
+      </svg>
+      <style>{`
+        .eye-tear {
+          animation: eye-tear-fall 1.05s cubic-bezier(.22,.6,.28,1) forwards;
+          transform-origin: 50px 78px;
+          filter: drop-shadow(0 1.5px 2px rgba(0,0,0,.18));
+        }
+        @keyframes eye-tear-fall {
+          0% { transform: translate(50px, 78px) scale(0.55); opacity: 0; }
+          12% { transform: translate(50px, 82px) scale(1); opacity: 1; }
+          18% { transform: translate(50.6px, 86px) scale(1); opacity: 1; }
+          100% { transform: translate(49.2px, 138px) scale(0.92); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .eye-tear { animation: none !important; opacity: 0 !important; }
+        }
+      `}</style>
+    </span>
   );
 }
 
