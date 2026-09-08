@@ -258,8 +258,7 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
             </Fold>
 
             {/* Platforms */}
-            <div className="flex flex-col gap-2">
-                <h4 className="m-0 text-[13px] font-bold">Plataformas</h4>
+            <Fold summary={`Plataformas (${enabledPlatforms.size} ativa${enabledPlatforms.size === 1 ? "" : "s"})`}>
                 <p className={cfgHint}>Habilite as plataformas que deseja ver como cards. Cada uma precisa da pasta de ROMs configurada.</p>
                 <div className="grid grid-cols-1 gap-2">
                     {(platformsMeta.length ? platformsMeta : ALL_PLATFORMS.map((id) => ({ id, label: PLATFORM_LABELS[id] ?? id, core: id, exts: [], needsBios: false }))).map((plat) => {
@@ -318,7 +317,7 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
                         );
                     })}
                 </div>
-            </div>
+            </Fold>
 
         </article>
     );

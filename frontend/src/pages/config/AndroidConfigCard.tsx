@@ -174,7 +174,7 @@ export function AndroidConfigCard({ c }: { c: ConfigCopy }) {
                     <span className="text-[12px] font-semibold">ADB</span>
                     <div className="flex items-center gap-2">
                         {adbStatus ? (
-                            <StatusPill state={adbStatus.ok ? "ok" : "missing"} label={adbStatus.ok ? (adbStatus.version || adbStatus.adb || "ok") : (adbStatus.error || "não encontrado")} />
+                            <StatusPill state={adbStatus.ok ? "ok" : "missing"} label={adbStatus.ok ? (adbStatus.version || adbStatus.adb || "ok") : "não encontrado"} />
                         ) : <span className="text-[11px] text-ink3">verificando…</span>}
                         <Button variant="ghost" className="px-2 py-1 text-[11px]" onClick={() => void reload()}>Atualizar</Button>
                     </div>
