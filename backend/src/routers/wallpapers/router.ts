@@ -163,6 +163,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
       if (!existing.has(idStr) && !listWallpapers().some((w) => String(w.id) === idStr)) return reply.code(400).send({ ok: false, error: "wallpaper id inválido" });
       setSelectedId(idStr);
     } else setSelectedId(null);
+    try { (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub?.notifyThemeChanged?.(); } catch {}
     return { ok: true, selected_id: getSelectedId() };
   });
 
@@ -287,6 +288,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     });
     saveMeta(meta);
     if (effectiveScope === "grid") setGridSelectedId(wid); else setSelectedId(wid);
+    if (effectiveScope === "theme") try { (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub?.notifyThemeChanged?.(); } catch {}
     return { ok: true, id: wid, scope: effectiveScope };
   });
 
@@ -312,6 +314,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     }
     const gridSelected = String(((load() as Record<string, unknown>).wallpapers as Record<string, unknown> | undefined)?.grid_selected_id ?? "");
     if (gridSelected === wid) setGridSelectedId(null);
+    try { (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub?.notifyThemeChanged?.(); } catch {}
     return { ok: true };
   });
 
@@ -553,6 +556,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     (meta.wallpapers as Array<Record<string, unknown>>).push({ id: wid, source: "provider", provider, external_id: externalId, preview_url: thumbUrl || imageUrl, created_at: new Date().toISOString(), original_url: imageUrl, scope: effectiveScope });
     saveMeta(meta);
     if (effectiveScope === "grid") setGridSelectedId(wid); else setSelectedId(wid);
+    if (effectiveScope === "theme") try { (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub?.notifyThemeChanged?.(); } catch {}
     return { ok: true, id: wid, provider };
   });
 

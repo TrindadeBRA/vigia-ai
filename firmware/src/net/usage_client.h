@@ -24,5 +24,6 @@ void markAllAccountsFailed(const char *msg);
 // Tema personalizado (protótipo, ver docs/CONTRATO_TEMA.md): busca
 // GET <coletor>/api/theme (e /api/theme/background se houver) e aplica via
 // ui/customtheme.h — chamado pelo botão de recarregar no header
-// (ui/layout.cpp + ui/nav.cpp), nunca automático.
+// (ui/layout.cpp + ui/nav.cpp) e pelo auto-refresh via SSE (themeClientTick).
 void themeClientReload();
+void themeClientTick();

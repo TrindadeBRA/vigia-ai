@@ -102,6 +102,7 @@ void loop()
     {
       usageClientPoll();
     }
+    themeClientTick();
   }
   else if (now - g_lastFetchMs > 5000)
   {

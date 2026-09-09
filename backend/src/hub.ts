@@ -43,11 +43,13 @@ function logFailures(payload: Record<string, unknown>): void {
   }
 }
 
+type SseItem = Record<string, unknown> | string | null;
+
 class HubQueue {
-  private items: Array<Record<string, unknown> | null> = [];
-  private waiters: Array<(v: Record<string, unknown> | null | typeof TIMEOUT) => void> = [];
+  private items: Array<SseItem> = [];
+  private waiters: Array<(v: SseItem | typeof TIMEOUT) => void> = [];
   private maxSize = 4;
-  put(payload: Record<string, unknown> | null): void {
+  put(payload: SseItem): void {
     if (this.waiters.length > 0) {
       const waiter = this.waiters.shift()!;
       waiter(payload);
@@ -65,7 +67,7 @@ class HubQueue {
       // dead queue case handled by hub
     }
   }
-  tryPut(payload: Record<string, unknown> | null): boolean {
+  tryPut(payload: SseItem): boolean {
     if (this.items.length >= this.maxSize) return false;
     this.items.push(payload);
     // if waiter exists, deliver immediately
@@ -76,13 +78,13 @@ class HubQueue {
     }
     return true;
   }
-  async next(timeoutMs: number): Promise<Record<string, unknown> | null | typeof TIMEOUT> {
+  async next(timeoutMs: number): Promise<SseItem | typeof TIMEOUT> {
     if (this.items.length > 0) {
       return this.items.shift()!;
     }
-    return new Promise<Record<string, unknown> | null | typeof TIMEOUT>((resolve) => {
+    return new Promise<SseItem | typeof TIMEOUT>((resolve) => {
       let timer: NodeJS.Timeout | null = null;
-      const waiter = (v: Record<string, unknown> | null | typeof TIMEOUT) => {
+      const waiter = (v: SseItem | typeof TIMEOUT) => {
         if (timer) clearTimeout(timer);
         resolve(v);
       };
@@ -99,7 +101,7 @@ class HubQueue {
   isFull(): boolean {
     return this.items.length >= this.maxSize;
   }
-  shift(): Record<string, unknown> | null | undefined {
+  shift(): SseItem | undefined {
     return this.items.shift();
   }
   size(): number {
@@ -242,6 +244,24 @@ export class UsageHub {
     for (const q of dead) this._queues.delete(q);
   }
 
+  broadcastRaw(raw: string): void {
+    const dead: HubQueue[] = [];
+    for (const q of this._queues) {
+      if (!q.tryPut(raw)) {
+        q.shift();
+        if (!q.tryPut(raw)) {
+          dead.push(q);
+        }
+      }
+    }
+    for (const q of dead) this._queues.delete(q);
+  }
+
+  notifyThemeChanged(): void {
+    const payload = JSON.stringify({ type: "theme", updated_at: utcNow() });
+    this.broadcastRaw(`event: theme\ndata: ${payload}\n\n`);
+  }
+
   subscribe(): HubQueue {
     const q = new HubQueue();
     this._queues.add(q);
@@ -270,6 +290,11 @@ export function formatSse(payload: Record<string, unknown>): string {
   return `event: usage\ndata: ${data}\n\n`;
 }
 
+export function formatThemeEvent(): string {
+  const payload = JSON.stringify({ type: "theme", updated_at: utcNow() });
+  return `event: theme\ndata: ${payload}\n\n`;
+}
+
 export async function* sseBytes(hub: UsageHub): AsyncGenerator<string | Uint8Array | Buffer> {
   const queue = hub.subscribe();
   try {
@@ -286,6 +311,10 @@ export async function* sseBytes(hub: UsageHub): AsyncGenerator<string | Uint8Arr
       }
       if (item === null) {
         break;
+      }
+      if (typeof item === "string") {
+        yield item;
+        continue;
       }
       yield formatSse(item as Record<string, unknown>);
     }

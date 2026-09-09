@@ -159,6 +159,10 @@ static bool g_sseOpen = false;
 static bool g_ssePaused = false;
 static String g_sseLine;
 static String g_sseData;
+static String g_sseEvent;
+static bool g_pendingThemeReload = false;
+static uint32_t g_lastThemeReloadMs = 0;
+static uint32_t g_themeAutoPollMs = 0;
 static uint32_t g_sseLastByteMs = 0;
 static uint32_t g_sseRetryAt = 0;
 static uint32_t g_sseRetryWait = 2000;
@@ -180,6 +184,7 @@ static void sseClose()
   }
   g_sseLine = "";
   g_sseData = "";
+  g_sseEvent = "";
 }
 
 void usageClientPauseSse()
@@ -217,22 +222,48 @@ static void sseHandleLine(const String &raw)
   {
     if (g_sseData.length())
     {
-      Serial.printf("coletor SSE: %d bytes\n", g_sseData.length());
-      g_snap.httpOk = parseUsageJson(g_sseData);
-      if (g_snap.httpOk)
+      if (g_sseEvent == "theme")
       {
-        g_hasFetchedOk = true;
-        g_lastFetchOkMs = millis();
+        Serial.printf("coletor SSE: evento theme %d bytes\n", g_sseData.length());
+        g_pendingThemeReload = true;
       }
-      usageClientLogSnapshot(g_snap.httpOk ? "sse-ok" : "sse-parse");
-      g_lastFetchMs = millis();
-      uiRefreshData();
+      else
+      {
+        Serial.printf("coletor SSE: %d bytes\n", g_sseData.length());
+        g_snap.httpOk = parseUsageJson(g_sseData);
+        if (g_snap.httpOk)
+        {
+          g_hasFetchedOk = true;
+          g_lastFetchOkMs = millis();
+        }
+        usageClientLogSnapshot(g_snap.httpOk ? "sse-ok" : "sse-parse");
+        g_lastFetchMs = millis();
+        uiRefreshData();
+      }
       g_sseData = "";
+      g_sseEvent = "";
+    }
+    else if (g_sseEvent.length())
+    {
+      // evento sem data (ex.: theme sem payload) — ainda dispara reload
+      if (g_sseEvent == "theme")
+      {
+        Serial.println("coletor SSE: evento theme (sem data)");
+        g_pendingThemeReload = true;
+      }
+      g_sseEvent = "";
     }
     return;
   }
   if (line[0] == ':')
   {
+    return;
+  }
+  if (line.startsWith("event:"))
+  {
+    String ev = line.substring(6);
+    ev.trim();
+    g_sseEvent = ev;
     return;
   }
   if (line.startsWith("data:"))
@@ -563,10 +594,80 @@ static bool themeClientFetchBackground(const String &base)
   return ok;
 }
 
+// Auto-refresh do tema via SSE (backend envia `event: theme` ao salvar
+// em /api/theme/meta ou trocar o wallpaper). Enquanto a VIEW_THEME
+// estiver visível o firmware recarrega sozinho; fora dela o evento é
+// ignorado (o tema já será baixado quando o usuário entrar na view).
+void themeClientTick()
+{
+  if (g_ssePaused)
+  {
+    g_pendingThemeReload = false;
+    return;
+  }
+  if (g_pendingThemeReload)
+  {
+    if (g_view != VIEW_THEME)
+    {
+      // Se não está na VIEW_THEME, só limpa o flag — o tema ficará
+      // desatualizado até entrar na view, onde o fallback faz o poll
+      // em poucos segundos. Evita trocar de tela sozinho (disruptivo).
+      g_pendingThemeReload = false;
+      return;
+    }
+    uint32_t now = millis();
+    // debounce 1.5s — vários saves rápidos no editor geram um único reload
+    if (now - g_lastThemeReloadMs < 1500)
+    {
+      return;
+    }
+    g_pendingThemeReload = false;
+    g_lastThemeReloadMs = now;
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      Serial.println("tema: SSE pediu reload mas sem Wi-Fi, adiando");
+      g_pendingThemeReload = true;
+      return;
+    }
+    Serial.println("tema: auto-reload via SSE");
+    themeClientReload();
+    g_themeAutoPollMs = now;
+    return;
+  }
+  // Fallback: enquanto em VIEW_THEME, poll periódico leve caso o SSE
+  // tenha caído ou a notificação tenha se perdido (ex.: reconexão).
+  // Intervalo curto (15s) sem SSE, longo (60s) com SSE saudável.
+  if (g_view == VIEW_THEME && customThemeActive())
+  {
+    uint32_t now = millis();
+    uint32_t interval = g_sseOpen ? 60000 : 15000;
+    if (now - g_themeAutoPollMs > interval)
+    {
+      if (WiFi.status() == WL_CONNECTED && !g_ssePaused)
+      {
+        Serial.println(g_sseOpen ? "tema: poll de segurança em VIEW_THEME (SSE ok)" : "tema: poll periódico em VIEW_THEME (SSE off)");
+        themeClientReload();
+        g_themeAutoPollMs = now;
+        g_lastThemeReloadMs = now;
+      }
+      else
+      {
+        g_themeAutoPollMs = now;
+      }
+    }
+  }
+  else if (g_view != VIEW_THEME)
+  {
+    // Mantém o timer alinhado ao sair da view para não disparar
+    // imediatamente ao reentrar.
+    g_themeAutoPollMs = millis();
+  }
+}
+
 // Botão de recarregar no header (ui/nav.cpp) — puxa o tema que o painel
 // salvou no coletor (POST /api/theme/meta feito por
-// frontend/.../ThemeEditorPage.tsx) e aplica via ui/customtheme.h. Não é
-// automático: só quando o usuário toca o ícone.
+// frontend/.../ThemeEditorPage.tsx) e aplica via ui/customtheme.h. Também
+// usado pelo auto-refresh via SSE (themeClientTick).
 void themeClientReload()
 {
   if (WiFi.status() != WL_CONNECTED)
