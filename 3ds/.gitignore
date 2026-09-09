@@ -1,0 +1,10 @@
+build/
+*.elf
+*.3dsx
+*.cia
+*.bnr
+*.icn
+*.rsf
+*.smdh
+resources/banner.bnr
+resources/icon.icn
