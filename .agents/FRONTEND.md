@@ -45,6 +45,14 @@ Todo campo que representa caminho de pasta ou arquivo (ex.: `saveFolder`, `biosF
 
 Campos já migrados: `EmulatorConfigCard` (`saveFolder`, `biosFolder`, `romPath`, `biosPath`) e `GitConfigCard` (`source`). Novos campos de caminho devem seguir o mesmo padrão.
 
+## Excluir/remover — sempre via ConfirmModal
+
+Toda funcionalidade que remove algo de forma permanente (conta, wallpaper, regra, card do board, repositório, dispositivo, etc.) **deve** passar por `ConfirmModal` (`frontend/src/components/ConfirmModal.tsx`) antes de disparar a exclusão de verdade — nunca excluir direto no `onClick`/`onPress` do botão ou ícone de lixeira.
+
+- Props: `open`, `title`, `body`, `confirmLabel`, `cancelLabel`, `onConfirm`, `onCancel`.
+- Padrão: um `useState` local guarda o id/alvo pendente (ex.: `const [toRemove, setToRemove] = useState<string | null>(null)`); o botão de excluir só seta esse state (abre o modal); a chamada de exclusão de fato roda em `onConfirm`, que também limpa o state.
+- Já usado em: `GithubConfigCard`, `GitConfigCard`, `CalendarConfigCard`, `CameraConfigCard`, `RetroAchievementsConfigCard`, `ExtraAccounts`, `AndroidConfigCard`, `CurrenciesConfigCard`, `RssConfigCard`, `alarmsPage/RulesList`, `alarmsPage/TelegramConnectedPanel`, `wallpaperManager/Library`, `GridWallpaperModal`, `display/Overview` (remover card do board) — usar esses como referência de integração, não reinventar um `window.confirm()` ou modal próprio.
+
 ## Emulador (EmulatorJS)
 
 Cards de jogos retro (`EmulatorCard.tsx`) + biblioteca dedicada (`/display/emulator`) carregando o EmulatorJS direto da CDN oficial, sem pacote npm — arquitetura, rotas do backend, o bug de foco no Mac corrigido em 2026-09 e outras pegadinhas (menu interno, resize, `noAutoFocus`) estão em [APIS_EMULATOR.md](APIS_EMULATOR.md).
