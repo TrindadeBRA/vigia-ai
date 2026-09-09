@@ -143,6 +143,7 @@ struct ThemeWidgetRect
   bool valid = false;
 };
 static ThemeWidgetRect g_iconRects[kMaxIcons];
+static ThemeWidgetRect g_clockRect;
 
 void customThemeInvalidateBackground()
 {
@@ -151,6 +152,7 @@ void customThemeInvalidateBackground()
   {
     g_iconRects[i].valid = false;
   }
+  g_clockRect.valid = false;
 }
 
 static float clampf(float v, float lo, float hi)
@@ -784,15 +786,24 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
 // refresh.
 static void eraseStaleRect(const CustomTheme &t, ThemeWidgetRect &prev, int nx0, int ny0, int nw, int nh)
 {
+  // Sempre restaura a união da caixa antiga com a nova antes de desenhar —
+  // não só quando ela encolhe. Widgets com showBackground=false desenham
+  // texto em modo transparente (1 arg no setTextColor), sem apagar nada por
+  // baixo; sem esse restauro, dígitos/glifos diferentes na mesma posição
+  // (ex.: relógio "23:33" -> "23:38") ficam sobrepostos em vez de trocar,
+  // já que paintCustomHome() não repinta mais a tela inteira a cada refresh
+  // (ver g_bgDirty). Pra quem tem caixa opaca (box=true) isso é redundante
+  // com o fillRoundRect que vem em seguida, mas é barato — só a área do
+  // próprio widget, não a tela inteira.
+  int ex0 = nx0, ey0 = ny0, ex1 = nx0 + nw, ey1 = ny0 + nh;
   if (prev.valid)
   {
-    const bool contained = nx0 <= prev.x0 && ny0 <= prev.y0 &&
-                            nx0 + nw >= prev.x0 + prev.w && ny0 + nh >= prev.y0 + prev.h;
-    if (!contained)
-    {
-      restoreBackgroundRect(t, prev.x0, prev.y0, prev.w, prev.h);
-    }
+    ex0 = min(ex0, prev.x0);
+    ey0 = min(ey0, prev.y0);
+    ex1 = max(ex1, prev.x0 + prev.w);
+    ey1 = max(ey1, prev.y0 + prev.h);
   }
+  restoreBackgroundRect(t, ex0, ey0, ex1 - ex0, ey1 - ey0);
   prev.x0 = nx0;
   prev.y0 = ny0;
   prev.w = nw;
@@ -1793,6 +1804,7 @@ static void drawThemeClock(const ThemeClock &c)
     int bgW = tw + padX * 2;
     int bgH = th + padY * 2;
     clampBoxCenter(cx, cy, bgW, bgH, tft.width(), tft.height());
+    eraseStaleRect(g_theme, g_clockRect, cx - bgW / 2, cy - bgH / 2, bgW, bgH);
     // Cor de fundo do card: preto com alpha simulado (mistura com bgColor)
     // Usa um cinza escuro semi-transparente aproximado
     uint16_t bgCol = 0x1082; // ~#101010 escuro
@@ -1802,6 +1814,7 @@ static void drawThemeClock(const ThemeClock &c)
   else
   {
     clampBoxCenter(cx, cy, tw, th, tft.width(), tft.height());
+    eraseStaleRect(g_theme, g_clockRect, cx - tw / 2, cy - th / 2, tw, th);
     tft.setTextColor(fg);
   }
   tft.drawString(buf, cx, cy, font);
