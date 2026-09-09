@@ -1,5 +1,9 @@
 build/
+*.o
+*.d
 *.elf
+*.lst
+*.map
 *.3dsx
 *.cia
 *.bnr
