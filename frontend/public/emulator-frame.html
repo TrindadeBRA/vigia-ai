@@ -1,480 +1,581 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vigia AI EmulatorJS</title>
-    <style>
-      html, body, #game {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        overflow: hidden;
-        background: #000;
-      }
-      /* Esconde overlay nativo — tudo via toolbar custom do parent */
-      .ejs_menu_bar,
-      .ejs_context_menu,
-      .ejs_settings_parent,
-      .ejs_cheat_parent,
-      .ejs_virtualGamepad_open,
-      .ejs_ad_iframe,
-      .ejs_message {
-        display: none !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-      }
-      .ejs_popup_container { display: none !important; }
-      .vigia-allow-ejs-popup .ejs_popup_container {
-        display: block !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-      }
-      .vigia-allow-ejs-popup .ejs_control_body {
-        display: block !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-      }
-      .ejs_canvas_parent { pointer-events: auto; }
-      .ejs_parent { --ejs-primary-color: 26,175,255; }
-    </style>
-  </head>
-  <body>
-    <div id="game"></div>
-    <script>
-      (() => {
-        const params = new URLSearchParams(location.search);
-        const notify = (type, detail) => parent.postMessage({ source: "vigia-emulator", type, detail }, "*");
 
-        // Helpers para saves no servidor
-        const platform = params.get("platform") || params.get("core") || "unknown";
-        const gameName = params.get("name") || "Jogo";
-        const sanitize = (s) => s.replace(/[\/\\:\0]/g, "_").replace(/[^a-zA-Z0-9._\-+()\[\] ]/g, "_").slice(0, 120) || "_";
-        const uploadSave = async (kind, data) => {
-          try {
-            const plat = sanitize(platform);
-            const g = sanitize(gameName.replace(/\.[^.]+$/, ""));
-            const res = await fetch(`/api/emulator/saves/${encodeURIComponent(plat)}/${encodeURIComponent(g)}/${kind}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/octet-stream" },
-              body: data,
-            });
-            if (!res.ok) console.warn("[emulator-saves] upload falhou", plat, g, kind, res.status);
-            else console.log("[emulator-saves] upload ok", plat, g, kind, data.byteLength);
-          } catch (e) { console.warn("[emulator-saves] upload erro", e); }
-        };
-        const downloadSave = async (kind) => {
-          try {
-            const plat = sanitize(platform);
-            const g = sanitize(gameName.replace(/\.[^.]+$/, ""));
-            const res = await fetch(`/api/emulator/saves/${encodeURIComponent(plat)}/${encodeURIComponent(g)}/${kind}`, { cache: "no-store" });
-            if (res.status === 404) return null;
-            if (!res.ok) return null;
-            const buf = await res.arrayBuffer();
-            if (!buf.byteLength) return null;
-            return new Uint8Array(buf);
-          } catch (e) { console.warn("[emulator-saves] download erro", e); return null; }
-        };
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vigia AI EmulatorJS</title>
+  <style>
+    html,
+    body,
+    #game {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
 
-        const required = ["core", "game", "data"];
-        const missing = required.find((key) => !params.get(key));
-        if (missing) {
-          notify("error", `configuração ausente: ${missing}`);
-          return;
+    /* Esconde overlay nativo — tudo via toolbar custom do parent */
+    .ejs_menu_bar,
+    .ejs_context_menu,
+    .ejs_settings_parent,
+    .ejs_cheat_parent,
+    .ejs_virtualGamepad_open,
+    .ejs_ad_iframe,
+    .ejs_message {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .ejs_popup_container {
+      display: none !important;
+    }
+
+    .vigia-allow-ejs-popup .ejs_popup_container {
+      display: block !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    .vigia-allow-ejs-popup .ejs_control_body {
+      display: block !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    .ejs_canvas_parent {
+      pointer-events: auto;
+    }
+
+    .ejs_parent {
+      --ejs-primary-color: 26, 175, 255;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="game"></div>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const notify = (type, detail) => {
+        try { parent.postMessage({ source: "vigia-emulator", type, detail }, "*"); } catch { }
+        // Também loga no console do iframe para diagnóstico no Electron (DevTools → iframe)
+        if (type === "error") console.error("[emulator-frame]", detail);
+        else console.log("[emulator-frame]", type, detail ?? "");
+      };
+      // Diagnóstico: loga URL completa do frame
+      console.log("[emulator-frame] init", location.href);
+      // Timeout de diagnóstico: se não receber EJS_ready em 15s, avisa o parent
+      const diagTimeout = setTimeout(() => {
+        if (!window.EJS_emulator) {
+          console.warn("[emulator-frame] EJS_emulator não criado após 15s — possível bloqueio de CDN ou CSP");
+          notify("error", "EmulatorJS não carregou (CDN bloqueado ou sem rede). Verifique a conexão.");
         }
+      }, 15000);
 
-        // Patch de traduções pt-BR
-        const ptbrPatch = {
-          "Context Menu": "Menu de contexto",
-          "Note that some cheats require a restart to disable": "Alguns cheats precisam reiniciar para desativar",
-          "Click to resume Emulator": "Clique para retomar o emulador",
-          "Drop save state here to load": "Solte o save state aqui para carregar",
-          "Outdated graphics driver": "Driver gráfico desatualizado",
-          "Start Screen Recording": "Iniciar gravação de tela",
-          "Stop Screen Recording": "Parar gravação de tela",
-          "This project is powered by": "Este projeto usa",
-          "View the RetroArch license here": "Ver licença do RetroArch aqui",
-          "Disks": "Discos",
-          "Exit EmulatorJS": "Sair do emulador",
-          "Exit Emulation": "Sair da emulação",
-          "BUTTON_1": "Botão 1",
-          "BUTTON_2": "Botão 2",
-          "BUTTON_3": "Botão 3",
-          "BUTTON_4": "Botão 4",
-          "up arrow": "seta para cima",
-          "down arrow": "seta para baixo",
-          "left arrow": "seta para esquerda",
-          "right arrow": "seta para direita",
-          "LEFT_TOP_SHOULDER": "ombro superior esquerdo",
-          "RIGHT_TOP_SHOULDER": "ombro superior direito",
-          "CRT beam": "CRT beam",
-          "CRT caligari": "CRT caligari",
-          "CRT lottes": "CRT lottes",
-          "CRT yeetron": "CRT yeetron",
-          "CRT zfast": "CRT zfast",
-          "SABR": "SABR",
-          "Bicubic": "Bicúbico",
-          "Mix frames": "Misturar quadros",
-          "WebGL2": "WebGL2",
-          "Requires restart": "Requer reinício",
-          "VSync": "VSync",
-          "Video Rotation": "Rotação de vídeo",
-          "Rewind Enabled (Requires restart)": "Rebobinar (requer reinício)",
-          "System Save interval": "Intervalo de save do sistema",
-          "Menu Bar Button": "Botão da barra de menu",
-          "visible": "visível",
-          "hidden": "oculto",
-          "Screenshot Source": "Fonte da captura",
-          "Screenshot Format": "Formato da captura",
-          "Screenshot Upscale": "Ampliação da captura",
-          "Screen Recording FPS": "FPS da gravação",
-          "Screen Recording Format": "Formato da gravação",
-          "Screen Recording Upscale": "Ampliação da gravação",
-          "Screen Recording Video Bitrate": "Bitrate de vídeo",
-          "Screen Recording Audio Bitrate": "Bitrate de áudio",
-          "Menubar Mouse Trigger": "Gatilho do mouse na barra",
-          "Downward Movement": "Movimento para baixo",
-          "Movement Anywhere": "Movimento em qualquer lugar",
-          "Direct Keyboard Input": "Entrada direta do teclado",
-          "Forward Alt key": "Encaminhar tecla Alt",
-          "Lock Mouse": "Travar mouse",
-        };
-        // Intercepta fetch de localization para injetar traduções
-        const origFetch = window.fetch.bind(window);
-        window.fetch = async (input, init) => {
-          const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-          const res = await origFetch(input, init);
-          if (typeof url === "string" && url.includes("localization/pt-BR.json")) {
-            try {
-              const clone = res.clone();
-              const json = await clone.json();
-              for (const [k, v] of Object.entries(ptbrPatch)) if (!(k in json)) json[k] = v;
-              return new Response(JSON.stringify(json), { status: res.status, statusText: res.statusText, headers: res.headers });
-            } catch {}
-          }
-          return res;
-        };
-
-        // Silencia Wake Lock
-        window.addEventListener("unhandledrejection", (e) => {
-          const msg = String(e.reason?.message ?? e.reason ?? "");
-          if (msg.includes("Wake Lock") || msg.includes("NotAllowedError")) { e.preventDefault(); console.warn("[EmulatorJS] Wake Lock negado — ignorado"); }
-        });
-
-        // Configuração EJS — auto-start direto, sem botão
-        window.EJS_player = "#game";
-        // EJS_core deve ser o ID da plataforma (ex: "gb", "gba", "nds") — EmulatorJS resolve o core sozinho
-        window.EJS_core = params.get("core");
-        window.EJS_gameUrl = params.get("game");
-        window.EJS_pathtodata = params.get("data");
-        window.EJS_gameName = gameName;
-        window.EJS_language = params.get("language") || "pt-BR";
-        window.EJS_volume = Number(params.get("volume") || "1");
-        window.EJS_startOnLoaded = true;
-        window.EJS_noAutoFocus = params.get("noAutoFocus") === "true";
-        window.EJS_threads = false;
-        window.EJS_disableDatabases = false;
-        window.EJS_cacheConfig = params.get("cacheEnabled") === "true" ? { enabled: true } : { enabled: false };
-        window.EJS_backgroundColor = params.get("backgroundColor") || "transparent";
-        window.EJS_backgroundBlur = params.get("backgroundBlur") === "true";
-        window.EJS_softLoad = params.get("softLoad") === "true";
-        window.EJS_disableCue = params.get("disableCue") === "true";
-        window.EJS_disableAutoUnload = params.get("disableAutoUnload") === "true";
-        window.EJS_disableBatchBootup = params.get("disableBatchBootup") === "true";
-        window.EJS_hideSettings = params.get("hideSettings") === "true";
+      // Helpers para saves no servidor
+      const platform = params.get("platform") || params.get("core") || "unknown";
+      const gameName = params.get("name") || "Jogo";
+      const sanitize = (s) => s.replace(/[\/\\:\0]/g, "_").replace(/[^a-zA-Z0-9._\-+()\[\] ]/g, "_").slice(0, 120) || "_";
+      const uploadSave = async (kind, data) => {
         try {
-          const defOpts = params.get("defaultOptions");
-          if (defOpts) window.EJS_defaultOptions = JSON.parse(defOpts);
-        } catch {}
-        const color = params.get("color");
-        if (color) window.EJS_color = color;
-        const bios = params.get("bios");
-        if (bios) window.EJS_biosUrl = bios;
-        // Desativa 100% do overlay nativo — tudo via toolbar custom do parent
-        window.EJS_Buttons = {
-          playPause: false, play: false, pause: false, restart: false, mute: false, unmute: false,
-          settings: false, fullscreen: false, enterFullscreen: false, exitFullscreen: false,
-          saveState: false, loadState: false, screenRecord: false, gamepad: false, cheat: false,
-          volumeSlider: false, saveSavFiles: false, loadSavFiles: false, quickSave: false,
-          quickLoad: false, screenshot: false, cacheManager: false, exitEmulation: false,
-          netplay: false, diskButton: false, contextMenu: false,
-        };
-        window.EJS_fullscreenOnLoad = params.get("fullscreenOnLoad") === "true";
+          const plat = sanitize(platform);
+          const g = sanitize(gameName.replace(/\.[^.]+$/, ""));
+          const res = await fetch(`/api/emulator/saves/${encodeURIComponent(plat)}/${encodeURIComponent(g)}/${kind}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: data,
+          });
+          if (!res.ok) console.warn("[emulator-saves] upload falhou", plat, g, kind, res.status);
+          else console.log("[emulator-saves] upload ok", plat, g, kind, data.byteLength);
+        } catch (e) { console.warn("[emulator-saves] upload erro", e); }
+      };
+      const downloadSave = async (kind) => {
+        try {
+          const plat = sanitize(platform);
+          const g = sanitize(gameName.replace(/\.[^.]+$/, ""));
+          const res = await fetch(`/api/emulator/saves/${encodeURIComponent(plat)}/${encodeURIComponent(g)}/${kind}`, { cache: "no-store" });
+          if (res.status === 404) return null;
+          if (!res.ok) return null;
+          const buf = await res.arrayBuffer();
+          if (!buf.byteLength) return null;
+          return new Uint8Array(buf);
+        } catch (e) { console.warn("[emulator-saves] download erro", e); return null; }
+      };
 
-        // Callbacks de save — imediato + restauração
-        window.EJS_onSaveState = (data) => { if (data?.state?.length) void uploadSave("state", data.state); };
-        window.EJS_onSaveSave = (data) => { if (data?.save?.length) void uploadSave("sram", data.save); };
-        window.EJS_onLoadState = () => {};
+      const required = ["core", "game", "data"];
+      const missing = required.find((key) => !params.get(key));
+      if (missing) {
+        notify("error", `configuração ausente: ${missing}`);
+        return;
+      }
 
-        window.EJS_onGameStart = async () => {
-          notify("started");
-          // Restaura SRAM do servidor
+      // Patch de traduções pt-BR
+      const ptbrPatch = {
+        "Context Menu": "Menu de contexto",
+        "Note that some cheats require a restart to disable": "Alguns cheats precisam reiniciar para desativar",
+        "Click to resume Emulator": "Clique para retomar o emulador",
+        "Drop save state here to load": "Solte o save state aqui para carregar",
+        "Outdated graphics driver": "Driver gráfico desatualizado",
+        "Start Screen Recording": "Iniciar gravação de tela",
+        "Stop Screen Recording": "Parar gravação de tela",
+        "This project is powered by": "Este projeto usa",
+        "View the RetroArch license here": "Ver licença do RetroArch aqui",
+        "Disks": "Discos",
+        "Exit EmulatorJS": "Sair do emulador",
+        "Exit Emulation": "Sair da emulação",
+        "BUTTON_1": "Botão 1",
+        "BUTTON_2": "Botão 2",
+        "BUTTON_3": "Botão 3",
+        "BUTTON_4": "Botão 4",
+        "up arrow": "seta para cima",
+        "down arrow": "seta para baixo",
+        "left arrow": "seta para esquerda",
+        "right arrow": "seta para direita",
+        "LEFT_TOP_SHOULDER": "ombro superior esquerdo",
+        "RIGHT_TOP_SHOULDER": "ombro superior direito",
+        "CRT beam": "CRT beam",
+        "CRT caligari": "CRT caligari",
+        "CRT lottes": "CRT lottes",
+        "CRT yeetron": "CRT yeetron",
+        "CRT zfast": "CRT zfast",
+        "SABR": "SABR",
+        "Bicubic": "Bicúbico",
+        "Mix frames": "Misturar quadros",
+        "WebGL2": "WebGL2",
+        "Requires restart": "Requer reinício",
+        "VSync": "VSync",
+        "Video Rotation": "Rotação de vídeo",
+        "Rewind Enabled (Requires restart)": "Rebobinar (requer reinício)",
+        "System Save interval": "Intervalo de save do sistema",
+        "Menu Bar Button": "Botão da barra de menu",
+        "visible": "visível",
+        "hidden": "oculto",
+        "Screenshot Source": "Fonte da captura",
+        "Screenshot Format": "Formato da captura",
+        "Screenshot Upscale": "Ampliação da captura",
+        "Screen Recording FPS": "FPS da gravação",
+        "Screen Recording Format": "Formato da gravação",
+        "Screen Recording Upscale": "Ampliação da gravação",
+        "Screen Recording Video Bitrate": "Bitrate de vídeo",
+        "Screen Recording Audio Bitrate": "Bitrate de áudio",
+        "Menubar Mouse Trigger": "Gatilho do mouse na barra",
+        "Downward Movement": "Movimento para baixo",
+        "Movement Anywhere": "Movimento em qualquer lugar",
+        "Direct Keyboard Input": "Entrada direta do teclado",
+        "Forward Alt key": "Encaminhar tecla Alt",
+        "Lock Mouse": "Travar mouse",
+      };
+      // Intercepta fetch de localization para injetar traduções
+      const origFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        const res = await origFetch(input, init);
+        if (typeof url === "string" && url.includes("localization/pt-BR.json")) {
           try {
-            const data = await downloadSave("sram");
-            if (data && data.length > 0) {
-              const emu = window.EJS_emulator;
-              const gm = emu?.gameManager;
-              const mod = emu?.Module;
-              const fs = mod?.FS;
-              const getSavePath = emu?.getSaveFilePath ?? gm?.getSaveFilePath;
-              if (fs && getSavePath) {
-                try {
-                  const savePath = String(getSavePath.call(gm ?? emu) ?? "");
-                  if (savePath) {
-                    try { fs.unlink(savePath); } catch {}
-                    fs.writeFile(savePath, data);
-                    const loadFn = gm?.loadSaveFiles ?? emu?.loadSaveFiles;
-                    if (loadFn) try { loadFn.call(gm ?? emu); } catch {}
-                    console.log("[emulator-saves] SRAM restaurado", data.length);
-                  }
-                } catch (e) { console.warn("[emulator-saves] falha ao restaurar", e); }
-              }
-            }
-          } catch (e) { console.warn("[emulator-saves] download falhou", e); }
+            const clone = res.clone();
+            const json = await clone.json();
+            for (const [k, v] of Object.entries(ptbrPatch)) if (!(k in json)) json[k] = v;
+            return new Response(JSON.stringify(json), { status: res.status, statusText: res.statusText, headers: res.headers });
+          } catch { }
+        }
+        return res;
+      };
 
-          // Hooks adicionais: saveSaveFiles e onSaveUpdate
-          setTimeout(() => {
-            try {
-              const emu = window.EJS_emulator;
-              const gm = emu?.gameManager;
-              if (gm && typeof gm.saveSaveFiles === "function") {
-                const orig = gm.saveSaveFiles;
-                gm.saveSaveFiles = function(...args) {
-                  const ret = orig.apply(this, args);
-                  setTimeout(() => {
-                    try {
-                      const d = gm.getSaveFile ? gm.getSaveFile(false) : null;
-                      if (d && d.length) void uploadSave("sram", d);
-                    } catch (e) { console.warn("[emulator-saves] hook falhou", e); }
-                  }, 500);
-                  return ret;
-                };
-              }
-              if (emu && typeof emu.enableSaveUpdateEvent === "function") {
-                try { emu.enableSaveUpdateEvent.call(emu); } catch {}
-              }
-              if (!window.EJS_onSaveUpdate) {
-                window.EJS_onSaveUpdate = (data) => { if (data?.save?.length) void uploadSave("sram", data.save); };
-              }
-            } catch (e) { console.warn("[emulator-saves] hook falhou", e); }
-          }, 1500);
+      // Silencia Wake Lock
+      window.addEventListener("unhandledrejection", (e) => {
+        const msg = String(e.reason?.message ?? e.reason ?? "");
+        if (msg.includes("Wake Lock") || msg.includes("NotAllowedError")) { e.preventDefault(); console.warn("[EmulatorJS] Wake Lock negado — ignorado"); }
+      });
 
-          // Garante overlay escondido
-          setTimeout(() => {
-            try {
-              const bar = document.querySelector(".ejs_menu_bar");
-              if (bar) bar.style.display = "none";
-              const ctx = document.querySelector(".ejs_context_menu");
-              if (ctx) ctx.style.display = "none";
-            } catch {}
-          }, 100);
-        };
+      // Configuração EJS — auto-start direto, sem botão
+      window.EJS_player = "#game";
+      // EJS_core deve ser o ID da plataforma (ex: "gb", "gba", "nds") — EmulatorJS resolve o core sozinho
+      window.EJS_core = params.get("core");
+      window.EJS_gameUrl = params.get("game");
+      window.EJS_pathtodata = params.get("data");
+      window.EJS_gameName = gameName;
+      window.EJS_language = params.get("language") || "pt-BR";
+      window.EJS_volume = Number(params.get("volume") || "1");
+      window.EJS_startOnLoaded = true;
+      window.EJS_noAutoFocus = params.get("noAutoFocus") === "true";
+      window.EJS_threads = false;
+      window.EJS_disableDatabases = false;
+      window.EJS_cacheConfig = params.get("cacheEnabled") === "true" ? { enabled: true } : { enabled: false };
+      window.EJS_backgroundColor = params.get("backgroundColor") || "transparent";
+      window.EJS_backgroundBlur = params.get("backgroundBlur") === "true";
+      window.EJS_softLoad = params.get("softLoad") === "true";
+      window.EJS_disableCue = params.get("disableCue") === "true";
+      window.EJS_disableAutoUnload = params.get("disableAutoUnload") === "true";
+      window.EJS_disableBatchBootup = params.get("disableBatchBootup") === "true";
+      window.EJS_hideSettings = params.get("hideSettings") === "true";
+      try {
+        const defOpts = params.get("defaultOptions");
+        if (defOpts) window.EJS_defaultOptions = JSON.parse(defOpts);
+      } catch { }
+      const color = params.get("color");
+      if (color) window.EJS_color = color;
+      const bios = params.get("bios");
+      if (bios) window.EJS_biosUrl = bios;
+      // Desativa 100% do overlay nativo — tudo via toolbar custom do parent
+      window.EJS_Buttons = {
+        playPause: false, play: false, pause: false, restart: false, mute: false, unmute: false,
+        settings: false, fullscreen: false, enterFullscreen: false, exitFullscreen: false,
+        saveState: false, loadState: false, screenRecord: false, gamepad: false, cheat: false,
+        volumeSlider: false, saveSavFiles: false, loadSavFiles: false, quickSave: false,
+        quickLoad: false, screenshot: false, cacheManager: false, exitEmulation: false,
+        netplay: false, diskButton: false, contextMenu: false,
+      };
+      window.EJS_fullscreenOnLoad = params.get("fullscreenOnLoad") === "true";
 
-        window.EJS_ready = () => {
-          notify("ready");
-          console.log("[EmulatorJS] ready");
-        };
+      // Callbacks de save — imediato + restauração
+      window.EJS_onSaveState = (data) => { if (data?.state?.length) void uploadSave("state", data.state); };
+      window.EJS_onSaveSave = (data) => { if (data?.save?.length) void uploadSave("sram", data.save); };
+      window.EJS_onLoadState = () => { };
 
-        window.addEventListener("error", (event) => notify("error", event.message || "falha no EmulatorJS"));
-        window.addEventListener("unhandledrejection", (event) => {
-          const message = String(event.reason?.message || event.reason || "");
-          if (message.includes("Wake Lock") || message.includes("NotAllowedError")) { event.preventDefault(); return; }
-          notify("error", message || "falha ao iniciar o núcleo");
-        });
-
-        // Comandos vindos do parent (toolbar)
-        window.addEventListener("message", (event) => {
-          if (event.source !== parent) return;
-          const msg = event.data;
-          if (!msg || msg.source !== "vigia-emulator-host") return;
-          const emu = window.EJS_emulator;
-          if (!emu) return;
-          try {
-            switch (msg.type) {
-              case "pause": emu.pause?.(); break;
-              case "play": emu.play?.(); break;
-              case "togglePause": emu.paused ? emu.play?.() : emu.pause?.(); break;
-              case "restart": emu.gameManager?.restart?.(); emu.displayMessage?.("Reiniciando…"); break;
-              case "setVolume": { const v = Number(msg.volume); emu.volume = v; emu.setVolume?.(v); break; }
-              case "toggleMute": {
-                const isMuted = emu.muted || emu.volume === 0;
-                if (isMuted) { const nv = msg.lastVolume || 0.5; emu.volume = nv; emu.muted = false; emu.setVolume?.(nv); }
-                else { emu.muted = true; emu.setVolume?.(0); }
-                break;
-              }
-              case "fullscreen": emu.toggleFullscreen?.(!document.fullscreenElement); break;
-              case "screenshot": {
-                const take = emu.takeScreenshot ?? emu.screenshot;
-                if (emu.takeScreenshot) {
-                  emu.takeScreenshot().then(({ screenshot, format }) => {
-                    const blob = new Blob([screenshot], { type: `image/${format}` });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url; a.download = `${emu.getBaseFileName?.() ?? "screenshot"}.${format}`; a.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 2000);
-                    emu.displayMessage?.("Screenshot salvo");
-                  }).catch(() => emu.displayMessage?.("Falha no screenshot"));
-                } else if (emu.screenshot) {
-                  emu.screenshot((blob, fmt) => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url; a.download = `${emu.getBaseFileName?.() ?? "screenshot"}.${fmt}`; a.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 2000);
-                    emu.displayMessage?.("Screenshot salvo");
-                  });
+      window.EJS_onGameStart = async () => {
+        notify("started");
+        // Restaura SRAM do servidor
+        try {
+          const data = await downloadSave("sram");
+          if (data && data.length > 0) {
+            const emu = window.EJS_emulator;
+            const gm = emu?.gameManager;
+            const mod = emu?.Module;
+            const fs = mod?.FS;
+            const getSavePath = emu?.getSaveFilePath ?? gm?.getSaveFilePath;
+            if (fs && getSavePath) {
+              try {
+                const savePath = String(getSavePath.call(gm ?? emu) ?? "");
+                if (savePath) {
+                  try { fs.unlink(savePath); } catch { }
+                  fs.writeFile(savePath, data);
+                  const loadFn = gm?.loadSaveFiles ?? emu?.loadSaveFiles;
+                  if (loadFn) try { loadFn.call(gm ?? emu); } catch { }
+                  console.log("[emulator-saves] SRAM restaurado", data.length);
                 }
-                break;
-              }
-              case "saveState": {
-                const gm = emu.gameManager;
-                if (!gm) break;
-                if (gm.supportsStates?.() === 0) { emu.displayMessage?.("Save states não suportado"); break; }
-                try {
-                  const state = gm.getState?.();
-                  if (!state || state.length === 0) { emu.displayMessage?.("Falha ao salvar estado"); break; }
-                  const blob = new Blob([state]);
+              } catch (e) { console.warn("[emulator-saves] falha ao restaurar", e); }
+            }
+          }
+        } catch (e) { console.warn("[emulator-saves] download falhou", e); }
+
+        // Hooks adicionais: saveSaveFiles e onSaveUpdate
+        setTimeout(() => {
+          try {
+            const emu = window.EJS_emulator;
+            const gm = emu?.gameManager;
+            if (gm && typeof gm.saveSaveFiles === "function") {
+              const orig = gm.saveSaveFiles;
+              gm.saveSaveFiles = function (...args) {
+                const ret = orig.apply(this, args);
+                setTimeout(() => {
+                  try {
+                    const d = gm.getSaveFile ? gm.getSaveFile(false) : null;
+                    if (d && d.length) void uploadSave("sram", d);
+                  } catch (e) { console.warn("[emulator-saves] hook falhou", e); }
+                }, 500);
+                return ret;
+              };
+            }
+            if (emu && typeof emu.enableSaveUpdateEvent === "function") {
+              try { emu.enableSaveUpdateEvent.call(emu); } catch { }
+            }
+            if (!window.EJS_onSaveUpdate) {
+              window.EJS_onSaveUpdate = (data) => { if (data?.save?.length) void uploadSave("sram", data.save); };
+            }
+          } catch (e) { console.warn("[emulator-saves] hook falhou", e); }
+        }, 1500);
+
+        // Garante overlay escondido
+        setTimeout(() => {
+          try {
+            const bar = document.querySelector(".ejs_menu_bar");
+            if (bar) bar.style.display = "none";
+            const ctx = document.querySelector(".ejs_context_menu");
+            if (ctx) ctx.style.display = "none";
+          } catch { }
+        }, 100);
+      };
+
+      window.EJS_ready = () => {
+        clearTimeout(diagTimeout);
+        notify("ready");
+        console.log("[EmulatorJS] ready");
+      };
+
+      window.EJS_onGameStart = async () => {
+        clearTimeout(diagTimeout);
+        notify("started");
+        // Restaura SRAM do servidor
+        try {
+          const data = await downloadSave("sram");
+          if (data && data.length > 0) {
+            const emu = window.EJS_emulator;
+            const gm = emu?.gameManager;
+            const mod = emu?.Module;
+            const fs = mod?.FS;
+            const getSavePath = emu?.getSaveFilePath ?? gm?.getSaveFilePath;
+            if (fs && getSavePath) {
+              try {
+                const savePath = String(getSavePath.call(gm ?? emu) ?? "");
+                if (savePath) {
+                  try { fs.unlink(savePath); } catch { }
+                  fs.writeFile(savePath, data);
+                  const loadFn = gm?.loadSaveFiles ?? emu?.loadSaveFiles;
+                  if (loadFn) try { loadFn.call(gm ?? emu); } catch { }
+                  console.log("[emulator-saves] SRAM restaurado", data.length);
+                }
+              } catch (e) { console.warn("[emulator-saves] falha ao restaurar", e); }
+            }
+          }
+        } catch (e) { console.warn("[emulator-saves] download falhou", e); }
+
+        // Hooks adicionais: saveSaveFiles e onSaveUpdate
+        setTimeout(() => {
+          try {
+            const emu = window.EJS_emulator;
+            const gm = emu?.gameManager;
+            if (gm && typeof gm.saveSaveFiles === "function") {
+              const orig = gm.saveSaveFiles;
+              gm.saveSaveFiles = function (...args) {
+                const ret = orig.apply(this, args);
+                setTimeout(() => {
+                  try {
+                    const d = gm.getSaveFile ? gm.getSaveFile(false) : null;
+                    if (d && d.length) void uploadSave("sram", d);
+                  } catch (e) { console.warn("[emulator-saves] hook falhou", e); }
+                }, 500);
+                return ret;
+              };
+            }
+            if (emu && typeof emu.enableSaveUpdateEvent === "function") {
+              try { emu.enableSaveUpdateEvent.call(emu); } catch { }
+            }
+            if (!window.EJS_onSaveUpdate) {
+              window.EJS_onSaveUpdate = (data) => { if (data?.save?.length) void uploadSave("sram", data.save); };
+            }
+          } catch (e) { console.warn("[emulator-saves] hook falhou", e); }
+        }, 1500);
+
+        // Garante overlay escondido
+        setTimeout(() => {
+          try {
+            const bar = document.querySelector(".ejs_menu_bar");
+            if (bar) bar.style.display = "none";
+            const ctx = document.querySelector(".ejs_context_menu");
+            if (ctx) ctx.style.display = "none";
+          } catch { }
+        }, 100);
+      };
+
+      window.addEventListener("error", (event) => notify("error", event.message || "falha no EmulatorJS"));
+      window.addEventListener("unhandledrejection", (event) => {
+        const message = String(event.reason?.message || event.reason || "");
+        if (message.includes("Wake Lock") || message.includes("NotAllowedError")) { event.preventDefault(); return; }
+        notify("error", message || "falha ao iniciar o núcleo");
+      });
+
+      // Comandos vindos do parent (toolbar)
+      window.addEventListener("message", (event) => {
+        if (event.source !== parent) return;
+        const msg = event.data;
+        if (!msg || msg.source !== "vigia-emulator-host") return;
+        const emu = window.EJS_emulator;
+        if (!emu) return;
+        try {
+          switch (msg.type) {
+            case "pause": emu.pause?.(); break;
+            case "play": emu.play?.(); break;
+            case "togglePause": emu.paused ? emu.play?.() : emu.pause?.(); break;
+            case "restart": emu.gameManager?.restart?.(); emu.displayMessage?.("Reiniciando…"); break;
+            case "setVolume": { const v = Number(msg.volume); emu.volume = v; emu.setVolume?.(v); break; }
+            case "toggleMute": {
+              const isMuted = emu.muted || emu.volume === 0;
+              if (isMuted) { const nv = msg.lastVolume || 0.5; emu.volume = nv; emu.muted = false; emu.setVolume?.(nv); }
+              else { emu.muted = true; emu.setVolume?.(0); }
+              break;
+            }
+            case "fullscreen": emu.toggleFullscreen?.(!document.fullscreenElement); break;
+            case "screenshot": {
+              const take = emu.takeScreenshot ?? emu.screenshot;
+              if (emu.takeScreenshot) {
+                emu.takeScreenshot().then(({ screenshot, format }) => {
+                  const blob = new Blob([screenshot], { type: `image/${format}` });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
-                  a.href = url; a.download = `${emu.getBaseFileName?.() ?? "game"}.state`; a.click();
+                  a.href = url; a.download = `${emu.getBaseFileName?.() ?? "screenshot"}.${format}`; a.click();
                   setTimeout(() => URL.revokeObjectURL(url), 2000);
-                  emu.displayMessage?.("Estado salvo");
-                  void uploadSave("state", state);
-                } catch (e) { console.warn(e); emu.displayMessage?.("Falha ao salvar estado"); }
-                break;
+                  emu.displayMessage?.("Screenshot salvo");
+                }).catch(() => emu.displayMessage?.("Falha no screenshot"));
+              } else if (emu.screenshot) {
+                emu.screenshot((blob, fmt) => {
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = `${emu.getBaseFileName?.() ?? "screenshot"}.${fmt}`; a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 2000);
+                  emu.displayMessage?.("Screenshot salvo");
+                });
               }
-              case "loadState": {
-                const gm = emu.gameManager;
-                if (!gm) break;
-                const input = document.createElement("input");
-                input.type = "file"; input.accept = ".state,.bin";
-                input.onchange = async () => {
-                  const f = input.files?.[0]; if (!f) return;
-                  const buf = new Uint8Array(await f.arrayBuffer());
-                  gm.loadState?.(buf);
-                  emu.displayMessage?.("Estado carregado");
-                };
-                input.click();
-                break;
-              }
-              case "quickSave": {
-                const slot = String(msg.slot || "1");
-                const ok = emu.gameManager?.quickSave?.(slot);
-                emu.displayMessage?.(ok ? `Salvo no slot ${slot}` : "Falha ao salvar");
-                break;
-              }
-              case "quickLoad": {
-                const slot = String(msg.slot || "1");
-                emu.gameManager?.quickLoad?.(slot);
-                emu.displayMessage?.(`Carregado do slot ${slot}`);
-                break;
-              }
-              case "exportSram": {
-                const gm = emu.gameManager;
-                const file = gm?.getSaveFile?.(false);
-                if (!file || file.length === 0) { emu.displayMessage?.("Nenhum save encontrado"); break; }
-                const blob = new Blob([file]);
-                const path = String(gm?.getSaveFilePath?.() ?? "save.srm");
-                const name = path.split("/").pop() ?? "save.srm";
+              break;
+            }
+            case "saveState": {
+              const gm = emu.gameManager;
+              if (!gm) break;
+              if (gm.supportsStates?.() === 0) { emu.displayMessage?.("Save states não suportado"); break; }
+              try {
+                const state = gm.getState?.();
+                if (!state || state.length === 0) { emu.displayMessage?.("Falha ao salvar estado"); break; }
+                const blob = new Blob([state]);
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
-                a.href = url; a.download = name; a.click();
+                a.href = url; a.download = `${emu.getBaseFileName?.() ?? "game"}.state`; a.click();
                 setTimeout(() => URL.revokeObjectURL(url), 2000);
-                emu.displayMessage?.("Save exportado");
-                break;
-              }
-              case "importSram": {
-                const gm = emu.gameManager;
-                if (!gm) break;
-                const input = document.createElement("input");
-                input.type = "file";
-                input.onchange = async () => {
-                  const f = input.files?.[0]; if (!f) return;
-                  const data = new Uint8Array(await f.arrayBuffer());
-                  const path = String(gm.getSaveFilePath?.() ?? "/save.srm");
-                  const FS = gm.FS;
-                  if (!FS) return;
-                  try {
-                    const parts = path.split("/");
-                    let cp = "";
-                    for (let i = 0; i < parts.length - 1; i++) {
-                      if (!parts[i]) continue;
-                      cp += "/" + parts[i];
-                      try { if (!FS.analyzePath(cp).exists) FS.mkdir(cp); } catch {}
-                    }
-                    try { if (FS.analyzePath(path).exists) FS.unlink(path); } catch {}
-                    FS.writeFile(path, data);
-                    gm.loadSaveFiles?.();
-                    emu.displayMessage?.("Save importado — reinicie se necessário");
-                    void uploadSave("sram", data);
-                  } catch (e) { console.warn(e); emu.displayMessage?.("Falha ao importar save"); }
-                };
-                input.click();
-                break;
-              }
-              case "changeSetting": emu.changeSettingOption?.(msg.key, msg.value); break;
-              case "getState": {
-                const state = {
-                  paused: Boolean(emu.paused),
-                  volume: typeof emu.volume === "number" ? emu.volume : 1,
-                  muted: Boolean(emu.muted),
-                  slot: emu.getSettingValue?.("save-state-slot") || "1",
-                };
-                parent.postMessage({ source: "vigia-emulator", type: "state", detail: state }, "*");
-                break;
-              }
-              case "screenRecord": {
-                const rec = emu.screenRecord?.();
-                if (!rec) { emu.displayMessage?.("Gravação não suportada"); break; }
-                // O parent controla o estado de gravação via polling, mas aqui iniciamos/paramos
-                if (msg.action === "stop" && window._vigiaRecorder) {
-                  try { window._vigiaRecorder.stop(); } catch {}
-                  window._vigiaRecorder = null;
-                  emu.displayMessage?.("Gravação parada");
-                } else {
-                  window._vigiaRecorder = rec;
-                  emu.displayMessage?.("Gravando…");
-                  rec.addEventListener("stop", () => { window._vigiaRecorder = null; }, { once: true });
-                  rec.addEventListener("error", () => { window._vigiaRecorder = null; }, { once: true });
-                }
-                break;
-              }
-              case "openControls": {
-                const parentEl = emu.elements?.parent ?? document.querySelector(".ejs_parent");
-                if (parentEl) parentEl.classList.add("vigia-allow-ejs-popup");
-                const menu = emu.controlMenu;
-                if (menu) {
-                  menu.style.display = "";
-                  const popup = menu.closest(".ejs_popup_container");
-                  if (popup) popup.style.display = "";
-                  try { menu.focus(); } catch {}
-                } else {
-                  const fallback = document.querySelector(".ejs_control_body");
-                  if (fallback) {
-                    const container = fallback.closest(".ejs_popup_container");
-                    if (container) container.style.display = "";
-                    fallback.style.display = "";
-                  }
-                }
-                break;
-              }
-              default: break;
+                emu.displayMessage?.("Estado salvo");
+                void uploadSave("state", state);
+              } catch (e) { console.warn(e); emu.displayMessage?.("Falha ao salvar estado"); }
+              break;
             }
-          } catch (e) { console.warn("[emulator-frame] comando falhou", msg.type, e); }
-        });
+            case "loadState": {
+              const gm = emu.gameManager;
+              if (!gm) break;
+              const input = document.createElement("input");
+              input.type = "file"; input.accept = ".state,.bin";
+              input.onchange = async () => {
+                const f = input.files?.[0]; if (!f) return;
+                const buf = new Uint8Array(await f.arrayBuffer());
+                gm.loadState?.(buf);
+                emu.displayMessage?.("Estado carregado");
+              };
+              input.click();
+              break;
+            }
+            case "quickSave": {
+              const slot = String(msg.slot || "1");
+              const ok = emu.gameManager?.quickSave?.(slot);
+              emu.displayMessage?.(ok ? `Salvo no slot ${slot}` : "Falha ao salvar");
+              break;
+            }
+            case "quickLoad": {
+              const slot = String(msg.slot || "1");
+              emu.gameManager?.quickLoad?.(slot);
+              emu.displayMessage?.(`Carregado do slot ${slot}`);
+              break;
+            }
+            case "exportSram": {
+              const gm = emu.gameManager;
+              const file = gm?.getSaveFile?.(false);
+              if (!file || file.length === 0) { emu.displayMessage?.("Nenhum save encontrado"); break; }
+              const blob = new Blob([file]);
+              const path = String(gm?.getSaveFilePath?.() ?? "save.srm");
+              const name = path.split("/").pop() ?? "save.srm";
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = name; a.click();
+              setTimeout(() => URL.revokeObjectURL(url), 2000);
+              emu.displayMessage?.("Save exportado");
+              break;
+            }
+            case "importSram": {
+              const gm = emu.gameManager;
+              if (!gm) break;
+              const input = document.createElement("input");
+              input.type = "file";
+              input.onchange = async () => {
+                const f = input.files?.[0]; if (!f) return;
+                const data = new Uint8Array(await f.arrayBuffer());
+                const path = String(gm.getSaveFilePath?.() ?? "/save.srm");
+                const FS = gm.FS;
+                if (!FS) return;
+                try {
+                  const parts = path.split("/");
+                  let cp = "";
+                  for (let i = 0; i < parts.length - 1; i++) {
+                    if (!parts[i]) continue;
+                    cp += "/" + parts[i];
+                    try { if (!FS.analyzePath(cp).exists) FS.mkdir(cp); } catch { }
+                  }
+                  try { if (FS.analyzePath(path).exists) FS.unlink(path); } catch { }
+                  FS.writeFile(path, data);
+                  gm.loadSaveFiles?.();
+                  emu.displayMessage?.("Save importado — reinicie se necessário");
+                  void uploadSave("sram", data);
+                } catch (e) { console.warn(e); emu.displayMessage?.("Falha ao importar save"); }
+              };
+              input.click();
+              break;
+            }
+            case "changeSetting": emu.changeSettingOption?.(msg.key, msg.value); break;
+            case "getState": {
+              const state = {
+                paused: Boolean(emu.paused),
+                volume: typeof emu.volume === "number" ? emu.volume : 1,
+                muted: Boolean(emu.muted),
+                slot: emu.getSettingValue?.("save-state-slot") || "1",
+              };
+              parent.postMessage({ source: "vigia-emulator", type: "state", detail: state }, "*");
+              break;
+            }
+            case "screenRecord": {
+              const rec = emu.screenRecord?.();
+              if (!rec) { emu.displayMessage?.("Gravação não suportada"); break; }
+              // O parent controla o estado de gravação via polling, mas aqui iniciamos/paramos
+              if (msg.action === "stop" && window._vigiaRecorder) {
+                try { window._vigiaRecorder.stop(); } catch { }
+                window._vigiaRecorder = null;
+                emu.displayMessage?.("Gravação parada");
+              } else {
+                window._vigiaRecorder = rec;
+                emu.displayMessage?.("Gravando…");
+                rec.addEventListener("stop", () => { window._vigiaRecorder = null; }, { once: true });
+                rec.addEventListener("error", () => { window._vigiaRecorder = null; }, { once: true });
+              }
+              break;
+            }
+            case "openControls": {
+              const parentEl = emu.elements?.parent ?? document.querySelector(".ejs_parent");
+              if (parentEl) parentEl.classList.add("vigia-allow-ejs-popup");
+              const menu = emu.controlMenu;
+              if (menu) {
+                menu.style.display = "";
+                const popup = menu.closest(".ejs_popup_container");
+                if (popup) popup.style.display = "";
+                try { menu.focus(); } catch { }
+              } else {
+                const fallback = document.querySelector(".ejs_control_body");
+                if (fallback) {
+                  const container = fallback.closest(".ejs_popup_container");
+                  if (container) container.style.display = "";
+                  fallback.style.display = "";
+                }
+              }
+              break;
+            }
+            default: break;
+          }
+        } catch (e) { console.warn("[emulator-frame] comando falhou", msg.type, e); }
+      });
 
-        // Bloqueia menu de contexto nativo, mas libera quando editor está aberto
-        document.addEventListener("contextmenu", (e) => {
-          const parentEl = document.querySelector(".ejs_parent.vigia-allow-ejs-popup");
-          if (parentEl) return;
-          e.preventDefault();
-        });
+      // Bloqueia menu de contexto nativo, mas libera quando editor está aberto
+      document.addEventListener("contextmenu", (e) => {
+        const parentEl = document.querySelector(".ejs_parent.vigia-allow-ejs-popup");
+        if (parentEl) return;
+        e.preventDefault();
+      });
 
-        const loader = document.createElement("script");
-        loader.src = `${window.EJS_pathtodata}loader.js`;
-        loader.async = true;
-        loader.onerror = () => notify("error", "falha ao carregar EmulatorJS (CDN)");
-        document.body.appendChild(loader);
-      })();
-    </script>
-  </body>
+      const loader = document.createElement("script");
+      loader.src = `${window.EJS_pathtodata}loader.js`;
+      loader.async = true;
+      loader.onerror = () => notify("error", "falha ao carregar EmulatorJS (CDN)");
+      document.body.appendChild(loader);
+    })();
+  </script>
+</body>
+
 </html>
