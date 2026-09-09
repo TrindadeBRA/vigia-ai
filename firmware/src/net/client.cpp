@@ -634,32 +634,12 @@ void themeClientTick()
     g_themeAutoPollMs = now;
     return;
   }
-  // Fallback: enquanto em VIEW_THEME, poll periódico leve caso o SSE
-  // tenha caído ou a notificação tenha se perdido (ex.: reconexão).
-  // Intervalo curto (15s) sem SSE, longo (60s) com SSE saudável.
-  if (g_view == VIEW_THEME && customThemeActive())
+  // Sem fallback periódico: só recarrega quando o backend envia
+  // `event: theme` (após POST /api/theme/meta no clique em Salvar).
+  // Isso evita que ajustes de background no editor disparem reload
+  // antes do usuário confirmar.
+  if (g_view != VIEW_THEME)
   {
-    uint32_t now = millis();
-    uint32_t interval = g_sseOpen ? 60000 : 15000;
-    if (now - g_themeAutoPollMs > interval)
-    {
-      if (WiFi.status() == WL_CONNECTED && !g_ssePaused)
-      {
-        Serial.println(g_sseOpen ? "tema: poll de segurança em VIEW_THEME (SSE ok)" : "tema: poll periódico em VIEW_THEME (SSE off)");
-        themeClientReload();
-        g_themeAutoPollMs = now;
-        g_lastThemeReloadMs = now;
-      }
-      else
-      {
-        g_themeAutoPollMs = now;
-      }
-    }
-  }
-  else if (g_view != VIEW_THEME)
-  {
-    // Mantém o timer alinhado ao sair da view para não disparar
-    // imediatamente ao reentrar.
     g_themeAutoPollMs = millis();
   }
 }
