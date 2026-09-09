@@ -1,61 +1,106 @@
 # Touch e views
 
-A maioria das TFT SPI 3,5" com toque usa controlador **XPT2046** (resistivo) no **mesmo SPI** da tela, com um CS extra (`T_CS`).
+Guia de interação da TFT touch do Vigia AI — hardware real e simulador. Para pinos/BOM: [`HARDWARE.md`](HARDWARE.md). Para rede/tema/SSE: [`FIRMWARE.md`](FIRMWARE.md) e [`../firmware/README.md`](../firmware/README.md).
 
-O Wokwi usa `board-ili9341-cap-touch` (FT6206, I2C 21/22). O chip manda **retrato 240×320**. No simulador a peça está em `rotate: 90` e o firmware usa `setRotation(1)` (paisagem 320×240), então o toque vira `x = y_nativo`, `y = 239 - x_nativo`. O hardware real usa XPT2046 + calibração, não este mapeamento.
+## Controladores
 
-## Views
+| Ambiente | Controlador | Barramento | Resolução nativa |
+|---|---|---|---|
+| **Hardware (placa integrada ESP32-2432)** | **XPT2046** resistivo | mesmo SPI da TFT (`T_CLK 18 / T_DIN 23 / T_DO 19`, `T_CS 33`) | 480×320 em paisagem (`setRotation(1)`) |
+| **Hardware (kit avulso legado)** | XPT2046 resistivo | mesmo SPI, `T_CS 21`, `T_IRQ 22` opcional | 480×320 |
+| **Wokwi** | **FT6206** capacitivo (`board-ili9341-cap-touch`) | I2C `SDA 21 / SCL 22` | 240×320 retrato → 320×240 paisagem |
 
-| Tela         | Conteúdo                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Inicio       | Lista ou grade (até 5 cards); escolhe em **Info → Início** (padrão **grade**). Um card por *tipo* de provedor (não por conta) — com mais de uma conta do mesmo provedor, mostra a que mais precisa de atenção + "+N" no título. Toque no card abre o detalhe. Na **lista**, cada card usa a altura natural; se não couberem, **setas** ↑↓. Na **grade**, 2 colunas (1/2 da largura; o ímpar não estica) e 3 linhas visíveis (6 células) sem corte |
-| Claude       | Janelas 5h, semana, Sonnet/Opus se existirem; usado/resta/reset. **Setas** à direita se precisar de scroll. Com mais de uma conta configurada (`CONTRATO_JSON.md`), aparece um paginador **‹ i/N ›** logo abaixo do título pra trocar de conta                                                                                                                                                                                               |
-| GPT          | Janelas sessão e semana (assinatura ChatGPT / Codex); usado/resta/reset. Mesmo paginador de contas                                                                                                                                                                                                                                                                                                                                                |
-| Cursor       | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). Setas de scroll. Mesmo paginador de contas do Claude                                                                                                                                                                                                                                                                                                                               |
-| OpenRouter   | Créditos da conta: barra, usado, resta, teto. Setas de scroll. Mesmo paginador de contas                                                                                                                                                                                                                                                                                                                                                          |
-| DeepSeek     | Saldo da conta: barra, resta. Mesmo paginador de contas                                                                                                                                                                                                                                                                                                                                                                                           |
-| OpenCode Go  | Assinatura mensal: 3 janelas (rolling/weekLimit/monthLimit), cada uma com usado/resta/reset. Setas de scroll. Mesmo paginador de contas                                                                                                                                                                                                                                                                                                           |
-| OpenCode Zen | Saldo pré-pago: barra, resta. Mesmo paginador de contas                                                                                                                                                                                                                                                                                                                                                                                           |
-| fal.ai       | Saldo de créditos: barra, resta. Mesmo paginador de contas                                                                                                                                                                                                                                                                                                                                                                                        |
-| Bitcoin      | Saldo on-chain + valor em USD/BRL. Mesmo paginador se houver mais de um endereço                                                                                                                                                                                                                                                                                                                                                                  |
-| AdSense      | Ganhos de hoje (est.) + saldo não pago. Mesmo paginador de contas                                                                                                                                                                                                                                                                                                                                                                                 |
-| Moedas       | Lista de cotações (fiat + cripto) na moeda base. Toque abre o detalhe com todas as linhas. Sem paginador (não é lista de contas)                                                                                                                                                                                                                                                                                                                  |
-| Info         | Rede, URL/QR do painel na LAN, layout da home (**Lista** / **Grade**), **tam. cards** (P / M / G / XG — 1×1, 1×1, 2×1, 2×2), **tema** (Escuro / Claro / Contraste), **cor** (7 tons, padrao vermelho), **idioma** (PT / EN / ES, padrão pt-BR), **Atualizar**, **Calibrar**. **Setas** à direita se precisar de scroll                                                                                                                            |
-| Relogio      | Hora com segundos, data e resumo dos provedores (mesma regra de "pior conta" da Início). **Sem barra**. Toque em qualquer lugar volta ao inicio                                                                                                                                                                                                                                                                                                   |
+O Wokwi não tem XPT2046; usa `board-ili9341-cap-touch` (FT6206) só para clicar no simulador. O chip manda **retrato 240×320**. No simulador a peça está em `rotate: 90` e o firmware usa `setRotation(1)` (paisagem 320×240), então o toque vira `x = y_nativo`, `y = 239 - x_nativo` (`firmware/src/input/touch.cpp`, bloco `WOKWI_SIM`). O hardware real usa XPT2046 + calibração NVS, não este mapeamento.
 
-Navegação na **barra** (lado escolhido em Info → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, uma seta **←** faz o mesmo. Ícone **i** abre Info. O **horário** e o **ícone de relógio** no meio da barra abrem a tela Relogio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões Prev/Next no Wokwi) alterna Início ↔ Info.
+Arquivos: `src/input/touch.cpp` (XPT2046/FT6206 + calibração), `src/input/gestures.cpp` (swipe/hold), `src/input/input.cpp` (`inputBegin`/`inputPoll`), `src/ui/nav.cpp` (hit-test/navegação).
 
-Nas telas internas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go / OpenCode Zen / fal.ai / Bitcoin / AdSense / Moedas / Info) e na **Início** (lista ou grade) se os cards não couberem: aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u` / `d`.
+## Views (18 no total — `firmware/src/core/state.h:6-37`)
 
-Hardware: `T_CS` no GPIO 21. Serial: `n` `p` `0`–`7`.
+| View | Enum | Conteúdo | Scroll | Paginador |
+|---|---|---|---|---|
+| Início | `VIEW_HOME` 0 | Lista ou grade (até 5 cards); escolhe em **Sistema → Início** (padrão **grade**). Um card por *tipo* de provedor (não por conta) — com N contas do mesmo provedor, mostra a que mais precisa de atenção + “+N” no título. Toque no card abre o detalhe. Na **lista**, altura natural; se não couber, **setas** ↑↓. Na **grade**, 2 colunas (1/2 da largura; o ímpar não estica) e 3 linhas visíveis (6 células) sem corte | ↑↓ se não couber | — |
+| Claude | `VIEW_CLAUDE` 1 | Janelas 5 h, semana, Sonnet/Opus se existirem; usado/resta/reset. | ↑↓ | `‹ i/N ›` |
+| Cursor | `VIEW_CURSOR` 2 | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). | ↑↓ | `‹ i/N ›` |
+| OpenRouter | `VIEW_OPENROUTER` 3 | Créditos: barra, usado, resta, teto. | ↑↓ | `‹ i/N ›` |
+| DeepSeek | `VIEW_DEEPSEEK` 4 | Saldo: barra, resta. | ↑↓ | `‹ i/N ›` |
+| GPT | `VIEW_GPT` 5 | Janelas sessão e semana (ChatGPT/Codex); usado/resta/reset. | ↑↓ | `‹ i/N ›` |
+| Sistema | `VIEW_STATUS` 6 | Rede, URL/QR do painel na LAN, layout da home (**Lista**/**Grade**), **tam. cards** (P/M/G/XG… — 1×1 a 4×4), **tema** (Escuro/Claro/Contraste), **cor** (7 tons, padrão vermelho), **idioma** (PT/EN/ES, padrão pt-BR), **barra** (esq/topo/dir/base), **Atualizar**, **Calibrar**. | ↑↓ | — |
+| Relógio | `VIEW_NOW` 7 | Hora com segundos, data e resumo dos provedores (mesma regra “pior conta” da Início). **Sem barra**. Toque em qualquer lugar volta ao início | — | — |
+| OpenCode | `VIEW_OPENCODE` 8 | Assinatura mensal: 3 janelas (rolling/weekLimit/monthLimit), cada uma com usado/resta/reset. | ↑↓ | `‹ i/N ›` |
+| fal.ai | `VIEW_FAL` 9 | Saldo de créditos: barra, resta. | ↑↓ | `‹ i/N ›` |
+| Bitcoin | `VIEW_BITCOIN` 10 | Saldo on-chain + valor em USD/BRL. | ↑↓ | `‹ i/N ›` (cada carteira) |
+| Tema custom | `VIEW_THEME` 11 | Tela cheia sem header — fundo + relógio + ícones com cota (protótipo, ver [`CONTRATO_TEMA.md`](CONTRATO_TEMA.md)). Só entra por gatilho explícito (botão Recarregar ou evento SSE `theme`), nunca por swipe. | — | — |
+| AdSense | `VIEW_ADSENSE` 12 | Ganhos de hoje (est.) + saldo não pago. | ↑↓ | `‹ i/N ›` |
+| Moedas | `VIEW_CURRENCIES` 13 | Lista de cotações (fiat+cripto) na moeda base. Toque abre detalhe. | ↑↓ | — (não é lista de contas) |
+| Clima | `VIEW_WEATHER` 14 | Open-Meteo: atual + máx/mín do dia. | ↑↓ | — |
+| Mineração | `VIEW_MINER` 15 | Motor Stratum+SHA256 (só minera com esta view ativa, ver [`PLANO_MINERACAO.md`](PLANO_MINERACAO.md)). | auto 1 Hz | swipe normal |
+| Câmeras | `VIEW_CAMERAS` 16 | Lista de câmeras IP (card por câmera) — toque abre live. | — | — |
+| Câmera live | `VIEW_CAMERA` 17 | MJPEG em tela cheia + PTZ ONVIF. | — | — |
 
-Serial (placa e Wokwi): `n` / `p` Início↔Info, `0` início, `1` Claude, `2` Cursor, `3` OpenRouter, `4` DeepSeek, `5` GPT, `6` OpenCode Go, `7` OpenCode Zen, `8` info, `9` relogio, `l` lista, `g` grade, `t` ciclo de tema, `a` ciclo da cor, `i` ciclo de idioma, `h` ciclo da barra (esq/topo/dir/base), `u`/`d` scroll no detalhe/info/início, `r` refresh, `c` calibrar (só hardware), `s` ciclo de tamanho do card da view atual, `1`/`2`/`3`/`4`/`5` tamanho P(1×1)/L(1×2)/M(2×2)/W(2×4)/G(4×4).
+> Contagem visível: `VIEW_COUNT = 18` (`state.h:37`). `VIEW_THEME` nunca entra no ciclo de swipe normal (`uiNext`/`uiPrev` em `ui/nav.cpp`).
 
-A escolha Lista/Grade, o tema, a cor, o idioma, o lado da barra e o tamanho de cada card ficam na NVS (namespace `ui`, chaves `home`, `theme`, `accent`, `lang`, `edge` e `cs` — blob de `VIEW_COUNT` bytes, um `CardSize` por `View`). Início padrão: **grade**, cards **M** (normal). Idioma padrão: **pt-BR**. Barra padrão: **esquerda**. Cor padrão: **vermelho**.
+Navegação na **barra** (lado escolhido em Sistema → **BARRA**; padrão **esquerda**): título **VIGIA AI** volta ao início; fora da home, seta **←** faz o mesmo. Ícone **i** abre Sistema. O **horário** e o **ícone de relógio** no meio da barra abrem Relógio. O selo/área livre da barra pede refresh. Deslize horizontal (e botões **Prev/Next** no Wokwi, GPIO 13/5) alterna Início ↔ Sistema.
+
+Nas telas internas e na **Início** (lista ou grade) quando o conteúdo não cabe: aparecem **setas** ↑↓ à direita. Toque nelas, deslize vertical, ou serial `u`/`d` (ver abaixo).
+
+## Gestos
+
+- **Tap** num card da Início → detalhe da conta. Tap no paginador `‹ ›` troca de conta (`g_snap` tem até `MAX_ACCOUNTS=5` por provedor).
+- **Swipe horizontal** → Início ↔ Sistema. **Swipe vertical** → scroll (quando `uiCanScroll()`).
+- **Setas ↑↓** (hit-test em `ui/nav.cpp`) → `uiDetailScrollBy(dy)`.
+- **Hold** sobre o “olho” da marca → dilata a pupila (`uiHandlePointerHold`, só efeito visual, igual ao hover do logo web).
+
+## Serial (115200 baud) — debug no hardware e no Wokwi
+
+Mesma lista em [`../firmware/README.md`](../firmware/README.md) §10.3. Útil quando o touch não está calibrado ou para automação:
+
+```
+n / p        Início ↔ Sistema (next/prev)
+0            Início
+1 Claude   2 Cursor  3 OpenRouter  4 DeepSeek
+5 GPT      6 OpenCode (Go/Zen)  7 (reservado)  8 Sistema  9 Relógio
+l / g        lista / grade (HomeLayout)
+t            ciclo de tema (DARK → LIGHT → CONTRAST)
+a            ciclo da cor de destaque (7 tons, ACCENT_RED…VIOLET)
+i            ciclo de idioma (PT → EN → ES)
+h            ciclo da barra (LEFT → TOP → RIGHT → BOTTOM)
+u / d        scroll cima/baixo no detalhe/Sistema/Início
+r            refresh (GET /usage)
+c            calibrar touch (só hardware, 4 cantos)
+s            ciclo de tamanho do card da view atual (CARD_SM…CARD_WXL)
+1/2/3/4/5    tamanho direto: P(1×1)/L(1×2)/M(2×2)/W(2×4)/G(4×4)
+```
+
+O firmware ecoa no Serial: `tft WxH`, `usage sse-ok` + dump de contas (`usageClientLogSnapshot`), `coletor SSE: ...` etc. — ver `firmware/src/net/parse.cpp:7-106`.
+
+## Persistência (NVS)
+
+A escolha Lista/Grade, tema, cor, idioma, lado da barra e tamanho de cada card ficam na NVS (namespace `ui`, chaves `home`, `theme`, `accent`, `lang`, `edge` e `cs` — blob de `VIEW_COUNT` bytes, um `CardSize` por `View`; ver `firmware/src/ui/theme.cpp:128-335`). Padrões: **grade**, cards **M** (normal), tema **Escuro**, cor **vermelho**, idioma **pt-BR**, barra **esquerda**.
+
+A calibração do touch fica em NVS separada (namespace `touch`, `firmware/src/input/touch.cpp`). Primeira vez: **Sistema → Calibrar touch** (quatro cantos). Se mudar `setRotation`, recalibre.
 
 ## Ligação típica (XPT2046)
 
 SPI compartilhado com a TFT. **Não** ligue `T_CS` no GPIO 15 (já é CS da tela).
 
-| Touch | GPIO   | Notas                          |
-| ----- | ------ | ------------------------------ |
-| T_CLK | 18     | = SCK da TFT                   |
-| T_DIN | 23     | = MOSI                         |
-| T_DO  | 19     | = MISO                         |
-| T_CS  | **21** | `TOUCH_CS` no `platformio.ini` |
-| T_IRQ | **22** | opcional, `TOUCH_IRQ`          |
+| Touch | GPIO | Notas |
+|---|---|---|
+| T_CLK | 18 | = SCK da TFT |
+| T_DIN | 23 | = MOSI |
+| T_DO | 19 | = MISO |
+| T_CS | **33** (integrada) / **21** (kit avulso legado) | `TOUCH_CS` em `platformio.ini` |
+| T_IRQ | **22** | opcional (`TOUCH_IRQ`) |
 
-Se o silkscreen da sua placa usar outros pinos, mude `TOUCH_CS` / `TOUCH_IRQ` no env `esp32dev`.
+Se o silkscreen da sua placa usar outros pinos, mude `TOUCH_CS` / `TOUCH_IRQ` no `env:esp32dev` de `firmware/platformio.ini`.
 
 ## Calibração
 
-Salva na NVS da ESP32 (namespace `touch`). Primeira vez: tela **Info** → **Calibrar touch** (quatro cantos). Se girar a tela (`setRotation`), calibre de novo.
+Salva na NVS (`touch`). Primeira vez: **Sistema → Calibrar touch** (quatro cantos). Se girar a tela (`setRotation`), calibre de novo. Toque “fantasma” ou invertido = calibração ruim ou `T_CS` errado — confira [`HARDWARE.md`](HARDWARE.md) §2.
 
-Toque “fantasma” ou invertido = calibração ruim ou `T_CS` errado.
+## Arquivos relevantes
 
-## Arquivos
-
-- `src/ui/nav.cpp` — navegação e hit-test
-- `src/ui/views/` — uma tela por arquivo (Início, detalhe, Sistema, Relógio)
-- `src/input/` — XPT2046 / FT6206 / botões / serial
-- `src/core/state.h` — `View` e snapshot
+- `src/ui/nav.cpp` — navegação, hit-test, paginador, scroll
+- `src/ui/views/` — uma tela por arquivo (home, claude, gpt, cursor, … now, miner, cameras)
+- `src/input/` — `input.cpp` (orquestra), `touch.cpp` (XPT2046/FT6206), `gestures.cpp`, `serial.cpp`
+- `src/core/state.h` — `enum View`, `UsageSnapshot`, `MAX_ACCOUNTS`
+- `src/ui/theme.cpp` — NVS de layout/tema/cor/idioma/barra/tamanhos

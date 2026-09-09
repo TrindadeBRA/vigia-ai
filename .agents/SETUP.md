@@ -172,19 +172,11 @@ Regras ficam em `backend/data/config.json` (`alarms[]`); token e chats em `teleg
 
 ## Placa (hardware)
 
-**BOM:** ESP32 Dev Module (WROOM / DevKit C) + TFT SPI **3,5"** 320×480 (**ILI9488**; ILI9486 = flag no `platformio.ini`). Touch **XPT2046**. GPIO **2** é `TFT_DC` — não usar como LED.
+**BOM recomendado:** placa integrada **ESP32-2432** (WROOM + TFT SPI **3,5" 320×480 ILI9488** já soldada, touch **XPT2046**, `TFT_BL` no GPIO 27) — alternativa ILI9486: troque `ILI9488_DRIVER` por `ILI9486_DRIVER` em `platformio.ini`. Kit avulso (ESP32 + TFT solta) ainda funciona — pinout legado abaixo.
 
-| Sinal | GPIO |
-| --- | --- |
-| MOSI / T_DIN | 23 |
-| MISO / T_DO | 19 |
-| SCLK / T_CLK | 18 |
-| TFT CS | 15 |
-| TFT DC | **2** |
-| TFT RST | 4 |
-| Touch CS | 21 |
+**Placa integrada (env `esp32dev` atual):** `MISO 12 / MOSI 13 / SCLK 14 / CS 15 / DC 2 / RST -1 / BL 27 / TOUCH_CS 33`. **Kit avulso legado:** `MOSI 23 / MISO 19 / SCLK 18 / TFT_CS 15 / DC 2 / RST 4 / TOUCH_CS 21`. GPIO **2** é `TFT_DC` (compartilha LED onboard) — nunca use como LED de heartbeat.
 
-Pinos, backlight e rotação: [`HARDWARE.md`](HARDWARE.md). Views e calibração: [`TOUCH.md`](TOUCH.md).
+Pinos, alimentação e partição `huge_app`: [`HARDWARE.md`](HARDWARE.md) · [`FIRMWARE.md`](FIRMWARE.md). Views e calibração: [`TOUCH.md`](TOUCH.md). Guia completo da placa: [`../firmware/README.md`](../firmware/README.md).
 
 ```bash
 cp firmware/src/secrets.h.example firmware/src/secrets.h

@@ -42,8 +42,8 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 
 |                |                                                                                                                             |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 🖥️ **Físico**   | ESP32 Dev Module + TFT SPI **3,5"** touch (XPT2046), tela sempre ligada na mesa                                             |
-| 🌐 **Web**      | [`/display`](.agents/SETUP.md), mesmo layout, responsivo (desktop e mobile), tema/cor salvos no navegador                   |
+| 🖥️ **Físico**   | ESP32-2432 (ou Dev Module) + TFT SPI **3,5"** touch (XPT2046, `TOUCH_CS 33` na integrada), tela sempre ligada na mesa — ver [`firmware/README.md`](firmware/README.md) |
+| 🌐 **Web**      | [`/display`](.agents/SETUP.md), mesmo layout, responsivo (desktop e mobile), tema/cor salvos no backend (`/api/prefs`)     |
 | 💻 **App**      | Instalador para **Linux, macOS e Windows** — não precisa de Python nem de Node ([`.agents/DESKTOP.md`](.agents/DESKTOP.md)) |
 | 🧪 **Simulado** | [Wokwi](https://wokwi.com/) no VS Code — testa o firmware sem soldar nada                                                   |
 
