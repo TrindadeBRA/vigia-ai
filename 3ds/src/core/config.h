@@ -7,7 +7,7 @@
 #include <cstdint>
 
 struct VigiaConfig {
-  std::string collectorUrl = "http://192.168.1.10:8787"; // sem trailing slash
+  std::string collectorUrl = "http://192.168.3.58:8787"; // hardcode teste 3DS
   uint8_t theme = 0; // 0 dark 1 light 2 contrast
   uint8_t lang = 0;  // 0 pt 1 en 2 es
   uint8_t accent = 0;

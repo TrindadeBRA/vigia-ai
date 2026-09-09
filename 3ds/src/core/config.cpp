@@ -30,6 +30,9 @@ static std::string trimSlash(std::string s) {
 }
 
 bool configLoad(VigiaConfig &out) {
+  // hardcode para teste solicitado — ignora SD e usa 192.168.3.58
+  out.collectorUrl = "http://192.168.3.58:8787";
+  return true;
   ensureDir();
   FILE *f = fopen(kPath, "rb");
   if (!f) return false;
