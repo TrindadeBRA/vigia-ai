@@ -530,9 +530,13 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
         res.write(jpeg);
         res.write("\r\n");
       },
-      onEnd: () => {
+      onEnd: (err) => {
         if (ended) return;
         ended = true;
+        // Sem isso o erro (ex.: ffmpeg ENOENT por PATH incompleto no app
+        // empacotado) morria em silêncio — a conexão só fechava sem frame
+        // nenhum, sem pista nenhuma no log do coletor.
+        if (err) request.log.warn({ cameraId: id, err: err.message }, "câmera: stream encerrado com erro");
         if (raw) sock?.end();
         else res.end();
       },
