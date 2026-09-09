@@ -22,14 +22,21 @@ static u32 *SOC_buffer = nullptr;
 
 void httpClientInit(bool *outHttpPatched) {
   if (s_httpcInited) return;
-  // SOC: httpc precisa de soc:U com buffer alinhado 0x1000
   SOC_buffer = (u32*)memalign(0x1000, 0x100000);
   if (SOC_buffer) {
     Result r = socInit(SOC_buffer, 0x100000);
     if (R_SUCCEEDED(r)) s_socInited = true;
+    else {
+      // sem soc:U no RSF ou sem WiFi, nao pode travar o app — fica offline mas UI abre
+      free(SOC_buffer); SOC_buffer=nullptr;
+    }
   }
   Result r = httpcInit(0);
   if (R_SUCCEEDED(r)) s_httpcInited = true;
+  else {
+    if(s_socInited){ socExit(); s_socInited=false; }
+    if(SOC_buffer){ free(SOC_buffer); SOC_buffer=nullptr; }
+  }
   if (outHttpPatched) *outHttpPatched = s_httpcInited;
   s_lastPollMs = 0;
 }

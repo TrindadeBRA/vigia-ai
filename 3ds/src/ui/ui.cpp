@@ -137,13 +137,34 @@ void uiInit(){
   for(int i=0;i<VIEW_COUNT;i++) s_cardSize[i]=CARD_MD;
   s_scroll=0;
 #ifdef _3DS
-  C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
-  C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
+  // citro2d precisa de C3D ja iniciado; falhas aqui antes causavam retorno imediato pra HOME
+  // sem log — agora checa e cai para console se falhar
+  if(!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)){
+    // fallback console para debug
+    consoleInit(GFX_TOP, nullptr);
+    printf("C3D_Init falhou\n");
+    return;
+  }
+  if(!C2D_Init(C2D_DEFAULT_MAX_OBJECTS)){
+    consoleInit(GFX_TOP, nullptr);
+    printf("C2D_Init falhou\n");
+    return;
+  }
   C2D_Prepare();
   topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
   botTarget = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+  if(!topTarget || !botTarget){
+    consoleInit(GFX_TOP, nullptr);
+    printf("C2D_CreateScreenTarget falhou\n");
+    return;
+  }
   textBuf = C2D_TextBufNew(4096);
-  font = nullptr; // usa system font
+  if(!textBuf){
+    consoleInit(GFX_TOP, nullptr);
+    printf("C2D_TextBufNew falhou\n");
+    return;
+  }
+  font = nullptr;
 #endif
 }
 void uiShutdown(){

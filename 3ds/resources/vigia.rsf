@@ -21,6 +21,60 @@ SystemControlInfo:
   StackSize               : 0x00040000
 
 AccessControlInfo:
+  IdealProcessor          : 0
+  AffinityMask            : 1
+  Priority                : 48
+  CoreVersion             : 2
+  DescVersion             : 2
+  ReleaseKernelMajor      : 2
+  ReleaseKernelMinor      : 50
+  HandleTableSize         : 512
+  SystemCallAccess:
+    ArbitrateAddress: 34
+    Break: 60
+    CancelSyncRequest: 35
+    CloseHandle: 35
+    ControlMemory: 1
+    CreateAddressArbiter: 33
+    CreateEvent: 23
+    CreateMutex: 19
+    CreateSemaphore: 21
+    CreateThread: 8
+    DuplicateHandle: 35
+    ExitProcess: 9
+    GetCurrentProcessorNumber: 28
+    GetProcessId: 35
+    GetProcessInfo: 35
+    GetResourceLimit: 35
+    GetSystemInfo: 35
+    GetThreadInfo: 35
+    OutputDebugString: 61
+    QueryMemory: 2
+    ReleaseMutex: 20
+    ReleaseSemaphore: 22
+    SignalEvent: 24
+    SleepThread: 10
+    WaitSynchronization1: 32
+    WaitSynchronizationN: 33
+  ServiceAccessControl:
+    - APT:U
+    - ac:u
+    - am:u
+    - boss:U
+    - cam:u
+    - cfg:u
+    - dsp::DSP
+    - fs:USER
+    - gsp::Gpu
+    - hid:USER
+    - http:C
+    - ir:USER
+    - ndm:u
+    - nwm::UDS
+    - ptm:u
+    - soc:U
+    - ssl:C
+    - y2r:u
   ExtSaveDataId           : 0xCE000
   SystemSaveDataId1       : 0x00000000
   SystemSaveDataId2       : 0x00000000
