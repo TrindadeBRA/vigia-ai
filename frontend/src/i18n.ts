@@ -221,6 +221,9 @@ type Strings = {
   noteRemoveConfirmTitle: string;
   noteRemoveConfirmBody: string;
   noteRemoveConfirmAction: string;
+  cardRemoveConfirmTitle: string;
+  cardRemoveConfirmBody: string;
+  cardRemoveConfirmAction: string;
   widgetNoteCount: (n: number) => string;
   imageEmpty: string;
   imageEmptyHint: string;
@@ -515,6 +518,9 @@ export const STR: Record<Lang, Strings> = {
     noteRemoveConfirmTitle: "Remover nota?",
     noteRemoveConfirmBody: "O texto dessa anotação vai ser perdido — não dá pra desfazer.",
     noteRemoveConfirmAction: "Remover nota",
+    cardRemoveConfirmTitle: "Remover card?",
+    cardRemoveConfirmBody: "Esse card vai ser removido do painel — não dá pra desfazer.",
+    cardRemoveConfirmAction: "Remover",
     widgetNoteCount: (n) => (n === 1 ? "1 nota" : `${n} notas`),
     imageEmpty: "Sem imagem",
     imageEmptyHint: "Clique para configurar",
@@ -802,6 +808,9 @@ export const STR: Record<Lang, Strings> = {
     noteRemoveConfirmTitle: "Remove note?",
     noteRemoveConfirmBody: "This note's text will be lost — this can't be undone.",
     noteRemoveConfirmAction: "Remove note",
+    cardRemoveConfirmTitle: "Remove card?",
+    cardRemoveConfirmBody: "This card will be removed from the board — this can't be undone.",
+    cardRemoveConfirmAction: "Remove",
     widgetNoteCount: (n) => (n === 1 ? "1 note" : `${n} notes`),
     imageEmpty: "No image",
     imageEmptyHint: "Click to configure",
@@ -1089,6 +1098,9 @@ export const STR: Record<Lang, Strings> = {
     noteRemoveConfirmTitle: "¿Quitar nota?",
     noteRemoveConfirmBody: "El texto de esta nota se va a perder — no se puede deshacer.",
     noteRemoveConfirmAction: "Quitar nota",
+    cardRemoveConfirmTitle: "¿Quitar tarjeta?",
+    cardRemoveConfirmBody: "Esta tarjeta se va a quitar del panel — no se puede deshacer.",
+    cardRemoveConfirmAction: "Quitar",
     widgetNoteCount: (n) => (n === 1 ? "1 nota" : `${n} notas`),
     imageEmpty: "Sin imagen",
     imageEmptyHint: "Toca para configurar",

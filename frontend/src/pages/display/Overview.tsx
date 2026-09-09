@@ -154,7 +154,7 @@ export function Overview({
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
   const [dropPreview, setDropPreview] = useState<Cell | null>(null);
   const [freeTarget, setFreeTarget] = useState<string | null>(null);
-  const [noteToRemove, setNoteToRemove] = useState<string | null>(null);
+  const [cardToRemove, setCardToRemove] = useState<string | null>(null);
   const [bgRect, setBgRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const unitPx = rowPxFor(cellPx);
   const readonly = Boolean(kiosk);
@@ -318,6 +318,13 @@ export function Overview({
   }
 
   function handleRemove(id: string) {
+    setCardToRemove(id);
+  }
+
+  function removeCardConfirmed() {
+    const id = cardToRemove;
+    setCardToRemove(null);
+    if (!id) return;
     if (id.startsWith("img:")) {
       onRemoveImage?.(id);
       onBoard((b) => {
@@ -332,7 +339,16 @@ export function Overview({
       return;
     }
     if (id.startsWith("note:")) {
-      setNoteToRemove(id);
+      onRemoveNote?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
       return;
     }
     if (id.startsWith("widget:camera:")) {
@@ -362,22 +378,6 @@ export function Overview({
       return;
     }
     onBoard((b) => removeCloneBoard(b, id));
-  }
-
-  function removeNoteConfirmed() {
-    const id = noteToRemove;
-    setNoteToRemove(null);
-    if (!id) return;
-    onRemoveNote?.(id);
-    onBoard((b) => {
-      const size = { ...b.size };
-      const pos = { ...b.pos };
-      const bg = { ...(b.bg || {}) };
-      delete size[id];
-      delete pos[id];
-      delete bg[id];
-      return { ...b, size, pos, bg };
-    });
   }
 
   function handleDuplicateImage(id: string) {
@@ -650,13 +650,13 @@ export function Overview({
         }}
       />
       <ConfirmModal
-        open={Boolean(noteToRemove)}
-        title={t.noteRemoveConfirmTitle}
-        body={t.noteRemoveConfirmBody}
-        confirmLabel={t.noteRemoveConfirmAction}
+        open={Boolean(cardToRemove)}
+        title={cardToRemove?.startsWith("note:") ? t.noteRemoveConfirmTitle : t.cardRemoveConfirmTitle}
+        body={cardToRemove?.startsWith("note:") ? t.noteRemoveConfirmBody : t.cardRemoveConfirmBody}
+        confirmLabel={cardToRemove?.startsWith("note:") ? t.noteRemoveConfirmAction : t.cardRemoveConfirmAction}
         cancelLabel={t.widgetNoteCancel}
-        onCancel={() => setNoteToRemove(null)}
-        onConfirm={removeNoteConfirmed}
+        onCancel={() => setCardToRemove(null)}
+        onConfirm={removeCardConfirmed}
       />
     </div>
   );
