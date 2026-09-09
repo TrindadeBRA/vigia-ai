@@ -44,12 +44,18 @@ void drawFwdChevron(int cx, int cy, uint16_t color);
 int brandWidth(uint8_t font);
 void drawBrand(int x, int y, uint8_t font);
 
-// Icone da marca: olho com esclera branca fixa (nao muda com o tema) e pupila
-// na cor de acento, desviada do centro por (gazeX, gazeY) em px — usado pra
-// animar o olhar (ver uiTickEye). Centro (cx, cy), raio r. `lid` (0..1) fecha
-// o olho verticalmente com palpebras deslizando de cima/baixo, igual ao blink
-// do logo do frontend (0 = aberto, 1 = fechado).
-void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f);
+// Icone da marca: olho com esclera branca fixa (nao muda com o tema, exceto
+// no easter egg `hurt`) e iris na cor de acento com pupila mais escura por
+// cima (alphaBlend, nao preto solido), desviada do centro por (gazeX, gazeY)
+// em px — usado pra animar o olhar (ver uiTickEye). Centro (cx, cy), raio r.
+// `lid` (0..1) fecha o olho verticalmente com palpebras deslizando de cima/
+// baixo, igual ao blink do logo do frontend (0 = aberto, 1 = fechado).
+// `dilate` (0..1) cresce a iris/pupila — igual ao hover do logo web, aqui
+// disparado por segurar o dedo no olho (ver uiHandlePointerHold). `hurt`
+// tinge a esclera de rosa e força um leve semicerrar — easter egg de toques
+// rapidos no olho (ver registerEyeTap em nav.cpp).
+void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f,
+                  float dilate = 0.0f, bool hurt = false);
 
 // Mesmo desenho, mas parametrizado no alvo grafico (TFT_eSPI ou TFT_eSprite,
 // que herda de TFT_eSPI) — usado pelo splash pra montar o frame inteiro num
@@ -57,15 +63,28 @@ void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f);
 // evitando o "cortes/flicker" de compor o olho direto na tela primitiva a
 // primitiva (ver ui/splash.cpp).
 template <typename T>
-void drawEyeIconOn(T &gfx, int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f) {
-  gfx.fillCircle(cx, cy, r, TFT_WHITE);
+void drawEyeIconOn(T &gfx, int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f,
+                    float dilate = 0.0f, bool hurt = false) {
+  const uint16_t sclera = hurt ? gfx.alphaBlend(110, COL_BAD, TFT_WHITE) : TFT_WHITE;
+  gfx.fillCircle(cx, cy, r, sclera);
   gfx.drawCircle(cx, cy, r, COL_TEXT_DIM);
-  const int pupilR = r * 2 / 5;
+
+  if (dilate < 0.0f) dilate = 0.0f;
+  if (dilate > 1.0f) dilate = 1.0f;
+  const int irisR = r * 2 / 5 + (int)(r * 3 / 10 * dilate + 0.5f);
+  const int pupilR = r * 3 / 20 + (int)(r * 3 / 20 * dilate + 0.5f);
   const int px = cx + gazeX;
   const int py = cy + gazeY;
-  gfx.fillCircle(px, py, pupilR, COL_ACCENT);
-  if (pupilR >= 4) {
-    gfx.fillCircle(px - pupilR / 3, py - pupilR / 3, 2, TFT_WHITE);
+  gfx.fillCircle(px, py, irisR, COL_ACCENT);
+  // Pupila: preto translucido por cima da iris (alphaBlend), nao um preto
+  // solido — num icone pequeno um circulo preto puro le como "buraco".
+  gfx.fillCircle(px, py, pupilR, gfx.alphaBlend(140, TFT_BLACK, COL_ACCENT));
+  if (irisR >= 5) {
+    gfx.fillCircle(px - irisR / 3, py - irisR / 3, irisR / 6 > 0 ? irisR / 6 : 1, TFT_WHITE);
+    if (irisR >= 8) {
+      const uint16_t dim = gfx.alphaBlend(115, TFT_WHITE, COL_ACCENT);
+      gfx.fillCircle(px + irisR / 3, py + irisR / 4, irisR / 10 > 0 ? irisR / 10 : 1, dim);
+    }
   }
   if (lid > 0.001f) {
     int coverage = (int)(r * 2 * lid + 0.5f);

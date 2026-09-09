@@ -1,5 +1,7 @@
 #include "ui/ui.h"
 
+#include <math.h>
+
 #include "net/camera_client.h"
 #include "net/mining_client.h"
 #include "net/usage_client.h"
@@ -51,6 +53,60 @@ static bool viewProviderVisible(View v)
 static bool isCameraView(View v)
 {
   return v == VIEW_CAMERAS || v == VIEW_CAMERA;
+}
+
+// Dedo em cima do olho da marca (área tocável do "voltar pra Home", ver
+// drawHeader() em layout.cpp) — atualizado a cada tick com o toque ainda na
+// tela (uiHandlePointerHold), lido por uiTickEye() pra animar a dilatação.
+static bool g_eyeHeld = false;
+
+void uiHandlePointerHold(int16_t x, int16_t y)
+{
+  if (g_view == VIEW_NOW || g_view == VIEW_THEME || g_view == VIEW_CAMERA || g_eyeR <= 0)
+  {
+    return;
+  }
+  int dx = x - g_eyeCx;
+  int dy = y - g_eyeCy;
+  int reach = g_eyeR + 6;
+  g_eyeHeld = (dx * dx + dy * dy) <= reach * reach;
+}
+
+// Easter egg do olho vermelho/machucado, igual ao logo web (Logo.tsx): 10
+// toques direto no olho em menos de 3s deixam a esclera rosada por um
+// tempo. Buffer fixo (sem alocação) com os últimos toques dentro da janela.
+constexpr int EYE_HURT_CLICKS = 10;
+constexpr uint32_t EYE_HURT_WINDOW_MS = 3000;
+constexpr uint32_t EYE_HURT_MS = 2600;
+static uint32_t g_eyeTapTimes[EYE_HURT_CLICKS] = {0};
+static int g_eyeTapCount = 0;
+
+static void registerEyeTap()
+{
+  const uint32_t now = millis();
+  int kept = 0;
+  for (int i = 0; i < g_eyeTapCount; i++)
+  {
+    if (now - g_eyeTapTimes[i] < EYE_HURT_WINDOW_MS)
+    {
+      g_eyeTapTimes[kept++] = g_eyeTapTimes[i];
+    }
+  }
+  if (kept >= EYE_HURT_CLICKS)
+  {
+    for (int i = 1; i < kept; i++)
+    {
+      g_eyeTapTimes[i - 1] = g_eyeTapTimes[i];
+    }
+    kept = EYE_HURT_CLICKS - 1;
+  }
+  g_eyeTapTimes[kept++] = now;
+  g_eyeTapCount = kept;
+  if (g_eyeTapCount >= EYE_HURT_CLICKS)
+  {
+    g_eyeTapCount = 0;
+    g_eyeHurtUntilMs = now + EYE_HURT_MS;
+  }
 }
 
 void uiSetView(View v)
@@ -288,6 +344,7 @@ void uiPaint()
 
 void uiHandlePointerUp(int16_t x, int16_t y)
 {
+  g_eyeHeld = false;
   if (g_view == VIEW_CAMERA)
   {
     cameraLiveHandlePointer(false, x, y);
@@ -345,6 +402,15 @@ void uiHandleTap(int16_t x, int16_t y)
   {
     if (x >= g_headerHomeX0 && x < g_headerHomeX1 && y >= g_headerHomeY0 && y < g_headerHomeY1)
     {
+      if (g_eyeR > 0)
+      {
+        int dx = x - g_eyeCx;
+        int dy = y - g_eyeCy;
+        if (dx * dx + dy * dy <= (g_eyeR + 4) * (g_eyeR + 4))
+        {
+          registerEyeTap();
+        }
+      }
       uiSetView(g_view == VIEW_CAMERA ? VIEW_CAMERAS : VIEW_HOME);
       return;
     }
@@ -585,10 +651,13 @@ void uiTickClock()
   drawHeader();
 }
 
-// Anima a pupila do olho da marca (saccade: olha pra um ponto, pausa curta,
-// olha pra outro) e o blink (palpebras fechando/abrindo na vertical, igual
-// ao logo do frontend) redesenhando só o icone, sem passar por drawHeader() —
-// chamado a cada volta do loop() em main.cpp, bem mais amiude que o resto do
+// Anima a pupila do olho da marca — saccade (olha decidido pra um ponto,
+// pausa, olha pra outro, com easing — igual ao logo web em Logo.tsx), drift
+// e respiração sutis o tempo todo (nunca 100% parado), blink (pálpebras
+// fechando/abrindo na vertical), dilatação enquanto o dedo segura o olho
+// (uiHandlePointerHold) e o easter egg de olho vermelho/machucado
+// (registerEyeTap) — redesenhando só o icone, sem passar por drawHeader().
+// Chamado a cada volta do loop() em main.cpp, bem mais amiude que o resto do
 // header pra dar movimento continuo. VIEW_NOW e tela cheia sem header.
 void uiTickEye()
 {
@@ -597,16 +666,18 @@ void uiTickEye()
     return;
   }
   static uint32_t lastDrawMs = 0;
-  static uint32_t nextMoveMs = 0;
-  static int targetX = 0;
-  static int targetY = 0;
-  static float gazeX = 0;
-  static float gazeY = 0;
+  static bool gazeInited = false;
+  static float gazeX = 0, gazeY = 0;
+  static float fromX = 0, fromY = 0, toX = 0, toY = 0;
+  static uint32_t saccadeAt = 0;
+  static uint32_t saccadeMs = 120;
+  static uint32_t holdUntilMs = 0;
   static bool blinkInited = false;
   static uint32_t nextBlinkMs = 0;
   static uint32_t blinkStartMs = 0;
   static uint32_t blinkDurMs = 160;
   static bool blinking = false;
+  static float dilate = 0.0f;
 
   uint32_t now = millis();
   if (now - lastDrawMs < 40)
@@ -615,22 +686,71 @@ void uiTickEye()
   }
   lastDrawMs = now;
 
-  if ((int32_t)(now - nextMoveMs) >= 0)
+  if (!gazeInited)
   {
-    int maxGaze = g_eyeR * 3 / 5 - 2;
-    if (maxGaze < 1)
-    {
-      maxGaze = 1;
-    }
-    targetX = random(-maxGaze, maxGaze + 1);
-    targetY = random(-maxGaze, maxGaze + 1);
-    nextMoveMs = now + random(900, 2600);
+    gazeInited = true;
+    holdUntilMs = now + 700;
   }
 
-  gazeX += (targetX - gazeX) * 0.2f;
-  gazeY += (targetY - gazeY) * 0.2f;
-  g_eyeGazeX = (int)gazeX;
-  g_eyeGazeY = (int)gazeY;
+  int maxGaze = g_eyeR * 3 / 5 - 2;
+  if (maxGaze < 1)
+  {
+    maxGaze = 1;
+  }
+
+  if ((int32_t)(now - holdUntilMs) >= 0)
+  {
+    fromX = gazeX;
+    fromY = gazeY;
+    // Giro grande a partir do ângulo atual (não um alvo qualquer) pra
+    // parecer intencional — 18% de chance de voltar pro centro, senão gira
+    // 120°-240°. Mesma heurística de nextTarget() no logo web.
+    if (random(0, 100) < 18)
+    {
+      toX = 0;
+      toY = 0;
+    }
+    else
+    {
+      float curAngle = atan2f(gazeY, gazeX);
+      float turn = PI * (2.0f / 3.0f) + ((float)random(0, 1000) / 1000.0f) * (PI * (2.0f / 3.0f));
+      if (random(0, 2))
+      {
+        turn = -turn;
+      }
+      float angle = curAngle + turn;
+      float radius = maxGaze * (0.55f + ((float)random(0, 1000) / 1000.0f) * 0.45f);
+      toX = cosf(angle) * radius;
+      toY = sinf(angle) * radius * 0.8f;
+    }
+    saccadeAt = now;
+    saccadeMs = 90 + random(0, 70);
+    holdUntilMs = now + saccadeMs + 700 + random(0, 1800);
+  }
+
+  float p = saccadeMs > 0 ? (float)(now - saccadeAt) / (float)saccadeMs : 1.0f;
+  if (p > 1.0f)
+  {
+    p = 1.0f;
+  }
+  // easeOutCubic
+  float inv = 1.0f - p;
+  float e = 1.0f - inv * inv * inv;
+  gazeX = fromX + (toX - fromX) * e;
+  gazeY = fromY + (toY - fromY) * e;
+
+  // Drift + respiração: o olho nunca fica 100% parado, igual ao web —
+  // amplitude mínima de ~0.6px pra não sumir de arredondamento em ícones
+  // pequenos.
+  float driftAmp = maxGaze * 0.05f;
+  if (driftAmp < 0.6f)
+  {
+    driftAmp = 0.6f;
+  }
+  float driftX = sinf(now / 700.0f) * driftAmp;
+  float driftY = cosf(now / 900.0f) * driftAmp * 0.8f;
+  g_eyeGazeX = (int)roundf(gazeX + driftX);
+  g_eyeGazeY = (int)roundf(gazeY + driftY);
 
   if (!blinkInited)
   {
@@ -641,8 +761,8 @@ void uiTickEye()
   float lid = 0.0f;
   if (blinking)
   {
-    float p = (float)(now - blinkStartMs) / (float)blinkDurMs;
-    if (p >= 1.0f)
+    float bp = (float)(now - blinkStartMs) / (float)blinkDurMs;
+    if (bp >= 1.0f)
     {
       blinking = false;
       // 12% de chance de um blink duplo rapido, senao a proxima pausa longa.
@@ -652,7 +772,7 @@ void uiTickEye()
     else
     {
       // Envelope triangular: fecha nos primeiros 40% do tempo, abre no resto.
-      lid = (p < 0.4f) ? (p / 0.4f) : (1.0f - (p - 0.4f) / 0.6f);
+      lid = (bp < 0.4f) ? (bp / 0.4f) : (1.0f - (bp - 0.4f) / 0.6f);
     }
   }
   else if ((int32_t)(now - nextBlinkMs) >= 0)
@@ -661,7 +781,24 @@ void uiTickEye()
     blinkStartMs = now;
     blinkDurMs = 140 + random(0, 60);
   }
+
+  const bool hurt = (int32_t)(now - g_eyeHurtUntilMs) < 0;
+  // Olho semicerrado de irritação enquanto machucado, sem impedir o blink.
+  if (hurt)
+  {
+    lid = lid > 0.35f ? lid : 0.35f;
+  }
   g_eyeLid = lid;
 
-  drawEyeIcon(g_eyeCx, g_eyeCy, g_eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid);
+  // Dilatação: sobe suavemente segurando o dedo no olho, desce ao soltar —
+  // sem dilatar durante o easter egg de "machucado" (igual ao logo web).
+  float targetDilate = (g_eyeHeld && !hurt) ? 1.0f : 0.0f;
+  dilate += (targetDilate - dilate) * 0.15f;
+  if (fabsf(targetDilate - dilate) < 0.003f)
+  {
+    dilate = targetDilate;
+  }
+  g_eyeDilate = dilate;
+
+  drawEyeIcon(g_eyeCx, g_eyeCy, g_eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid, g_eyeDilate, hurt);
 }

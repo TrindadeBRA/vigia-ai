@@ -61,6 +61,14 @@ extern int g_eyeGazeY;
 // uiTickEye() (blink vertical, igual ao logo do frontend) — drawHeader()
 // reaproveita pra não "reabrir" o olho a cada redesenho periódico do header.
 extern float g_eyeLid;
+// Dilatação (0..1) da íris/pupila — sobe suavemente enquanto o dedo fica
+// sobre o olho (ver uiHandlePointerHold) e volta a 0 ao soltar, igual ao
+// hover do logo web (Logo.tsx). Animada por uiTickEye().
+extern float g_eyeDilate;
+// millis() até quando o olho fica "vermelho/machucado" (esclera rosada,
+// olho semicerrado) — ativado por 10 toques rápidos no olho em 3s, igual
+// ao easter egg do logo web. 0 = nunca ativado / já passou.
+extern uint32_t g_eyeHurtUntilMs;
 // Retangulos de toque dos cards da Início, preenchidos por paintHomeList()/
 // paintHomeGrid() a cada pintura — só os provedores com pelo menos uma conta
 // entram aqui, na ordem em que foram desenhados. uiHandleTap() percorre esta

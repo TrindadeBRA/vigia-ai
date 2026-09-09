@@ -15,6 +15,7 @@ void onPointer(bool down, uint16_t x, uint16_t y) {
   if (down) {
     g_lastX = x;
     g_lastY = y;
+    uiHandlePointerHold((int16_t)x, (int16_t)y);
     if (!g_wasDown) {
       g_wasDown = true;
       g_didTap = false;
