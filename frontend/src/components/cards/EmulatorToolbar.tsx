@@ -625,16 +625,44 @@ function EmulatorSettingsModal({ onClose }: { onClose: () => void }) {
         } catch { /* ignore */ }
     }, []);
 
+    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
     const set = useCallback((k: string, v: string) => {
         setValues((prev) => ({ ...prev, [k]: v }));
         const emu = getEmu();
         emu?.changeSettingOption?.(k, v);
-        // changeSettingOption só aplica em memória — sem isso, a escolha (fast
-        // forward, FPS, etc.) some no próximo jogo/reload (some junto com o
-        // EJS_emulator antigo). O modal de cheats já faz esse saveSettings()
-        // depois de mutar; aqui faltava.
+        // Aplica na sessão atual — mas changeSettingOption/saveSettings do EJS
+        // não sobrevivem de forma confiável a trocar de jogo/recarregar o
+        // frame (o iframe é recriado do zero a cada carga). Persistência de
+        // verdade é o botão "Salvar como padrão" abaixo, que grava em
+        // defaultOptions no coletor (EmulatorConfigCard → EJS_defaultOptions).
         emu?.saveSettings?.();
     }, []);
+
+    // Grava as opções atuais em /api/emulator/config → defaultOptions, que é
+    // reaplicado (EJS_defaultOptions) toda vez que um jogo carrega — ao
+    // contrário do saveSettings() do EJS, sobrevive a troca de jogo/emulador
+    // e a reinício do app. PATCH substitui defaultOptions inteiro, então lê o
+    // atual primeiro pra não perder chaves de outra sessão/jogo.
+    const saveAsDefault = useCallback(async () => {
+        setSaveStatus("saving");
+        try {
+            const current = (await fetch("/api/emulator/config", { cache: "no-store" }).then((r) => r.json())) as { defaultOptions?: Record<string, unknown> };
+            const nextDefaultOptions = { ...(current.defaultOptions ?? {}), ...values };
+            const res = await fetch("/api/emulator/config", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ defaultOptions: nextDefaultOptions }),
+            });
+            if (!res.ok) throw new Error(String(res.status));
+            window.dispatchEvent(new CustomEvent("vigia:emulator-config-updated"));
+            setSaveStatus("saved");
+        } catch {
+            setSaveStatus("error");
+        } finally {
+            window.setTimeout(() => setSaveStatus("idle"), 2200);
+        }
+    }, [values]);
 
     const tabs: Array<{ id: typeof tab; label: string }> = [
         { id: "video", label: "Vídeo" },
@@ -697,7 +725,19 @@ function EmulatorSettingsModal({ onClose }: { onClose: () => void }) {
                     ))}
                 </div>
             ) : null}
-            <p className="text-[11px] text-ink3">Algumas opções exigem reiniciar o jogo para aplicar.</p>
+            <div className="flex flex-wrap items-center gap-2 border-t border-edge pt-3">
+                <button
+                    type="button"
+                    onClick={() => void saveAsDefault()}
+                    disabled={saveStatus === "saving"}
+                    className="rounded-xl bg-accent px-4 py-2 text-[13px] font-bold text-white disabled:opacity-60"
+                >
+                    {saveStatus === "saving" ? "Salvando…" : "Salvar como padrão"}
+                </button>
+                {saveStatus === "saved" ? <span className="text-[12px] font-semibold text-good">Salvo — vale para os próximos jogos.</span> : null}
+                {saveStatus === "error" ? <span className="text-[12px] font-semibold text-bad">Falha ao salvar. Tente de novo.</span> : null}
+            </div>
+            <p className="text-[11px] text-ink3">As opções acima já aplicam na sessão atual (algumas exigem reiniciar o jogo). Pra valerem também da próxima vez que abrir um jogo, clique em "Salvar como padrão".</p>
         </ModalShell>
     );
 }
