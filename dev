@@ -750,31 +750,25 @@ case "$1" in
             echo "DEVKITARM nao definido — tentando build via Docker (devkitpro/devkitarm)..." >&2
             if docker run --rm -v "$ROOT_DIR:/build" -w /build/3ds devkitpro/devkitarm make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"; then
               echo "✓ .3dsx gerado via Docker em 3ds/vigia-ai.3dsx (use no Homebrew Launcher: sdmc:/3ds/vigia-ai/)" >&2
-              echo "  Tentando .cia dentro do Docker (instalando makerom+bannertool)..." >&2
+              echo "  Tentando .cia dentro do Docker (instalando makerom)..." >&2
               if docker run --rm -v "$ROOT_DIR:/build" -w /build/3ds devkitpro/devkitarm bash -c '
                 set -e
-                # makerom (Project_CTR) - nao vem no devkitarm
+                # makerom (Project_CTR) - nao vem no devkitarm, bannertool opcional (Makefile usa smdhtool)
                 if ! command -v makerom >/dev/null 2>&1; then
-                  echo "instalando makerom..." >&2
-                  apt-get update -qq && apt-get install -y -qq git make curl unzip >/dev/null 2>&1 || true
-                  if [ ! -f /tmp/ctr_build/makerom ]; then
-                    git clone --depth 1 https://github.com/profi200/Project_CTR.git /tmp/ctr_build 2>/dev/null || true
-                    make -C /tmp/ctr_build/makerom -j2 >/dev/null 2>&1 || true
-                    cp /tmp/ctr_build/makerom/makerom /usr/local/bin/makerom 2>/dev/null || true
-                    chmod +x /usr/local/bin/makerom 2>/dev/null || true
-                  fi
+                  echo "instalando makerom (build local deps)..." >&2
+                  rm -rf /tmp/ctr_build
+                  git clone --recursive https://github.com/profi200/Project_CTR.git /tmp/ctr_build 2>&1 | tail -n 5
+                  # deps primeiro (libmbedtls/libblz/libyaml) — sem isso link falha com -lmbedtls
+                  make -C /tmp/ctr_build/makerom deps 2>&1 | tail -n 20
+                  make -C /tmp/ctr_build/makerom -j2 2>&1 | tail -n 20
+                  cp /tmp/ctr_build/makerom/bin/makerom /usr/local/bin/makerom 2>&1 | head
+                  chmod +x /usr/local/bin/makerom 2>/dev/null || true
+                  which makerom 2>&1 | head
                 fi
-                # bannertool
-                if ! command -v bannertool >/dev/null 2>&1; then
-                  echo "instalando bannertool..." >&2
-                  curl -Ls https://github.com/Steveice10/bannertool/releases/download/1.2.0/bannertool.zip -o /tmp/b.zip 2>/dev/null || true
-                  unzip -qo /tmp/b.zip -d /tmp 2>/dev/null || true
-                  find /tmp -name "bannertool" -type f -exec cp {} /usr/local/bin/bannertool \; 2>/dev/null || true
-                  chmod +x /usr/local/bin/bannertool 2>/dev/null || true
-                fi
-                which makerom 2>/dev/null && which bannertool 2>/dev/null
-                make cia -j2
-              ' 2>&1 | tail -n 40; then
+                echo "makerom: $(which makerom 2>&1)" >&2
+                make cia -j2 2>&1 | tail -n 30
+                ls -lh vigia-ai.cia 2>&1 | head
+              ' 2>&1 | tail -n 50; then
                 if [ -f "$ROOT_DIR/3ds/vigia-ai.cia" ]; then echo "✓ cia gerado em 3ds/vigia-ai.cia (instale via FBI)" >&2; ls -lh "$ROOT_DIR/3ds/vigia-ai."* >&2; exit 0; fi
               fi
               echo "" >&2

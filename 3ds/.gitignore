@@ -4,7 +4,9 @@ build/
 *.cia
 *.bnr
 *.icn
-*.rsf
+# rsf de saida (copia de resources/vigia.rsf)
+vigia-ai.rsf
 *.smdh
 resources/banner.bnr
 resources/icon.icn
+!resources/vigia.rsf

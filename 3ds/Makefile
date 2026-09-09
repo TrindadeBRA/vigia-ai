@@ -104,32 +104,35 @@ $(BUILD):
 
 $(OUTPUT).3dsx $(OUTPUT).elf: $(OFILES)
 
-# CIA - precisa de banner.bnr + icon.icn gerados pelo bannertool
+# CIA - banner opcional se bannertool nao existir (icon via smdhtool)
+BANNERTOOL_EXISTS := $(shell command -v $(BANNERTOOL) >/dev/null 2>&1 && echo 1 || echo 0)
+ifeq ($(BANNERTOOL_EXISTS),1)
+BANNER_DEPS := $(BUILD)/banner.bnr $(BUILD)/icon.icn
+MAKEROM_BANNER := -banner $(BUILD)/banner.bnr
+else
+BANNER_DEPS := $(BUILD)/icon.icn
+MAKEROM_BANNER :=
+endif
+
 cia: $(OUTPUT).cia
 
-$(OUTPUT).cia: $(OUTPUT).elf $(OUTPUT).rsf banner
+$(OUTPUT).cia: $(OUTPUT).elf $(OUTPUT).rsf $(BANNER_DEPS)
 	@if ! command -v $(MAKEROM) >/dev/null 2>&1; then \
 		echo "erro: $(MAKEROM) nao encontrado — cia precisa de makerom" >&2; \
-		echo "  macOS: dkp-pacman -S 3ds-tools  ou  brew install makerom" >&2; \
-		echo "  ou baixe em https://github.com/profi200/Project_CTR/releases" >&2; \
+		echo "  Docker: ./dev 3ds cia tenta baixar makerom automaticamente" >&2; \
+		echo "  macOS: dkp-pacman -S 3ds-tools  ou  https://github.com/profi200/Project_CTR/releases" >&2; \
 		echo "  .3dsx ja foi gerado em $(OUTPUT).3dsx (use pelo Homebrew Launcher)" >&2; \
 		exit 1; \
 	fi
-	$(MAKEROM) -f cia -o $@ -elf $(OUTPUT).elf -rsf $(OUTPUT).rsf \
-		-target t -exefslogo -icon $(BUILD)/icon.icn -banner $(BUILD)/banner.bnr \
+	$(MAKEROM) -f cia -o $@ -elf $(OUTPUT).elf -rsf $(OUTPUT).rsf -desc app:1 \
+		-target t -exefslogo -icon $(BUILD)/icon.icn $(MAKEROM_BANNER) \
 		-major $(APP_VERSION_MAJOR) -minor $(APP_VERSION_MINOR) -micro $(APP_VERSION_MICRO) -DSaveSize=0
 
-banner: $(BUILD)/banner.bnr $(BUILD)/icon.icn
+banner: $(BANNER_DEPS)
 
 $(BUILD)/banner.bnr: $(BANNER) $(AUDIO)
 	@mkdir -p $(BUILD)
-	@if command -v $(BANNERTOOL) >/dev/null 2>&1; then \
-		$(BANNERTOOL) makebanner -i $(BANNER) -a $(AUDIO) -o $@; \
-	else \
-		echo "bannertool nao encontrado — cia precisa de bannertool (dkp-pacman -S 3ds-bannertool ou https://github.com/Steveice10/bannertool/releases) — gerando icn via smdhtool e bnr dummy" >&2; \
-		smdhtool --create "$(APP_TITLE)" "$(APP_DESCRIPTION)" "$(APP_AUTHOR)" $(ICON) $(BUILD)/icon.icn; \
-		printf "dummy banner — instale bannertool para banner real" > $@; \
-	fi
+	$(BANNERTOOL) makebanner -i $(BANNER) -a $(AUDIO) -o $@
 
 $(BUILD)/icon.icn: $(ICON)
 	@mkdir -p $(BUILD)
