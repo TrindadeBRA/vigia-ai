@@ -1,6 +1,7 @@
 import type { UsagePayload } from "../../../api/types";
 import { cn } from "../../../cn";
 import { Logo } from "../../../components/Logo";
+import { wmoEmoji, wmoLabel } from "../../../format";
 import { PROVIDER_ICON } from "../../../theme";
 import { formatThemeMetric, weatherEmoji, type ThemeProvider } from "../themeMetrics";
 
@@ -26,15 +27,39 @@ export function IconChip({
   const value = formatThemeMetric(usage, provider, metric);
   const iconPx = 20 * scale * zoom;
   if (provider === "weather") {
+    const emoji = weatherEmoji(usage);
+    const code = usage?.weather?.current?.weather_code;
+    const label = code != null ? wmoLabel(code) : null;
+    const badgeEmoji = emoji || wmoEmoji(code);
     return (
       <div
-        className={cn("flex items-center gap-1 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
+        className={cn("flex items-center gap-1.5 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
         style={{ background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
       >
-        <span style={{ fontSize: `${14 * scale * zoom}px`, lineHeight: 1 }}>{weatherEmoji(usage)}</span>
-        <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
-          {value || "--"}
-        </span>
+        <div className="relative shrink-0">
+          <img
+            src={PROVIDER_ICON.weather}
+            alt=""
+            draggable={false}
+            style={{ width: iconPx, height: iconPx, objectFit: "contain" }}
+          />
+          <span
+            className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-panel shadow-[0_0_0_1px_var(--card-border)]"
+            style={{ width: Math.max(14, 10 * scale * zoom), height: Math.max(14, 10 * scale * zoom), fontSize: `${8 * scale * zoom}px`, lineHeight: 1 }}
+          >
+            {badgeEmoji}
+          </span>
+        </div>
+        <div className="flex flex-col leading-none">
+          <span className="whitespace-nowrap font-mono font-bold text-white" style={{ color: color || undefined, fontSize: `${11 * scale * zoom}px` }}>
+            {value || "--"}
+          </span>
+          {label ? (
+            <span className="whitespace-nowrap font-medium text-white/70" style={{ fontSize: `${7.5 * scale * zoom}px`, marginTop: 1 }}>
+              {label}
+            </span>
+          ) : null}
+        </div>
       </div>
     );
   }

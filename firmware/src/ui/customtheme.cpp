@@ -1248,29 +1248,28 @@ static void drawThemeWeather(const ThemeIcon &icon)
   int cy = (int)(icon.y * tft.height());
   const WeatherData &w = g_snap.weather;
   char tempBuf[16];
-  const char *iconLabel = "clima";
   if (w.hasData && w.ok && w.temperature > -900)
   {
     int t = (int)roundf(w.temperature);
     // TFT_eSPI usa font sem glifo de grau; C/F ASCII
     snprintf(tempBuf, sizeof(tempBuf), "%d %s", t,
              (w.tempUnit.indexOf('F') >= 0 || w.tempUnit.indexOf('f') >= 0) ? "F" : "C");
-    if (w.weatherCode >= 0)
-      iconLabel = weatherWmoText(w.weatherCode);
   }
   else
   {
     snprintf(tempBuf, sizeof(tempBuf), "--");
   }
   const uint8_t font = icon.scale >= 2.0f ? 4 : 2;
-  tft.setTextDatum(MC_DATUM);
-  int iconW = tft.textWidth(iconLabel, font);
   int tempW = tft.textWidth(tempBuf, font);
-  int gap = 4;
+  int tempH = tft.fontHeight(font);
+  int iconW = 0, iconH = 0;
+  bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
+  int gap = hasIcon ? 4 : 0;
   int padX = 6;
   int padY = 4;
-  int boxW = iconW + gap + tempW + padX * 2;
-  int boxH = tft.fontHeight(font) + padY * 2;
+  int innerH = hasIcon ? max(iconH, tempH) : tempH;
+  int boxW = padX * 2 + (hasIcon ? iconW + gap : 0) + tempW;
+  int boxH = innerH + padY * 2;
   if (boxW < 40)
     boxW = 40;
   if (boxH < 18)
@@ -1293,15 +1292,20 @@ static void drawThemeWeather(const ThemeIcon &icon)
       tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
     }
   }
-  int totalW = iconW + gap + tempW;
-  int startX = cx - totalW / 2;
-  int textY = cy;
-  tft.setTextDatum(MC_DATUM);
+  if (hasIcon)
+  {
+    int iconX = x0 + padX;
+    int iconY = y0 + (boxH - iconH) / 2;
+    tft.setSwapBytes(true);
+    tft.pushImage(iconX, iconY, iconW, iconH, g_iconScaleBuf, kBakedCard);
+    tft.setSwapBytes(false);
+  }
+  int textX = x0 + padX + (hasIcon ? iconW + gap : 0);
+  // Centraliza verticalmente o texto no box (MC seria centralizado no cx,
+  // mas aqui o texto fica à direita do ícone, então usamos ML/C para alinhar em cy)
+  tft.setTextDatum(ML_DATUM);
   box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
-  int iconCx = startX + iconW / 2;
-  int tempCx = startX + iconW + gap + tempW / 2;
-  tft.drawString(iconLabel, iconCx, textY, font);
-  tft.drawString(tempBuf, tempCx, textY, font);
+  tft.drawString(tempBuf, textX, cy, font);
 }
 
 static void drawThemeIcon(const ThemeIcon &icon)
