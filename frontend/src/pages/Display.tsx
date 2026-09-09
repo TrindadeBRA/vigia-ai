@@ -16,7 +16,7 @@ import { Skeleton } from "../components/Skeleton";
 import { FETCH_OK_FLASH_MS, FRESH_PAYLOAD_MS, POLL_MS, countdownSecs, fmtClock, nextFetchAtMs, payloadAgeMs } from "../format";
 import { useAndroidDevices } from "../hooks/useAndroidDevices";
 import { useCameras } from "../hooks/useCameras";
-import { GAMEPAD_CSS, gamepadScrollMain, gamepadZoom, isGamepadTypingActive, useGamepad } from "../hooks/useGamepad";
+import { GAMEPAD_CSS, gamepadScrollMain, gamepadZoom, isEmulatorActive, isGamepadTypingActive, useGamepad } from "../hooks/useGamepad";
 import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useImageWidgets } from "../hooks/useImageWidgets";
@@ -351,6 +351,23 @@ export default function Display() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [prefs.focus, setPrefs]);
+
+  // Enquanto um jogo do emulador está rodando, ArrowUp/Down/etc. não devem
+  // rolar o <main> — o foco costuma ficar num ancestral (ex.: o próprio
+  // <main>) em vez de dentro do iframe do jogo, então um preventDefault só no
+  // card (ver EmulatorCard) não pega esse caso: evento nunca desce de um
+  // ancestral pra um filho, só sobe. isEmulatorActive() já existe pra
+  // suspender a navegação por gamepad — reaproveita o mesmo sinal aqui.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isEmulatorActive()) return;
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "PageUp", "PageDown", "Home", "End"].includes(e.key)) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("keydown", onKey, { capture: true });
+    return () => document.removeEventListener("keydown", onKey, { capture: true });
+  }, []);
 
   // Kiosk: tenta entrar em fullscreen real (para embeds). Browsers exigem gesto do usuário,
   // então tenta de imediato e também na primeira interação.
