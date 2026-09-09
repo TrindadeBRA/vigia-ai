@@ -103,7 +103,10 @@ function createWindow(): BrowserWindow {
     try {
       const u = new URL(url);
       // Permite navegação interna do iframe do emulador (mesma origem do coletor)
-      if (u.hostname === "127.0.0.1" || u.hostname === "localhost") return { action: "allow" };
+      // e CDN do EmulatorJS (necessário para loader.js / cores)
+      if (u.hostname === "127.0.0.1" || u.hostname === "localhost" || u.hostname.endsWith("emulatorjs.org") || u.hostname.endsWith("cdn.emulatorjs.org")) {
+        return { action: "allow" };
+      }
     } catch { /* ignore */ }
     if (url.startsWith("http")) void shell.openExternal(url);
     return { action: "deny" };
@@ -124,6 +127,54 @@ function createWindow(): BrowserWindow {
         return;
       }
     } catch { /* ignore */ }
+  });
+
+  // Permite que o iframe do emulador carregue recursos cross-origin (CDN, ROMs, BIOS)
+  // Sem isso o Electron bloqueia fetch/XHR do iframe para cdn.emulatorjs.org
+  // BUG anterior: callback({}) sem headers quebrava TODAS as requisições (ROMs, API)
+  // fazendo o jogo ficar em "carregando" para sempre no Electron.
+  // BUG 2: injetar Access-Control-Allow-Origin duplicado ("*, *") bloqueia o CDN
+  // (CDN já envia "*"). Normaliza para valor único, deduplicando valores.
+  window.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    const url = details.url;
+    const isEmulatorFrame = url.includes("emulator-frame.html");
+    const isCdn = url.includes("emulatorjs.org") || url.includes("cdn.emulatorjs.org");
+    const headers = { ...(details.responseHeaders ?? {}) } as Record<string, string[]>;
+    if (isEmulatorFrame || isCdn) {
+      // Remove CSP restritiva que bloqueia scripts do CDN dentro do iframe
+      delete headers["content-security-policy"];
+      delete headers["Content-Security-Policy"];
+      delete headers["x-frame-options"];
+      delete headers["X-Frame-Options"];
+      if (isCdn) {
+        // CDN já envia Access-Control-Allow-Origin: * — normaliza para único valor
+        // Evita "*, *" que causa ERR_FAILED (CORS bloqueado)
+        const corsKeys = Object.keys(headers).filter((k) => k.toLowerCase() === "access-control-allow-origin");
+        if (corsKeys.length > 0) {
+          const allValues = corsKeys.flatMap((k) => headers[k]).flatMap((v) => v.split(",").map((s) => s.trim())).filter(Boolean);
+          const unique = [...new Set(allValues)];
+          for (const k of corsKeys) delete headers[k];
+          headers["access-control-allow-origin"] = [unique[0] || "*"];
+        } else {
+          headers["access-control-allow-origin"] = ["*"];
+        }
+      }
+      // Garante que o iframe seja renderizado inline, não como download
+      if (isEmulatorFrame) {
+        headers["content-type"] = ["text/html; charset=utf-8"];
+        headers["content-disposition"] = ["inline"];
+      }
+      callback({ responseHeaders: headers });
+      return;
+    }
+    callback({ responseHeaders: details.responseHeaders });
+  });
+
+  // Loga erros do iframe para diagnóstico (aparece no console do Electron)
+  window.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
+    if (validatedURL.includes("emulator-frame.html") || validatedURL.includes("emulatorjs")) {
+      log(`[emulator] did-fail-load ${errorCode} ${errorDescription} ${validatedURL}`);
+    }
   });
 
   // Fechar a janela não encerra o coletor — a placa continua sendo servida.
