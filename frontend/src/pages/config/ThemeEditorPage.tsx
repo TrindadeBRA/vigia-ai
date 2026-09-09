@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
-import { ChipIcon, ClockIcon, ImageIcon, PlusCircleIcon, TextIcon } from "../../components/icons";
+import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, TextIcon } from "../../components/icons";
 import { Logo } from "../../components/Logo";
 import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
@@ -41,10 +41,16 @@ import {
   weatherEmoji,
   type ThemeProvider,
 } from "./themeMetrics";
-import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, TextField, TomSelectField } from "./ui";
+import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, StatusPill, Switch, TextField, TomSelectField } from "./ui";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperManager } from "./wallpaperManager/context";
 import { WallpaperLibrary } from "./wallpaperManager/Library";
+
+const RB_SWAP_STORAGE_KEY = "vigia:theme-debug:rb-swap";
+
+function buildScreenshotUrl(ip: string, rbSwap: boolean) {
+  return `http://${ip}/theme/screenshot?t=${Date.now()}&rb=${rbSwap ? 1 : 0}`;
+}
 
 export default function ThemeEditorPage() {
   const { cfg, phase, reload, setPhase, lang } = usePublicConfig();
@@ -60,6 +66,14 @@ export default function ThemeEditorPage() {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [screenshotFullscreen, setScreenshotFullscreen] = useState(false);
+  const [screenshotCapturedAt, setScreenshotCapturedAt] = useState<number | null>(null);
+  const [rbSwap, setRbSwap] = useState(() => {
+    try {
+      return localStorage.getItem(RB_SWAP_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [now, setNow] = useState(() => new Date());
   const [usage, setUsage] = useState<UsagePayload | null>(null);
   const [wallpapers, setWallpapers] = useState<WallpaperItem[]>([]);
@@ -751,51 +765,107 @@ export default function ThemeEditorPage() {
       {debugModalOpen ? (
         <Modal title={c.debugTool} onClose={() => setDebugModalOpen(false)} closeLabel={closeLabel} wide>
           <p className={cfgStatus}>{c.debugLead}</p>
-          <TextField
-            label={c.deviceIpLabel}
-            value={deviceIp}
-            placeholder="192.168.0.42"
-            hint={c.deviceIpHint}
-            onChange={(e) => {
-              setIpTouched(true);
-              setDeviceIp(e.target.value);
-            }}
-          />
-          {!deviceIp ? (
-            <p className={cfgStatus}>{c.deviceUnknown}</p>
-          ) : (
-            <>
-              {cfg?.device.last_seen_s != null ? <p className={cfgStatus}>{c.deviceSeen(cfg.device.last_seen_s)}</p> : null}
-              {isBareLoopback(deviceIp) ? <p className={`${cfgStatus} text-warn`}>{c.deviceLoopback}</p> : null}
-            </>
-          )}
+
           <div className="flex flex-col gap-2">
-            <Button
-              variant="secondary"
-              disabled={!deviceIp.trim()}
-              loading={screenshotLoading}
-              onClick={() => {
-                setScreenshotLoading(true);
-                setScreenshotUrl(`http://${deviceIp.trim()}/theme/screenshot?t=${Date.now()}`);
+            <TextField
+              label={c.deviceIpLabel}
+              value={deviceIp}
+              placeholder="192.168.0.42"
+              hint={c.deviceIpHint}
+              onChange={(e) => {
+                setIpTouched(true);
+                setDeviceIp(e.target.value);
               }}
+            />
+            {!deviceIp ? (
+              <p className={cfgStatus}>{c.deviceUnknown}</p>
+            ) : cfg?.device.last_seen_s != null ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <StatusPill state="ok" label={c.deviceSeen(cfg.device.last_seen_s)} />
+              </div>
+            ) : null}
+            {deviceIp && isBareLoopback(deviceIp) ? (
+              <p className="m-0 rounded-[10px] border border-warn/30 bg-warn/10 px-3 py-2 text-[12.5px] leading-[1.5] text-warn">
+                {c.deviceLoopback}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-[14px] border border-edge bg-canvas/50 p-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="m-0 min-w-[160px] flex-1 text-[12.5px] leading-[1.5] text-ink3">{c.screenshotHint}</p>
+              <Button
+                variant="secondary"
+                disabled={!deviceIp.trim()}
+                loading={screenshotLoading}
+                onClick={() => {
+                  setScreenshotLoading(true);
+                  setScreenshotUrl(buildScreenshotUrl(deviceIp.trim(), rbSwap));
+                }}
+              >
+                {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
+              </Button>
+            </div>
+
+            <div
+              className="relative mx-auto flex w-full max-w-[360px] items-center justify-center overflow-hidden rounded-[12px] border border-edge bg-black/30"
+              style={{ aspectRatio: `${canvasSize.width} / ${canvasSize.height}` }}
             >
-              {screenshotLoading ? c.screenshotLoading : c.screenshotButton}
-            </Button>
-            <p className={cfgStatus}>{c.screenshotHint}</p>
-            {screenshotUrl ? (
-              <button type="button" className="w-fit cursor-zoom-in border-0 bg-transparent p-0" onClick={() => setScreenshotFullscreen(true)}>
-                <img
-                  src={screenshotUrl}
-                  alt={c.screenshotButton}
-                  className="w-full max-w-[320px] rounded-[10px] border border-edge"
-                  onLoad={() => setScreenshotLoading(false)}
-                  onError={() => {
-                    setScreenshotLoading(false);
-                    setScreenshotUrl(null);
-                    screenshot.fail(c.screenshotError);
-                  }}
-                />
-              </button>
+              {screenshotLoading ? <div className="absolute inset-0 animate-pulse bg-white/5" /> : null}
+              {screenshotUrl ? (
+                <button
+                  type="button"
+                  className="absolute inset-0 cursor-zoom-in border-0 bg-transparent p-0"
+                  onClick={() => setScreenshotFullscreen(true)}
+                >
+                  <img
+                    src={screenshotUrl}
+                    alt={c.screenshotButton}
+                    className={cn("size-full object-contain transition-opacity duration-150", screenshotLoading && "opacity-0")}
+                    onLoad={() => {
+                      setScreenshotLoading(false);
+                      setScreenshotCapturedAt(Date.now());
+                    }}
+                    onError={() => {
+                      setScreenshotLoading(false);
+                      setScreenshotUrl(null);
+                      screenshot.fail(c.screenshotError);
+                    }}
+                  />
+                  <span className="absolute right-2 top-2 flex size-6 items-center justify-center rounded-md bg-black/55 text-white">
+                    <MaximizeIcon size={13} />
+                  </span>
+                </button>
+              ) : !screenshotLoading ? (
+                <p className="max-w-[220px] px-4 text-center text-[12px] leading-[1.5] text-ink3">{c.screenshotEmpty}</p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-edge pt-3">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[12.5px] leading-[1.5] text-ink3">{c.colorSwapHint}</p>
+              </div>
+              <Switch
+                label={c.colorSwapLabel}
+                checked={rbSwap}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setRbSwap(next);
+                  try {
+                    localStorage.setItem(RB_SWAP_STORAGE_KEY, next ? "1" : "0");
+                  } catch {
+                    /* ignore */
+                  }
+                  if (deviceIp.trim() && screenshotUrl) {
+                    setScreenshotLoading(true);
+                    setScreenshotUrl(buildScreenshotUrl(deviceIp.trim(), next));
+                  }
+                }}
+              />
+            </div>
+
+            {screenshotCapturedAt && screenshotUrl && !screenshotLoading ? (
+              <p className="m-0 text-[11.5px] text-ink3">{c.screenshotUpdated(Math.max(0, Math.round((now.getTime() - screenshotCapturedAt) / 1000)))}</p>
             ) : null}
             <FieldStatus status={screenshot.status} message={screenshot.message} />
           </div>

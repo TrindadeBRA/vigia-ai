@@ -76,6 +76,10 @@ export type ThemeCopy = {
   screenshotLoading: string;
   screenshotHint: string;
   screenshotError: string;
+  screenshotEmpty: string;
+  screenshotUpdated: (s: number) => string;
+  colorSwapLabel: string;
+  colorSwapHint: string;
   ntcTitle: string;
   ntcPlaceholder: string;
   ntcHint: string;
@@ -197,6 +201,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     screenshotLoading: "Lendo a tela…",
     screenshotHint: "Lê os pixels de verdade por SPI (mesma tela que a placa mostra) — leva alguns segundos.",
     screenshotError: "Não consegui ler a tela da placa.",
+    screenshotEmpty: "Nenhuma leitura ainda — clique no botão acima.",
+    screenshotUpdated: (s) => (s < 60 ? `lida há ${s}s` : `lida há ${Math.round(s / 60)}min`),
+    colorSwapLabel: "Trocar canais R/B",
+    colorSwapHint: "As cores vieram estranhas (tudo meio esverdeado ou azulado)? O sensor da placa pode devolver os canais vermelho e azul trocados. Alterne aqui e recarregue até bater com a tela de verdade.",
     ntcTitle: "Cor por nome/texto (NameToColor)",
     ntcPlaceholder: "Digite qualquer texto — ex: \"vermelho\", \"oceano\", \"#ff00aa\", \"Lucas\"",
     ntcHint: "Qualquer string vira uma cor determinística via zonaro.github.io/NameToColor (CDN). Aceita nomes em PT/EN, HEX, RGB, índices e texto livre.",
@@ -316,6 +324,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     screenshotLoading: "Reading the screen…",
     screenshotHint: "Reads the real pixels over SPI (same screen the board shows) — takes a few seconds.",
     screenshotError: "Couldn't read the board's screen.",
+    screenshotEmpty: "No reading yet — click the button above.",
+    screenshotUpdated: (s) => (s < 60 ? `read ${s}s ago` : `read ${Math.round(s / 60)}min ago`),
+    colorSwapLabel: "Swap R/B channels",
+    colorSwapHint: "Colors looking off (everything a bit green or blue)? The board's sensor may return the red and blue channels swapped. Toggle this and reload until it matches the real screen.",
     ntcTitle: "Color from any text (NameToColor)",
     ntcPlaceholder: "Type any text — e.g. \"red\", \"ocean\", \"#ff00aa\", \"Lucas\"",
     ntcHint: "Any string becomes a deterministic color via zonaro.github.io/NameToColor (CDN). Supports PT/EN names, HEX, RGB, indexes and free text.",
@@ -435,6 +447,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     screenshotLoading: "Leyendo la pantalla…",
     screenshotHint: "Lee los píxeles de verdad por SPI (la misma pantalla que muestra la placa) — tarda unos segundos.",
     screenshotError: "No se pudo leer la pantalla de la placa.",
+    screenshotEmpty: "Todavía no hay lectura — hacé clic en el botón de arriba.",
+    screenshotUpdated: (s) => (s < 60 ? `leída hace ${s}s` : `leída hace ${Math.round(s / 60)}min`),
+    colorSwapLabel: "Intercambiar canales R/B",
+    colorSwapHint: "¿Los colores salen raros (todo medio verdoso o azulado)? El sensor de la placa puede devolver los canales rojo y azul invertidos. Alterná esto y recargá hasta que coincida con la pantalla real.",
     ntcTitle: "Color desde cualquier texto (NameToColor)",
     ntcPlaceholder: "Escribí cualquier texto — ej: \"rojo\", \"océano\", \"#ff00aa\", \"Lucas\"",
     ntcHint: "Cualquier texto se vuelve un color determinístico vía zonaro.github.io/NameToColor (CDN). Acepta nombres en PT/EN, HEX, RGB, índices y texto libre.",

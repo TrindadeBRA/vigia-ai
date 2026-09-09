@@ -144,8 +144,16 @@ static void handleScreenshot() {
   g_server.send(200, "image/bmp", "");
   g_server.sendContent((const char*)header, sizeof(header));
 
+  // ILI9488 (ver platformio.ini) devolve os 3 bytes de leitura SPI numa ordem
+  // de canal que depende do bit BGR do MADCTL do painel físico — não dá pra
+  // saber estaticamente se é R,G,B ou B,G,R sem testar no hardware real.
+  // ?rb=0 desliga a troca R<->B de canal para calibrar visualmente pelo
+  // próprio modal de depuração (Ver tela da placa agora); default = liga
+  // (mantém o comportamento anterior).
+  const bool swapRB = !(g_server.hasArg("rb") && g_server.arg("rb") == "0");
+
   constexpr int kRows = 8;
-  static uint8_t rgbBuf[480 * kRows * 3];  // readRectRGB: R,G,B por pixel
+  static uint8_t rgbBuf[480 * kRows * 3];  // readRectRGB: 3 bytes/pixel, ordem de canal incerta (ver acima)
   static uint8_t rowBuf[480 * 3 + 4];      // banda: B,G,R (BMP) + padding
 
   int y = 0;
@@ -155,9 +163,15 @@ static void handleScreenshot() {
     for (int r = 0; r < rows; r++) {
       const uint8_t* src = rgbBuf + (size_t)r * w * 3;
       for (int x = 0; x < w; x++) {
-        rowBuf[x * 3 + 0] = src[x * 3 + 2];
-        rowBuf[x * 3 + 1] = src[x * 3 + 1];
-        rowBuf[x * 3 + 2] = src[x * 3 + 0];
+        if (swapRB) {
+          rowBuf[x * 3 + 0] = src[x * 3 + 2];
+          rowBuf[x * 3 + 1] = src[x * 3 + 1];
+          rowBuf[x * 3 + 2] = src[x * 3 + 0];
+        } else {
+          rowBuf[x * 3 + 0] = src[x * 3 + 0];
+          rowBuf[x * 3 + 1] = src[x * 3 + 1];
+          rowBuf[x * 3 + 2] = src[x * 3 + 2];
+        }
       }
       for (int p = w * 3; p < rowStride; p++) {
         rowBuf[p] = 0;
