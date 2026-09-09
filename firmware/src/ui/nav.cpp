@@ -339,6 +339,11 @@ void uiPaint()
     return;
   }
   tft.fillScreen(COL_BG);
+  // O fillScreen acima apaga o fundo do tema (se VIEW_THEME) — força o
+  // próximo paintCustomHome() a repintá-lo em vez de assumir que já está lá
+  // (ver g_bgDirty em customtheme.cpp, que evita esse mesmo repaint nos
+  // refreshes periódicos de dado pra não piscar a tela toda).
+  customThemeInvalidateBackground();
   uiRefreshData();
 }
 

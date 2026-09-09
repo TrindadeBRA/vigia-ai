@@ -85,7 +85,7 @@ export const PROVIDER_ICON: Record<string, string> = {
   cursor: "/icons/cursor.png",
   openrouter: "/icons/openrouter.png",
   deepseek: "/icons/deepseek.png",
-  opencode: "/icons/opencode.png",
+  opencode: "/icons/opencode.png?v=20260908",
   fal: "/icons/fal.png",
   bitcoin: "/icons/bitcoin.png?v=20260901",
   adsense: "/icons/adsense.png?v=20260901",
@@ -96,9 +96,9 @@ export const PROVIDER_ICON: Record<string, string> = {
   github: "/icons/github.png",
   calendar: "/icons/calendar.png",
   calendarTasks: "/icons/calendar.png",
-  rss: "/icons/rss.png",
+  rss: "/icons/rss.png?v=20260908",
   spotify: "/icons/spotify.svg",
-  youtubemusic: "/icons/youtubemusic.svg",
+  youtubemusic: "/icons/youtubemusic.png?v=20260908",
 };
 
 // URL da página oficial de plano/uso de cada provider de IA (usado para o atalho "ver site oficial").

@@ -76,9 +76,9 @@ void spotifyClientPoll()
   JsonVariantConst track = doc["track"];
   if (!track.isNull() && track.is<JsonObjectConst>()) {
     JsonObjectConst t = track.as<JsonObjectConst>();
-    s.trackName = jsonText(t["name"]);
-    s.artists = jsonText(t["artists"]);
-    s.album = jsonText(t["album"]);
+    s.trackName = asciiFold(jsonText(t["name"]));
+    s.artists = asciiFold(jsonText(t["artists"]));
+    s.album = asciiFold(jsonText(t["album"]));
     s.durationMs = t["duration_ms"].isNull() ? -1 : t["duration_ms"].as<int>();
   } else {
     s.trackName = "";

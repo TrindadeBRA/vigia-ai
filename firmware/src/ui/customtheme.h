@@ -43,6 +43,10 @@ void customThemeEndBackgroundWrite(bool ok);
 
 // Despachado por paintHome() (views/home.cpp) quando customThemeActive().
 void paintCustomHome();
+// Força o próximo paintCustomHome() a repintar o fundo inteiro em vez de só
+// atualizar os widgets — chamar sempre que algo além do tema já tiver escrito
+// na tela (ex.: um tft.fillScreen() em uiPaint()).
+void customThemeInvalidateBackground();
 // Chamado por uiTickClock() — repinta a tela inteira só quando o minuto muda
 // (o relógio do tema só mostra HH:MM, sem segundos).
 void customThemeTickClock();
