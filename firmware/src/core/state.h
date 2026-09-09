@@ -189,6 +189,20 @@ struct WeatherData
   String locationName = "";
 };
 
+struct SpotifyData
+{
+  bool hasData = false;
+  bool ok = false;
+  bool configured = false;
+  String error;
+  bool isPlaying = false;
+  int progressMs = -1;
+  int durationMs = -1;
+  String trackName;
+  String artists;
+  String album;
+};
+
 // Cotação de moedas: um único card com N itens (fiat + cripto), não uma
 // lista de contas. MAX_CURRENCY_ITEMS limita o que a placa guarda; o
 // coletor pode ter mais, o resto só não aparece (log serial, nunca trava).
@@ -240,6 +254,7 @@ struct UsageSnapshot
   int adsenseCount = 0;
   WeatherData weather;
   CurrenciesData currencies;
+  SpotifyData spotify;
 };
 
 extern TFT_eSPI tft;

@@ -96,7 +96,7 @@ sempre converte fração → pixel na hora de desenhar, contra
   quando `showBackground` é `false`.
 - `scale`: multiplicador de tamanho, clamp **0.5–4.0**.
 - `icons[].provider`: `claude` | `gpt` | `cursor` | `openrouter` | `deepseek`
-  | `opencode` | `fal` | `bitcoin` | `adsense` | `weather` | `brand` (o olho da marca).
+  | `opencode` | `fal` | `bitcoin` | `adsense` | `weather` | `spotify` | `brand` (o olho da marca).
   Item com provider desconhecido é ignorado, o resto do tema continua válido.
 - `icons[].metric`: chave da cota do `/usage` desenhada **junto** com o ícone
   (é o ponto do tema — ver limites das IAs de relance). Omitido = métrica
@@ -114,6 +114,7 @@ sempre converte fração → pixel na hora de desenhar, contra
   | `bitcoin`    | `value_usd_cents`   | `balance_btc` |
   | `adsense`    | `unpaid_cents`      | `today_cents` |
   | `weather`    | (sempre temperatura; ignora `metric`) | — |
+  | `spotify`    | (faixa atual; ignora `metric`) | — |
   | `brand`      | (sem métrica)       | — |
 
   Com várias contas do mesmo provedor, a placa usa a que mais precisa de

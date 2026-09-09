@@ -7,6 +7,7 @@
 #include "mining/mining_task.h"
 #include "net/camera_client.h"
 #include "net/mining_client.h"
+#include "net/spotify_client.h"
 #include "net/theme_server.h"
 #include "net/usage_client.h"
 #include "ui/ui.h"
@@ -87,6 +88,7 @@ void loop()
   miningTaskTick();
   miningClientPoll();
   cameraClientPoll();
+  spotifyClientTick();
 
   usageClientEnsureWifi();
   uint32_t now = millis();

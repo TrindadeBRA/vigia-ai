@@ -2,6 +2,7 @@ import type { UsagePayload } from "../../../api/types";
 import { cn } from "../../../cn";
 import { Logo } from "../../../components/Logo";
 import { wmoEmoji, wmoLabel } from "../../../format";
+import { useSpotifyPreview } from "../../../hooks/useSpotifyPreview";
 import { PROVIDER_ICON } from "../../../theme";
 import { formatThemeMetric, weatherEmoji, type ThemeProvider } from "../themeMetrics";
 
@@ -26,6 +27,58 @@ export function IconChip({
 }) {
   const value = formatThemeMetric(usage, provider, metric);
   const iconPx = 20 * scale * zoom;
+  const spotify = useSpotifyPreview();
+  if (provider === "spotify") {
+    const track = spotify?.track;
+    const isPlaying = spotify?.is_playing;
+    const isConfigured = spotify?.configured !== false;
+    const hasTrack = !!track;
+    const title = hasTrack ? track.name : !isConfigured ? "Conecte Spotify" : spotify?.error ? "Erro" : "Nada tocando";
+    const subtitle = hasTrack ? track.artists : !isConfigured ? "em Configurações" : isPlaying ? "Tocando" : "Pausado";
+    return (
+      <div
+        className={cn("flex items-center gap-1.5 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
+        style={{ background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
+      >
+        <div className="relative shrink-0">
+          <img
+            src={PROVIDER_ICON.spotify}
+            alt=""
+            draggable={false}
+            style={{ width: iconPx, height: iconPx, objectFit: "contain" }}
+            className="rounded-full"
+          />
+          {hasTrack ? (
+            <span
+              className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-panel text-[9px] shadow-[0_0_0_1px_var(--card-border)]"
+              style={{ width: Math.max(14, 10 * scale * zoom), height: Math.max(14, 10 * scale * zoom), fontSize: `${7 * scale * zoom}px` }}
+            >
+              {isPlaying ? "▶" : "⏸"}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex min-w-0 max-w-[140px] flex-col leading-none">
+          <span
+            className="truncate font-bold text-white"
+            style={{ color: color || undefined, fontSize: `${10 * scale * zoom}px`, maxWidth: 110 * scale * zoom }}
+            title={hasTrack ? `${track.name} — ${track.artists}` : undefined}
+          >
+            {title.length > 24 ? `${title.slice(0, 24)}…` : title}
+          </span>
+          {subtitle ? (
+            <span className="truncate font-medium text-white/70" style={{ fontSize: `${7 * scale * zoom}px`, marginTop: 1 }}>
+              {subtitle.length > 28 ? `${subtitle.slice(0, 28)}…` : subtitle}
+            </span>
+          ) : null}
+          {!isConfigured && spotify?.error ? (
+            <span className="truncate text-[6px] text-bad" style={{ fontSize: `${6 * scale * zoom}px` }}>
+              {spotify.error}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
   if (provider === "weather") {
     const emoji = weatherEmoji(usage);
     const code = usage?.weather?.current?.weather_code;

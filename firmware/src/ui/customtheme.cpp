@@ -21,6 +21,7 @@ using fs::File;
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
+#include "assets/icons/icon_spotify.h"
 #include "assets/icons/icon_weather.h"
 
 static const char *kMetaPath = "/theme.json";
@@ -41,6 +42,7 @@ enum ThemeIconKind : uint8_t
   TICON_WEATHER,
   TICON_BITCOIN,
   TICON_ADSENSE,
+  TICON_SPOTIFY,
   TICON_BRAND,
   TICON_COUNT
 };
@@ -186,7 +188,7 @@ static bool parseIconKind(const String &s, ThemeIconKind &out)
 {
   static const char *kNames[TICON_COUNT] = {"claude", "gpt", "cursor", "openrouter",
                                             "deepseek", "opencode", "fal", "weather", "bitcoin",
-                                            "adsense", "brand"};
+                                            "adsense", "spotify", "brand"};
   for (int i = 0; i < TICON_COUNT; i++)
   {
     if (s == kNames[i])
@@ -538,6 +540,8 @@ static IconRef iconRefFor(ThemeIconKind k)
     return {ICON_BITCOIN, ICON_BITCOIN_W, ICON_BITCOIN_H};
   case TICON_ADSENSE:
     return {ICON_ADSENSE, ICON_ADSENSE_W, ICON_ADSENSE_H};
+  case TICON_SPOTIFY:
+    return {ICON_SPOTIFY, ICON_SPOTIFY_W, ICON_SPOTIFY_H};
   default:
     return {nullptr, 0, 0};
   }
@@ -656,7 +660,7 @@ static const char *defaultMetricFor(ThemeIconKind k)
 
 static const char *resolvedMetric(const ThemeIcon &icon)
 {
-  if (icon.kind == TICON_BRAND || icon.kind == TICON_WEATHER)
+  if (icon.kind == TICON_BRAND || icon.kind == TICON_WEATHER || icon.kind == TICON_SPOTIFY)
   {
     return "";
   }
@@ -1308,11 +1312,125 @@ static void drawThemeWeather(const ThemeIcon &icon)
   tft.drawString(tempBuf, textX, cy, font);
 }
 
+static void drawThemeSpotify(const ThemeIcon &icon)
+{
+  int cx = (int)(icon.x * tft.width());
+  int cy = (int)(icon.y * tft.height());
+  const SpotifyData &s = g_snap.spotify;
+  String title, subtitle;
+  if (!s.hasData || !s.configured) {
+    title = "Spotify";
+    subtitle = "desconectado";
+  } else if (!s.ok) {
+    title = "Spotify";
+    subtitle = s.error.length() ? s.error.substring(0, 18) : "erro";
+  } else if (!s.trackName.length()) {
+    title = "Nada tocando";
+    subtitle = s.isPlaying ? "tocando" : "pausado";
+  } else {
+    title = s.trackName;
+    subtitle = s.artists.length() ? s.artists : (s.isPlaying ? "tocando" : "pausado");
+  }
+  // Trunca para caber no chip
+  const uint8_t fontTitle = icon.scale >= 1.8f ? 2 : 2;
+  const uint8_t fontSub = 1;
+  // Largura máxima estimada para texto (evita box gigante)
+  int maxTextW = 110;
+  if (icon.scale > 1.5f) maxTextW = (int)(110 * icon.scale);
+  if (maxTextW > tft.width() - 20) maxTextW = tft.width() - 20;
+  // Corta título se precisar
+  while (title.length() > 0 && tft.textWidth(title, fontTitle) > maxTextW) {
+    title.remove(title.length() - 1);
+  }
+  while (subtitle.length() > 0 && tft.textWidth(subtitle, fontSub) > maxTextW) {
+    subtitle.remove(subtitle.length() - 1);
+  }
+  if (title.length() == 0) title = "--";
+  int titleW = tft.textWidth(title, fontTitle);
+  int subW = subtitle.length() ? tft.textWidth(subtitle, fontSub) : 0;
+  int textW = max(titleW, subW);
+  int titleH = tft.fontHeight(fontTitle);
+  int subH = subtitle.length() ? tft.fontHeight(fontSub) : 0;
+  int textH = titleH + (subtitle.length() ? 2 + subH : 0);
+  int iconW = 0, iconH = 0;
+  // Para Spotify, usa cor verde quando tocando, cinza quando pausado, se não houver cor custom
+  ThemeIcon tmp = icon;
+  if (!tmp.hasColor) {
+    if (s.hasData && s.configured && s.ok && s.isPlaying) {
+      tmp.hasColor = true;
+      tmp.color = 0x1DB9; // verde Spotify aproximado (#1DB954 -> 0x1DB9)
+    } else if (s.hasData && s.configured && !s.trackName.length()) {
+      tmp.hasColor = true;
+      tmp.color = 0x8410; // cinza
+    }
+  }
+  bool hasIcon = scaleThemeIcon(tmp, iconW, iconH);
+  int gap = hasIcon ? 6 : 0;
+  int padX = 6;
+  int padY = 4;
+  int innerH = max(hasIcon ? iconH : 0, textH);
+  int boxW = padX * 2 + (hasIcon ? iconW + gap : 0) + textW + 6;
+  int boxH = innerH + padY * 2;
+  if (boxW < 70) boxW = 70;
+  if (boxH < 28) boxH = 28;
+  if (boxW > tft.width() - 4) boxW = tft.width() - 4;
+  clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
+  int x0 = cx - boxW / 2;
+  int y0 = cy - boxH / 2;
+  const bool box = icon.showBackground;
+  uint16_t bgCol = icon.hasBgColor ? icon.bgColor : 0x1082;
+  uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
+  if (box) {
+    if (icon.hasColor) {
+      tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
+      tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+    } else {
+      tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    }
+  }
+  if (hasIcon) {
+    int iconX = x0 + padX;
+    int iconY = y0 + (boxH - iconH) / 2;
+    tft.setSwapBytes(true);
+    tft.pushImage(iconX, iconY, iconW, iconH, g_iconScaleBuf, kBakedCard);
+    tft.setSwapBytes(false);
+  }
+  int textX = x0 + padX + (hasIcon ? iconW + gap : 0);
+  int textY = y0 + padY + (innerH - textH) / 2;
+  tft.setTextDatum(TL_DATUM);
+  // Título
+  box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
+  tft.drawString(title, textX, textY, fontTitle);
+  if (subtitle.length()) {
+    tft.setTextDatum(TL_DATUM);
+    box ? tft.setTextColor(0xAD75, bgCol) : tft.setTextColor(0xAD75);
+    tft.drawString(subtitle, textX, textY + titleH + 2, fontSub);
+  }
+  // Indicador play/pause pequeno no canto superior direito interno (triângulo/barras)
+  if (s.hasData && s.configured && s.ok && s.trackName.length()) {
+    int indX = x0 + boxW - 8;
+    int indY = y0 + 6;
+    if (s.isPlaying) {
+      // triângulo play
+      tft.fillTriangle(indX, indY, indX, indY + 6, indX + 5, indY + 3, fg);
+    } else {
+      // duas barras pause
+      tft.fillRect(indX, indY, 2, 6, fg);
+      tft.fillRect(indX + 4, indY, 2, 6, fg);
+    }
+  }
+}
+
 static void drawThemeIcon(const ThemeIcon &icon)
 {
   if (icon.kind == TICON_WEATHER)
   {
     drawThemeWeather(icon);
+    return;
+  }
+  if (icon.kind == TICON_SPOTIFY)
+  {
+    drawThemeSpotify(icon);
     return;
   }
   int cx = (int)(icon.x * tft.width());

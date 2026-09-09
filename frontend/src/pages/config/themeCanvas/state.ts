@@ -34,11 +34,11 @@ export type ThemeState = {
   texts: ThemeText[];
 };
 
-// Providers sem conta/cota real (ícone da marca, clima) não têm o mini-cartão
+// Providers sem conta/cota real (ícone da marca, clima, spotify) não têm o mini-cartão
 // da Início/Agora — mesma exclusão do firmware (ver customtheme.cpp:
-// drawThemeIcon retorna antes de checar icon.style pra esses dois).
+// drawThemeIcon retorna antes de checar icon.style pra esses).
 export function providerSupportsCard(provider: ThemeProvider): boolean {
-  return provider !== "weather" && provider !== "brand";
+  return provider !== "weather" && provider !== "brand" && provider !== "spotify";
 }
 
 // Espelha o clampBoxCenter do firmware (ui/customtheme.cpp) e o do editor
