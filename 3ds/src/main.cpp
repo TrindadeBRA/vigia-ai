@@ -16,8 +16,12 @@
 
 static void logToSD(const char *msg){
 #ifdef _3DS
-  FILE *f=fopen("sdmc:/3ds/vigia-ai/log.txt","a");
-  if(f){ fprintf(f,"%s\n",msg); fclose(f); }
+  // tenta 3 locais (um vai funcionar mesmo sem pasta)
+  FILE *f=fopen("sdmc:/vigia.log","a"); if(f){ fprintf(f,"%s\n",msg); fclose(f); return; }
+  f=fopen("sdmc:/log.txt","a"); if(f){ fprintf(f,"%s\n",msg); fclose(f); return; }
+  // cria pasta se nao existe e tenta de novo
+  mkdir("sdmc:/3ds/vigia-ai", 0777);
+  f=fopen("sdmc:/3ds/vigia-ai/log.txt","a"); if(f){ fprintf(f,"%s\n",msg); fclose(f); }
 #endif
   (void)msg;
 }
@@ -90,9 +94,7 @@ int main(int argc, char* argv[]){
     if(now-lastTick>1000){ lastTick=now; uiTickClock(); }
 
     u32 kHeld = hidKeysHeld();
-    if((kHeld & KEY_START) && (kHeld & KEY_SELECT)) running=false;
-    // B sozinho volta pra HOME ja tratado em uiHandleButton, mas tambem sai aqui se HOME for pressionado
-    if(kHeld & KEY_HOME) running=false;
+    if(kHeld & KEY_START) running=false;
 
     gspWaitForVBlank();
     svcSleepThread(16*1000*1000);
