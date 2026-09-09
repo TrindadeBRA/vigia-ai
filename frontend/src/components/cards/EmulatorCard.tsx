@@ -765,6 +765,19 @@ export function EmulatorBoardCard({
         return () => clearTimeout(timer);
     }, [size, status]);
 
+    // Enquanto o foco estiver em algum elemento deste card (o próprio
+    // container, botões da toolbar) e não dentro do iframe do jogo, ArrowUp/
+    // Down/etc. tomam a ação padrão do navegador: rolar a página — o iframe
+    // tem seu próprio documento (overflow hidden) e nunca borbulha keydown
+    // pro pai, então isso só dispara quando o jogo NÃO está de fato recebendo
+    // a tecla, e nunca atrapalha quem está jogando via teclado dentro do jogo.
+    const preventScrollKeys = useCallback((e: React.KeyboardEvent) => {
+        if (status !== "ready") return;
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "PageUp", "PageDown", "Home", "End"].includes(e.key)) {
+            e.preventDefault();
+        }
+    }, [status]);
+
     const handleContainerFocus = useCallback(() => {
         if (status === "ready" && !activeRef.current) {
             activeRef.current = true;
@@ -778,7 +791,7 @@ export function EmulatorBoardCard({
     const totalPlatforms = groups.length;
 
     return (
-        <div className={cn("flex h-full min-h-0 w-full flex-col overflow-hidden", isSmall ? "gap-1" : "gap-1.5")}>
+        <div className={cn("flex h-full min-h-0 w-full flex-col overflow-hidden", isSmall ? "gap-1" : "gap-1.5")} onKeyDown={preventScrollKeys}>
             <div
                 ref={gameContainerRef}
                 onFocus={handleContainerFocus}
