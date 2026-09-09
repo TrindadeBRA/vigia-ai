@@ -730,6 +730,11 @@ case "$1" in
     case "${1:-}" in
       build)
         if [ -z "${DEVKITARM:-}" ]; then
+          if command -v docker >/dev/null 2>&1; then
+            echo "DEVKITARM nao definido — tentando build via Docker..." >&2
+            docker run --rm -v "$ROOT_DIR:/build" -w /build/3ds devkitpro/devkita64 make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)" && exit 0
+            echo "Docker falhou, caindo no host stub" >&2
+          fi
           echo "DEVKITARM nao definido — tentando host stub (sem citro2d)" >&2
           g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/core/state.cpp -o /tmp/3ds_state.o && \
           g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/net/parse.cpp -o /tmp/3ds_parse.o && \
@@ -740,7 +745,53 @@ case "$1" in
         (cd "$ROOT_DIR/3ds" && make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)")
         ;;
       cia)
-        if [ -z "${DEVKITARM:-}" ]; then echo "erro: DEVKITARM nao definido" >&2; exit 1; fi
+        if [ -z "${DEVKITARM:-}" ]; then
+          if command -v docker >/dev/null 2>&1; then
+            echo "DEVKITARM nao definido — tentando build via Docker (devkitpro/devkitarm)..." >&2
+            if docker run --rm -v "$ROOT_DIR:/build" -w /build/3ds devkitpro/devkitarm make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"; then
+              echo "✓ .3dsx gerado via Docker em 3ds/vigia-ai.3dsx (use no Homebrew Launcher: sdmc:/3ds/vigia-ai/)" >&2
+              if docker run --rm -v "$ROOT_DIR:/build" -w /build/3ds devkitpro/devkitarm make cia -j2 2>&1 | tail -n 20; then
+                if [ -f "$ROOT_DIR/3ds/vigia-ai.cia" ]; then echo "✓ cia gerado em 3ds/vigia-ai.cia" >&2; exit 0; fi
+              fi
+              echo "" >&2
+              echo "→ .3dsx OK. .cia precisa de makerom+bannertool (nao inclusos no devkitarm linux)." >&2
+              echo "  Para FBI/Luma3DS (.cia): instale devkitPro local ou converta o .3dsx:" >&2
+              echo "    • macOS: curl -L https://github.com/devkitPro/pacman/releases/latest/download/devkitpro-pacman-installer.pkg -o /tmp/dkp.pkg && sudo installer -pkg /tmp/dkp.pkg -target / && sudo dkp-pacman -Syu 3ds-dev --noconfirm" >&2
+              echo "    • + makerom/bannertool:  brew install bannertool  ou  https://github.com/profi200/Project_CTR/releases  +  https://github.com/Steveice10/bannertool/releases" >&2
+              echo "    • depois: ./dev 3ds cia  # ou  docker + makerom manual" >&2
+              echo "  Alternativa: use o .3dsx direto pelo Homebrew Launcher (mesma funcao)." >&2
+              exit 0
+            fi
+            echo "falha no Docker, veja log acima" >&2
+          fi
+          cat >&2 <<'MSG'
+erro: DEVKITARM nao definido
+
+Gerado .3dsx via host stub, mas .cia precisa do toolchain:
+
+Instale devkitPro (macOS arm64):
+
+  # 1) devkitPro pacman
+  curl -L https://github.com/devkitPro/pacman/releases/latest/download/devkitpro-pacman-installer.pkg -o /tmp/dkp.pkg
+  sudo installer -pkg /tmp/dkp.pkg -target /
+  sudo dkp-pacman -Syu 3ds-dev --noconfirm
+  echo 'export DEVKITPRO=/opt/devkitpro' >> ~/.zshrc
+  echo 'export DEVKITARM=$DEVKITPRO/devkitARM' >> ~/.zshrc
+  source ~/.zshrc
+
+  # 2) build
+  ./dev 3ds build # -> 3ds/vigia-ai.3dsx (ja funciona via Docker)
+  ./dev 3ds cia   # -> 3ds/vigia-ai.cia (precisa bannertool)
+
+Sem instalar, use Docker (ja detectado):
+
+  docker run --rm -v "$PWD:/build" -w /build/3ds devkitpro/devkitarm make
+  docker run --rm -v "$PWD:/build" -w /build/3ds devkitpro/devkitarm bash -c "curl -Ls https://github.com/Steveice10/bannertool/releases/download/1.2.0/bannertool.zip -o /tmp/b.zip && unzip -qo /tmp/b.zip -d /tmp && cp /tmp/bannertool*/bannertool /usr/local/bin/ && make cia"
+
+Docs: https://devkitpro.org/wiki/Getting_Started  |  3ds/README.md
+MSG
+          exit 1
+        fi
         (cd "$ROOT_DIR/3ds" && make cia -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)")
         ;;
       clean) (cd "$ROOT_DIR/3ds" && make clean) ;;

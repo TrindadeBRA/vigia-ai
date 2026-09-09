@@ -10,7 +10,7 @@
 
 #ifdef _3DS
 #include <3ds.h>
-#include <citro2d/c2d.h>
+#include <citro2d.h>
 static C3D_RenderTarget *topTarget=nullptr, *botTarget=nullptr;
 static C2D_TextBuf textBuf=nullptr;
 static C2D_Font font=nullptr;
@@ -171,7 +171,7 @@ void uiDrawHeaderTop(){
 #ifdef _3DS
   UiCtx c=uiCtx();
   // header 400x28
-  drawRect(0,0,400,28,c.card);
+  drawRect(0,0,400,28,c.pal.card);
   // titulo + countdown + status
   char hdr[128];
   // countdown
@@ -185,11 +185,12 @@ void uiDrawHeaderTop(){
   int secs = 0;
   if(g_pollMs>0 && g_lastFetchMs>0){
     int64_t left = (int64_t)g_pollMs - (int64_t)(now - g_lastFetchMs);
-    if(left<0) left=0; secs=(int)(left/1000);
+    if(left<0) left=0;
+    secs=(int)(left/1000);
   }
   bool ok = g_hasFetchedOk;
   snprintf(hdr,sizeof(hdr),"Vigia AI  %02d s %s %s", secs, ok?"\x03":"", g_netLine.c_str());
-  drawText(8,6,0.45,c.text,hdr);
+  drawText(8,6,0.45,c.pal.text,hdr);
 #else
   (void)drawRect; (void)drawText;
 #endif
@@ -215,10 +216,10 @@ void uiPaint(){
   C2D_SceneBegin(botTarget);
   if(g_view==VIEW_HOME) vigia::paintHomeBottom();
   else if(g_view==VIEW_CONFIG) vigia::paintConfigBottom();
-  else {
+  } else {
     // bottom hint para detalhe
-    UiCtx c=uiCtx();
-    drawText(8,8,0.4,c.textDim,"B: voltar  L/R: conta  Y: refresh  X: config");
+    UiCtx c2=uiCtx();
+    drawText(8,8,0.4,c2.pal.textDim,"B: voltar  L/R: conta  Y: refresh  X: config");
   }
   C3D_FrameEnd(0);
 #else
@@ -230,7 +231,8 @@ void uiTickClock(){
   static uint64_t last=0;
 #ifdef _3DS
   uint64_t now=osGetTime();
-  if(now-last<1000) return; last=now;
+  if(now-last<1000) return;
+  last=now;
   uiPaint();
 #else
   (void)last;

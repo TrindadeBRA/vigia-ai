@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #ifdef _3DS
-#include <citro2d/c2d.h>
+#include <citro2d.h>
 #endif
 
 namespace vigia {
@@ -34,7 +34,7 @@ static float worstPct(View v){
     case VIEW_CURSOR: if(g_snap.cursorCount) return g_snap.cursor[g_cursorIdx].percent; break;
     case VIEW_OPENROUTER: if(g_snap.openrouterCount) return g_snap.openrouter[g_openrouterIdx].percent; break;
     case VIEW_DEEPSEEK: if(g_snap.deepseekCount) return g_snap.deepseek[g_deepseekIdx].percent; break;
-    case VIEW_OPENCODE: if(g_snap.opencodeCount) return std::max({g_snap.opencode[g_opencodeIdx].rollingPercent,g_snap.opencode[g_opencodeIdx].weeklyPercent,g_snap.opencode[g_opencodeIdx].monthlyPercent}); break;
+    case VIEW_OPENCODE: if(g_snap.opencodeCount) return std::max(g_snap.opencode[g_opencodeIdx].rollingPercent,std::max(g_snap.opencode[g_opencodeIdx].weeklyPercent,g_snap.opencode[g_opencodeIdx].monthlyPercent)); break;
     case VIEW_FAL: if(g_snap.falCount) return g_snap.fal[g_falIdx].percent; break;
     default: break;
   }

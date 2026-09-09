@@ -8,7 +8,8 @@
 #include <cstdint>
 
 #ifdef _3DS
-#include <citro2d/c2d.h>
+#include <3ds.h>
+#include <citro2d.h>
 #else
 // host stubs
 typedef void* C2D_TextBuf; typedef void* C2D_Font;

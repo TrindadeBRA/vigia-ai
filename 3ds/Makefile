@@ -49,19 +49,24 @@ GRAPHICS :=
 BANNERTOOL ?= bannertool
 MAKEROM    ?= makerom
 
+LIBS    := -lcitro2d -lcitro3d -lctru -lm
+LIBDIRS := $(CTRULIB) $(PORTLIBS)
+
+# Includes / libpaths — precisam vir ANTES de CFLAGS (:= expande na hora)
+INCLUDE  := $(foreach dir,$(INCLUDES),-I$(TOPDIR)/$(dir)) \
+            $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
+            -I$(TOPDIR)/$(BUILD)
+LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+
 ARCH   := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 CFLAGS := -g -Wall -O2 -mword-relocations -ffunction-sections -fdata-sections \
-          $(ARCH) $(INCLUDE) -DARM11 -D_3DS \
-          -DVIGIA_VERSION=\"$(APP_VERSION_MAJOR).$(APP_VERSION_MINOR).$(APP_VERSION_MICRO)\" \
-          -DAPP_TITLE=\"$(APP_TITLE)\"
+          $(ARCH) $(INCLUDE) -D__3DS__ \
+          -DVIGIA_VERSION=\"$(APP_VERSION_MAJOR).$(APP_VERSION_MINOR).$(APP_VERSION_MICRO)\"
 
 CXXFLAGS := $(CFLAGS) -std=c++17 -fno-rtti -fno-exceptions
 
 ASFLAGS := -g $(ARCH)
 LDFLAGS  = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
-
-LIBS    := -lcitro2d -lcitro3d -lctru -lm
-LIBDIRS := $(CTRULIB) $(PORTLIBS)
 
 # ----- File lists -----
 ifneq ($(BUILD),$(notdir $(CURDIR)))
@@ -103,6 +108,13 @@ $(OUTPUT).3dsx $(OUTPUT).elf: $(OFILES)
 cia: $(OUTPUT).cia
 
 $(OUTPUT).cia: $(OUTPUT).elf $(OUTPUT).rsf banner
+	@if ! command -v $(MAKEROM) >/dev/null 2>&1; then \
+		echo "erro: $(MAKEROM) nao encontrado — cia precisa de makerom" >&2; \
+		echo "  macOS: dkp-pacman -S 3ds-tools  ou  brew install makerom" >&2; \
+		echo "  ou baixe em https://github.com/profi200/Project_CTR/releases" >&2; \
+		echo "  .3dsx ja foi gerado em $(OUTPUT).3dsx (use pelo Homebrew Launcher)" >&2; \
+		exit 1; \
+	fi
 	$(MAKEROM) -f cia -o $@ -elf $(OUTPUT).elf -rsf $(OUTPUT).rsf \
 		-target t -exefslogo -icon $(BUILD)/icon.icn -banner $(BUILD)/banner.bnr \
 		-major $(APP_VERSION_MAJOR) -minor $(APP_VERSION_MINOR) -micro $(APP_VERSION_MICRO) -DSaveSize=0
@@ -111,11 +123,21 @@ banner: $(BUILD)/banner.bnr $(BUILD)/icon.icn
 
 $(BUILD)/banner.bnr: $(BANNER) $(AUDIO)
 	@mkdir -p $(BUILD)
-	$(BANNERTOOL) makebanner -i $(BANNER) -a $(AUDIO) -o $@
+	@if command -v $(BANNERTOOL) >/dev/null 2>&1; then \
+		$(BANNERTOOL) makebanner -i $(BANNER) -a $(AUDIO) -o $@; \
+	else \
+		echo "bannertool nao encontrado — cia precisa de bannertool (dkp-pacman -S 3ds-bannertool ou https://github.com/Steveice10/bannertool/releases) — gerando icn via smdhtool e bnr dummy" >&2; \
+		smdhtool --create "$(APP_TITLE)" "$(APP_DESCRIPTION)" "$(APP_AUTHOR)" $(ICON) $(BUILD)/icon.icn; \
+		printf "dummy banner — instale bannertool para banner real" > $@; \
+	fi
 
 $(BUILD)/icon.icn: $(ICON)
 	@mkdir -p $(BUILD)
-	$(BANNERTOOL) makesmdh -s "$(APP_TITLE)" -l "$(APP_TITLE)" -p "$(APP_AUTHOR)" -i $(ICON) -o $@
+	@if command -v $(BANNERTOOL) >/dev/null 2>&1; then \
+		$(BANNERTOOL) makesmdh -s "$(APP_TITLE)" -l "$(APP_TITLE)" -p "$(APP_AUTHOR)" -i $(ICON) -o $@; \
+	else \
+		smdhtool --create "$(APP_TITLE)" "$(APP_DESCRIPTION)" "$(APP_AUTHOR)" $(ICON) $@; \
+	fi
 
 $(OUTPUT).rsf: $(RSF)
 	@cp $< $@
@@ -126,3 +148,5 @@ clean:
 
 # ----- deps -----
 -include $(DEPSDIR)/*.d
+
+endif

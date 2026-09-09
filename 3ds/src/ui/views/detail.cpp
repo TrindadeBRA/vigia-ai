@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #ifdef _3DS
-#include <citro2d/c2d.h>
+#include <citro2d.h>
 #endif
 
 namespace vigia {
