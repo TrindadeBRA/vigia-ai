@@ -184,6 +184,24 @@ Assinaturas (Claude / GPT / Cursor / OpenRouter / DeepSeek / OpenCode Go / OpenC
 
 Quer entender exatamente como cada provedor é consultado (endpoints, headers, mapeamento de campos)? Guia técnico completo em [`.agents/SETUP.md`](.agents/SETUP.md#como-o-vigia-lê-as-cotas). Arquitetura: [`.agents/ARQUITETURA.md`](.agents/ARQUITETURA.md). Contrato da placa: [`.agents/CONTRATO_JSON.md`](.agents/CONTRATO_JSON.md).
 
+### Frequência de requisições
+
+Cada card do `/display` faz seu próprio poll em background (`fetch` direto
+no componente ou hook — não passa por um client HTTP centralizado):
+
+| Serviço | Intervalo | Onde |
+| --- | --- | --- |
+| Contas (Claude/GPT/Cursor/OpenRouter/DeepSeek/Bitcoin/AdSense…) | SSE (push) + poll de 60 s como fallback | `/display` |
+| Spotify | 15 s | `/display` |
+| YouTube Music | 15 s | `/display` |
+| Sistema (CPU/RAM/disco) | 10 s | `/display` |
+| Notas | 15 s | `/display` |
+| Widgets de imagem | 15 s | `/display` |
+| Dispositivos Android | 15 s | `/display` |
+| Câmeras (listagem) | 60 s | `/display` |
+| Mineração — status | 5 s | só em `/display/config` (aba de mineração aberta) |
+| Telegram | 3 s | só em `/display/config`, e só enquanto o bot está configurado mas ainda sem chat vinculado |
+
 ## Privacidade e segurança
 
 - O coletor **não é** um OAuth client: não emite, não autoriza e não renova tokens — só reusa o que o app oficial já gravou neste host.
