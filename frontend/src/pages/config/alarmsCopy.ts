@@ -63,6 +63,10 @@ export type AlarmsCopy = {
   saved: string;
   saveFailed: string;
   cancel: string;
+  confirmRemoveTitle: string;
+  confirmRemoveBody: (label: string) => string;
+  telegramDisconnectConfirmTitle: string;
+  telegramDisconnectConfirmBody: string;
   rulesSummary: (total: number, active: number) => string;
   filterAll: string;
   searchRules: string;
@@ -156,6 +160,10 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     saved: "Alterações salvas",
     saveFailed: "Não foi possível salvar",
     cancel: "Cancelar",
+    confirmRemoveTitle: "Remover?",
+    confirmRemoveBody: (label) => `Remover "${label}"? Essa ação não pode ser desfeita.`,
+    telegramDisconnectConfirmTitle: "Desconectar Telegram?",
+    telegramDisconnectConfirmBody: "Isso apaga o token e todos os destinatários cadastrados. Os alarmes não vão mais enviar aviso até reconectar.",
     rulesSummary: (total, active) => `${total} regra${total === 1 ? "" : "s"} · ${active} ativa${active === 1 ? "" : "s"}`,
     filterAll: "Todos os provedores",
     searchRules: "Buscar regra…",
@@ -247,6 +255,10 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     saved: "Changes saved",
     saveFailed: "Could not save",
     cancel: "Cancel",
+    confirmRemoveTitle: "Remove?",
+    confirmRemoveBody: (label) => `Remove "${label}"? This can't be undone.`,
+    telegramDisconnectConfirmTitle: "Disconnect Telegram?",
+    telegramDisconnectConfirmBody: "This erases the token and every recipient on file. Alarms will stop sending notifications until you reconnect.",
     rulesSummary: (total, active) => `${total} rule${total === 1 ? "" : "s"} · ${active} enabled`,
     filterAll: "All providers",
     searchRules: "Search rules…",
@@ -338,6 +350,10 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     saved: "Cambios guardados",
     saveFailed: "No se pudo guardar",
     cancel: "Cancelar",
+    confirmRemoveTitle: "¿Quitar?",
+    confirmRemoveBody: (label) => `¿Quitar "${label}"? Esta acción no se puede deshacer.`,
+    telegramDisconnectConfirmTitle: "¿Desconectar Telegram?",
+    telegramDisconnectConfirmBody: "Esto borra el token y todos los destinatarios guardados. Las alarmas dejarán de avisar hasta que reconectes.",
     rulesSummary: (total, active) => `${total} regla${total === 1 ? "" : "s"} · ${active} activa${active === 1 ? "" : "s"}`,
     filterAll: "Todos los proveedores",
     searchRules: "Buscar regla…",

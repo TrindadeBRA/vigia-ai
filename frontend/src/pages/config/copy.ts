@@ -73,6 +73,9 @@ export type ConfigCopy = {
   added: string;
   remove: string;
   removed: string;
+  cancel: string;
+  confirmRemoveTitle: string;
+  confirmRemoveBody: (label: string) => string;
   needSecret: string;
   claudeBlurb: string;
   gptBlurb: string;
@@ -483,6 +486,9 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     added: "Conta adicionada.",
     remove: "Remover",
     removed: "Conta removida.",
+    cancel: "Cancelar",
+    confirmRemoveTitle: "Remover?",
+    confirmRemoveBody: (label) => `Remover "${label}"? Essa ação não pode ser desfeita.`,
     needSecret: "Cole o token ou a chave antes de adicionar.",
     secretFold: "Colar uma chave",
     toolsTitle: "Placa e rede",
@@ -910,6 +916,9 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     added: "Account added.",
     remove: "Remove",
     removed: "Account removed.",
+    cancel: "Cancel",
+    confirmRemoveTitle: "Remove?",
+    confirmRemoveBody: (label) => `Remove "${label}"? This can't be undone.`,
     needSecret: "Paste the token or key before adding.",
     secretFold: "Paste a key",
     toolsTitle: "Board and network",
@@ -1337,6 +1346,9 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     added: "Cuenta añadida.",
     remove: "Quitar",
     removed: "Cuenta quitada.",
+    cancel: "Cancelar",
+    confirmRemoveTitle: "¿Quitar?",
+    confirmRemoveBody: (label) => `¿Quitar "${label}"? Esta acción no se puede deshacer.`,
     needSecret: "Pega el token o la clave antes de añadir.",
     secretFold: "Pegar una clave",
     toolsTitle: "Placa y red",

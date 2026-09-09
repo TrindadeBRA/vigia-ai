@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { addAccount, deleteAccount } from "../../api/client";
 import type { AccountPublic } from "../../api/types";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { useRequest } from "../../hooks/useRequest";
 import type { ConfigCopy } from "./copy";
 import { ActionRow, Button, FieldStatus, TextField } from "./ui";
@@ -25,6 +26,7 @@ export function ExtraAccounts({
   const [newLabel, setNewLabel] = useState("");
   const [newSecret, setNewSecret] = useState("");
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [confirmingAccount, setConfirmingAccount] = useState<AccountPublic | null>(null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -40,18 +42,7 @@ export function ExtraAccounts({
                 variant="ghost"
                 loading={remove.busy && removingId === a.id}
                 disabled={remove.busy}
-                onClick={async () => {
-                  setRemovingId(a.id);
-                  const out = await remove.run(
-                    async () => {
-                      const res = await deleteAccount(provider, a.id);
-                      if (res.ok) await onReload();
-                      return res;
-                    },
-                    { success: c.removed, error: offline },
-                  );
-                  if (out?.ok) setRemovingId(null);
-                }}
+                onClick={() => setConfirmingAccount(a)}
               >
                 {remove.busy && removingId === a.id ? c.removing : c.remove}
               </Button>
@@ -88,6 +79,29 @@ export function ExtraAccounts({
         </Button>
       </ActionRow>
       <FieldStatus status={add.status !== "idle" ? add.status : remove.status} message={add.message || remove.message} />
+      <ConfirmModal
+        open={Boolean(confirmingAccount)}
+        title={c.confirmRemoveTitle}
+        body={c.confirmRemoveBody(confirmingAccount?.label || confirmingAccount?.suffix || "")}
+        confirmLabel={c.remove}
+        cancelLabel={c.cancel}
+        onCancel={() => setConfirmingAccount(null)}
+        onConfirm={async () => {
+          const a = confirmingAccount;
+          setConfirmingAccount(null);
+          if (!a) return;
+          setRemovingId(a.id);
+          const out = await remove.run(
+            async () => {
+              const res = await deleteAccount(provider, a.id);
+              if (res.ok) await onReload();
+              return res;
+            },
+            { success: c.removed, error: offline },
+          );
+          if (out?.ok) setRemovingId(null);
+        }}
+      />
     </div>
   );
 }

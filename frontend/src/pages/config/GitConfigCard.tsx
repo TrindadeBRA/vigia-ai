@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, iconChip, iconImg } from "../../tw";
@@ -34,17 +35,19 @@ function RepoRow({ repo, c, onReload }: { repo: GitRepoConfig; c: ConfigCopy; on
     const [limit, setLimit] = useState(String(repo.limit));
     const [branch, setBranch] = useState(repo.branch || "");
     const save = useRequest();
+    const [confirmingRemove, setConfirmingRemove] = useState(false);
+    const repoLabel = repo.label || repo.source.split("/").pop()?.replace(/\.git$/, "") || repo.source;
 
     return (
         <li className="flex flex-col gap-2 rounded-[10px] border border-edge bg-canvas px-3 py-2.5">
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                    <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">{repo.label || repo.source.split("/").pop()?.replace(/\.git$/, "") || repo.source}</p>
+                    <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">{repoLabel}</p>
                     <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-ink3">{repo.source}{repo.branch ? ` · ${repo.branch}` : ""} · {repo.limit} commits</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                     <Button variant="ghost" className="px-2 py-1 text-[11px]" onClick={() => setEditing((v) => !v)}>{editing ? "Cancelar" : "Editar"}</Button>
-                    <Button variant="ghost" className="px-2 py-1 text-[11px]" loading={remove.busy} onClick={() => remove.run(async () => { const r = await apiDelete(`/api/git/repos/${repo.id}`); await onReload(); return r; }, { success: c.removed, error: c.offline })}>{remove.busy ? c.removing : c.remove}</Button>
+                    <Button variant="ghost" className="px-2 py-1 text-[11px]" loading={remove.busy} onClick={() => setConfirmingRemove(true)}>{remove.busy ? c.removing : c.remove}</Button>
                 </div>
             </div>
             {editing ? (
@@ -59,6 +62,18 @@ function RepoRow({ repo, c, onReload }: { repo: GitRepoConfig; c: ConfigCopy; on
                 </div>
             ) : null}
             {remove.message ? <FieldStatus status={remove.status} message={remove.message} /> : null}
+            <ConfirmModal
+                open={confirmingRemove}
+                title={c.confirmRemoveTitle}
+                body={c.confirmRemoveBody(repoLabel)}
+                confirmLabel={c.remove}
+                cancelLabel={c.cancel}
+                onCancel={() => setConfirmingRemove(false)}
+                onConfirm={() => {
+                    setConfirmingRemove(false);
+                    void remove.run(async () => { const r = await apiDelete(`/api/git/repos/${repo.id}`); await onReload(); return r; }, { success: c.removed, error: c.offline });
+                }}
+            />
         </li>
     );
 }

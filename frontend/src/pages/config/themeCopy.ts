@@ -58,6 +58,10 @@ export type ThemeCopy = {
   removing: string;
   removedOk: string;
   removeError: string;
+  cancel: string;
+  wallpaperRemoveConfirmTitle: string;
+  wallpaperRemoveConfirmBody: (label: string) => string;
+  wallpaperRemoveConfirmAction: string;
   resolutionMismatch: string;
   deleteHint: string;
   debugTool: string;
@@ -174,6 +178,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     removing: "Removendo…",
     removedOk: "Tema removido do coletor",
     removeError: "Falha ao remover",
+    cancel: "Cancelar",
+    wallpaperRemoveConfirmTitle: "Remover wallpaper?",
+    wallpaperRemoveConfirmBody: (label) => `Remover "${label}" da biblioteca? Essa ação não pode ser desfeita.`,
+    wallpaperRemoveConfirmAction: "Remover",
     resolutionMismatch: "A resolução mudou desde a última imagem enviada — suba a imagem de novo.",
     deleteHint: "Dica: a tecla Delete também remove o elemento selecionado.",
     debugTool: "Depuração da placa",
@@ -289,6 +297,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     removing: "Removing…",
     removedOk: "Theme removed from the collector",
     removeError: "Failed to remove",
+    cancel: "Cancel",
+    wallpaperRemoveConfirmTitle: "Remove wallpaper?",
+    wallpaperRemoveConfirmBody: (label) => `Remove "${label}" from the library? This can't be undone.`,
+    wallpaperRemoveConfirmAction: "Remove",
     resolutionMismatch: "Resolution changed since the last upload — upload the image again.",
     deleteHint: "Tip: the Delete key also removes the selected element.",
     debugTool: "Board debugging",
@@ -404,6 +416,10 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     removing: "Quitando…",
     removedOk: "Tema quitado del colector",
     removeError: "Falló al quitar",
+    cancel: "Cancelar",
+    wallpaperRemoveConfirmTitle: "¿Quitar wallpaper?",
+    wallpaperRemoveConfirmBody: (label) => `¿Quitar "${label}" de la biblioteca? Esta acción no se puede deshacer.`,
+    wallpaperRemoveConfirmAction: "Quitar",
     resolutionMismatch: "La resolución cambió desde la última imagen enviada — subila de nuevo.",
     deleteHint: "Consejo: la tecla Supr también quita el elemento seleccionado.",
     debugTool: "Depuración de la placa",

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { addCurrencyItem, deleteCurrencyItem, patchCurrenciesConfig, searchCurrencyCoins } from "../../api/client";
 import type { CurrenciesConfig, CurrencySearchResult } from "../../api/types";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, iconChip, iconImg } from "../../tw";
@@ -43,30 +44,42 @@ const FIAT_CODES: { code: string; label: string }[] = [
 
 function ItemRow({ item, c, onReload }: { item: CurrenciesConfig["items"][number]; c: ConfigCopy; onReload: () => Promise<void> }) {
     const remove = useRequest();
+    const [confirmingRemove, setConfirmingRemove] = useState(false);
+    const itemLabel = item.label || item.code;
     return (
         <li className="flex items-center justify-between gap-2 rounded-[10px] border border-edge bg-canvas px-2.5 py-2">
             <div className="min-w-0">
                 <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] font-[650]">
-                    {item.label || item.code} <span className="ml-1 text-[11px] font-normal text-ink3">{item.code}{item.kind === "crypto" ? ` · ${c.currenciesKindCrypto}` : ""}</span>
+                    {itemLabel} <span className="ml-1 text-[11px] font-normal text-ink3">{item.code}{item.kind === "crypto" ? ` · ${c.currenciesKindCrypto}` : ""}</span>
                 </p>
             </div>
             <Button
                 variant="ghost"
                 className="shrink-0 px-2.5 py-1.5 text-[12.5px]"
                 loading={remove.busy}
-                onClick={() =>
-                    remove.run(
+                onClick={() => setConfirmingRemove(true)}
+            >
+                {remove.busy ? c.removing : c.remove}
+            </Button>
+            <ConfirmModal
+                open={confirmingRemove}
+                title={c.confirmRemoveTitle}
+                body={c.confirmRemoveBody(itemLabel)}
+                confirmLabel={c.remove}
+                cancelLabel={c.cancel}
+                onCancel={() => setConfirmingRemove(false)}
+                onConfirm={() => {
+                    setConfirmingRemove(false);
+                    void remove.run(
                         async () => {
                             const res = await deleteCurrencyItem(item.id);
                             if (res.ok) await onReload();
                             return res;
                         },
                         { success: c.removed, error: c.offline },
-                    )
-                }
-            >
-                {remove.busy ? c.removing : c.remove}
-            </Button>
+                    );
+                }}
+            />
         </li>
     );
 }

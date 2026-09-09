@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { addCamera, fetchCameras, removeCamera, updateCamera } from "../../api/client";
 import type { CameraItem } from "../../api/types";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { useRequest } from "../../hooks/useRequest";
 import { cfgCard, iconChip } from "../../tw";
 import type { ConfigCopy } from "./copy";
@@ -29,6 +30,7 @@ function CameraRow({ camera, c, onReload }: { camera: CameraItem; c: ConfigCopy;
   const [onvifPort, setOnvifPort] = useState(String(camera.onvifPort));
   const save = useRequest();
   const remove = useRequest();
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   const portNum = Number(port);
   const onvifPortNum = Number(onvifPort);
@@ -49,7 +51,7 @@ function CameraRow({ camera, c, onReload }: { camera: CameraItem; c: ConfigCopy;
             variant="ghost"
             className="px-2 py-1 text-[11px]"
             loading={remove.busy}
-            onClick={() => remove.run(async () => { const r = await removeCamera(camera.id); await onReload(); return r; }, { success: c.removed, error: c.offline })}
+            onClick={() => setConfirmingRemove(true)}
           >
             {remove.busy ? c.removing : c.remove}
           </Button>
@@ -109,6 +111,18 @@ function CameraRow({ camera, c, onReload }: { camera: CameraItem; c: ConfigCopy;
         </div>
       ) : null}
       {remove.message ? <FieldStatus status={remove.status} message={remove.message} /> : null}
+      <ConfirmModal
+        open={confirmingRemove}
+        title={c.confirmRemoveTitle}
+        body={c.confirmRemoveBody(camera.label || camera.host)}
+        confirmLabel={c.remove}
+        cancelLabel={c.cancel}
+        onCancel={() => setConfirmingRemove(false)}
+        onConfirm={() => {
+          setConfirmingRemove(false);
+          void remove.run(async () => { const r = await removeCamera(camera.id); await onReload(); return r; }, { success: c.removed, error: c.offline });
+        }}
+      />
     </li>
   );
 }

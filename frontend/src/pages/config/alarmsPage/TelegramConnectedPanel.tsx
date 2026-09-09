@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { TelegramChat } from "../../../api/types";
 import { cn } from "../../../cn";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 import { useRequest } from "../../../hooks/useRequest";
 import { cfgFieldLabel } from "../../../tw";
 import type { ALARMS_STR } from "../alarmsCopy";
@@ -32,6 +34,8 @@ export function TelegramConnectedPanel({
   const openBot = () => {
     if (botUsername) window.open(`https://t.me/${botUsername}`, "_blank", "noopener,noreferrer");
   };
+  const [confirmingChat, setConfirmingChat] = useState<TelegramChat | null>(null);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -86,7 +90,7 @@ export function TelegramConnectedPanel({
                       variant="ghost"
                       className="shrink-0 px-2.5"
                       loading={removeAction.busy}
-                      onClick={() => onRemoveChat(chat.id)}
+                      onClick={() => setConfirmingChat(chat)}
                     >
                       {removeAction.busy ? c.removing : c.remove}
                     </Button>
@@ -114,7 +118,7 @@ export function TelegramConnectedPanel({
               </Button>
             ) : null}
           </div>
-          <Button variant="ghost" loading={clearAction.busy || telegramBusy} onClick={onClear}>
+          <Button variant="ghost" loading={clearAction.busy || telegramBusy} onClick={() => setConfirmingClear(true)}>
             {clearAction.busy ? c.telegramDisconnecting : hasChats ? c.telegramDisconnect : c.telegramChangeToken}
           </Button>
         </div>
@@ -122,6 +126,31 @@ export function TelegramConnectedPanel({
 
       {testAction.message ? <FieldStatus status={testAction.status} message={testAction.message} /> : null}
       {clearAction.message ? <FieldStatus status={clearAction.status} message={clearAction.message} /> : null}
+      <ConfirmModal
+        open={Boolean(confirmingChat)}
+        title={c.confirmRemoveTitle}
+        body={c.confirmRemoveBody(confirmingChat?.label || confirmingChat?.id || "")}
+        confirmLabel={c.remove}
+        cancelLabel={c.cancel}
+        onCancel={() => setConfirmingChat(null)}
+        onConfirm={() => {
+          const chat = confirmingChat;
+          setConfirmingChat(null);
+          if (chat) onRemoveChat(chat.id);
+        }}
+      />
+      <ConfirmModal
+        open={confirmingClear}
+        title={c.telegramDisconnectConfirmTitle}
+        body={c.telegramDisconnectConfirmBody}
+        confirmLabel={c.telegramDisconnect}
+        cancelLabel={c.cancel}
+        onCancel={() => setConfirmingClear(false)}
+        onConfirm={() => {
+          setConfirmingClear(false);
+          onClear();
+        }}
+      />
     </div>
   );
 }
