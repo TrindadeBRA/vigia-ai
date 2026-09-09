@@ -46,7 +46,7 @@ async function fetchState(): Promise<void> {
 function ensurePolling() {
   if (interval != null) return;
   void fetchState();
-  interval = window.setInterval(() => { void fetchState(); }, 5000);
+  interval = window.setInterval(() => { void fetchState(); }, 15000);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) void fetchState();
   });

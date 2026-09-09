@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchCameras, removeCamera } from "../api/client";
 import type { CameraItem } from "../api/types";
 
-// Câmeras mudam pouco — mesmo intervalo de poll de fundo usado pras notas
-// (useServerNotes.ts). O refresh no foco/visibilitychange cobre "voltei pra
-// aba, quero ver na hora"; o poll é só rede de segurança pra edição feita em
-// Configurações enquanto esta aba fica parada olhando o board.
-const POLL_MS = 15000;
+// Câmeras mudam pouco — poll de fundo mais espaçado que o padrão de 15s.
+// O refresh no foco/visibilitychange cobre "voltei pra aba, quero ver na
+// hora"; o poll é só rede de segurança pra edição feita em Configurações
+// enquanto esta aba fica parada olhando o board.
+const POLL_MS = 60000;
 
 async function fetchCamerasQuiet(): Promise<CameraItem[]> {
   try {

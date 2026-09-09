@@ -38,7 +38,7 @@ type SpotifyState = {
   track: SpotifyTrack | null;
 };
 
-const POLL_MS = 5000;
+const POLL_MS = 15000;
 const AFTER_ACTION_MS = 550;
 
 async function postAction(path: string): Promise<void> {
