@@ -444,14 +444,31 @@ export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): P
   if (enabled?.includes("eye")) {
     list.push({ id: "widget:eye", provider: "eye", ok: true, error: null, title: t.widgetEye, label: "", metrics: [] });
   }
-  if (enabled?.includes("spotify")) {
-    list.push({ id: "widget:spotify", provider: "spotify", ok: true, error: null, title: t.widgetSpotify, label: "", metrics: [] });
-  }
-  if (enabled?.includes("youtubemusic")) {
-    list.push({ id: "widget:youtubemusic", provider: "youtubemusic", ok: true, error: null, title: t.widgetYoutubeMusic, label: "", metrics: [] });
-  }
   if (enabled?.includes("system")) {
     list.push({ id: "widget:system", provider: "system", ok: true, error: null, title: t.widgetSystem, label: "", metrics: [] });
+  }
+  return list;
+}
+
+/** Disparado pelos ConfigCard de Spotify/YouTube Music (conectar, desconectar,
+ * trocar o toggle "No painel") pra avisar Display.tsx que precisa reler
+ * /api/config — os dois ficam montados juntos via Outlet em /display/config. */
+export const MUSIC_CONFIG_UPDATED_EVENT = "vigia:music-config-updated";
+
+type MusicProviderStatus = { configured: boolean; hidden: boolean } | null | undefined;
+
+/** Spotify e YouTube Music viram card sozinhos assim que a conta é conectada
+ * em Configurações — igual GitHub/AdSense/etc., não mais um "widget" opcional
+ * que precisava ser adicionado à mão em cada navegador. Mesmo id de antes
+ * (`widget:spotify`/`widget:youtubemusic`) pra não perder posição/tamanho de
+ * quem já tinha adicionado manualmente. */
+export function buildMusicProviders(providers: { spotify?: MusicProviderStatus; youtubemusic?: MusicProviderStatus } | null | undefined, t: T): ProviderMeta[] {
+  const list: ProviderMeta[] = [];
+  if (providers?.spotify?.configured && !providers.spotify.hidden) {
+    list.push({ id: "widget:spotify", provider: "spotify", ok: true, error: null, title: t.widgetSpotify, label: "", metrics: [] });
+  }
+  if (providers?.youtubemusic?.configured && !providers.youtubemusic.hidden) {
+    list.push({ id: "widget:youtubemusic", provider: "youtubemusic", ok: true, error: null, title: t.widgetYoutubeMusic, label: "", metrics: [] });
   }
   return list;
 }

@@ -76,6 +76,8 @@ export const ConfigPatchSchema = z.object({
   fal_hidden: z.boolean().nullable().default(null),
   bitcoin_hidden: z.boolean().nullable().default(null),
   adsense_hidden: z.boolean().nullable().default(null),
+  spotify_hidden: z.boolean().nullable().default(null),
+  youtubemusic_hidden: z.boolean().nullable().default(null),
   claude_local_label: z.string().nullable().default(null),
   gpt_local_label: z.string().nullable().default(null),
   cursor_local_label: z.string().nullable().default(null),

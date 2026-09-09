@@ -1,12 +1,14 @@
 import { cn } from "../cn";
 import type { T } from "../i18n";
 import { Modal } from "../pages/config/ui";
-import { PROVIDER_ICON } from "../theme";
 import { EyeMark } from "./Logo";
 
-export type WidgetKind = "clock" | "eye" | "spotify" | "youtubemusic" | "system";
+// Spotify/YouTube Music não entram mais aqui: viram card sozinhos quando a
+// conta é conectada em Configurações (ver buildMusicProviders em
+// pages/display/buildProviders.ts), igual GitHub/AdSense/etc.
+export type WidgetKind = "clock" | "eye" | "system";
 
-export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "spotify", "youtubemusic", "system"];
+export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "system"];
 
 function ClockIcon() {
   return (
@@ -29,8 +31,6 @@ function ImageIcon() {
 
 function widgetLabel(kind: WidgetKind, t: T): string {
   if (kind === "clock") return t.widgetClock;
-  if (kind === "spotify") return t.widgetSpotify;
-  if (kind === "youtubemusic") return t.widgetYoutubeMusic;
   if (kind === "system") return t.widgetSystem;
   return t.widgetEye;
 }
@@ -47,8 +47,6 @@ function SystemIcon() {
 
 function widgetIcon(kind: WidgetKind) {
   if (kind === "clock") return <ClockIcon />;
-  if (kind === "spotify") return <img className="size-5 object-contain" src={PROVIDER_ICON.spotify} alt="" draggable={false} />;
-  if (kind === "youtubemusic") return <img className="size-5 object-contain" src={PROVIDER_ICON.youtubemusic} alt="" draggable={false} />;
   if (kind === "system") return <SystemIcon />;
   return <EyeMark size={20} follow={false} />;
 }

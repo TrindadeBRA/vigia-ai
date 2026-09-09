@@ -145,13 +145,14 @@ function _spotifyCard(cfg: Record<string, unknown>): Record<string, unknown> {
   const clientId = String(p.client_id ?? "").trim();
   const clientSecret = String(p.client_secret ?? "").trim();
   const refresh = String(p.refresh_token ?? "").trim();
+  const hidden = Boolean(p.hidden);
   if (refresh) {
-    return { source: "spotify", label: "Login Spotify gravado neste coletor", configured: true, suffix: clientId ? suffix(clientId) : null, mode: "oauth", hidden: false, local_label: "", primary_label: "", accounts: [] };
+    return { source: "spotify", label: "Login Spotify gravado neste coletor", configured: true, suffix: clientId ? suffix(clientId) : null, mode: "oauth", hidden, local_label: "", primary_label: "", accounts: [] };
   }
   if (clientId && clientSecret) {
-    return { source: "spotify_client", label: "Credenciais do Spotify salvas — entre com o Spotify", configured: false, suffix: suffix(clientId), mode: "need_oauth", hidden: false, local_label: "", primary_label: "", accounts: [] };
+    return { source: "spotify_client", label: "Credenciais do Spotify salvas — entre com o Spotify", configured: false, suffix: suffix(clientId), mode: "need_oauth", hidden, local_label: "", primary_label: "", accounts: [] };
   }
-  return { source: "missing", label: "Cole o Client ID e o Client Secret do app Spotify", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] };
+  return { source: "missing", label: "Cole o Client ID e o Client Secret do app Spotify", configured: false, suffix: null, mode: "need_paste", hidden, local_label: "", primary_label: "", accounts: [] };
 }
 
 function _youtubemusicCard(cfg: Record<string, unknown>): Record<string, unknown> {
@@ -159,13 +160,14 @@ function _youtubemusicCard(cfg: Record<string, unknown>): Record<string, unknown
   const clientId = String(p.client_id ?? "").trim();
   const clientSecret = String(p.client_secret ?? "").trim();
   const refresh = String(p.refresh_token ?? "").trim();
+  const hidden = Boolean(p.hidden);
   if (refresh) {
-    return { source: "youtubemusic", label: "Login YouTube Music gravado neste coletor", configured: true, suffix: clientId ? suffix(clientId) : null, mode: "oauth", hidden: false, local_label: "", primary_label: "", accounts: [] };
+    return { source: "youtubemusic", label: "Login YouTube Music gravado neste coletor", configured: true, suffix: clientId ? suffix(clientId) : null, mode: "oauth", hidden, local_label: "", primary_label: "", accounts: [] };
   }
   if (clientId && clientSecret) {
-    return { source: "youtubemusic_client", label: "Credenciais do Google salvas — entre com o YouTube Music", configured: false, suffix: suffix(clientId), mode: "need_oauth", hidden: false, local_label: "", primary_label: "", accounts: [] };
+    return { source: "youtubemusic_client", label: "Credenciais do Google salvas — entre com o YouTube Music", configured: false, suffix: suffix(clientId), mode: "need_oauth", hidden, local_label: "", primary_label: "", accounts: [] };
   }
-  return { source: "missing", label: "Cole o Client ID e o Client Secret do Google Cloud (tipo Web) para YouTube Music", configured: false, suffix: null, mode: "need_paste", hidden: false, local_label: "", primary_label: "", accounts: [] };
+  return { source: "missing", label: "Cole o Client ID e o Client Secret do Google Cloud (tipo Web) para YouTube Music", configured: false, suffix: null, mode: "need_paste", hidden, local_label: "", primary_label: "", accounts: [] };
 }
 
 function _opencodeCard(cfg: Record<string, unknown>): Record<string, unknown> {
@@ -313,6 +315,8 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
           bitcoin: [body.bitcoin_hidden, body.bitcoin_primary_label, body.bitcoin_paste, "bitcoin"],
           adsense: [body.adsense_hidden, body.adsense_primary_label, null, null],
           retroachievements: [body.retroachievements_hidden, body.retroachievements_primary_label, body.retroachievements_paste, "retroachievements"],
+          spotify: [body.spotify_hidden, null, null, null],
+          youtubemusic: [body.youtubemusic_hidden, null, null, null],
         };
         for (const [name, [hidden, label, paste, kind]] of Object.entries(mapping)) {
           const providers = (cfg.providers ?? {}) as Record<string, Record<string, unknown>>;

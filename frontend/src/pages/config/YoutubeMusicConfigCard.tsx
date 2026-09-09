@@ -2,10 +2,15 @@ import { useEffect, useState } from "react";
 import { patchConfig } from "../../api/client";
 import type { ProviderCardPublic } from "../../api/types";
 import { useRequest, type RequestStatus } from "../../hooks/useRequest";
+import { MUSIC_CONFIG_UPDATED_EVENT } from "../display/buildProviders";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, cfgHint, iconChip, iconImg } from "../../tw";
 import { badgeOf, connectionHint, type ConfigCopy } from "./copy";
-import { ActionRow, Button, FieldStatus, Fold, StatusPill, TextField } from "./ui";
+import { ActionRow, Button, FieldStatus, Fold, StatusPill, Switch, TextField } from "./ui";
+
+function notifyMusicConfigChanged() {
+  window.dispatchEvent(new Event(MUSIC_CONFIG_UPDATED_EVENT));
+}
 
 const MASK = "•".repeat(24);
 
@@ -22,15 +27,21 @@ export function YoutubeMusicConfigCard({ p, listenPort, inDocker, c, onReload }:
   const hasClient = p.mode === "oauth" || p.mode === "need_oauth";
   const [clientId, setClientId] = useState(hasClient ? MASK : "");
   const [clientSecret, setClientSecret] = useState(hasClient ? MASK : "");
+  const [hidden, setHidden] = useState(p.hidden);
   const saveCreds = useRequest();
   const login = useRequest();
   const logout = useRequest();
+  const hide = useRequest();
   const [oauthFlash, setOauthFlash] = useState<{ status: RequestStatus; message: string } | null>(null);
 
   useEffect(() => {
     setClientId(hasClient ? MASK : "");
     setClientSecret(hasClient ? MASK : "");
   }, [hasClient]);
+
+  useEffect(() => {
+    setHidden(p.hidden);
+  }, [p.hidden]);
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
@@ -44,6 +55,7 @@ export function YoutubeMusicConfigCard({ p, listenPort, inDocker, c, onReload }:
     if (status === "ok") {
       setOauthFlash({ status: "success", message: c.ytmusicOauthOk });
       void onReload();
+      notifyMusicConfigChanged();
     } else if (status === "denied") {
       setOauthFlash({ status: "error", message: reason ? `${c.ytmusicOauthDenied} — ${reason.slice(0, 280)}` : c.ytmusicOauthDenied });
     } else {
@@ -67,10 +79,10 @@ export function YoutubeMusicConfigCard({ p, listenPort, inDocker, c, onReload }:
     }
   };
   const lastMsg =
-    oauthFlash || saveCreds.message || login.message || logout.message
+    oauthFlash || saveCreds.message || login.message || logout.message || hide.message
       ? oauthFlash || {
-        status: saveCreds.message ? saveCreds.status : login.message ? login.status : logout.status,
-        message: saveCreds.message || login.message || logout.message,
+        status: saveCreds.message ? saveCreds.status : login.message ? login.status : logout.message ? logout.status : hide.status,
+        message: saveCreds.message || login.message || logout.message || hide.message,
       }
       : null;
 
@@ -89,6 +101,29 @@ export function YoutubeMusicConfigCard({ p, listenPort, inDocker, c, onReload }:
             <p className="mb-0 mt-[3px] text-[12.5px] leading-[1.45] text-ink3">{hint}</p>
           </div>
         </div>
+        {p.configured ? (
+          <Switch
+            label={c.showOnBoard}
+            busy={hide.busy}
+            checked={!hidden}
+            onChange={async (e) => {
+              const nextHidden = !e.target.checked;
+              setHidden(nextHidden);
+              const out = await hide.run(
+                async () => {
+                  const res = await patchConfig({ youtubemusic_hidden: nextHidden });
+                  if (res.ok) {
+                    await onReload();
+                    notifyMusicConfigChanged();
+                  }
+                  return res;
+                },
+                { success: nextHidden ? c.hiddenOn : c.hiddenOff, error: c.offline },
+              );
+              if (!out?.ok) setHidden(!nextHidden);
+            }}
+          />
+        ) : null}
       </div>
 
       {!p.configured ? <p className={cfgHint}>{c.ytmusicBlurb}</p> : null}
@@ -195,7 +230,10 @@ export function YoutubeMusicConfigCard({ p, listenPort, inDocker, c, onReload }:
               async () => {
                 const res = await fetch("/api/oauth/youtubemusic/disconnect", { method: "POST" });
                 const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-                if (res.ok && data.ok) await onReload();
+                if (res.ok && data.ok) {
+                  await onReload();
+                  notifyMusicConfigChanged();
+                }
                 return { ok: Boolean(res.ok && data.ok), error: data.error };
               },
               { success: c.ytmusicLogoutOk, error: c.offline },

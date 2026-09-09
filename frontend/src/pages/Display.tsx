@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
-import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, UsagePayload } from "../api/types";
+import { fetchConfig, fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
+import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, ProviderCardPublic, UsagePayload } from "../api/types";
 import { colsForWidth, sameBoard } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
@@ -27,7 +27,7 @@ import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
 import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
-import { buildAndroidProviders, buildCameraProviders, buildEmulatorProviders, buildImageProviders, buildNoteProviders, buildProviders, buildWidgetProviders } from "./display/buildProviders";
+import { buildAndroidProviders, buildCameraProviders, buildEmulatorProviders, buildImageProviders, buildMusicProviders, buildNoteProviders, buildProviders, buildWidgetProviders, MUSIC_CONFIG_UPDATED_EVENT } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
 import { SettingsDrawer } from "./display/SettingsDrawer";
@@ -119,6 +119,31 @@ export default function Display() {
     };
     window.addEventListener("vigia:dashboard-cycle", onCycle as EventListener);
     return () => window.removeEventListener("vigia:dashboard-cycle", onCycle as EventListener);
+  }, []);
+
+  // Spotify/YouTube Music: viram card sozinhos quando conectados em
+  // Configurações (ver buildMusicProviders) — sem depender do "Adicionar
+  // widget". Reler /api/config ao montar e sempre que o ConfigCard avisar
+  // (conectar, desconectar, trocar o "No painel"); os dois ficam montados
+  // juntos via Outlet quando a rota é /display/config.
+  const [musicProviders, setMusicProviders] = useState<{ spotify: ProviderCardPublic | null; youtubemusic: ProviderCardPublic | null }>({ spotify: null, youtubemusic: null });
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      fetchConfig()
+        .then((cfg) => {
+          if (!alive) return;
+          const providers = cfg.providers as Record<string, ProviderCardPublic>;
+          setMusicProviders({ spotify: providers.spotify ?? null, youtubemusic: providers.youtubemusic ?? null });
+        })
+        .catch(() => { });
+    };
+    load();
+    window.addEventListener(MUSIC_CONFIG_UPDATED_EVENT, load);
+    return () => {
+      alive = false;
+      window.removeEventListener(MUSIC_CONFIG_UPDATED_EVENT, load);
+    };
   }, []);
 
   const [emulatorConfig, setEmulatorConfig] = useState<import("../api/types").EmulatorConfig | null>(null);
@@ -292,9 +317,10 @@ export default function Display() {
     } : null,
   }));
   const bpBoard = boardForCols(boards, currentCols);
+  const musicCardProviders = buildMusicProviders(musicProviders, t);
   const boardProviders = data
-    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...emulatorProviders]
-    : [...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...buildWidgetProviders(prefs.widgets, t), ...emulatorProviders];
+    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...musicCardProviders, ...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...emulatorProviders]
+    : [...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...buildWidgetProviders(prefs.widgets, t), ...musicCardProviders, ...emulatorProviders];
   const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
   const toggleWidget = (kind: WidgetKind) =>
     setPrefs((p) => {

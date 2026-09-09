@@ -629,6 +629,11 @@ function EmulatorSettingsModal({ onClose }: { onClose: () => void }) {
         setValues((prev) => ({ ...prev, [k]: v }));
         const emu = getEmu();
         emu?.changeSettingOption?.(k, v);
+        // changeSettingOption só aplica em memória — sem isso, a escolha (fast
+        // forward, FPS, etc.) some no próximo jogo/reload (some junto com o
+        // EJS_emulator antigo). O modal de cheats já faz esse saveSettings()
+        // depois de mutar; aqui faltava.
+        emu?.saveSettings?.();
     }, []);
 
     const tabs: Array<{ id: typeof tab; label: string }> = [
