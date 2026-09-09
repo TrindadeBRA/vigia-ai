@@ -79,3 +79,22 @@ jobs:
         run: |
           pio run -e wokwi
           pio run -e esp32dev
+
+  3ds:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build 3DS (host stub + citro2d check)
+        run: |
+          # Host stub (sem devkit) — garante que parse/state compilam no CI sem SDK
+          apt-get update && apt-get install -y g++ >/dev/null 2>&1 || true
+          g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/core/state.cpp -o /tmp/state.o
+          g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/net/parse.cpp -o /tmp/parse.o
+          g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/ui/theme.cpp -o /tmp/theme.o
+          echo "host stub ok"
+      - name: Build 3DS .3dsx (devkitARM)
+        working-directory: 3ds
+        run: |
+          make -j$(nproc)
+          ls -lh vigia-ai.elf vigia-ai.3dsx

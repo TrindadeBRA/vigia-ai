@@ -53,6 +53,9 @@ uso: ./dev <comando>
   ./dev firmware wokwi  só compila o env wokwi (não sobe o gateway)
   ./dev firmware flash  grava na ESP32
   ./dev firmware monitor
+  ./dev 3ds build       app Nintendo 3DS .3dsx (precisa devkitARM)
+  ./dev 3ds cia         app Nintendo 3DS .cia (precisa makerom+bannertool)
+  ./dev 3ds clean       limpa build 3DS
   ./dev app             app desktop (Electron) em desenvolvimento
   ./dev app build       instalador da plataforma atual (dist/)
   ./dev test            vitest + tsc (backend/frontend/desktop)
@@ -718,6 +721,31 @@ case "$1" in
       monitor) run_pio device monitor -b "$MONITOR_BAUD" ;;
       *)
         echo "uso: ./dev firmware {build|wokwi|flash|monitor}" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  3ds)
+    shift
+    case "${1:-}" in
+      build)
+        if [ -z "${DEVKITARM:-}" ]; then
+          echo "DEVKITARM nao definido — tentando host stub (sem citro2d)" >&2
+          g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/core/state.cpp -o /tmp/3ds_state.o && \
+          g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/net/parse.cpp -o /tmp/3ds_parse.o && \
+          g++ -std=c++17 -I3ds/src -I3ds/include -c 3ds/src/ui/theme.cpp -o /tmp/3ds_theme.o && \
+          echo "host stub ok (instale devkitPro para .3dsx/.cia: https://devkitpro.org/wiki/Getting_Started)" || exit 1
+          exit 0
+        fi
+        (cd "$ROOT_DIR/3ds" && make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)")
+        ;;
+      cia)
+        if [ -z "${DEVKITARM:-}" ]; then echo "erro: DEVKITARM nao definido" >&2; exit 1; fi
+        (cd "$ROOT_DIR/3ds" && make cia -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)")
+        ;;
+      clean) (cd "$ROOT_DIR/3ds" && make clean) ;;
+      *)
+        echo "uso: ./dev 3ds {build|cia|clean}" >&2
         exit 1
         ;;
     esac
