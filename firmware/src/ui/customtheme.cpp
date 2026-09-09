@@ -21,6 +21,7 @@ using fs::File;
 #include "assets/icons/icon_gpt.h"
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
+#include "assets/icons/icon_spotify.h"
 #include "assets/icons/icon_weather.h"
 
 static const char *kMetaPath = "/theme.json";
@@ -41,6 +42,7 @@ enum ThemeIconKind : uint8_t
   TICON_WEATHER,
   TICON_BITCOIN,
   TICON_ADSENSE,
+  TICON_SPOTIFY,
   TICON_BRAND,
   TICON_COUNT
 };
@@ -124,6 +126,33 @@ static bool g_active = false;
 static String g_rawJson;
 static File g_uploadFile;
 
+// true = a próxima paintCustomHome() precisa repintar o fundo inteiro (tela
+// acabou de ser limpa, tema mudou, etc.); false = o fundo já está correto na
+// tela e paintCustomHome() pode só atualizar os widgets por cima dele — evita
+// o "pisca" de redesenhar a tela inteira a cada refresh periódico de dado
+// (usage/spotify chamam uiRefreshData() de poucos em poucos segundos).
+static bool g_bgDirty = true;
+
+// Última caixa (x0,y0,w,h) desenhada por cada ícone do tema — usada só pra
+// apagar o retângulo antigo quando ele encolhe entre um refresh e outro (ex.:
+// música do Spotify troca pra um título mais curto), já que sem repintar o
+// fundo inteiro uma caixa nova menor deixaria uma sobra da caixa antiga.
+struct ThemeWidgetRect
+{
+  int x0 = 0, y0 = 0, w = 0, h = 0;
+  bool valid = false;
+};
+static ThemeWidgetRect g_iconRects[kMaxIcons];
+
+void customThemeInvalidateBackground()
+{
+  g_bgDirty = true;
+  for (int i = 0; i < kMaxIcons; i++)
+  {
+    g_iconRects[i].valid = false;
+  }
+}
+
 static float clampf(float v, float lo, float hi)
 {
   return v < lo ? lo : (v > hi ? hi : v);
@@ -186,7 +215,7 @@ static bool parseIconKind(const String &s, ThemeIconKind &out)
 {
   static const char *kNames[TICON_COUNT] = {"claude", "gpt", "cursor", "openrouter",
                                             "deepseek", "opencode", "fal", "weather", "bitcoin",
-                                            "adsense", "brand"};
+                                            "adsense", "spotify", "brand"};
   for (int i = 0; i < TICON_COUNT; i++)
   {
     if (s == kNames[i])
@@ -538,6 +567,8 @@ static IconRef iconRefFor(ThemeIconKind k)
     return {ICON_BITCOIN, ICON_BITCOIN_W, ICON_BITCOIN_H};
   case TICON_ADSENSE:
     return {ICON_ADSENSE, ICON_ADSENSE_W, ICON_ADSENSE_H};
+  case TICON_SPOTIFY:
+    return {ICON_SPOTIFY, ICON_SPOTIFY_W, ICON_SPOTIFY_H};
   default:
     return {nullptr, 0, 0};
   }
@@ -626,6 +657,149 @@ static void drawThemeBackground(const CustomTheme &t)
   tft.fillRect(0, 0, fullW, fullH, t.bgColor);
 }
 
+// Repinta só um retângulo do fundo (cor ou recorte da imagem, na resolução
+// cheia) — usado por eraseStaleRect() pra apagar a sobra de uma caixa de
+// widget que encolheu entre dois refreshes, sem precisar repintar a tela
+// inteira (ver g_bgDirty/customThemeInvalidateBackground).
+static uint16_t g_restoreRowBuf[240];
+static uint16_t g_restoreOutRow[480];
+
+static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, int h)
+{
+  const int fullW = tft.width();
+  const int fullH = tft.height();
+  if (x0 < 0)
+  {
+    w += x0;
+    x0 = 0;
+  }
+  if (y0 < 0)
+  {
+    h += y0;
+    y0 = 0;
+  }
+  if (x0 + w > fullW)
+  {
+    w = fullW - x0;
+  }
+  if (y0 + h > fullH)
+  {
+    h = fullH - y0;
+  }
+  if (w <= 0 || h <= 0)
+  {
+    return;
+  }
+  if (t.bgKind != TBG_IMAGE)
+  {
+    tft.fillRect(x0, y0, w, h, t.bgColor);
+    return;
+  }
+  const int halfW = customThemeCanvasWidth();
+  const int halfH = customThemeCanvasHeight();
+  if (halfW <= 0 || halfW > 240 || halfH <= 0)
+  {
+    tft.fillRect(x0, y0, w, h, t.bgColor);
+    return;
+  }
+  const size_t expected = (size_t)halfW * (size_t)halfH * 2;
+  const bool useRam = g_bgRam && g_bgRamLen == expected;
+  File f;
+  bool useFile = false;
+  if (!useRam && g_fsOk)
+  {
+    f = LittleFS.open(kBgPath, "r");
+    useFile = (bool)f && (size_t)f.size() == expected;
+    if (f && !useFile)
+    {
+      f.close();
+    }
+  }
+  if (!useRam && !useFile)
+  {
+    tft.fillRect(x0, y0, w, h, t.bgColor);
+    return;
+  }
+  const int sx0 = x0 / 2;
+  int sw = (x0 + w - 1) / 2 - sx0 + 1;
+  if (sx0 + sw > halfW)
+  {
+    sw = halfW - sx0;
+  }
+  if (sw <= 0)
+  {
+    if (useFile)
+    {
+      f.close();
+    }
+    return;
+  }
+  tft.setSwapBytes(true);
+  for (int y = y0; y < y0 + h; y++)
+  {
+    int sy = y / 2;
+    if (sy >= halfH)
+    {
+      sy = halfH - 1;
+    }
+    const uint16_t *srcRow;
+    if (useRam)
+    {
+      srcRow = (const uint16_t *)g_bgRam + (size_t)sy * halfW + sx0;
+    }
+    else
+    {
+      f.seek(((size_t)sy * halfW + sx0) * 2, fs::SeekSet);
+      if (f.read((uint8_t *)g_restoreRowBuf, (size_t)sw * 2) != (size_t)sw * 2)
+      {
+        break;
+      }
+      srcRow = g_restoreRowBuf;
+    }
+    for (int x = 0; x < w; x++)
+    {
+      int sx = (x0 + x) / 2 - sx0;
+      if (sx < 0)
+      {
+        sx = 0;
+      }
+      if (sx >= sw)
+      {
+        sx = sw - 1;
+      }
+      g_restoreOutRow[x] = srcRow[sx];
+    }
+    tft.pushImage(x0, y, w, 1, g_restoreOutRow);
+  }
+  tft.setSwapBytes(false);
+  if (useFile)
+  {
+    f.close();
+  }
+}
+
+// Se a caixa anterior do widget não cabe inteira dentro da nova, a sobra
+// (fundo pintado só com essa caixa antiga) ficaria visível — restaura só essa
+// sobra antes de desenhar por cima. Atualiza o rect guardado pro próximo
+// refresh.
+static void eraseStaleRect(const CustomTheme &t, ThemeWidgetRect &prev, int nx0, int ny0, int nw, int nh)
+{
+  if (prev.valid)
+  {
+    const bool contained = nx0 <= prev.x0 && ny0 <= prev.y0 &&
+                            nx0 + nw >= prev.x0 + prev.w && ny0 + nh >= prev.y0 + prev.h;
+    if (!contained)
+    {
+      restoreBackgroundRect(t, prev.x0, prev.y0, prev.w, prev.h);
+    }
+  }
+  prev.x0 = nx0;
+  prev.y0 = ny0;
+  prev.w = nw;
+  prev.h = nh;
+  prev.valid = true;
+}
+
 // Buffer de escala nearest-neighbor pros ícones (base 20x20, até 4x = 80x80).
 constexpr int kIconScaledMax = 80;
 static uint16_t g_iconScaleBuf[kIconScaledMax * kIconScaledMax];
@@ -656,7 +830,7 @@ static const char *defaultMetricFor(ThemeIconKind k)
 
 static const char *resolvedMetric(const ThemeIcon &icon)
 {
-  if (icon.kind == TICON_BRAND || icon.kind == TICON_WEATHER)
+  if (icon.kind == TICON_BRAND || icon.kind == TICON_WEATHER || icon.kind == TICON_SPOTIFY)
   {
     return "";
   }
@@ -1116,7 +1290,7 @@ static void drawThemeCardTitle(int x, int y, int maxW, const String &name, const
   tft.drawString(s, x, y + tft.fontHeight(2) + 1, 1);
 }
 
-static void drawThemeCard(const ThemeIcon &icon)
+static void drawThemeCard(const ThemeIcon &icon, int idx)
 {
   ThemeCardContent c = themeCardContentFor(icon.kind);
   const float sc = icon.scale;
@@ -1148,6 +1322,7 @@ static void drawThemeCard(const ThemeIcon &icon)
     clampBoxCenter(cx, cy, cardW, cardH, tft.width(), tft.height());
     const int x0 = cx - cardW / 2;
     const int y0 = cy - cardH / 2;
+    eraseStaleRect(g_theme, g_iconRects[idx], x0, y0, cardW, cardH);
     if (box)
     {
       if (icon.hasColor)
@@ -1203,6 +1378,7 @@ static void drawThemeCard(const ThemeIcon &icon)
   clampBoxCenter(cx, cy, cardW, cardH, tft.width(), tft.height());
   const int x0 = cx - cardW / 2;
   const int y0 = cy - cardH / 2;
+  eraseStaleRect(g_theme, g_iconRects[idx], x0, y0, cardW, cardH);
 
   if (box)
   {
@@ -1242,35 +1418,34 @@ static void drawThemeCard(const ThemeIcon &icon)
   }
 }
 
-static void drawThemeWeather(const ThemeIcon &icon)
+static void drawThemeWeather(const ThemeIcon &icon, int idx)
 {
   int cx = (int)(icon.x * tft.width());
   int cy = (int)(icon.y * tft.height());
   const WeatherData &w = g_snap.weather;
   char tempBuf[16];
-  const char *iconLabel = "clima";
   if (w.hasData && w.ok && w.temperature > -900)
   {
     int t = (int)roundf(w.temperature);
     // TFT_eSPI usa font sem glifo de grau; C/F ASCII
     snprintf(tempBuf, sizeof(tempBuf), "%d %s", t,
              (w.tempUnit.indexOf('F') >= 0 || w.tempUnit.indexOf('f') >= 0) ? "F" : "C");
-    if (w.weatherCode >= 0)
-      iconLabel = weatherWmoText(w.weatherCode);
   }
   else
   {
     snprintf(tempBuf, sizeof(tempBuf), "--");
   }
   const uint8_t font = icon.scale >= 2.0f ? 4 : 2;
-  tft.setTextDatum(MC_DATUM);
-  int iconW = tft.textWidth(iconLabel, font);
   int tempW = tft.textWidth(tempBuf, font);
-  int gap = 4;
+  int tempH = tft.fontHeight(font);
+  int iconW = 0, iconH = 0;
+  bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
+  int gap = hasIcon ? 4 : 0;
   int padX = 6;
   int padY = 4;
-  int boxW = iconW + gap + tempW + padX * 2;
-  int boxH = tft.fontHeight(font) + padY * 2;
+  int innerH = hasIcon ? max(iconH, tempH) : tempH;
+  int boxW = padX * 2 + (hasIcon ? iconW + gap : 0) + tempW;
+  int boxH = innerH + padY * 2;
   if (boxW < 40)
     boxW = 40;
   if (boxH < 18)
@@ -1278,6 +1453,7 @@ static void drawThemeWeather(const ThemeIcon &icon)
   clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
   int y0 = cy - boxH / 2;
+  eraseStaleRect(g_theme, g_iconRects[idx], x0, y0, boxW, boxH);
   const bool box = icon.showBackground;
   uint16_t bgCol = icon.hasBgColor ? icon.bgColor : 0x1082;
   uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
@@ -1293,22 +1469,135 @@ static void drawThemeWeather(const ThemeIcon &icon)
       tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
     }
   }
-  int totalW = iconW + gap + tempW;
-  int startX = cx - totalW / 2;
-  int textY = cy;
-  tft.setTextDatum(MC_DATUM);
+  if (hasIcon)
+  {
+    int iconX = x0 + padX;
+    int iconY = y0 + (boxH - iconH) / 2;
+    tft.setSwapBytes(true);
+    tft.pushImage(iconX, iconY, iconW, iconH, g_iconScaleBuf, kBakedCard);
+    tft.setSwapBytes(false);
+  }
+  int textX = x0 + padX + (hasIcon ? iconW + gap : 0);
+  // Centraliza verticalmente o texto no box (MC seria centralizado no cx,
+  // mas aqui o texto fica à direita do ícone, então usamos ML/C para alinhar em cy)
+  tft.setTextDatum(ML_DATUM);
   box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
-  int iconCx = startX + iconW / 2;
-  int tempCx = startX + iconW + gap + tempW / 2;
-  tft.drawString(iconLabel, iconCx, textY, font);
-  tft.drawString(tempBuf, tempCx, textY, font);
+  tft.drawString(tempBuf, textX, cy, font);
 }
 
-static void drawThemeIcon(const ThemeIcon &icon)
+static void drawThemeSpotify(const ThemeIcon &icon, int idx)
+{
+  int cx = (int)(icon.x * tft.width());
+  int cy = (int)(icon.y * tft.height());
+  const SpotifyData &s = g_snap.spotify;
+  String title, subtitle;
+  if (!s.hasData || !s.configured) {
+    title = "Spotify";
+    subtitle = "desconectado";
+  } else if (!s.ok) {
+    title = "Spotify";
+    subtitle = s.error.length() ? s.error.substring(0, 18) : "erro";
+  } else if (!s.trackName.length()) {
+    title = "Nada tocando";
+    subtitle = s.isPlaying ? "tocando" : "pausado";
+  } else {
+    title = s.trackName;
+    subtitle = s.artists.length() ? s.artists : (s.isPlaying ? "tocando" : "pausado");
+  }
+  // Trunca para caber no chip
+  const uint8_t fontTitle = icon.scale >= 1.8f ? 2 : 2;
+  const uint8_t fontSub = 1;
+  // Largura máxima estimada para texto (evita box gigante)
+  int maxTextW = 110;
+  if (icon.scale > 1.5f) maxTextW = (int)(110 * icon.scale);
+  if (maxTextW > tft.width() - 20) maxTextW = tft.width() - 20;
+  // Corta título se precisar
+  while (title.length() > 0 && tft.textWidth(title, fontTitle) > maxTextW) {
+    title.remove(title.length() - 1);
+  }
+  while (subtitle.length() > 0 && tft.textWidth(subtitle, fontSub) > maxTextW) {
+    subtitle.remove(subtitle.length() - 1);
+  }
+  if (title.length() == 0) title = "--";
+  int titleW = tft.textWidth(title, fontTitle);
+  int subW = subtitle.length() ? tft.textWidth(subtitle, fontSub) : 0;
+  int textW = max(titleW, subW);
+  int titleH = tft.fontHeight(fontTitle);
+  int subH = subtitle.length() ? tft.fontHeight(fontSub) : 0;
+  int textH = titleH + (subtitle.length() ? 2 + subH : 0);
+  int iconW = 0, iconH = 0;
+  // Sem tint automático: o ícone já traz as cores da marca (verde Spotify)
+  // pintadas no próprio PNG (ver assets/icons/spotify.png) — aplicar uma cor
+  // por cima (ex.: "verde quando tocando") só achatava o ícone pra monocromo,
+  // e o valor usado pra isso nem era verde em RGB565 (saía azulado).
+  bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
+  int gap = hasIcon ? 6 : 0;
+  int padX = 6;
+  int padY = 4;
+  int innerH = max(hasIcon ? iconH : 0, textH);
+  int boxW = padX * 2 + (hasIcon ? iconW + gap : 0) + textW + 6;
+  int boxH = innerH + padY * 2;
+  if (boxW < 70) boxW = 70;
+  if (boxH < 28) boxH = 28;
+  if (boxW > tft.width() - 4) boxW = tft.width() - 4;
+  clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
+  int x0 = cx - boxW / 2;
+  int y0 = cy - boxH / 2;
+  eraseStaleRect(g_theme, g_iconRects[idx], x0, y0, boxW, boxH);
+  const bool box = icon.showBackground;
+  uint16_t bgCol = icon.hasBgColor ? icon.bgColor : 0x1082;
+  uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
+  if (box) {
+    if (icon.hasColor) {
+      tft.drawRoundRect(x0, y0, boxW, boxH, 6, icon.color);
+      tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+    } else {
+      tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    }
+  }
+  if (hasIcon) {
+    int iconX = x0 + padX;
+    int iconY = y0 + (boxH - iconH) / 2;
+    tft.setSwapBytes(true);
+    tft.pushImage(iconX, iconY, iconW, iconH, g_iconScaleBuf, kBakedCard);
+    tft.setSwapBytes(false);
+  }
+  int textX = x0 + padX + (hasIcon ? iconW + gap : 0);
+  int textY = y0 + padY + (innerH - textH) / 2;
+  tft.setTextDatum(TL_DATUM);
+  // Título
+  box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
+  tft.drawString(title, textX, textY, fontTitle);
+  if (subtitle.length()) {
+    tft.setTextDatum(TL_DATUM);
+    box ? tft.setTextColor(0xAD75, bgCol) : tft.setTextColor(0xAD75);
+    tft.drawString(subtitle, textX, textY + titleH + 2, fontSub);
+  }
+  // Indicador play/pause pequeno no canto superior direito interno (triângulo/barras)
+  if (s.hasData && s.configured && s.ok && s.trackName.length()) {
+    int indX = x0 + boxW - 8;
+    int indY = y0 + 6;
+    if (s.isPlaying) {
+      // triângulo play
+      tft.fillTriangle(indX, indY, indX, indY + 6, indX + 5, indY + 3, fg);
+    } else {
+      // duas barras pause
+      tft.fillRect(indX, indY, 2, 6, fg);
+      tft.fillRect(indX + 4, indY, 2, 6, fg);
+    }
+  }
+}
+
+static void drawThemeIcon(const ThemeIcon &icon, int idx)
 {
   if (icon.kind == TICON_WEATHER)
   {
-    drawThemeWeather(icon);
+    drawThemeWeather(icon, idx);
+    return;
+  }
+  if (icon.kind == TICON_SPOTIFY)
+  {
+    drawThemeSpotify(icon, idx);
     return;
   }
   int cx = (int)(icon.x * tft.width());
@@ -1317,12 +1606,13 @@ static void drawThemeIcon(const ThemeIcon &icon)
   {
     const int r = (int)(10 * icon.scale);
     clampBoxCenter(cx, cy, r * 2, r * 2, tft.width(), tft.height());
+    eraseStaleRect(g_theme, g_iconRects[idx], cx - r, cy - r, r * 2, r * 2);
     drawEyeIcon(cx, cy, r, 0, 0, 0.0f);
     return;
   }
   if (icon.style == TSTYLE_CARD)
   {
-    drawThemeCard(icon);
+    drawThemeCard(icon, idx);
     return;
   }
   int targetW = 0;
@@ -1335,6 +1625,7 @@ static void drawThemeIcon(const ThemeIcon &icon)
   if (!val.length())
   {
     clampBoxCenter(cx, cy, targetW, targetH, tft.width(), tft.height());
+    eraseStaleRect(g_theme, g_iconRects[idx], cx - targetW / 2, cy - targetH / 2, targetW, targetH);
     tft.setSwapBytes(true);
     tft.pushImage(cx - targetW / 2, cy - targetH / 2, targetW, targetH, g_iconScaleBuf, kBakedCard);
     tft.setSwapBytes(false);
@@ -1352,6 +1643,7 @@ static void drawThemeIcon(const ThemeIcon &icon)
   clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
   int y0 = cy - boxH / 2;
+  eraseStaleRect(g_theme, g_iconRects[idx], x0, y0, boxW, boxH);
   const bool box = icon.showBackground;
   uint16_t bgCol = icon.hasBgColor ? icon.bgColor : 0x1082;
   uint16_t fg = icon.hasColor ? icon.color : COL_TEXT;
@@ -1521,14 +1813,18 @@ void paintCustomHome()
   {
     return;
   }
-  drawThemeBackground(g_theme);
+  if (g_bgDirty)
+  {
+    drawThemeBackground(g_theme);
+    g_bgDirty = false;
+  }
   if (g_theme.clock.enabled)
   {
     drawThemeClock(g_theme.clock);
   }
   for (int i = 0; i < g_theme.iconCount; i++)
   {
-    drawThemeIcon(g_theme.icons[i]);
+    drawThemeIcon(g_theme.icons[i], i);
   }
   for (int i = 0; i < g_theme.textCount; i++)
   {

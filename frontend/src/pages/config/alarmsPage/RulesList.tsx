@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { deleteAlarm, patchAlarm } from "../../../api/client";
 import type { AlarmMetric, AlarmsPublic } from "../../../api/types";
 import { cn } from "../../../cn";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 import { SlidersIcon, TrashIcon } from "../../../components/icons";
 import { useRequest } from "../../../hooks/useRequest";
 import { cfgHint, iconBtn } from "../../../tw";
@@ -119,6 +120,7 @@ function RuleRow({
   const toggle = useRequest();
   const remove = useRequest();
   const save = useRequest();
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editThreshold, setEditThreshold] = useState(rule.threshold);
   const [editUnit, setEditUnit] = useState<string>((rule as unknown as { threshold_unit?: string }).threshold_unit ?? "minutes");
@@ -245,16 +247,7 @@ function RuleRow({
             className={cn(iconBtn, "text-bad hover:text-bad")}
             aria-label={c.remove}
             disabled={remove.busy}
-            onClick={() =>
-              remove.run(
-                async () => {
-                  const res = await deleteAlarm(rule.id);
-                  if (res.ok) await onReload();
-                  return res;
-                },
-                { success: c.removed },
-              )
-            }
+            onClick={() => setConfirmingRemove(true)}
           >
             <TrashIcon size={16} />
           </button>
@@ -269,6 +262,25 @@ function RuleRow({
           />
         </div>
       ) : null}
+      <ConfirmModal
+        open={confirmingRemove}
+        title={c.confirmRemoveTitle}
+        body={c.confirmRemoveBody(customName || metricLabel)}
+        confirmLabel={c.remove}
+        cancelLabel={c.cancel}
+        onCancel={() => setConfirmingRemove(false)}
+        onConfirm={() => {
+          setConfirmingRemove(false);
+          void remove.run(
+            async () => {
+              const res = await deleteAlarm(rule.id);
+              if (res.ok) await onReload();
+              return res;
+            },
+            { success: c.removed },
+          );
+        }}
+      />
     </li>
   );
 }

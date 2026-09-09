@@ -23,9 +23,10 @@ static bool g_liveHasFrame = false;
 static int g_backX0 = 0;
 static int g_backY0 = 0;
 static int g_backS = 36;
-static int g_fitX0 = 0;
-static int g_fitY0 = 0;
-static int g_fitS = 36;
+static int g_hideX0 = 0;
+static int g_hideY0 = 0;
+static int g_hideS = 36;
+static bool g_chromeHidden = false;
 
 static void drawCameraPtzPad();
 
@@ -39,27 +40,20 @@ static void drawLiveBack()
   drawBackChevron(g_backX0 + g_backS / 2, g_backY0 + g_backS / 2, COL_TEXT);
 }
 
-static void drawLiveFit()
+static void drawLiveHide()
 {
-  g_fitS = 36;
-  g_fitX0 = g_backX0 + g_backS + 6;
-  g_fitY0 = g_backY0;
-  tft.fillRoundRect(g_fitX0, g_fitY0, g_fitS, g_fitS, 8, COL_CARD);
-  tft.drawRoundRect(g_fitX0, g_fitY0, g_fitS, g_fitS, 8, COL_CARD_BORDER);
-  const int x = g_fitX0;
-  const int y = g_fitY0;
-  const int s = g_fitS;
-  // Cover: retangulo preenchido (preenche a tela). Contain: moldura +
-  // retangulo menor (encaixa com barras).
-  if (cameraClientFitCover())
-  {
-    tft.fillRoundRect(x + 8, y + 10, s - 16, s - 20, 2, COL_TEXT);
-  }
-  else
-  {
-    tft.drawRoundRect(x + 7, y + 7, s - 14, s - 14, 3, COL_TEXT);
-    tft.fillRoundRect(x + 12, y + 13, s - 24, s - 26, 2, COL_TEXT_MUTED);
-  }
+  g_hideS = 36;
+  g_hideX0 = g_backX0 + g_backS + 6;
+  g_hideY0 = g_backY0;
+  tft.fillRoundRect(g_hideX0, g_hideY0, g_hideS, g_hideS, 8, COL_CARD);
+  tft.drawRoundRect(g_hideX0, g_hideY0, g_hideS, g_hideS, 8, COL_CARD_BORDER);
+  // Olho riscado: esconde os controles pra ver a câmera sem nada em cima.
+  const int cx = g_hideX0 + g_hideS / 2;
+  const int cy = g_hideY0 + g_hideS / 2;
+  tft.drawCircle(cx, cy, 8, COL_TEXT);
+  tft.fillCircle(cx, cy, 3, COL_TEXT);
+  tft.drawLine(cx - 11, cy - 11, cx + 11, cy + 11, COL_TEXT);
+  tft.drawLine(cx - 11, cy - 10, cx + 11, cy + 12, COL_TEXT);
 }
 
 static void addBtnHole(int x, int y, int s)
@@ -70,12 +64,17 @@ static void addBtnHole(int x, int y, int s)
 
 static void drawLiveChrome()
 {
-  drawLiveBack();
-  drawLiveFit();
-  drawCameraPtzPad();
   cameraClientClearOverlayHoles();
+  if (g_chromeHidden)
+  {
+    g_ptzVisible = false;
+    return;
+  }
+  drawLiveBack();
+  drawLiveHide();
+  drawCameraPtzPad();
   addBtnHole(g_backX0, g_backY0, g_backS);
-  addBtnHole(g_fitX0, g_fitY0, g_fitS);
+  addBtnHole(g_hideX0, g_hideY0, g_hideS);
   if (g_ptzVisible)
   {
     for (int i = 0; i < 6; i++)
@@ -241,6 +240,7 @@ void paintCameraLive()
 {
   const UiStrings &t = uiTr();
   g_ptzVisible = false;
+  tft.resetViewport();
   tft.fillScreen(COL_BG);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(COL_TEXT_MUTED, COL_BG);
@@ -292,21 +292,20 @@ bool cameraLiveHandlePointer(bool down, int16_t x, int16_t y)
   }
   if (down)
   {
+    if (g_chromeHidden)
+    {
+      g_chromeHidden = false;
+      drawLiveChrome();
+      return true;
+    }
     if (x >= g_backX0 && x < g_backX0 + g_backS && y >= g_backY0 && y < g_backY0 + g_backS)
     {
       uiSetView(VIEW_CAMERAS);
       return true;
     }
-    if (x >= g_fitX0 && x < g_fitX0 + g_fitS && y >= g_fitY0 && y < g_fitY0 + g_fitS)
+    if (x >= g_hideX0 && x < g_hideX0 + g_hideS && y >= g_hideY0 && y < g_hideY0 + g_hideS)
     {
-      cameraClientToggleFit();
-      g_liveHasFrame = false;
-      g_liveErr = "";
-      tft.fillScreen(COL_BG);
-      const UiStrings &t = uiTr();
-      tft.setTextDatum(MC_DATUM);
-      tft.setTextColor(COL_TEXT_MUTED, COL_BG);
-      tft.drawString(t.cameraLoading, tft.width() / 2, tft.height() / 2, 2);
+      g_chromeHidden = true;
       drawLiveChrome();
       return true;
     }
@@ -332,6 +331,7 @@ void cameraLiveOnEnter()
 {
   g_liveHasFrame = false;
   g_liveErr = "";
+  g_chromeHidden = false;
 }
 
 void uiTickCamera()

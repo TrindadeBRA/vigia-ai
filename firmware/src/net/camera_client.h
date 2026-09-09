@@ -25,8 +25,10 @@ int cameraPtzCount();
 
 void cameraClientFetchList();
 void cameraClientPoll();
+void cameraClientOnShowList();
 void cameraClientEnterLive();
 void cameraClientExitLive();
+void cameraClientTickLive();
 bool cameraClientPtzHeld();
 void cameraClientSetPtzHeld(bool held);
 bool cameraClientSendPtz(const char *action);

@@ -77,7 +77,7 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "remaining_cents": 1300,
       "bonus_cents": 0,
       "cycle_end": "2026-09-15T00:00:00Z",
-      "plan": "pro",
+      "plan": "PRO",
       "requests_used": null,
       "requests_limit": null
     }
@@ -275,7 +275,7 @@ Cota da assinatura ChatGPT / Codex CLI — ver `APIS_GPT.md`.
 | `remaining_cents` | number ou `null` | On-demand ainda disponível                                                                       |
 | `bonus_cents`     | number ou `null` | Crédito extra, se houver                                                                         |
 | `cycle_end`       | string ou `null` | Fim do ciclo de fatura                                                                           |
-| `plan`            | string ou `null` | Ex.: `pro`, `ultra` — `null` pra contas extras coladas (o plano só é lido do login local do Mac) |
+| `plan`            | string ou `null` | Ex.: `PRO`, `ultra` — `pro` do Cursor vira `PRO`; `null` pra contas extras coladas (o plano só é lido do login local do Mac) |
 | `requests_used`   | number ou `null` | Só no fallback legado `auth/usage`                                                               |
 | `requests_limit`  | number ou `null` | Só no fallback legado `auth/usage`                                                               |
 

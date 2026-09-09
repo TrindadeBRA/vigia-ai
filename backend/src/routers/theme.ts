@@ -109,6 +109,10 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     } catch (e) {
       return reply.code(500).send({ ok: false, error: String(e) });
     }
+    try {
+      const hub = (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub;
+      hub?.notifyThemeChanged?.();
+    } catch {}
     return { ok: true };
   });
 
@@ -148,6 +152,10 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
 
   app.delete("/api/theme", async () => {
     try { unlinkSync(metaPath()); } catch {}
+    try {
+      const hub = (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub;
+      hub?.notifyThemeChanged?.();
+    } catch {}
     return { ok: true };
   });
 }

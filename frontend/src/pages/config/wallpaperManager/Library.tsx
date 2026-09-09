@@ -1,8 +1,9 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../../../cn";
+import { ConfirmModal } from "../../../components/ConfirmModal";
 import { cfgStatus } from "../../../tw";
 import { Button, Card, FieldStatus, SelectField } from "../ui";
 import { useWp } from "./context";
@@ -40,6 +41,7 @@ export function WallpaperLibrary() {
     } = useWp();
     const fileRef = useRef<HTMLInputElement>(null);
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+    const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
     // Wallhaven: carrega 9 wallpapers automaticamente ao abrir (mesmo sem busca)
     useEffect(() => {
@@ -105,7 +107,7 @@ export function WallpaperLibrary() {
                                             active={w.id === selectedId}
                                             selectedLabel={c.wallpaperSelected}
                                             onSelect={() => void selectReq.run(() => handleSelect(w.id), { error: c.wallpaperSelectError })}
-                                            onDelete={() => { if (confirm(`Remover ${w.id}?`)) void uploadReq.run(() => handleDelete(w.id), { success: c.imported, error: c.importError }); }}
+                                            onDelete={() => setConfirmingDeleteId(w.id)}
                                         />
                                     ))}
                                 </div>
@@ -200,6 +202,19 @@ export function WallpaperLibrary() {
                     ) : null}
                 </div>
             </Card>
+            <ConfirmModal
+                open={Boolean(confirmingDeleteId)}
+                title={c.wallpaperRemoveConfirmTitle}
+                body={c.wallpaperRemoveConfirmBody(confirmingDeleteId || "")}
+                confirmLabel={c.wallpaperRemoveConfirmAction}
+                cancelLabel={c.cancel}
+                onCancel={() => setConfirmingDeleteId(null)}
+                onConfirm={() => {
+                    const id = confirmingDeleteId;
+                    setConfirmingDeleteId(null);
+                    if (id) void uploadReq.run(() => handleDelete(id), { success: c.imported, error: c.importError });
+                }}
+            />
         </div>
     );
 }

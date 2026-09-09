@@ -100,5 +100,9 @@ void uiDetailScrollBy(int dy);
 bool uiCanScroll();
 void uiHandleTap(int16_t x, int16_t y);
 void uiHandlePointerUp(int16_t x, int16_t y);
+// Chamado a cada tick com o dedo ainda na tela (não só na borda do toque) —
+// usado só pra saber se o dedo está sobre o olho da marca (dilata a pupila
+// enquanto segurado, igual ao hover do logo web). Não afeta tap/swipe.
+void uiHandlePointerHold(int16_t x, int16_t y);
 void uiHandleSwipe(int16_t dx);
 void uiHandleVerticalSwipe(int16_t dy);

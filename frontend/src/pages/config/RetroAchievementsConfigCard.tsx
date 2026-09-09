@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { previewRetroAchievements } from "../../api/client";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { useRequest } from "../../hooks/useRequest";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgCard, iconChip, iconImg } from "../../tw";
@@ -20,6 +21,10 @@ export function RetroAchievementsConfigCard({ c, onReload, provider }: Props) {
     const toggleEnabled = useRequest();
     const doPreview = useRequest();
     const add = useRequest();
+    const removeAccount = useRequest();
+    const [confirmingAccountId, setConfirmingAccountId] = useState<string | null>(null);
+    const [removingAccountId, setRemovingAccountId] = useState<string | null>(null);
+    const confirmingAccount = provider.accounts.find((a) => a.id === confirmingAccountId) || null;
 
     const hint = provider.configured
         ? `${provider.accounts.length ? `${provider.accounts.length} conta${provider.accounts.length === 1 ? "" : "s"}` : "configurado"}${provider.suffix ? ` · ••••${provider.suffix}` : ""}`
@@ -142,10 +147,8 @@ export function RetroAchievementsConfigCard({ c, onReload, provider }: Props) {
                                 </div>
                                 <Button
                                     variant="ghost"
-                                    onClick={async () => {
-                                        const res = await fetch(`/api/config/account/retroachievements/${a.id}`, { method: "DELETE" });
-                                        if (res.ok) await onReload();
-                                    }}
+                                    loading={removeAccount.busy && removingAccountId === a.id}
+                                    onClick={() => setConfirmingAccountId(a.id)}
                                 >
                                     {c.remove}
                                 </Button>
@@ -154,6 +157,26 @@ export function RetroAchievementsConfigCard({ c, onReload, provider }: Props) {
                     </ul>
                 </Fold>
             ) : null}
+            <ConfirmModal
+                open={Boolean(confirmingAccount)}
+                title={c.confirmRemoveTitle}
+                body={c.confirmRemoveBody(confirmingAccount?.label || confirmingAccount?.suffix || "")}
+                confirmLabel={c.remove}
+                cancelLabel={c.cancel}
+                onCancel={() => setConfirmingAccountId(null)}
+                onConfirm={() =>
+                    void removeAccount.run(async () => {
+                        const id = confirmingAccountId;
+                        setConfirmingAccountId(null);
+                        if (!id) return { ok: true };
+                        setRemovingAccountId(id);
+                        const res = await fetch(`/api/config/account/retroachievements/${id}`, { method: "DELETE" });
+                        if (res.ok) await onReload();
+                        setRemovingAccountId(null);
+                        return { ok: res.ok };
+                    }, { success: c.removed, error: c.offline })
+                }
+            />
         </article>
     );
 }

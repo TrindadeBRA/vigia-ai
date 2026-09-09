@@ -200,6 +200,155 @@ String jsonText(JsonVariantConst v)
   return String(buf);
 }
 
+// A fonte 2 da TFT_eSPI (ver ui/i18n.h) só cobre ASCII — texto dinâmico vindo
+// de fora (nome de música/artista do Spotify, etc.) pode trazer acentos em
+// UTF-8 que drawString() não decodifica, cortando o resto da string no
+// primeiro byte multi-byte. Aproxima pro ASCII mais parecido em vez de
+// deixar o restante da string sumir.
+static char foldLatin1(uint32_t cp)
+{
+  switch (cp)
+  {
+  case 0x00C0: case 0x00C1: case 0x00C2: case 0x00C3: case 0x00C4: case 0x00C5:
+    return 'A';
+  case 0x00C7:
+    return 'C';
+  case 0x00C8: case 0x00C9: case 0x00CA: case 0x00CB:
+    return 'E';
+  case 0x00CC: case 0x00CD: case 0x00CE: case 0x00CF:
+    return 'I';
+  case 0x00D1:
+    return 'N';
+  case 0x00D2: case 0x00D3: case 0x00D4: case 0x00D5: case 0x00D6: case 0x00D8:
+    return 'O';
+  case 0x00D9: case 0x00DA: case 0x00DB: case 0x00DC:
+    return 'U';
+  case 0x00DD:
+    return 'Y';
+  case 0x00E0: case 0x00E1: case 0x00E2: case 0x00E3: case 0x00E4: case 0x00E5:
+    return 'a';
+  case 0x00E7:
+    return 'c';
+  case 0x00E8: case 0x00E9: case 0x00EA: case 0x00EB:
+    return 'e';
+  case 0x00EC: case 0x00ED: case 0x00EE: case 0x00EF:
+    return 'i';
+  case 0x00F1:
+    return 'n';
+  case 0x00F2: case 0x00F3: case 0x00F4: case 0x00F5: case 0x00F6: case 0x00F8:
+    return 'o';
+  case 0x00F9: case 0x00FA: case 0x00FB: case 0x00FC:
+    return 'u';
+  case 0x00FD: case 0x00FF:
+    return 'y';
+  case 0x0106: case 0x0108: case 0x010A: case 0x010C:
+    return 'C';
+  case 0x0107: case 0x0109: case 0x010B: case 0x010D:
+    return 'c';
+  case 0x0152:
+    return 'O';
+  case 0x0153:
+    return 'o';
+  case 0x0160:
+    return 'S';
+  case 0x0161:
+    return 's';
+  case 0x017D:
+    return 'Z';
+  case 0x017E:
+    return 'z';
+  default:
+    return 0;
+  }
+}
+
+String asciiFold(const String &in)
+{
+  String out;
+  out.reserve(in.length());
+  size_t i = 0;
+  const size_t n = in.length();
+  while (i < n)
+  {
+    uint8_t c = (uint8_t)in[i];
+    if (c < 0x80)
+    {
+      out += (char)c;
+      i += 1;
+      continue;
+    }
+    uint32_t cp = 0;
+    int len = 0;
+    if ((c & 0xE0) == 0xC0)
+    {
+      cp = c & 0x1F;
+      len = 2;
+    }
+    else if ((c & 0xF0) == 0xE0)
+    {
+      cp = c & 0x0F;
+      len = 3;
+    }
+    else if ((c & 0xF8) == 0xF0)
+    {
+      cp = c & 0x07;
+      len = 4;
+    }
+    else
+    {
+      i += 1; // byte de continuacao solto ou invalido — descarta
+      continue;
+    }
+    if (i + len > n)
+    {
+      break; // sequencia UTF-8 truncada no fim da string
+    }
+    bool valid = true;
+    for (int k = 1; k < len; k++)
+    {
+      uint8_t cc = (uint8_t)in[i + k];
+      if ((cc & 0xC0) != 0x80)
+      {
+        valid = false;
+        break;
+      }
+      cp = (cp << 6) | (cc & 0x3F);
+    }
+    if (!valid)
+    {
+      i += 1;
+      continue;
+    }
+    char folded = (len == 2) ? foldLatin1(cp) : 0;
+    if (folded)
+    {
+      out += folded;
+    }
+    else if (cp == 0x2018 || cp == 0x2019)
+    {
+      out += '\'';
+    }
+    else if (cp == 0x201C || cp == 0x201D)
+    {
+      out += '"';
+    }
+    else if (cp == 0x2013 || cp == 0x2014)
+    {
+      out += '-';
+    }
+    else if (cp == 0x2026)
+    {
+      out += "...";
+    }
+    else
+    {
+      out += '?'; // sem correspondente ASCII (CJK, emoji, etc.)
+    }
+    i += len;
+  }
+  return out;
+}
+
 bool parseUsageJson(const String &body)
 {
   JsonDocument doc;

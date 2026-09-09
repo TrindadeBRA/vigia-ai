@@ -8,6 +8,7 @@
 import { BrowserWindow, app, dialog, shell } from "electron";
 import { join } from "node:path";
 
+import { fixPath } from "./fixPath";
 import { registerIpc } from "./ipc";
 import { logFile, makeLogger } from "./logger";
 import { buildMenu } from "./menu";
@@ -382,9 +383,12 @@ if (!app.requestSingleInstanceLock()) {
     app.quit();
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     process.env.VIGIA_APP_VERSION = appVersion();
     log(`Vigia AI ${appVersion()} (${isPackaged ? "empacotado" : "dev"}) frontend=${frontendDist()}`);
+    // Antes do sidecar: ele herda process.env no spawn (ver sidecar.ts) — o
+    // coletor precisa do PATH corrigido pra achar ffmpeg/adb/git.
+    await fixPath(log);
     void bootstrap();
   });
 }

@@ -10,6 +10,7 @@ import { THEME_STR } from "../pages/config/themeCopy";
 import { Button, FieldStatus, Modal, SelectField, Switch } from "../pages/config/ui";
 import { WallhavenAdvancedFilters } from "../pages/config/wallpaperManager/WallhavenAdvancedFilters";
 import { WALLHAVEN_DEFAULTS, wallhavenFiltersToQuery, type WallhavenFilters } from "../pages/config/wallpaperManager/wallhavenFilters";
+import { ConfirmModal } from "./ConfirmModal";
 
 type ProviderStatus = {
   pexels: { configured: boolean };
@@ -59,6 +60,7 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
   const [searchPage, setSearchPage] = useState(1);
   const [wallhavenFilters, setWallhavenFilters] = useState<WallhavenFilters>({ ...WALLHAVEN_DEFAULTS });
   const fileRef = useRef<HTMLInputElement>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/wallpapers", { cache: "no-store" })
@@ -234,7 +236,7 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
                     w={w}
                     active={w.id === gridId}
                     onSelect={() => void selectReq.run(() => setGridWallpaper(w.id).then(() => ({ ok: true })), { success: "Wallpaper do grid atualizado", error: "falha" })}
-                    onDelete={() => { if (confirm(`Remover wallpaper ${w.id.slice(0, 8)} da biblioteca?`)) void deleteReq.run(() => handleDelete(w.id), { success: "Removido", error: "falha ao remover" }); }}
+                    onDelete={() => setConfirmingDeleteId(w.id)}
                   />
                 ))}
               </div>
@@ -303,6 +305,19 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
           </>
         ) : null}
       </div>
+      <ConfirmModal
+        open={Boolean(confirmingDeleteId)}
+        title={c.wallpaperRemoveConfirmTitle}
+        body={c.wallpaperRemoveConfirmBody(confirmingDeleteId ? confirmingDeleteId.slice(0, 8) : "")}
+        confirmLabel={c.wallpaperRemoveConfirmAction}
+        cancelLabel={c.cancel}
+        onCancel={() => setConfirmingDeleteId(null)}
+        onConfirm={() => {
+          const id = confirmingDeleteId;
+          setConfirmingDeleteId(null);
+          if (id) void deleteReq.run(() => handleDelete(id), { success: "Removido", error: "falha ao remover" });
+        }}
+      />
     </div>
   );
 }

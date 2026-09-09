@@ -64,7 +64,7 @@ export const USAGE_EXAMPLE = {
       remaining_cents: 1300,
       bonus_cents: 0,
       cycle_end: "15/09",
-      plan: "pro",
+      plan: "PRO",
       requests_used: null,
       requests_limit: null,
     },

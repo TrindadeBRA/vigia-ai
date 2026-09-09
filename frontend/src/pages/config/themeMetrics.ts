@@ -13,6 +13,7 @@ export type ThemeProvider =
   | "bitcoin"
   | "adsense"
   | "weather"
+  | "spotify"
   | "brand";
 
 export type MetricKind = "percent" | "cents" | "btc" | "temp";
@@ -30,6 +31,7 @@ export const ICON_PROVIDERS: { id: ThemeProvider; label: string }[] = [
   { id: "bitcoin", label: "Bitcoin" },
   { id: "adsense", label: "AdSense" },
   { id: "weather", label: "Clima" },
+  { id: "spotify", label: "Spotify" },
   { id: "brand", label: "VIGIA AI" },
 ];
 
@@ -73,6 +75,7 @@ export const PROVIDER_METRICS: Record<ThemeProvider, MetricDef[]> = {
     { key: "today_cents", kind: "cents" },
   ],
   weather: [{ key: "temperature", kind: "temp" }],
+  spotify: [],
   brand: [],
 };
 
@@ -174,6 +177,10 @@ export function formatThemeMetric(
     const temp = w?.current?.temperature_2m;
     const unit = w?.current_units?.["temperature_2m"] || "°C";
     return temp != null ? fmtTemp(temp, unit) : "--";
+  }
+  if (provider === "spotify") {
+    // Spotify não vem do /usage, o chip busca /api/spotify direto; fallback mostra placeholder
+    return "";
   }
   const acc = firstAccount(usage, provider);
   if (metric === "balance_btc") return fmtBtc(numField(acc, "balance_btc"));

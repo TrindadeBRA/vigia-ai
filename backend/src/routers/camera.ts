@@ -134,7 +134,60 @@ function grabSnapshot(config: CameraItem, width = 0): Promise<Buffer> {
 
 const STREAM_BOUNDARY = "vigiaframe";
 const SOI = Buffer.from([0xff, 0xd8]);
-const EOI = Buffer.from([0xff, 0xd9]);
+
+// MJPEG do ffmpeg é JPEG concatenado. Não use indexOf(EOI): APP1/EXIF
+// traz um JPEG aninhado com seu próprio FF D9 e o primeiro "frame" sai
+// truncado — a placa desenha 1 quadro e os seguintes falham o decode.
+function nextCompleteJpeg(buf: Buffer): { jpeg: Buffer; rest: Buffer } | null {
+  const start = buf.indexOf(SOI);
+  if (start < 0) return null;
+  let i = start + 2;
+  while (i + 1 < buf.length) {
+    if (buf[i] !== 0xff) {
+      i++;
+      continue;
+    }
+    const marker = buf[i + 1];
+    if (marker === 0xff) {
+      i++;
+      continue;
+    }
+    if (marker === 0xd9) {
+      // EOI só vale depois do SOS. Antes disso é JPEG aninhado (EXIF).
+      i += 2;
+      continue;
+    }
+    if (marker === 0xda) {
+      if (i + 3 >= buf.length) return null;
+      const sosLen = buf.readUInt16BE(i + 2);
+      i += 2 + sosLen;
+      while (i + 1 < buf.length) {
+        if (buf[i] === 0xff && buf[i + 1] !== 0x00) {
+          const m = buf[i + 1];
+          if (m === 0xd9) {
+            const end = i + 2;
+            return { jpeg: buf.subarray(start, end), rest: buf.subarray(end) };
+          }
+          if (m >= 0xd0 && m <= 0xd7) {
+            i += 2;
+            continue;
+          }
+        }
+        i++;
+      }
+      return null;
+    }
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      i += 2;
+      continue;
+    }
+    if (i + 3 >= buf.length) return null;
+    const len = buf.readUInt16BE(i + 2);
+    if (len < 2) return null;
+    i += 2 + len;
+  }
+  return null;
+}
 
 type StreamFit = "cover" | "contain";
 
@@ -178,8 +231,14 @@ function spawnFfmpegStream(
     "-i", url,
     "-an",
     "-vf", vf,
-    ...(forBoard ? [] : ["-r", "10"]),
-    "-q:v", forBoard ? "14" : "6",
+    // Sem "-r", com probesize/analyzeduration mínimos o ffmpeg costuma
+    // inferir um fps de saída errado (do tbr do RTSP) e duplica o último
+    // frame decodificado pra "completar" a taxa — a placa recebe bytes e
+    // desenha normal (nada acusa erro), mas é sempre a MESMA imagem: parece
+    // travado no primeiro frame. "passthrough" manda só frame decodificado
+    // de verdade, sem duplicar/dropar pra bater timing nenhum.
+    ...(forBoard ? ["-fps_mode", "passthrough"] : ["-r", "10"]),
+    "-q:v", forBoard ? "16" : "6",
     "-f", "mjpeg",
     "-flush_packets", "1",
     "-",
@@ -190,15 +249,13 @@ function spawnFfmpegStream(
   proc.stdout.on("data", (chunk: Buffer) => {
     buf = Buffer.concat([buf, chunk]);
     for (;;) {
-      const start = buf.indexOf(SOI);
-      if (start === -1) { buf = Buffer.alloc(0); break; }
-      const end = buf.indexOf(EOI, start + 2);
-      if (end === -1) {
-        if (start > 0) buf = buf.subarray(start);
+      const parsed = nextCompleteJpeg(buf);
+      if (!parsed) {
+        if (buf.length > 512 * 1024) buf = Buffer.alloc(0);
         break;
       }
-      onFrame(buf.subarray(start, end + 2));
-      buf = buf.subarray(end + 2);
+      onFrame(parsed.jpeg);
+      buf = Buffer.from(parsed.rest);
     }
   });
   proc.stderr.on("data", (chunk: Buffer) => {
@@ -227,7 +284,21 @@ function spawnFfmpegStream(
 // do CameraCard.tsx). Uma entrada por câmera (chave = id da câmera).
 type StreamSub = { onFrame: (jpeg: Buffer) => void; onEnd: (err: Error | null) => void };
 const STOP_GRACE_MS = 5000;
-type StreamEntry = { stop: () => void; subs: Set<StreamSub>; stopTimer: NodeJS.Timeout | null };
+// Câmeras clone (Yoosee/HiIP) só aceitam RTSP em UDP (ver grabSnapshot) — sem
+// retransmissão, um pacote perdido no Wi-Fi desincroniza o parser H.264 do
+// ffmpeg. Com -fflags discardcorrupt+nobuffer ele não erroriza nem sai: só
+// para de emitir frame silenciosamente e fica preso assim até o próximo
+// keyframe (pode nunca vir). Sem isso, o viewer trava pra sempre no último
+// JPEG. STALL_MS dá folga pro handshake RTSP + 1º keyframe (~1-2s).
+const STALL_MS = 6000;
+const WATCHDOG_INTERVAL_MS = 2000;
+type StreamEntry = {
+  stop: () => void;
+  subs: Set<StreamSub>;
+  stopTimer: NodeJS.Timeout | null;
+  watchdog: NodeJS.Timeout | null;
+  lastFrameAt: number;
+};
 const sharedStreams = new Map<string, StreamEntry>();
 
 function streamMapKey(cameraId: string, size?: { w: number; h: number }, fit: StreamFit = "cover"): string {
@@ -238,9 +309,52 @@ function killStream(cameraId: string): void {
   for (const [key, entry] of [...sharedStreams.entries()]) {
     if (key !== cameraId && !key.startsWith(`${cameraId}:`)) continue;
     if (entry.stopTimer) clearTimeout(entry.stopTimer);
+    if (entry.watchdog) clearInterval(entry.watchdog);
     entry.stop();
     sharedStreams.delete(key);
   }
+}
+
+function startStreamEntry(
+  key: string,
+  config: CameraItem,
+  subs: Set<StreamSub>,
+  size?: { w: number; h: number },
+  fit: StreamFit = "cover",
+): StreamEntry {
+  const entry: StreamEntry = { subs, stopTimer: null, stop: () => {}, watchdog: null, lastFrameAt: Date.now() };
+  let restarting = false;
+  const spawnOne = () => {
+    entry.lastFrameAt = Date.now();
+    const kill = spawnFfmpegStream(
+      config,
+      (jpeg) => {
+        entry.lastFrameAt = Date.now();
+        for (const s of subs) s.onFrame(jpeg);
+      },
+      (err) => {
+        if (restarting) {
+          restarting = false;
+          return;
+        }
+        for (const s of subs) s.onEnd(err);
+        subs.clear();
+        if (entry.watchdog) clearInterval(entry.watchdog);
+        if (sharedStreams.get(key) === entry) sharedStreams.delete(key);
+      },
+      size,
+      fit,
+    );
+    entry.stop = kill;
+  };
+  entry.watchdog = setInterval(() => {
+    if (subs.size === 0 || Date.now() - entry.lastFrameAt < STALL_MS) return;
+    restarting = true;
+    entry.stop();
+    spawnOne();
+  }, WATCHDOG_INTERVAL_MS);
+  spawnOne();
+  return entry;
 }
 
 function subscribeStream(
@@ -258,21 +372,8 @@ function subscribeStream(
       entry.stopTimer = null;
     }
   } else {
-    const subs = new Set<StreamSub>();
-    const created: StreamEntry = { subs, stopTimer: null, stop: () => {} };
-    created.stop = spawnFfmpegStream(
-      config,
-      (jpeg) => { for (const s of subs) s.onFrame(jpeg); },
-      (err) => {
-        for (const s of subs) s.onEnd(err);
-        subs.clear();
-        if (sharedStreams.get(key) === created) sharedStreams.delete(key);
-      },
-      size,
-      fit,
-    );
-    sharedStreams.set(key, created);
-    entry = created;
+    entry = startStreamEntry(key, config, new Set<StreamSub>(), size, fit);
+    sharedStreams.set(key, entry);
   }
   entry.subs.add(sub);
   return () => {
@@ -282,6 +383,7 @@ function subscribeStream(
     if (cur.subs.size === 0) {
       cur.stopTimer = setTimeout(() => {
         if (sharedStreams.get(key) === cur && cur.subs.size === 0) {
+          if (cur.watchdog) clearInterval(cur.watchdog);
           cur.stop();
           sharedStreams.delete(key);
         }
@@ -397,23 +499,46 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     }
     reply.hijack();
     const res = reply.raw;
-    res.writeHead(200, {
-      "Content-Type": `multipart/x-mixed-replace; boundary=${STREAM_BOUNDARY}`,
-      "Cache-Control": "no-store",
-      Connection: "close",
-    });
+    const sock = res.socket;
+    sock?.setNoDelay(true);
+    const raw = Boolean(size);
+    // HTTP/1.1 + writeHead sem Content-Length vira chunked (hex + CRLF no
+    // meio do JPEG). A placa congela no 1º quadro. HTTP/1.0 no socket evita isso.
+    if (raw && sock) {
+      sock.write(
+        "HTTP/1.0 200 OK\r\nContent-Type: application/octet-stream\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n",
+      );
+    } else {
+      res.chunkedEncoding = false;
+      res.writeHead(200, {
+        "Content-Type": `multipart/x-mixed-replace; boundary=${STREAM_BOUNDARY}`,
+        "Cache-Control": "no-store",
+        Connection: "close",
+      });
+    }
     let ended = false;
     const unsubscribe = subscribeStream(id, config, {
       onFrame: (jpeg) => {
-        if (ended || res.destroyed) return;
+        if (ended) return;
+        if (raw) {
+          if (!sock || sock.destroyed) return;
+          sock.write(jpeg);
+          return;
+        }
+        if (res.destroyed) return;
         res.write(`--${STREAM_BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`);
         res.write(jpeg);
         res.write("\r\n");
       },
-      onEnd: () => {
+      onEnd: (err) => {
         if (ended) return;
         ended = true;
-        res.end();
+        // Sem isso o erro (ex.: ffmpeg ENOENT por PATH incompleto no app
+        // empacotado) morria em silêncio — a conexão só fechava sem frame
+        // nenhum, sem pista nenhuma no log do coletor.
+        if (err) request.log.warn({ cameraId: id, err: err.message }, "câmera: stream encerrado com erro");
+        if (raw) sock?.end();
+        else res.end();
       },
     }, size, fit);
     request.raw.on("close", () => {
