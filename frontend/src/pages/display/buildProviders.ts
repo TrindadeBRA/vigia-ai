@@ -2,6 +2,7 @@ import type { BitcoinAccount, CameraItem, GptAccount, UsagePayload } from "../..
 import type { WidgetKind } from "../../components/AddWidgetModal";
 import { getAdsenseMetrics } from "../../components/cards/AdsenseCard";
 import { getCreditsMetrics, getOpenCodeMetrics } from "../../components/cards/CreditsCard";
+import { friendlyGithubError } from "../../components/cards/GithubCard";
 import { getRetroMetrics } from "../../components/cards/RetroAchievementsCard";
 import { fmtBrl, fmtBtc, fmtCountdown, fmtCurrencyAmount, fmtRemain, fmtUsd } from "../../format";
 import type { T } from "../../i18n";
@@ -380,12 +381,12 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
           { label: t.githubForks, pct: null, value: repo.forks != null ? String(repo.forks) : null, sub: null },
           { label: t.githubIssues, pct: null, value: repo.open_issues != null ? String(repo.open_issues) : null, sub: null },
         ]
-        : [{ label: repoName, pct: null, value: null, sub: repo.error ?? t.noData }];
+        : [{ label: repoName, pct: null, value: null, sub: friendlyGithubError(repo.error, t) }];
       list.push({
         id: `github:${repo.id}`,
         provider: "github",
         ok: repo.ok,
-        error: repo.error,
+        error: repo.ok ? repo.error : friendlyGithubError(repo.error, t),
         title: repoName,
         label: repo.default_branch || "",
         metrics,
@@ -395,14 +396,15 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       });
     }
     if (github.repos.length === 0 && !github.ok && github.error) {
+      const ghError = friendlyGithubError(github.error, t);
       list.push({
         id: "github:main",
         provider: "github",
         ok: false,
-        error: github.error,
+        error: ghError,
         title: t.github,
         label: "",
-        metrics: [{ label: t.github, pct: null, value: null, sub: github.error }],
+        metrics: [{ label: t.github, pct: null, value: null, sub: ghError }],
         kind: "github",
         github,
       });
@@ -417,12 +419,12 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
           { label: t.githubProfileFollowers, pct: null, value: profile.followers != null ? String(profile.followers) : null, sub: null },
           { label: t.githubProfilePublicRepos, pct: null, value: profile.public_repos != null ? String(profile.public_repos) : null, sub: null },
         ]
-        : [{ label: profileName, pct: null, value: null, sub: profile.error ?? t.noData }];
+        : [{ label: profileName, pct: null, value: null, sub: friendlyGithubError(profile.error, t) }];
       list.push({
         id: `github-profile:${profile.id || profile.username}`,
         provider: "github-profile",
         ok: profile.ok,
-        error: profile.error,
+        error: profile.ok ? profile.error : friendlyGithubError(profile.error, t),
         title: profileName,
         label: profile.username,
         metrics,

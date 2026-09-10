@@ -7,7 +7,39 @@ import { cn } from "../../cn";
 import { FlameIcon, TrophyIcon } from "../icons";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
-import { cardLabel, emptyNote, errorText, num } from "../../tw";
+import { cardLabel, emptyNote, num } from "../../tw";
+
+export function friendlyGithubError(raw: string | null | undefined, t: T): string {
+    if (!raw) return t.githubErrorUnknown;
+    const s = raw.toLowerCase();
+    if (/fetch failed|failed to fetch|networkerror|enotfound|eai_again|econnrefused|econnreset|und_err|socket|não foi possível conectar|could not connect|no se pudo conectar/.test(s)) {
+        return t.githubErrorNetwork;
+    }
+    if (/timeout|timed out|aborted|etimedout|demorou demais|took too long|tardó demasiado/.test(s)) {
+        return t.githubErrorTimeout;
+    }
+    if (/limite de requisi|rate limit|too many requests|límite de solicitudes/.test(s)) {
+        return t.githubErrorRateLimit;
+    }
+    if (/http 5\d\d|indisponível|unavailable|no está disponible/.test(s)) {
+        return t.githubErrorUnavailable;
+    }
+    if (/^http \d+|typeerror|^error:/.test(s)) {
+        return t.githubErrorUnknown;
+    }
+    return raw;
+}
+
+function GithubErrorNote({ message, compact, t, hint }: { message: string | null | undefined; compact?: boolean; t: T; hint?: boolean }) {
+    return (
+        <div className="flex min-h-0 flex-1 flex-col justify-center gap-1">
+            <div className={cn("font-semibold text-bad", compact ? "text-[11px] leading-snug" : "text-[13px] leading-snug")}>
+                {friendlyGithubError(message, t)}
+            </div>
+            {hint && !compact ? <div className="text-[11px] leading-snug text-ink3">{t.githubErrorHint}</div> : null}
+        </div>
+    );
+}
 
 type GithubView = "repo" | "trending" | "top";
 const GITHUB_TOP_LANGUAGES = ["", "JavaScript", "TypeScript", "Python", "Go", "Rust", "Java", "C++", "C#", "PHP", "Ruby", "Swift", "Kotlin"];
@@ -82,7 +114,7 @@ function GithubIcon({ compact }: { compact?: boolean }) {
     );
 }
 
-function GithubHeader({ repo, compact, onOpen }: { repo: GithubRepo; compact?: boolean; onOpen?: () => void }) {
+function GithubHeader({ repo, compact, onOpen, t }: { repo: GithubRepo; compact?: boolean; onOpen?: () => void; t: T }) {
     const name = shortRepoName(repo);
     const inner = (
         <>
@@ -92,7 +124,7 @@ function GithubHeader({ repo, compact, onOpen }: { repo: GithubRepo; compact?: b
             </div>
             <div className="min-w-0 flex-1">
                 <div className={cn("overflow-hidden text-ellipsis whitespace-nowrap font-[650] leading-none", compact ? "text-[12.5px]" : "text-[14px]")}>{name}</div>
-                <div className={cardLabel}>{repo.default_branch || "--"}</div>
+                <div className={cardLabel}>{repo.ok ? (repo.default_branch || "--") : t.githubErrorLabel}</div>
             </div>
         </>
     );
@@ -197,7 +229,7 @@ function GithubExploreList({ repos, loading, error, t, emptyLabel }: { repos: Gi
         return <div className="flex flex-1 items-center"><div className={emptyNote}>{t.githubExploreLoading}</div></div>;
     }
     if (error && repos.length === 0) {
-        return <div className="flex flex-1 items-center"><div className={errorText}>{error}</div></div>;
+        return <GithubErrorNote message={error} t={t} />;
     }
     if (repos.length === 0) {
         return <div className="flex flex-1 items-center"><div className={emptyNote}>{emptyLabel ?? t.githubExploreEmpty}</div></div>;
@@ -273,9 +305,11 @@ export function GithubBoardCard({
                         <div className={cardLabel}>{repos.length} {repos.length === 1 ? "repo" : "repos"}</div>
                     </div>
                 </div>
-                <div className="flex flex-1 items-center">
-                    <div className={cn(errorText, isCompact && "text-[11px] leading-snug")}>{github?.error || t.githubEmpty}</div>
-                </div>
+                {github?.error ? (
+                    <GithubErrorNote message={github.error} compact={isCompact} t={t} hint />
+                ) : (
+                    <div className="flex flex-1 items-center"><div className={emptyNote}>{t.githubEmpty}</div></div>
+                )}
             </div>
         );
     }
@@ -283,10 +317,8 @@ export function GithubBoardCard({
     if (!repo.ok) {
         return (
             <div className="flex h-full min-h-0 w-full flex-col">
-                <GithubHeader repo={repo} compact={isCompact} onOpen={onOpen} />
-                <div className="flex flex-1 items-center">
-                    <div className={cn(errorText, isCompact && "text-[11px] leading-snug")}>{repo.error || t.noData}</div>
-                </div>
+                <GithubHeader repo={repo} compact={isCompact} onOpen={onOpen} t={t} />
+                <GithubErrorNote message={repo.error} compact={isCompact} t={t} hint />
             </div>
         );
     }
@@ -311,7 +343,7 @@ export function GithubBoardCard({
     if (ns === "md") {
         return (
             <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-                <GithubHeader repo={repo} onOpen={onOpen} />
+                <GithubHeader repo={repo} onOpen={onOpen} t={t} />
                 <GithubViewTabs view={view} onChange={setView} t={t} />
                 {view === "repo" ? (
                     <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
@@ -336,7 +368,7 @@ export function GithubBoardCard({
     // lg / free: estatísticas completas + descrição
     return (
         <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-            <GithubHeader repo={repo} onOpen={onOpen} />
+            <GithubHeader repo={repo} onOpen={onOpen} t={t} />
             <GithubViewTabs view={view} onChange={setView} t={t} />
             {view === "repo" ? (
                 <button type="button" className="flex min-h-0 flex-1 cursor-pointer flex-col justify-center gap-1.5 overflow-hidden border-0 bg-transparent p-0 text-left" onClick={onOpen}>
@@ -421,7 +453,7 @@ export function GithubProfileBoardCard({
                     </div>
                 </div>
                 <div className="flex flex-1 items-center">
-                    <div className={cn(errorText, isCompact && "text-[11px] leading-snug")}>{t.githubEmpty}</div>
+                    <div className={emptyNote}>{t.githubEmpty}</div>
                 </div>
             </div>
         );
@@ -431,9 +463,7 @@ export function GithubProfileBoardCard({
         return (
             <div className="flex h-full min-h-0 w-full flex-col">
                 <GithubProfileHeader profile={profile} compact={isCompact} onOpen={onOpen} />
-                <div className="flex flex-1 items-center">
-                    <div className={cn(errorText, isCompact && "text-[11px] leading-snug")}>{profile.error || t.noData}</div>
-                </div>
+                <GithubErrorNote message={profile.error} compact={isCompact} t={t} hint />
             </div>
         );
     }
@@ -500,7 +530,7 @@ export function GithubDetail({ repo, github, t }: { repo?: GithubRepo | null; gi
                 {target.default_branch ? <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-ink">{target.default_branch}</span> : null}
             </div>
             {!target.ok ? (
-                <div className={errorText}>{target.error || t.noData}</div>
+                <GithubErrorNote message={target.error} t={t} hint />
             ) : (
                 <div className="flex flex-col gap-3">
                     {target.description ? <div className="text-[13px] leading-relaxed text-ink2">{target.description}</div> : null}
@@ -542,7 +572,7 @@ export function GithubProfileDetail({ profile, t }: { profile?: GithubProfile | 
                 <span className={cn("size-2.5 shrink-0 rounded-full", profile.ok ? "bg-good" : "bg-bad")} />
             </div>
             {!profile.ok ? (
-                <div className={errorText}>{profile.error || t.noData}</div>
+                <GithubErrorNote message={profile.error} t={t} hint />
             ) : (
                 <div className="flex flex-col gap-3">
                     {profile.bio ? <div className="text-[13px] leading-relaxed text-ink2">{profile.bio}</div> : null}

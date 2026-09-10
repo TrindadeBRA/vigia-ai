@@ -304,6 +304,13 @@ type Strings = {
   githubProfilePublicRepos: string;
   githubProfilePinned: string;
   githubProfileNoPinned: string;
+  githubErrorLabel: string;
+  githubErrorNetwork: string;
+  githubErrorTimeout: string;
+  githubErrorRateLimit: string;
+  githubErrorUnavailable: string;
+  githubErrorUnknown: string;
+  githubErrorHint: string;
 };
 
 export const STR: Record<Lang, Strings> = {
@@ -596,6 +603,13 @@ export const STR: Record<Lang, Strings> = {
     githubProfilePublicRepos: "repos públicos",
     githubProfilePinned: "Fixados",
     githubProfileNoPinned: "Nenhum repositório fixado no perfil.",
+    githubErrorLabel: "indisponível",
+    githubErrorNetwork: "Não foi possível conectar ao GitHub.",
+    githubErrorTimeout: "O GitHub demorou demais para responder.",
+    githubErrorRateLimit: "Limite de requisições do GitHub atingido. Tente de novo em alguns minutos.",
+    githubErrorUnavailable: "O GitHub está indisponível no momento.",
+    githubErrorUnknown: "Não foi possível atualizar os dados do GitHub.",
+    githubErrorHint: "Os dados voltam sozinhos no próximo ciclo.",
   },
   en: {
     overview: "Overview",
@@ -886,6 +900,13 @@ export const STR: Record<Lang, Strings> = {
     githubProfilePublicRepos: "public repos",
     githubProfilePinned: "Pinned",
     githubProfileNoPinned: "No repository pinned on the profile.",
+    githubErrorLabel: "unavailable",
+    githubErrorNetwork: "Could not connect to GitHub.",
+    githubErrorTimeout: "GitHub took too long to respond.",
+    githubErrorRateLimit: "GitHub rate limit reached. Try again in a few minutes.",
+    githubErrorUnavailable: "GitHub is unavailable right now.",
+    githubErrorUnknown: "Could not refresh GitHub data.",
+    githubErrorHint: "It will retry on the next refresh.",
   },
   es: {
     overview: "Resumen",
@@ -1176,6 +1197,13 @@ export const STR: Record<Lang, Strings> = {
     githubProfilePublicRepos: "repos públicos",
     githubProfilePinned: "Fijados",
     githubProfileNoPinned: "Ningún repositorio fijado en el perfil.",
+    githubErrorLabel: "no disponible",
+    githubErrorNetwork: "No se pudo conectar a GitHub.",
+    githubErrorTimeout: "GitHub tardó demasiado en responder.",
+    githubErrorRateLimit: "Límite de solicitudes de GitHub alcanzado. Prueba de nuevo en unos minutos.",
+    githubErrorUnavailable: "GitHub no está disponible en este momento.",
+    githubErrorUnknown: "No se pudieron actualizar los datos de GitHub.",
+    githubErrorHint: "Los datos vuelven solos en el próximo ciclo.",
   },
 };
 

@@ -29,6 +29,65 @@ export function isValidGithubRepo(raw: string): boolean {
     return REPO_RE.test(raw.trim());
 }
 
+const GITHUB_RATE_LIMIT =
+    "Limite de requisições do GitHub atingido (API pública sem token, tente novamente em alguns minutos)";
+const GITHUB_TIMEOUT = "O GitHub demorou demais para responder";
+const GITHUB_NETWORK = "Não foi possível conectar ao GitHub";
+const GITHUB_UNAVAILABLE = "O GitHub está indisponível no momento";
+const GITHUB_UNKNOWN = "Não foi possível atualizar os dados do GitHub";
+
+function errorChainText(err: unknown): string {
+    const parts: string[] = [];
+    let current: unknown = err;
+    const seen = new Set<unknown>();
+    for (let i = 0; i < 6 && current != null && !seen.has(current); i++) {
+        seen.add(current);
+        if (typeof current === "string") {
+            parts.push(current);
+            break;
+        }
+        if (typeof current !== "object") {
+            parts.push(String(current));
+            break;
+        }
+        const o = current as { name?: unknown; message?: unknown; code?: unknown; cause?: unknown };
+        if (typeof o.name === "string") parts.push(o.name);
+        if (typeof o.message === "string") parts.push(o.message);
+        if (typeof o.code === "string" || typeof o.code === "number") parts.push(String(o.code));
+        current = o.cause;
+    }
+    return parts.join(" ");
+}
+
+/** Traduz falhas de rede/timeout/HTTP em texto curto para o card (evita "fetch failed"). */
+export function describeGithubError(err: unknown): string {
+    const blob = errorChainText(err).toLowerCase();
+    if (/timeout|timed out|etimedout|aborted|aborterror|timeouterror|und_err_connect_timeout|und_err_headers_timeout|und_err_body_timeout/.test(blob)) {
+        return GITHUB_TIMEOUT;
+    }
+    if (/enotfound|eai_again|econnrefused|econnreset|enetunreach|ehostunreach|und_err|fetch failed|failed to fetch|networkerror|socket/.test(blob)) {
+        return GITHUB_NETWORK;
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    const trimmed = msg.trim();
+    if (!trimmed || /^typeerror$/i.test(trimmed) || trimmed.toLowerCase() === "fetch failed") {
+        return GITHUB_UNKNOWN;
+    }
+    return trimmed.slice(0, 300);
+}
+
+export function describeGithubHttpError(status: number, kind: "repo" | "user" | "search" = "repo"): string {
+    if (status === 404) {
+        if (kind === "user") return "Usuário não encontrado";
+        if (kind === "search") return "Busca do GitHub falhou";
+        return "Repositório não encontrado";
+    }
+    if (status === 401) return "GitHub recusou o acesso";
+    if (status === 403 || status === 429) return GITHUB_RATE_LIMIT;
+    if (status >= 500) return GITHUB_UNAVAILABLE;
+    return `GitHub retornou HTTP ${status}`;
+}
+
 export function githubFail(msg: string): Omit<GithubRepoResult, "id" | "label" | "repo"> {
     return {
         ok: false,
@@ -66,15 +125,8 @@ export async function fetchGithubRepo(cfg: { id: string; repo: string; label?: s
             },
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
-        if (resp.status === 404) {
-            return { id, label, repo, ...githubFail("Repositório não encontrado") };
-        }
-        if (resp.status === 403 || resp.status === 429) {
-            return { id, label, repo, ...githubFail("Limite de requisições do GitHub atingido (API pública sem token, tente novamente em alguns minutos)") };
-        }
         if (!resp.ok) {
-            const body = await resp.text().catch(() => "");
-            return { id, label, repo, ...githubFail(`HTTP ${resp.status}: ${body.slice(0, 200)}`) };
+            return { id, label, repo, ...githubFail(describeGithubHttpError(resp.status, "repo")) };
         }
         const data = await resp.json() as Record<string, unknown>;
         return {
@@ -92,8 +144,7 @@ export async function fetchGithubRepo(cfg: { id: string; repo: string; label?: s
             updated_at: utcNow(),
         };
     } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return { id, label, repo, ...githubFail(msg.slice(0, 300)) };
+        return { id, label, repo, ...githubFail(describeGithubError(e)) };
     }
 }
 
@@ -156,14 +207,8 @@ async function searchGithubRepos(query: string, cacheKey: string): Promise<Githu
             },
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
-        if (resp.status === 403 || resp.status === 429) {
-            const error = "Limite de requisições do GitHub atingido (API pública sem token, tente novamente em alguns minutos)";
-            if (cached) return { ok: true, error, repos: cached.data, updated_at: utcNow() };
-            return { ok: false, error, repos: [], updated_at: utcNow() };
-        }
         if (!resp.ok) {
-            const body = await resp.text().catch(() => "");
-            const error = `HTTP ${resp.status}: ${body.slice(0, 200)}`;
+            const error = describeGithubHttpError(resp.status, "search");
             if (cached) return { ok: true, error, repos: cached.data, updated_at: utcNow() };
             return { ok: false, error, repos: [], updated_at: utcNow() };
         }
@@ -187,9 +232,9 @@ async function searchGithubRepos(query: string, cacheKey: string): Promise<Githu
         exploreCache.set(cacheKey, { at: Date.now(), data: repos });
         return { ok: true, error: null, repos, updated_at: utcNow() };
     } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (cached) return { ok: true, error: msg.slice(0, 300), repos: cached.data, updated_at: utcNow() };
-        return { ok: false, error: msg.slice(0, 300), repos: [], updated_at: utcNow() };
+        const error = describeGithubError(e);
+        if (cached) return { ok: true, error, repos: cached.data, updated_at: utcNow() };
+        return { ok: false, error, repos: [], updated_at: utcNow() };
     }
 }
 
@@ -344,15 +389,8 @@ export async function fetchGithubProfile(usernameRaw: string): Promise<GithubPro
             }).catch(() => null),
         ]);
 
-        if (userResp.status === 404) return profileFail(username, "Usuário não encontrado");
-        if (userResp.status === 403 || userResp.status === 429) {
-            const error = "Limite de requisições do GitHub atingido (API pública sem token, tente novamente em alguns minutos)";
-            if (cached) return { ...cached.data, error };
-            return profileFail(username, error);
-        }
         if (!userResp.ok) {
-            const body = await userResp.text().catch(() => "");
-            const error = `HTTP ${userResp.status}: ${body.slice(0, 200)}`;
+            const error = describeGithubHttpError(userResp.status, "user");
             if (cached) return { ...cached.data, error };
             return profileFail(username, error);
         }
@@ -376,9 +414,9 @@ export async function fetchGithubProfile(usernameRaw: string): Promise<GithubPro
         profileCache.set(cacheKey, { at: Date.now(), data: result });
         return result;
     } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (cached) return { ...cached.data, error: msg.slice(0, 300) };
-        return profileFail(username, msg.slice(0, 300));
+        const error = describeGithubError(e);
+        if (cached) return { ...cached.data, error };
+        return profileFail(username, error);
     }
 }
 

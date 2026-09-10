@@ -8,7 +8,7 @@ import { cursorFail, fetchCursorAccounts } from "./providers/cursor.js";
 import { deepseekFail, fetchDeepseekAccounts } from "./providers/deepseek.js";
 import { falFail, fetchFalAccounts } from "./providers/fal.js";
 import { fetchGitRepos, mockGitPayload } from "./providers/git.js";
-import { fetchGithubProfiles, fetchGithubRepos, githubSectionFlags, mockGithubPayload } from "./providers/github.js";
+import { describeGithubError, fetchGithubProfiles, fetchGithubRepos, githubSectionFlags, mockGithubPayload } from "./providers/github.js";
 import { fetchGptAccounts, gptFail } from "./providers/gpt.js";
 import { fetchOpencodeAccounts, opencodeFail } from "./providers/opencode.js";
 import { fetchOpenrouterAccounts, openrouterFail } from "./providers/openrouter.js";
@@ -481,7 +481,7 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
   try {
     results.github = await githubPromise;
   } catch (exc) {
-    results.github = { ok: false, error: String(exc), updated_at: utcNow(), repos: [], profiles: [] };
+    results.github = { ok: false, error: describeGithubError(exc), updated_at: utcNow(), repos: [], profiles: [] };
   }
 
   // storage + system are local, no external API — always fresh

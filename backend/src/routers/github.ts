@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { fetchGithubProfile, fetchGithubRepo, fetchGithubTop, fetchGithubTrending, githubSectionFlags, isValidGithubRepo, isValidGithubUsername } from "../providers/github.js";
+import { describeGithubError, fetchGithubProfile, fetchGithubRepo, fetchGithubTop, fetchGithubTrending, githubSectionFlags, isValidGithubRepo, isValidGithubUsername } from "../providers/github.js";
 import { load, updateSync as update } from "../store.js";
 
 export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
@@ -221,7 +221,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
             return { ok: true, error: null, updated_at: utcNow(), repos, profiles };
         } catch (e) {
             const { utcNow: now } = await import("../formatting.js");
-            return { ok: false, error: String(e), updated_at: now(), repos: [], profiles: [] };
+            return { ok: false, error: describeGithubError(e), updated_at: now(), repos: [], profiles: [] };
         }
     });
 
