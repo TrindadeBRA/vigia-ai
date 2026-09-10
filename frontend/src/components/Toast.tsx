@@ -9,12 +9,18 @@ export type ToastVariant = "success" | "error";
 type ToastItem = {
   id: number;
   variant: ToastVariant;
-  message: string;
+  title: string;
+  description: string;
 };
 
 const DURATION_MS: Record<ToastVariant, number> = {
   success: 4200,
   error: 6000,
+};
+
+const DEFAULT_TITLE: Record<ToastVariant, string> = {
+  success: "Sucesso!",
+  error: "Erro!",
 };
 
 /** Recolore só o EyeMark deste toast — --accent/--glow são custom properties,
@@ -61,18 +67,18 @@ function resume(id: number, ms: number): void {
   schedule(id, ms);
 }
 
-function emit(variant: ToastVariant, message: string): void {
-  if (!message) return;
+function emit(variant: ToastVariant, description: string, title?: string): void {
+  if (!description) return;
   const id = nextId++;
-  items = [...items, { id, variant, message }];
+  items = [...items, { id, variant, title: title || DEFAULT_TITLE[variant], description }];
   notify();
   schedule(id, DURATION_MS[variant]);
 }
 
 /** API imperativa — chame de qualquer hook/função, sem precisar de contexto React. */
 export const toast = {
-  success: (message: string) => emit("success", message),
-  error: (message: string) => emit("error", message),
+  success: (description: string, title?: string) => emit("success", description, title),
+  error: (description: string, title?: string) => emit("error", description, title),
 };
 
 function useToastItems(): ToastItem[] {
@@ -99,7 +105,7 @@ export function ToastViewport() {
           key={item.id}
           role={item.variant === "error" ? "alert" : "status"}
           className={cn(
-            "pointer-events-auto flex w-full max-w-[360px] items-start gap-2.5 rounded-2xl border border-edge bg-panel py-2.5 pl-3 pr-2 shadow-card-hover animate-slide-in",
+            "pointer-events-auto flex w-full max-w-[380px] items-center gap-3 rounded-2xl border border-edge bg-panel py-3 pl-3.5 pr-2.5 shadow-card-hover animate-slide-in",
             "border-l-[3px]",
             item.variant === "success" && "border-l-good",
             item.variant === "error" && "border-l-bad",
@@ -107,15 +113,18 @@ export function ToastViewport() {
           onMouseEnter={() => pause(item.id)}
           onMouseLeave={() => resume(item.id, DURATION_MS[item.variant])}
         >
-          <span className="mt-0.5 shrink-0" style={ICON_VARS[item.variant] as React.CSSProperties}>
-            <EyeMark size={22} />
+          <span className="shrink-0" style={ICON_VARS[item.variant] as React.CSSProperties}>
+            <EyeMark size={34} />
           </span>
-          <p className="m-0 min-w-0 flex-1 whitespace-pre-line break-words text-[13px] leading-[1.45] text-ink">
-            {item.message}
-          </p>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <p className="m-0 truncate text-[14px] font-bold leading-[1.3] text-ink">{item.title}</p>
+            <p className="m-0 min-w-0 whitespace-pre-line break-words text-[13px] leading-[1.4] text-ink2">
+              {item.description}
+            </p>
+          </div>
           <button
             type="button"
-            className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
+            className="flex size-6 shrink-0 cursor-pointer items-center justify-center self-start rounded-md border-0 bg-transparent text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink"
             onClick={() => dismiss(item.id)}
             aria-label="×"
           >
