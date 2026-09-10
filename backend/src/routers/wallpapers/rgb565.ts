@@ -1,6 +1,12 @@
 // Conversão de imagem <-> RAW RGB565 (tela ESP32 240x160 / preview Wokwi 160x120).
 // Usa Jimp (puro JS, sem módulo nativo — ver PLANO_NODE.md §2.3); a aritmética de
 // empacotamento de bits é o que importa aqui, não a lib de imagem escolhida.
+
+/** Empacota RGB888 em RGB565 (mesmo layout little-endian dos ícones PROGMEM). */
+export function packRgba565(r: number, g: number, b: number): number {
+  return ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
+}
+
 export async function imageToRaw(imageBytes: Buffer, targetW: number, targetH: number): Promise<Buffer> {
   let Jimp: unknown;
   try {
@@ -38,7 +44,7 @@ export async function imageToRaw(imageBytes: Buffer, targetW: number, targetH: n
         const r = (color >>> 24) & 0xff;
         const g = (color >>> 16) & 0xff;
         const b = (color >>> 8) & 0xff;
-        const v = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
+        const v = packRgba565(r, g, b);
         out[idx] = v & 0xff;
         out[idx + 1] = (v >> 8) & 0xff;
         idx += 2;

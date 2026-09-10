@@ -10,14 +10,19 @@ export type WallpaperItem = {
     provider?: string | null;
     external_id?: string | null;
     preview_url?: string | null;
+    original_url?: string | null;
     created_at?: string | null;
     has_preview: boolean;
+    kind?: "static" | "gif";
+    frame_count?: number;
+    frame_delay_ms?: number;
 };
 
 export type ProviderStatus = {
     pexels: { configured: boolean; needs_key: boolean };
     wallhaven: { configured: boolean; has_key?: boolean; needs_key: boolean };
     unsplash: { configured: boolean; needs_key: boolean };
+    giphy: { configured: boolean; needs_key: boolean };
 };
 
 export type SearchResult = {
@@ -31,6 +36,9 @@ export type SearchResult = {
     preview?: string;
     photographer?: string;
     resolution?: string;
+    title?: string;
+    type?: string;
+    import_url?: string;
 };
 
 function apiFail(j: unknown, fallback: string): string {
@@ -47,8 +55,8 @@ export type WallpaperApi = {
     wallpapers: WallpaperItem[];
     selectedId: string | null;
     providers: ProviderStatus | null;
-    searchProvider: "pexels" | "wallhaven" | "unsplash";
-    setSearchProvider: (v: "pexels" | "wallhaven" | "unsplash") => void;
+    searchProvider: "pexels" | "wallhaven" | "unsplash" | "giphy";
+    setSearchProvider: (v: "pexels" | "wallhaven" | "unsplash" | "giphy") => void;
     searchQuery: string;
     setSearchQuery: (v: string) => void;
     searchResults: SearchResult[];
@@ -96,7 +104,7 @@ export function WallpaperManager({
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [providers, setProviders] = useState<ProviderStatus | null>(null);
 
-    const [searchProvider, setSearchProvider] = useState<"pexels" | "wallhaven" | "unsplash">("wallhaven");
+    const [searchProvider, setSearchProvider] = useState<"pexels" | "wallhaven" | "unsplash" | "giphy">("wallhaven");
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchTotal, setSearchTotal] = useState<number | null>(null);
@@ -206,7 +214,7 @@ export function WallpaperManager({
         const body = {
             provider: item.provider,
             id: item.id,
-            image_url: item.full || item.preview || item.thumb || item.url,
+            image_url: item.import_url || item.full || item.preview || item.thumb || item.url,
             thumb: item.thumb || item.preview,
             preview: item.preview || item.thumb,
             scope: "theme",
@@ -230,6 +238,7 @@ export function WallpaperManager({
         if (searchProvider === "wallhaven") return true;
         if (searchProvider === "pexels") return providers?.pexels.configured;
         if (searchProvider === "unsplash") return providers?.unsplash.configured;
+        if (searchProvider === "giphy") return providers?.giphy?.configured;
         return false;
     })();
 

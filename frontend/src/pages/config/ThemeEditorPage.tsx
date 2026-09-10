@@ -3,6 +3,7 @@ import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
 import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, TextIcon } from "../../components/icons";
+import { wallpaperMediaSrc } from "../../components/ProviderSearchGrid";
 import { Logo } from "../../components/Logo";
 import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
@@ -231,12 +232,18 @@ export default function ThemeEditorPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selected]);
 
+  const currentWallpaper = wallpapers.find((w) => w.id === currentWallpaperId) ?? null;
+  const gifMeta =
+    currentWallpaper?.kind === "gif"
+      ? { frame_count: currentWallpaper.frame_count ?? 12, frame_delay_ms: currentWallpaper.frame_delay_ms ?? 50 }
+      : null;
+
   async function saveTheme() {
     const hasWallpaper = Boolean(currentWallpaperId);
     const r2 = await fetch("/api/theme/meta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(themeToJson(theme, hasWallpaper)),
+      body: JSON.stringify(themeToJson(theme, hasWallpaper, gifMeta)),
     });
     const j2 = (await r2.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
     if (!j2.ok) return { ok: false, error: j2.error || c.saveError };
@@ -286,7 +293,7 @@ export default function ThemeEditorPage() {
           <p className="mb-1 mt-2 max-w-[62ch] text-sm leading-relaxed text-ink2">{c.lead}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ThemeIOButtons theme={theme} hasWallpaper={Boolean(currentWallpaperId)} onImport={(t) => setTheme(() => t)} c={c} />
+          <ThemeIOButtons theme={theme} hasWallpaper={Boolean(currentWallpaperId)} gif={gifMeta} onImport={(t) => setTheme(() => t)} c={c} />
           <Button onClick={() => void send.run(saveTheme, { success: c.savedOk, error: c.saveError })} loading={send.busy}>
             {send.busy ? c.saving : c.save}
           </Button>
@@ -347,7 +354,7 @@ export default function ThemeEditorPage() {
               {localPreviewUrl || currentWallpaperId ? (
                 <img
                   key={localPreviewUrl || currentWallpaperId}
-                  src={localPreviewUrl || `/api/wallpapers/${currentWallpaperId}/preview`}
+                  src={localPreviewUrl || (currentWallpaper ? wallpaperMediaSrc(currentWallpaper) : `/api/wallpapers/${currentWallpaperId}/preview`)}
                   alt=""
                   draggable={false}
                   className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
@@ -709,6 +716,7 @@ export default function ThemeEditorPage() {
                   <span className="font-mono text-[13px] text-ink">{theme.background.color.toUpperCase()}</span>
                 </div>
                 <NameToColorPicker value={theme.background.color} onChange={(v) => v && setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} lang={lang} allowClear={false} />
+                {gifMeta ? <p className="text-xs leading-relaxed text-ink3">{c.gifBoardHint}</p> : null}
               </div>
             </Card>
           ) : (

@@ -20,7 +20,19 @@ export type ThemeClock = { enabled: boolean; x: number; y: number; scale: number
 export type ThemeBg = { color: string };
 export type ThemeState = { background: ThemeBg; clock: ThemeClock; icons: ThemeIcon[]; texts: ThemeText[] };
 
-export type WallpaperItem = { id: string; source: string; provider?: string | null; external_id?: string | null; preview_url?: string | null; created_at?: string | null; has_preview: boolean };
+export type WallpaperItem = {
+  id: string;
+  source: string;
+  provider?: string | null;
+  external_id?: string | null;
+  preview_url?: string | null;
+  original_url?: string | null;
+  created_at?: string | null;
+  has_preview: boolean;
+  kind?: "static" | "gif";
+  frame_count?: number;
+  frame_delay_ms?: number;
+};
 
 export const DEFAULT_THEME: ThemeState = {
   background: { color: "#0f0f0f" },
@@ -156,10 +168,16 @@ export function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState
   return [theme, setTheme];
 }
 
-export function themeToJson(t: ThemeState, hasWallpaper: boolean) {
+export function themeToJson(t: ThemeState, hasWallpaper: boolean, gif?: { frame_count: number; frame_delay_ms: number } | null) {
+  const background: Record<string, unknown> = { type: hasWallpaper ? "image" : "color", color: t.background.color };
+  if (hasWallpaper && gif && gif.frame_count >= 2) {
+    background.type = "gif";
+    background.frame_count = Math.min(12, Math.max(2, Math.round(gif.frame_count)));
+    background.frame_delay_ms = Math.min(80, Math.max(40, Math.round(gif.frame_delay_ms || 50)));
+  }
   return {
     version: 1,
-    background: { type: hasWallpaper ? "image" : "color", color: t.background.color },
+    background,
     clock: {
       enabled: t.clock.enabled,
       x: t.clock.x,
@@ -187,8 +205,8 @@ export function themeToJson(t: ThemeState, hasWallpaper: boolean) {
 
 // ── Exportar/importar tema (fundo, relógio, ícones, textos) como JSON ──────
 
-export function downloadThemeJson(theme: ThemeState, hasWallpaper: boolean) {
-  const payload = { version: 1, exported_at: new Date().toISOString(), theme: themeToJson(theme, hasWallpaper) };
+export function downloadThemeJson(theme: ThemeState, hasWallpaper: boolean, gif?: { frame_count: number; frame_delay_ms: number } | null) {
+  const payload = { version: 1, exported_at: new Date().toISOString(), theme: themeToJson(theme, hasWallpaper, gif) };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

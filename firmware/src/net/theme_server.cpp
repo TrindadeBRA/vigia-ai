@@ -182,6 +182,40 @@ static void handleScreenshot() {
   }
 }
 
+static bool g_animUploadOk = true;
+
+static void handleAnimUpload() {
+  HTTPUpload& upload = g_server.upload();
+  if (upload.status == UPLOAD_FILE_START) {
+    g_animUploadOk = customThemeBeginAnimWrite();
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (g_animUploadOk) {
+      g_animUploadOk = customThemeWriteAnimChunk(upload.buf, upload.currentSize);
+    }
+  } else if (upload.status == UPLOAD_FILE_END) {
+    const size_t expected = customThemeAnimExpectedBytes();
+    bool sizeOk = expected > 0 && (upload.totalSize == expected);
+    if (!sizeOk) {
+      Serial.printf("tema: anim upload tamanho %u != esperado %u\n", (unsigned)upload.totalSize,
+                    (unsigned)expected);
+    }
+    g_animUploadOk = g_animUploadOk && sizeOk;
+    customThemeEndAnimWrite(g_animUploadOk);
+  } else if (upload.status == UPLOAD_FILE_ABORTED) {
+    g_animUploadOk = false;
+    customThemeEndAnimWrite(false);
+  }
+}
+
+static void handleAnimDone() {
+  sendCors();
+  if (g_animUploadOk) {
+    g_server.send(200, "application/json", "{\"ok\":true}");
+  } else {
+    g_server.send(400, "application/json", "{\"ok\":false,\"error\":\"upload de animação inválido (tamanho ou storage)\"}");
+  }
+}
+
 void themeServerBegin() {
   g_server.on("/theme", HTTP_GET, handleGetTheme);
   g_server.on("/theme", HTTP_OPTIONS, handleOptions);
@@ -190,6 +224,8 @@ void themeServerBegin() {
   g_server.on("/theme/meta", HTTP_OPTIONS, handleOptions);
   g_server.on("/theme/background", HTTP_POST, handleBackgroundDone, handleBackgroundUpload);
   g_server.on("/theme/background", HTTP_OPTIONS, handleOptions);
+  g_server.on("/theme/background/anim", HTTP_POST, handleAnimDone, handleAnimUpload);
+  g_server.on("/theme/background/anim", HTTP_OPTIONS, handleOptions);
   g_server.on("/theme/screenshot", HTTP_GET, handleScreenshot);
   g_server.begin();
   Serial.println("servidor de tema: porta 80 (/theme)");

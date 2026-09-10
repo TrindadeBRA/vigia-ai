@@ -26,6 +26,7 @@ using fs::File;
 
 static const char *kMetaPath = "/theme.json";
 static const char *kBgPath = "/theme_bg.raw";
+static const char *kBgAnimPath = "/theme_bg_anim.raw";
 // Fundo pré-misturado no gen_icons.py (ver widgets.cpp:drawIcon) — usado aqui
 // como cor sentinela de "pixel transparente" no pushImage() escalado.
 constexpr uint16_t kBakedCard = 0x1904;
@@ -104,7 +105,8 @@ struct ThemeClock
 enum ThemeBgKind : uint8_t
 {
   TBG_COLOR = 0,
-  TBG_IMAGE = 1
+  TBG_IMAGE = 1,
+  TBG_GIF = 2
 };
 
 constexpr int kMaxIcons = 8;
@@ -114,6 +116,8 @@ struct CustomTheme
 {
   ThemeBgKind bgKind = TBG_COLOR;
   uint16_t bgColor = 0;
+  int frameCount = 0;
+  int frameDelayMs = 200;
   ThemeClock clock;
   ThemeIcon icons[kMaxIcons];
   int iconCount = 0;
@@ -125,6 +129,9 @@ static CustomTheme g_theme;
 static bool g_active = false;
 static String g_rawJson;
 static File g_uploadFile;
+static int g_animFrameIdx = 0;
+static uint32_t g_animLastMs = 0;
+static bool g_animLetterboxDirty = true;
 
 // true = a próxima paintCustomHome() precisa repintar o fundo inteiro (tela
 // acabou de ser limpa, tema mudou, etc.); false = o fundo já está correto na
@@ -144,15 +151,22 @@ struct ThemeWidgetRect
 };
 static ThemeWidgetRect g_iconRects[kMaxIcons];
 static ThemeWidgetRect g_clockRect;
+static ThemeWidgetRect g_textRects[kMaxTexts];
+static uint8_t g_gifRowMask[480];
 
 void customThemeInvalidateBackground()
 {
   g_bgDirty = true;
+  g_animLetterboxDirty = true;
   for (int i = 0; i < kMaxIcons; i++)
   {
     g_iconRects[i].valid = false;
   }
   g_clockRect.valid = false;
+  for (int i = 0; i < kMaxTexts; i++)
+  {
+    g_textRects[i].valid = false;
+  }
 }
 
 static float clampf(float v, float lo, float hi)
@@ -244,7 +258,32 @@ static bool parseTheme(const String &json, CustomTheme &out)
   g_lastParseError = "";
   CustomTheme t;
   JsonVariantConst bg = doc["background"];
-  t.bgKind = (jsonText(bg["type"]) == "image") ? TBG_IMAGE : TBG_COLOR;
+  const String bgType = jsonText(bg["type"]);
+  t.frameCount = 0;
+  t.frameDelayMs = 200;
+  if (bgType == "gif")
+  {
+    int fc = bg["frame_count"] | 0;
+    int dly = bg["frame_delay_ms"] | 50;
+    if (fc < 2) fc = 2;
+    if (fc > 12) fc = 12;
+    // Temas antigos gravaram 150–600 ms; na placa isso vira scan lento.
+    // Playback honra o timing do GIF mas não deixa mais lento que ~12 fps
+    // nem mais rápido que o SPI consegue (~25 fps).
+    if (dly < 40) dly = 40;
+    if (dly > 80) dly = 80;
+    t.bgKind = TBG_GIF;
+    t.frameCount = fc;
+    t.frameDelayMs = dly;
+  }
+  else if (bgType == "image")
+  {
+    t.bgKind = TBG_IMAGE;
+  }
+  else
+  {
+    t.bgKind = TBG_COLOR;
+  }
   uint16_t col;
   t.bgColor = hexColorToRgb565(jsonText(bg["color"]), col) ? col : COL_BG;
 
@@ -396,6 +435,17 @@ bool customThemeClockEnabled() { return g_active && g_theme.clock.enabled; }
 // de desenho) — só o fundo usa essa resolução reduzida.
 int customThemeCanvasWidth() { return tft.width() / 2; }
 int customThemeCanvasHeight() { return tft.height() / 2; }
+int customThemeCanvasAnimWidth() { return tft.width() / 4; }
+int customThemeCanvasAnimHeight() { return tft.height() / 4; }
+bool customThemeBackgroundIsGif() { return g_active && g_theme.bgKind == TBG_GIF; }
+size_t customThemeAnimExpectedBytes()
+{
+  if (!customThemeBackgroundIsGif() || g_theme.frameCount < 2)
+  {
+    return 0;
+  }
+  return (size_t)g_theme.frameCount * (size_t)customThemeCanvasAnimWidth() * (size_t)customThemeCanvasAnimHeight() * 2;
+}
 
 String customThemeLastError() { return g_lastParseError; }
 
@@ -426,6 +476,13 @@ bool customThemeApplyMeta(const String &json)
   g_theme = t;
   g_rawJson = json;
   g_active = true;
+  g_animFrameIdx = 0;
+  g_animLastMs = 0;
+  g_animLetterboxDirty = true;
+  if (g_fsOk && t.bgKind != TBG_GIF)
+  {
+    LittleFS.remove(kBgAnimPath);
+  }
   // Tela cheia dedicada (VIEW_THEME), não a Início — entra sozinho sempre
   // que um tema é aplicado (botão de recarregar ou POST direto), como
   // pedido: "vai ser qnd for clicado no botão novo, ou qnd receber". Não usa
@@ -445,6 +502,7 @@ static uint8_t *g_bgRam = nullptr;
 static size_t g_bgRamLen = 0;
 static size_t g_bgRamCap = 0;
 static bool g_bgUsingRam = false;
+static bool g_bgRamIsAnim = false;
 constexpr size_t kBgRamCapMax = 200000;
 
 static void freeBgRam()
@@ -459,7 +517,10 @@ void customThemeClearAll()
 {
   LittleFS.remove(kMetaPath);
   LittleFS.remove(kBgPath);
+  LittleFS.remove(kBgAnimPath);
   freeBgRam();
+  g_bgRamIsAnim = false;
+  g_animFrameIdx = 0;
   g_active = false;
   g_rawJson = "";
   if (g_view == VIEW_HOME)
@@ -473,6 +534,7 @@ String customThemeCurrentJson() { return g_active ? g_rawJson : String(); }
 bool customThemeBeginBackgroundWrite()
 {
   freeBgRam();
+  g_bgRamIsAnim = false;
   if (g_fsOk)
   {
     g_bgUsingRam = false;
@@ -536,6 +598,67 @@ void customThemeEndBackgroundWrite(bool ok)
   }
 }
 
+bool customThemeBeginAnimWrite()
+{
+  freeBgRam();
+  g_bgRamIsAnim = true;
+  g_animFrameIdx = 0;
+  const size_t need = customThemeAnimExpectedBytes();
+  if (need == 0)
+  {
+    Serial.println("tema: animação sem frame_count no theme.json");
+    return false;
+  }
+  if (g_fsOk)
+  {
+    g_bgUsingRam = false;
+    g_uploadFile = LittleFS.open(kBgAnimPath, "w");
+    return (bool)g_uploadFile;
+  }
+  if (need > kBgRamCapMax)
+  {
+    Serial.printf("tema: sem LittleFS e animação (%u bytes) grande demais pra RAM\n", (unsigned)need);
+    return false;
+  }
+  g_bgRam = (uint8_t *)malloc(need);
+  if (!g_bgRam)
+  {
+    Serial.printf("tema: malloc da animação (%u bytes) em RAM falhou — livre=%u maior_bloco=%u\n", (unsigned)need,
+                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
+    return false;
+  }
+  g_bgRamCap = need;
+  g_bgUsingRam = true;
+  return true;
+}
+
+bool customThemeWriteAnimChunk(const uint8_t *data, size_t n)
+{
+  return customThemeWriteBackgroundChunk(data, n);
+}
+
+void customThemeEndAnimWrite(bool ok)
+{
+  if (g_bgUsingRam)
+  {
+    if (!ok)
+    {
+      freeBgRam();
+      g_bgRamIsAnim = false;
+    }
+    return;
+  }
+  if (g_uploadFile)
+  {
+    g_uploadFile.close();
+  }
+  if (!ok)
+  {
+    LittleFS.remove(kBgAnimPath);
+    g_bgRamIsAnim = false;
+  }
+}
+
 // --- Render ------------------------------------------------------------
 
 struct IconRef
@@ -581,80 +704,269 @@ static IconRef iconRefFor(ThemeIconKind k)
 // bufferizar a imagem em resolução cheia, tanto lendo do LittleFS quanto da
 // RAM (ver drawThemeBackground).
 static uint16_t g_bgHalfRow[240];
-static uint16_t g_bgFullRowPair[480 * 2];
+static uint16_t g_bgFullRowPair[480];
+// Um frame de animação (120×80) cabe aqui — lê do LittleFS de uma vez só
+// pra não seekar linha a linha (o scan de cima pra baixo vinha disso).
+static uint16_t g_animSrcFrame[120 * 80];
+
+static bool openBgSource(const CustomTheme &t, bool wantAnim, File &f, bool &useFile, bool &useRam, int &srcW, int &srcH, int &scale, size_t &expected)
+{
+  scale = wantAnim ? 4 : 2;
+  srcW = wantAnim ? customThemeCanvasAnimWidth() : customThemeCanvasWidth();
+  srcH = wantAnim ? customThemeCanvasAnimHeight() : customThemeCanvasHeight();
+  if (srcW <= 0 || srcW > 240 || srcH <= 0)
+  {
+    return false;
+  }
+  const int frames = wantAnim ? (t.frameCount > 0 ? t.frameCount : 1) : 1;
+  expected = (size_t)srcW * (size_t)srcH * 2 * (size_t)frames;
+  useRam = g_bgRam && g_bgRamLen == expected && g_bgRamIsAnim == wantAnim;
+  useFile = false;
+  if (!useRam && g_fsOk)
+  {
+    f = LittleFS.open(wantAnim ? kBgAnimPath : kBgPath, "r");
+    useFile = (bool)f && (size_t)f.size() == expected;
+    if (f && !useFile)
+    {
+      f.close();
+    }
+  }
+  return useRam || useFile;
+}
+
+static void gifDestRect(int srcW, int srcH, int scale, int &ox, int &oy, int &dw, int &dh)
+{
+  const int fullW = tft.width();
+  const int fullH = tft.height();
+  dw = srcW * scale;
+  dh = srcH * scale;
+  if (dw > fullW)
+  {
+    dw = fullW;
+  }
+  if (dh > fullH)
+  {
+    dh = fullH;
+  }
+  ox = (fullW - dw) / 2;
+  oy = (fullH - dh) / 2;
+  if (ox < 0)
+  {
+    ox = 0;
+  }
+  if (oy < 0)
+  {
+    oy = 0;
+  }
+}
+
+static void markGifHoles(int y, int dw)
+{
+  if (dw > (int)sizeof(g_gifRowMask))
+  {
+    dw = (int)sizeof(g_gifRowMask);
+  }
+  memset(g_gifRowMask, 1, (size_t)dw);
+  auto punch = [&](const ThemeWidgetRect &r)
+  {
+    if (!r.valid || r.w <= 0 || r.h <= 0)
+    {
+      return;
+    }
+    const int pad = 2;
+    const int y0 = r.y0 - pad;
+    const int y1 = r.y0 + r.h + pad;
+    if (y < y0 || y >= y1)
+    {
+      return;
+    }
+    int x0 = r.x0 - pad;
+    int x1 = r.x0 + r.w + pad;
+    if (x0 < 0)
+    {
+      x0 = 0;
+    }
+    if (x1 > dw)
+    {
+      x1 = dw;
+    }
+    if (x1 > x0)
+    {
+      memset(g_gifRowMask + x0, 0, (size_t)(x1 - x0));
+    }
+  };
+  punch(g_clockRect);
+  for (int i = 0; i < kMaxIcons; i++)
+  {
+    punch(g_iconRects[i]);
+  }
+  for (int i = 0; i < kMaxTexts; i++)
+  {
+    punch(g_textRects[i]);
+  }
+}
+
+static bool drawScaledRaw(bool useRam, File &f, int srcW, int srcH, int scale, int frameIdx, bool punchHoles)
+{
+  const int fullW = tft.width();
+  const int fullH = tft.height();
+  int ox = 0, oy = 0, dw = fullW, dh = fullH;
+  gifDestRect(srcW, srcH, scale, ox, oy, dw, dh);
+  const size_t rowBytes = (size_t)srcW * 2;
+  const size_t frameBytes = rowBytes * (size_t)srcH;
+  const size_t frameOff = (size_t)frameIdx * frameBytes;
+
+  const uint16_t *srcBase = nullptr;
+  if (useRam)
+  {
+    srcBase = (const uint16_t *)(g_bgRam + frameOff);
+  }
+  else if ((size_t)srcW * (size_t)srcH <= (sizeof(g_animSrcFrame) / sizeof(g_animSrcFrame[0])))
+  {
+    f.seek(frameOff, fs::SeekSet);
+    if (f.read((uint8_t *)g_animSrcFrame, frameBytes) != frameBytes)
+    {
+      return false;
+    }
+    srcBase = g_animSrcFrame;
+  }
+
+  tft.setSwapBytes(true);
+  tft.startWrite();
+  if (!punchHoles)
+  {
+    tft.setWindow(ox, oy, ox + dw - 1, oy + dh - 1);
+  }
+  bool ok = true;
+  if (!srcBase && !useRam)
+  {
+    f.seek(frameOff, fs::SeekSet);
+  }
+  for (int sy = 0; sy < srcH; sy++)
+  {
+    const uint16_t *srcRow;
+    if (srcBase)
+    {
+      srcRow = srcBase + (size_t)sy * srcW;
+    }
+    else
+    {
+      if (f.read((uint8_t *)g_bgHalfRow, rowBytes) != rowBytes)
+      {
+        ok = false;
+        break;
+      }
+      srcRow = g_bgHalfRow;
+    }
+    for (int x = 0; x < srcW; x++)
+    {
+      uint16_t p = srcRow[x];
+      const int dx = x * scale;
+      for (int k = 0; k < scale; k++)
+      {
+        if (dx + k < dw)
+        {
+          g_bgFullRowPair[dx + k] = p;
+        }
+      }
+    }
+    const int destY0 = oy + sy * scale;
+    int destRows = scale;
+    if (destY0 + destRows > oy + dh)
+    {
+      destRows = oy + dh - destY0;
+    }
+    if (destRows <= 0)
+    {
+      break;
+    }
+    for (int r = 0; r < destRows; r++)
+    {
+      const int destY = destY0 + r;
+      if (!punchHoles)
+      {
+        tft.pushPixels(g_bgFullRowPair, (uint32_t)dw);
+        continue;
+      }
+      markGifHoles(destY, dw);
+      int x = 0;
+      while (x < dw)
+      {
+        while (x < dw && g_gifRowMask[x] == 0)
+        {
+          x++;
+        }
+        const int s = x;
+        while (x < dw && g_gifRowMask[x] != 0)
+        {
+          x++;
+        }
+        if (x > s)
+        {
+          tft.setWindow(ox + s, destY, ox + x - 1, destY);
+          tft.pushPixels(g_bgFullRowPair + s, (uint32_t)(x - s));
+        }
+      }
+    }
+  }
+  tft.endWrite();
+  tft.setSwapBytes(false);
+  return ok;
+}
 
 static void drawThemeBackground(const CustomTheme &t)
 {
   const int fullW = tft.width();
   const int fullH = tft.height();
-  const int halfW = customThemeCanvasWidth();
-  const int halfH = customThemeCanvasHeight();
-  if (t.bgKind == TBG_IMAGE && halfW > 0 && halfW <= 240)
+  File f;
+  bool useFile = false;
+  bool useRam = false;
+  int srcW = 0, srcH = 0, scale = 2;
+  size_t expected = 0;
+  if (t.bgKind == TBG_GIF && openBgSource(t, true, f, useFile, useRam, srcW, srcH, scale, expected))
   {
-    const size_t expected = (size_t)halfW * (size_t)halfH * 2;
-    const bool useRam = g_bgRam && g_bgRamLen == expected;
-    File f;
-    bool useFile = false;
-    if (!useRam && g_fsOk)
+    if (g_animLetterboxDirty)
     {
-      f = LittleFS.open(kBgPath, "r");
-      useFile = (bool)f && (size_t)f.size() == expected;
-      if (f && !useFile)
-      {
-        f.close();
-      }
+      tft.fillRect(0, 0, fullW, fullH, t.bgColor);
     }
-    if (useRam || useFile)
+    int idx = g_animFrameIdx;
+    if (idx < 0 || idx >= t.frameCount)
     {
-      tft.setSwapBytes(true);
-      bool ok = true;
-      for (int sy = 0; sy < halfH; sy++)
-      {
-        const uint16_t *srcRow;
-        if (useRam)
-        {
-          srcRow = (const uint16_t *)g_bgRam + (size_t)sy * halfW;
-        }
-        else
-        {
-          if (f.read((uint8_t *)g_bgHalfRow, (size_t)halfW * 2) != (size_t)halfW * 2)
-          {
-            ok = false;
-            break;
-          }
-          srcRow = g_bgHalfRow;
-        }
-        for (int x = 0; x < halfW; x++)
-        {
-          uint16_t p = srcRow[x];
-          g_bgFullRowPair[x * 2] = p;
-          if (x * 2 + 1 < fullW)
-          {
-            g_bgFullRowPair[x * 2 + 1] = p;
-          }
-        }
-        const int destY = sy * 2;
-        const int destRows = (destY + 1 < fullH) ? 2 : 1;
-        if (destRows == 2)
-        {
-          memcpy(g_bgFullRowPair + fullW, g_bgFullRowPair, (size_t)fullW * 2);
-        }
-        tft.pushImage(0, destY, fullW, destRows, g_bgFullRowPair);
-      }
-      tft.setSwapBytes(false);
-      if (useFile)
-      {
-        f.close();
-      }
-      if (ok)
-      {
-        return;
-      }
+      idx = 0;
     }
-    else if (g_fsOk)
+    const bool ok = drawScaledRaw(useRam, f, srcW, srcH, scale, idx, !g_animLetterboxDirty);
+    if (useFile)
     {
-      Serial.println("tema: sem fundo em RAM/LittleFS compatível, usando cor");
+      f.close();
     }
+    if (ok)
+    {
+      if (g_animLetterboxDirty)
+      {
+        g_animLetterboxDirty = false;
+      }
+      return;
+    }
+  }
+  else if (t.bgKind == TBG_GIF && useFile)
+  {
+    f.close();
+  }
+  if ((t.bgKind == TBG_IMAGE || t.bgKind == TBG_GIF) && openBgSource(t, false, f, useFile, useRam, srcW, srcH, scale, expected))
+  {
+    const bool ok = drawScaledRaw(useRam, f, srcW, srcH, scale, 0, false);
+    if (useFile)
+    {
+      f.close();
+    }
+    if (ok)
+    {
+      return;
+    }
+  }
+  else if (useFile)
+  {
+    f.close();
   }
   tft.fillRect(0, 0, fullW, fullH, t.bgColor);
 }
@@ -692,75 +1004,100 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
   {
     return;
   }
-  if (t.bgKind != TBG_IMAGE)
+  if (t.bgKind != TBG_IMAGE && t.bgKind != TBG_GIF)
   {
     tft.fillRect(x0, y0, w, h, t.bgColor);
     return;
   }
-  const int halfW = customThemeCanvasWidth();
-  const int halfH = customThemeCanvasHeight();
-  if (halfW <= 0 || halfW > 240 || halfH <= 0)
-  {
-    tft.fillRect(x0, y0, w, h, t.bgColor);
-    return;
-  }
-  const size_t expected = (size_t)halfW * (size_t)halfH * 2;
-  const bool useRam = g_bgRam && g_bgRamLen == expected;
   File f;
   bool useFile = false;
-  if (!useRam && g_fsOk)
+  bool useRam = false;
+  int srcW = 0, srcH = 0, scale = 2;
+  size_t expected = 0;
+  bool wantAnim = t.bgKind == TBG_GIF;
+  if (!openBgSource(t, wantAnim, f, useFile, useRam, srcW, srcH, scale, expected) && wantAnim)
   {
-    f = LittleFS.open(kBgPath, "r");
-    useFile = (bool)f && (size_t)f.size() == expected;
-    if (f && !useFile)
+    wantAnim = false;
+    if (!openBgSource(t, false, f, useFile, useRam, srcW, srcH, scale, expected))
     {
-      f.close();
+      tft.fillRect(x0, y0, w, h, t.bgColor);
+      return;
     }
   }
-  if (!useRam && !useFile)
+  else if (!useRam && !useFile)
   {
     tft.fillRect(x0, y0, w, h, t.bgColor);
     return;
   }
-  const int sx0 = x0 / 2;
-  int sw = (x0 + w - 1) / 2 - sx0 + 1;
-  if (sx0 + sw > halfW)
-  {
-    sw = halfW - sx0;
-  }
-  if (sw <= 0)
-  {
-    if (useFile)
-    {
-      f.close();
-    }
-    return;
-  }
-  tft.setSwapBytes(true);
+  const int frameIdx = wantAnim ? ((g_animFrameIdx >= 0 && g_animFrameIdx < t.frameCount) ? g_animFrameIdx : 0) : 0;
+  int ox = 0, oy = 0, dw = srcW * scale, dh = srcH * scale;
+  gifDestRect(srcW, srcH, scale, ox, oy, dw, dh);
+  const size_t frameOff = (size_t)frameIdx * (size_t)srcW * (size_t)srcH * 2;
   for (int y = y0; y < y0 + h; y++)
   {
-    int sy = y / 2;
-    if (sy >= halfH)
+    if (y < oy || y >= oy + dh)
     {
-      sy = halfH - 1;
+      tft.drawFastHLine(x0, y, w, t.bgColor);
+      continue;
+    }
+    int sy = (y - oy) / scale;
+    if (sy >= srcH)
+    {
+      sy = srcH - 1;
+    }
+    if (sy < 0)
+    {
+      sy = 0;
+    }
+    int xLeft = x0;
+    int span = w;
+    if (xLeft < ox)
+    {
+      tft.drawFastHLine(xLeft, y, min(span, ox - xLeft), t.bgColor);
+      span -= (ox - xLeft);
+      xLeft = ox;
+    }
+    if (span <= 0)
+    {
+      continue;
+    }
+    if (xLeft + span > ox + dw)
+    {
+      int extra = xLeft + span - (ox + dw);
+      tft.drawFastHLine(ox + dw, y, extra, t.bgColor);
+      span -= extra;
+    }
+    if (span <= 0)
+    {
+      continue;
+    }
+    const int sx0 = (xLeft - ox) / scale;
+    int sw = ((xLeft + span - 1 - ox) / scale) - sx0 + 1;
+    if (sx0 + sw > srcW)
+    {
+      sw = srcW - sx0;
+    }
+    if (sw <= 0)
+    {
+      continue;
     }
     const uint16_t *srcRow;
     if (useRam)
     {
-      srcRow = (const uint16_t *)g_bgRam + (size_t)sy * halfW + sx0;
+      srcRow = (const uint16_t *)(g_bgRam + frameOff) + (size_t)sy * srcW + sx0;
     }
     else
     {
-      f.seek(((size_t)sy * halfW + sx0) * 2, fs::SeekSet);
+      f.seek(frameOff + ((size_t)sy * srcW + sx0) * 2, fs::SeekSet);
       if (f.read((uint8_t *)g_restoreRowBuf, (size_t)sw * 2) != (size_t)sw * 2)
       {
         break;
       }
       srcRow = g_restoreRowBuf;
     }
-    for (int x = 0; x < w; x++)
+    for (int x = 0; x < span; x++)
     {
-      int sx = (x0 + x) / 2 - sx0;
+      int sx = (xLeft + x - ox) / scale - sx0;
       if (sx < 0)
       {
         sx = 0;
@@ -771,7 +1108,9 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
       }
       g_restoreOutRow[x] = srcRow[sx];
     }
-    tft.pushImage(x0, y, w, 1, g_restoreOutRow);
+    tft.setSwapBytes(true);
+    tft.pushImage(xLeft, y, span, 1, g_restoreOutRow);
+    tft.setSwapBytes(false);
   }
   tft.setSwapBytes(false);
   if (useFile)
@@ -1680,7 +2019,7 @@ static void drawThemeIcon(const ThemeIcon &icon, int idx)
   tft.drawString(val, iconX + targetW + gap, cy, font);
 }
 
-static void drawThemeText(const ThemeText &t)
+static void drawThemeText(const ThemeText &t, int idx)
 {
   int cx = (int)(t.x * tft.width());
   int cy = (int)(t.y * tft.height());
@@ -1689,6 +2028,7 @@ static void drawThemeText(const ThemeText &t)
   int tw = tft.textWidth(t.text, font);
   int th = tft.fontHeight(font);
   clampBoxCenter(cx, cy, tw, th, tft.width(), tft.height());
+  eraseStaleRect(g_theme, g_textRects[idx], cx - tw / 2, cy - th / 2, tw, th);
   tft.setTextColor(t.hasColor ? t.color : COL_TEXT); // 1 arg = desenho transparente
   tft.drawString(t.text, cx, cy, font);
 }
@@ -1826,10 +2166,15 @@ void paintCustomHome()
   {
     return;
   }
+  const bool animBlit = g_bgDirty && g_theme.bgKind == TBG_GIF && !g_animLetterboxDirty;
   if (g_bgDirty)
   {
     drawThemeBackground(g_theme);
     g_bgDirty = false;
+  }
+  if (animBlit)
+  {
+    return;
   }
   if (g_theme.clock.enabled)
   {
@@ -1841,7 +2186,7 @@ void paintCustomHome()
   }
   for (int i = 0; i < g_theme.textCount; i++)
   {
-    drawThemeText(g_theme.texts[i]);
+    drawThemeText(g_theme.texts[i], i);
   }
 }
 
@@ -1859,5 +2204,32 @@ void customThemeTickClock()
     return;
   }
   lastKey = key;
+  paintCustomHome();
+}
+
+void customThemeTickAnimation()
+{
+  if (!g_active || g_theme.bgKind != TBG_GIF || g_theme.frameCount < 2)
+  {
+    return;
+  }
+  if (g_view != VIEW_THEME)
+  {
+    return;
+  }
+  const uint32_t now = millis();
+  const uint32_t delayMs = 40;
+  if (g_animLastMs == 0)
+  {
+    g_animLastMs = now;
+    return;
+  }
+  if ((now - g_animLastMs) < delayMs)
+  {
+    return;
+  }
+  g_animLastMs = now;
+  g_animFrameIdx = (g_animFrameIdx + 1) % g_theme.frameCount;
+  g_bgDirty = true;
   paintCustomHome();
 }

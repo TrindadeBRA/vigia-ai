@@ -109,6 +109,9 @@ export type ThemeCopy = {
   wallpaperSelectError: string;
   providerPexels: string;
   providerUnsplash: string;
+  providerGiphy: string;
+  gifBadge: string;
+  gifBoardHint: string;
   searchNeedsKey: (name: string) => string;
   searchPlaceholder: string;
   searchButton: string;
@@ -234,6 +237,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     wallpaperSelectError: "Falha ao selecionar papel de parede",
     providerPexels: "Pexels",
     providerUnsplash: "Unsplash",
+    providerGiphy: "Giphy",
+    gifBadge: "GIF",
+    gifBoardHint: "Na placa o GIF preenche a tela; relógio e ícones ficam por cima sem serem apagados a cada frame.",
     searchNeedsKey: (name) => `Configure a API key do ${name} no final da página para buscar.`,
     searchPlaceholder: "Buscar papéis de parede… ex: natureza, cidade, abstrato",
     searchButton: "Buscar",
@@ -357,6 +363,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     wallpaperSelectError: "Failed to select wallpaper",
     providerPexels: "Pexels",
     providerUnsplash: "Unsplash",
+    providerGiphy: "Giphy",
+    gifBadge: "GIF",
+    gifBoardHint: "On the board the GIF fills the screen; clock and icons stay on top without being wiped every frame.",
     searchNeedsKey: (name) => `Configure the ${name} API key at the bottom of the page to search.`,
     searchPlaceholder: "Search wallpapers… e.g. nature, city, abstract",
     searchButton: "Search",
@@ -480,6 +489,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     wallpaperSelectError: "Error al seleccionar el fondo",
     providerPexels: "Pexels",
     providerUnsplash: "Unsplash",
+    providerGiphy: "Giphy",
+    gifBadge: "GIF",
+    gifBoardHint: "En la placa el GIF llena la pantalla; reloj e íconos quedan encima sin borrarse en cada frame.",
     searchNeedsKey: (name) => `Configurá la API key de ${name} al final de la página para buscar.`,
     searchPlaceholder: "Buscar fondos… ej: naturaleza, ciudad, abstracto",
     searchButton: "Buscar",

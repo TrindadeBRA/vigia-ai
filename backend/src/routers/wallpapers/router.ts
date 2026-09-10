@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync,
 import { join } from "node:path";
 import { dataDir } from "../../config.js";
 import { load, updateSync as update } from "../../store.js";
+import { ANIM_HW, ANIM_WOKWI, extractGifFrames, isGifSignature, MAX_ANIM_FRAMES } from "./gif.js";
 import { imageToRaw, rawToPreview } from "./rgb565.js";
 import { downloadImage, httpJson } from "./ssrfGuard.js";
 
@@ -50,15 +51,20 @@ function listWallpapers(scope: string | null = null): Array<Record<string, unkno
     if (!existsSync(wallpaperRawPath(wid)) && !existsSync(wallpaperRawPath(wid, "_wokwi")) && !existsSync(wallpaperPreviewPath(wid))) {
       if (!existsSync(wallpaperOrigPath(wid))) continue;
     }
+    const kind = String(w.kind ?? "static") === "gif" ? "gif" : "static";
     out.push({
       id: wid,
       source: w.source ?? "upload",
       provider: w.provider ?? null,
       external_id: w.external_id ?? null,
       preview_url: w.preview_url ?? null,
+      original_url: w.original_url ?? null,
       created_at: w.created_at ?? null,
       has_preview: existsSync(wallpaperPreviewPath(wid)),
       scope: wScope,
+      kind,
+      frame_count: kind === "gif" ? Number(w.frame_count ?? 0) || undefined : undefined,
+      frame_delay_ms: kind === "gif" ? Number(w.frame_delay_ms ?? 0) || undefined : undefined,
     });
   }
   return out;
@@ -86,7 +92,21 @@ function setSelectedId(wid: string | null): void {
     if (!cfg.wallpapers) cfg.wallpapers = wp;
     wp.selected_id = String(wid ?? "");
   });
-  patchThemeBackgroundType(wid ? "image" : "color");
+  if (!wid) {
+    patchThemeBackgroundType("color");
+    return;
+  }
+  const meta = loadMeta();
+  const found = ((meta.wallpapers ?? []) as Array<Record<string, unknown>>).find((w) => String(w.id) === wid);
+  const kind = String(found?.kind ?? "static") === "gif" ? "gif" : "image";
+  if (kind === "gif") {
+    patchThemeBackgroundType("gif", {
+      frame_count: Number(found?.frame_count ?? 0),
+      frame_delay_ms: Number(found?.frame_delay_ms ?? 0),
+    });
+  } else {
+    patchThemeBackgroundType("image");
+  }
 }
 function getGridSelectedId(): string | null {
   const cfg = load() as Record<string, unknown>;
@@ -125,19 +145,38 @@ function providerStatus(): Record<string, unknown> {
     giphy: { configured: Boolean(keys.giphy_key.trim()), needs_key: true },
   };
 }
-function patchThemeBackgroundType(kind: string): void {
+function patchThemeBackgroundType(kind: string, extra?: { frame_count?: number; frame_delay_ms?: number }): void {
   const p = join(dataDir(), "theme.json");
   if (!existsSync(p)) return;
   try {
     const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
     if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return;
-    const bg = raw.background as Record<string, unknown> | undefined;
-    if (!bg || typeof bg !== "object") raw.background = { type: kind, color: "#0f0f0f" };
-    else { bg.type = kind; raw.background = bg; }
+    const bg = (raw.background && typeof raw.background === "object" ? { ...(raw.background as Record<string, unknown>) } : { color: "#0f0f0f" }) as Record<string, unknown>;
+    bg.type = kind;
+    if (kind === "gif") {
+      const fc = Math.min(12, Math.max(2, Math.round(Number(extra?.frame_count ?? 0))));
+      const dly = Math.min(80, Math.max(40, Math.round(Number(extra?.frame_delay_ms ?? 50))));
+      bg.frame_count = Number.isFinite(fc) ? fc : 2;
+      bg.frame_delay_ms = Number.isFinite(dly) ? dly : 200;
+    } else {
+      delete bg.frame_count;
+      delete bg.frame_delay_ms;
+    }
+    raw.background = bg;
     const tmp = p + ".tmp";
     writeFileSync(tmp, JSON.stringify(raw) + "\n", "utf-8");
     renameSync(tmp, p);
   } catch { }
+}
+
+async function writeAnimVariants(wid: string, imageBytes: Buffer): Promise<{ kind: "gif"; frame_count: number; frame_delay_ms: number } | { kind: "static" }> {
+  if (!isGifSignature(imageBytes)) return { kind: "static" };
+  const hw = await extractGifFrames(imageBytes, MAX_ANIM_FRAMES, ANIM_HW.w, ANIM_HW.h);
+  const wk = await extractGifFrames(imageBytes, MAX_ANIM_FRAMES, ANIM_WOKWI.w, ANIM_WOKWI.h);
+  if (!hw || !wk || hw.frames.length < 2 || wk.frames.length < 2) return { kind: "static" };
+  writeFileSync(wallpaperRawPath(wid, "_anim"), Buffer.concat(hw.frames));
+  writeFileSync(wallpaperRawPath(wid, "_anim_wokwi"), Buffer.concat(wk.frames));
+  return { kind: "gif", frame_count: hw.frames.length, frame_delay_ms: hw.delayMs };
 }
 
 export async function createWallpapersRoutes(app: FastifyInstance): Promise<void> {
@@ -302,7 +341,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     if (!found && !existsSync(wallpaperRawPath(wid)) && !existsSync(wallpaperPreviewPath(wid))) return reply.code(404).send({ ok: false, error: "wallpaper não encontrado" });
     meta.wallpapers = newList;
     saveMeta(meta);
-    for (const p of [wallpaperRawPath(wid), wallpaperRawPath(wid, "_wokwi"), wallpaperPreviewPath(wid), wallpaperOrigPath(wid)]) {
+    for (const p of [wallpaperRawPath(wid), wallpaperRawPath(wid, "_wokwi"), wallpaperRawPath(wid, "_anim"), wallpaperRawPath(wid, "_anim_wokwi"), wallpaperPreviewPath(wid), wallpaperOrigPath(wid)]) {
       try { unlinkSync(p); } catch { }
     }
     const remainingTheme = listWallpapers("theme").map((w) => String(w.id));
@@ -323,6 +362,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
       const data = readFileSync(orig);
       if (data[0] === 0xff && data[1] === 0xd8) return reply.type("image/jpeg").send(data);
       if (data[0] === 0x89 && data[1] === 0x50) return reply.type("image/png").send(data);
+      if (data[0] === 0x47 && data[1] === 0x49 && data[2] === 0x46) return reply.type("image/gif").send(data);
       return reply.type("image/jpeg").send(data);
     }
     const preview = wallpaperPreviewPath(wid);
@@ -483,8 +523,22 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
           const images = (it.images ?? {}) as Record<string, unknown>;
           const orig = (images.original ?? {}) as Record<string, unknown>;
           const fixed = (images.fixed_width ?? {}) as Record<string, unknown>;
+          const fixedH = (images.fixed_height ?? {}) as Record<string, unknown>;
           const downsized = (images.downsized ?? {}) as Record<string, unknown>;
-          return { id: String(it.id), provider: "giphy", width: orig.width ?? fixed.width, height: orig.height ?? fixed.height, url: it.url, title: it.title, thumb: fixed.url ?? downsized.url ?? orig.url, full: orig.url ?? fixed.url, preview: fixed.url ?? downsized.url, type: "gif" };
+          const importUrl = String(downsized.url ?? fixedH.url ?? fixed.url ?? orig.url ?? "");
+          return {
+            id: String(it.id),
+            provider: "giphy",
+            width: orig.width ?? fixed.width,
+            height: orig.height ?? fixed.height,
+            url: it.url,
+            title: it.title,
+            thumb: fixed.url ?? downsized.url ?? orig.url,
+            full: orig.url ?? fixed.url,
+            preview: fixed.url ?? downsized.url,
+            import_url: importUrl,
+            type: "gif",
+          };
         });
         return { provider: "giphy", query: q, page, per_page: perPage, total: pagination.total_count ?? results.length, results };
       } else {
@@ -522,7 +576,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     const effectiveScope: string = scopeParam && ["theme", "grid"].includes(scopeParam) ? scopeParam : "theme";
     const provider = String(body.provider ?? "").toLowerCase().trim();
     const externalId = String(body.id ?? body.external_id ?? "").trim();
-    let imageUrl = String(body.image_url ?? body.full ?? body.url ?? "").trim();
+    let imageUrl = String(body.image_url ?? body.import_url ?? body.full ?? body.url ?? "").trim();
     const thumbUrl = String(body.thumb ?? body.preview ?? "").trim();
     if (!["pexels", "wallhaven", "unsplash", "giphy"].includes(provider)) return reply.code(400).send({ ok: false, error: "provider deve ser pexels, wallhaven, unsplash ou giphy" });
     if (!imageUrl) return reply.code(400).send({ ok: false, error: "image_url obrigatório" });
@@ -544,16 +598,28 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     try { rawHw = await imageToRaw(imageBytes, 240, 160); rawWokwi = await imageToRaw(imageBytes, 160, 120); } catch (e: unknown) { const err = e as { statusCode?: number }; return reply.code(err.statusCode ?? 400).send({ ok: false, error: String(e) }); }
     writeFileSync(wallpaperRawPath(wid), rawHw);
     writeFileSync(wallpaperRawPath(wid, "_wokwi"), rawWokwi);
+    const anim = await writeAnimVariants(wid, imageBytes);
     // preview
     try {
       const preview = await rawToPreview(rawHw, 240, 160);
       if (preview.length) writeFileSync(wallpaperPreviewPath(wid), preview);
     } catch { }
     const meta = loadMeta();
-    (meta.wallpapers as Array<Record<string, unknown>>).push({ id: wid, source: "provider", provider, external_id: externalId, preview_url: thumbUrl || imageUrl, created_at: new Date().toISOString(), original_url: imageUrl, scope: effectiveScope });
+    (meta.wallpapers as Array<Record<string, unknown>>).push({
+      id: wid,
+      source: "provider",
+      provider,
+      external_id: externalId,
+      preview_url: thumbUrl || imageUrl,
+      created_at: new Date().toISOString(),
+      original_url: imageUrl,
+      scope: effectiveScope,
+      kind: anim.kind,
+      ...(anim.kind === "gif" ? { frame_count: anim.frame_count, frame_delay_ms: anim.frame_delay_ms } : {}),
+    });
     saveMeta(meta);
     if (effectiveScope === "grid") setGridSelectedId(wid); else setSelectedId(wid);
-    return { ok: true, id: wid, provider };
+    return { ok: true, id: wid, provider, kind: anim.kind, ...(anim.kind === "gif" ? { frame_count: anim.frame_count, frame_delay_ms: anim.frame_delay_ms } : {}) };
   });
 
   app.get("/api/wallpapers/grid/selected", { schema: { tags: ["Papéis de parede"] } }, async () => {

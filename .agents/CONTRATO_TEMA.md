@@ -21,7 +21,8 @@ Mudar este contrato = atualizar este doc, `firmware/src/ui/customtheme.cpp`,
    header vertical (esquerda/direita). Isso chama
    `firmware/src/net/client.cpp:themeClientReload()`, que faz
    `GET <origem do USAGE_URL>/api/theme` (+ `/api/theme/background` se
-   houver) e aplica via `ui/customtheme.h`.
+   houver, e `/api/theme/background/anim` quando `background.type` é `"gif"`)
+   e aplica via `ui/customtheme.h`.
 4. **Tela dedicada**: aplicar um tema (por esse pull ou pelo `POST /theme/meta`
    direto na placa, abaixo) sempre troca pra `VIEW_THEME`
    (`core/state.h`) — uma view **nova**, tela cheia, **sem** o header/menu da
@@ -78,9 +79,17 @@ sempre converte fração → pixel na hora de desenhar, contra
 }
 ```
 
-- `background.type`: `"color"` ou `"image"` (a imagem é o que foi mandado em
-  `.../theme/background` — se não existir ou o tamanho não bater com a
-  resolução atual da placa, cai pra `background.color`).
+- `background.type`: `"color"`, `"image"` ou `"gif"`. `"image"` é o RAW
+  estático de `.../theme/background`. `"gif"` é a sequência concatenada de
+  `.../theme/background/anim` (ver seção "Imagem de fundo animada"). Tipo
+  desconhecido/ausente, arquivo faltando ou tamanho que não bate com a
+  resolução atual cai pra `background.color`. Firmware antigo (sem suporte
+  a `"gif"`) trata o tipo como desconhecido e também cai na cor — sem crash.
+- `background.frame_count`: int **2–12**, só quando `type` é `"gif"`.
+- `background.frame_delay_ms`: int **40–80**, delay uniforme entre frames
+  (não por-frame). Só quando `type` é `"gif"`. Firmware antigo gravava
+  150–600; a placa atual clampa pra 40–80 na hora de reproduzir (não precisa
+  reimportar o GIF).
 - `background.color`, `clock.color`, `icons[].color`, `icons[].bgColor`,
   `texts[].color`: hex `#RRGGBB` opcional (omitido ou inválido = cor padrão
   do tema/tela).
@@ -158,6 +167,29 @@ bytes.push(v & 0xff, (v >> 8) & 0xff); // little-endian
 `firmware/src/ui/widgets.cpp:drawIcon`, que já usa `setSwapBytes(true)` pra
 esse formato).
 
+## Imagem de fundo animada
+
+RAW **RGB565 little-endian** igual ao fundo estático, mas **concatenado por
+frame** na ordem do loop (sem cabeçalho entre frames). Resolução = **um
+quarto** da tela, arredondada pra baixo — **120×80** no hardware (480×320)
+e **80×60** no Wokwi (320×240). Um frame = 19.200 bytes (hw) / 9.600 bytes
+(Wokwi). Com até 12 frames: ~225 KB (hw) / ~115 KB (Wokwi, cabe no fallback
+de RAM de 200.000 bytes).
+
+A placa estica o GIF na **tela cheia** (120×80 → 4× nearest-neighbor). A
+cada frame o blit **não pinta** os retângulos de relógio/ícones/textos
+(máscara), então os widgets não piscam. Delay ~40 ms; fps real ainda
+limitado pelo SPI do ILI9488.
+
+Arquivo na placa: LittleFS `/theme_bg_anim.raw` (ou o mesmo fallback de RAM
+do fundo estático no Wokwi). O coletor também gera o 1º frame estático
+(`<id>.raw` / `<id>_wokwi.raw`) no import de GIF, pra firmware antigo
+continuar com cor de fundo em vez de crashar.
+
+Conversão no coletor: `backend/src/routers/wallpapers/gif.ts`
+(`gifuct-js`, composição de disposal + amostragem uniforme se o GIF-fonte
+tiver mais de 12 frames).
+
 ## Rotas do coletor (`backend/src/routers/theme.ts` + `wallpapers.ts`)
 
 | Rota                                                       | O que faz                                                                                                                         |
@@ -166,6 +198,7 @@ esse formato).
 | `POST /api/theme/meta`                                     | corpo = `theme.json` cru (`Content-Type` qualquer, máx. 8 KB)                                                                     |
 | `POST /api/theme/background`                               | `multipart/form-data`, campo `bg` (máx. ~400 KB) — legado, ainda funciona                                                         |
 | `GET /api/theme/background`                                | bytes RAW do **papel selecionado**, `application/octet-stream`, `404` se não houver                                               |
+| `GET /api/theme/background/anim`                           | bytes RAW concatenados da animação (`<id>_anim.raw` / `_anim_wokwi.raw`), `404` se o selecionado não for `kind: "gif"`            |
 | `DELETE /api/theme`                                        | apaga os dois arquivos                                                                                                            |
 | `GET /api/wallpapers`                                      | `{ "wallpapers": [...], "selected_id": string \| null, "providers": {...}, "count" }`                                             |
 | `GET /api/wallpapers/selected`                             | `{ "selected_id": string \| null }`                                                                                               |
@@ -176,7 +209,7 @@ esse formato).
 | `DELETE /api/wallpapers/{id}`                              | remove wallpaper                                                                                                                  |
 | `GET /api/wallpapers/{id}/preview`                         | JPEG preview                                                                                                                      |
 | `GET /api/wallpapers/{id}/raw?w=&h=`                       | RAW do wallpaper (resolução via query ou header `X-Vigia-Screen`)                                                                 |
-| `GET /api/wallpapers/search/{provider}?q=&page=&per_page=` | busca em `pexels`/`wallhaven`/`unsplash`                                                                                          |
+| `GET /api/wallpapers/search/{provider}?q=&page=&per_page=` | busca em `pexels`/`wallhaven`/`unsplash`/`giphy`                                                                                  |
 | `POST /api/wallpapers/import`                              | `{ "provider", "id", "image_url", "thumb" }` — baixa, converte e salva                                                            |
 
 Não valida o schema do `theme.json` — é opaco pro coletor (quem valida é a
@@ -186,9 +219,9 @@ placa ao aplicar, e o painel ao montar).
 
 - O usuário cadastra 1+ imagens e **clica numa** para usá-la como fundo.
 - O id ativo fica em `config.json` → `wallpapers.selected_id`.
-- `GET /api/theme/background` devolve o RAW dessa imagem (resolução via `X-Vigia-Screen` ou `?w=&h=`).
-- A placa baixa o fundo **só** no recarregar do tema (`themeClientReload()`), sem polling.
-- Wallpapers são armazenados em `data/wallpapers/` como RAW RGB565 em duas resoluções (240×160 hardware + 160×120 wokwi) + JPEG preview + original.
+- `GET /api/theme/background` devolve o RAW estático dessa imagem (resolução via `X-Vigia-Screen` ou `?w=&h=`). Se `kind` for `"gif"`, `GET /api/theme/background/anim` devolve a sequência (`?w=`/`?h=` na resolução de animação: 120×80 ou 80×60).
+- A placa baixa o fundo **só** no recarregar do tema (`themeClientReload()`), sem polling — e a variante anim quando `background.type == "gif"`.
+- Wallpapers são armazenados em `data/wallpapers/` como RAW RGB565 em duas resoluções (240×160 hardware + 160×120 wokwi) + JPEG preview + original. GIFs animados ganham também `<id>_anim.raw` (12×120×80) e `<id>_anim_wokwi.raw` (12×80×60).
 
 ### Provedores externos
 
@@ -197,8 +230,9 @@ placa ao aplicar, e o painel ao montar).
 | **Wallhaven** | `https://wallhaven.cc/api/v1/search`     | Opcional (`X-API-Key`)                       | Sem key funciona para SFW; com key libera NSFW/sketchy |
 | **Pexels**    | `https://api.pexels.com/v1/search`       | Obrigatória (`Authorization: KEY`)           | Só disponível se usuário fornecer key                  |
 | **Unsplash**  | `https://api.unsplash.com/search/photos` | Obrigatória (`Authorization: Client-ID KEY`) | Só disponível se usuário fornecer key                  |
+| **Giphy**     | `https://api.giphy.com/v1/gifs/search`   | Obrigatória (`api_key`)                      | Import vira fundo animado (`kind: "gif"`, até 12 frames) |
 
-Chaves ficam em `config.json` → `wallpapers.providers.{pexels_key,unsplash_key,wallhaven_key}` (gitignored, nunca expostas no `GET /api/config`).
+Chaves ficam em `config.json` → `wallpapers.providers.{pexels_key,unsplash_key,wallhaven_key,giphy_key}` (gitignored, nunca expostas no `GET /api/config`).
 
 No painel, as chaves têm um card próprio por provedor em **Configurações → Papéis de parede** (`frontend/src/pages/config/WallpaperProvidersConfigCard.tsx`) — o editor de tema (`/display/theme`) só cuida da biblioteca, busca e import (`frontend/src/pages/config/wallpaperManager/` — `context.tsx` guarda o estado/chamadas de API, `Library.tsx` é a UI).
 
@@ -211,6 +245,7 @@ No painel, as chaves têm um card próprio por provedor em **Configurações →
 | `GET /theme`             | `{ "width", "height", "active", "fs_ok", "theme" }` — resolução = tela inteira                                                                                                                                                                                                                                                                                                                                                           |
 | `POST /theme/meta`       | mesmo corpo do coletor; aplica na hora (`VIEW_THEME`)                                                                                                                                                                                                                                                                                                                                                                                    |
 | `POST /theme/background` | `multipart/form-data`, campo `bg`, streamado direto (nunca bufferiza os ~300 KB em RAM) via `HTTPUpload`                                                                                                                                                                                                                                                                                                                                 |
+| `POST /theme/background/anim` | `multipart/form-data`, campo `bg`, streamado pro `/theme_bg_anim.raw` (tamanho = `frame_count * animW * animH * 2`) |
 | `DELETE /theme`          | apaga o tema, desliga `VIEW_THEME`                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `GET /theme/screenshot`  | BMP 24 bits da tela **de verdade**, lida pixel a pixel via SPI (`tft.readRectRGB`, precisa do `MISO` ligado — ver `HARDWARE.md`). Lento (alguns segundos) e bloqueia o `loop()` enquanto captura — só pra depuração manual, nunca automático. **Não funciona no Wokwi** (o simulador não emula leitura de pixel por SPI, só escrita) — use a janela do próprio simulador pra conferir visualmente lá; a rota vale pra placa física. |
 
@@ -240,13 +275,17 @@ disparam preflight).
   um ícone.
 - Só os ícones de provedor + a marca — sem upload de ícone/PNG arbitrário.
   Cada ícone de IA/saldo mostra a cota ao vivo (métrica escolhida no painel).
-- Relógio mostra só `HH:MM` (sem segundos) e repinta a tela inteira 1x por
-  minuto — sem blitting parcial.
+- Relógio mostra só `HH:MM` (sem segundos) e, no fundo estático, repinta a
+  tela inteira 1x por minuto — sem blitting parcial. Fundo `"gif"` avança
+  frame no `loop()` respeitando `frame_delay_ms` (40–80 ms, teto de 12
+  frames). O fps sustentado **não é garantido** se mineração/câmera
+  estiverem ocupando o mesmo `loop()`.
 - No Wokwi, o LittleFS não monta (`fs_ok: false`) — o tema (JSON pequeno e a
   imagem de fundo, já em meia resolução — ~38 KB no Wokwi, ~77 KB no
-  hardware real, ver seção "Imagem de fundo" acima) fica só em RAM pra
-  sessão atual; reiniciar o simulador perde o tema (mas o botão de
-  recarregar busca de novo do coletor, que persiste em disco no host).
+  hardware real, ver seção "Imagem de fundo" acima; animação ~115 KB no
+  Wokwi) fica só em RAM pra sessão atual; reiniciar o simulador perde o tema
+  (mas o botão de recarregar busca de novo do coletor, que persiste em disco
+  no host).
 - Corpo do `POST /theme/meta` direto na placa é bufferizado inteiro em RAM
   pelo `WebServer` (`arg("plain")`) antes de chegar no handler — por isso o
   limite de 8 KB.

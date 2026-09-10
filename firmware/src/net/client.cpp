@@ -594,6 +594,79 @@ static bool themeClientFetchBackground(const String &base)
   return ok;
 }
 
+static bool themeClientFetchAnim(const String &base)
+{
+  HTTPClient http;
+  http.setTimeout(20000);
+  http.setConnectTimeout(5000);
+  const int w = customThemeCanvasAnimWidth();
+  const int h = customThemeCanvasAnimHeight();
+  const int expected = (int)customThemeAnimExpectedBytes();
+  if (expected <= 0)
+  {
+    Serial.println("tema: theme.json GIF sem tamanho de animação esperado");
+    return false;
+  }
+  String url = base + "api/theme/background/anim?w=" + String(w) + "&h=" + String(h);
+  if (!http.begin(url))
+  {
+    return false;
+  }
+  addVigiaDeviceHeaders(http);
+  int code = http.GET();
+  bool ok = false;
+  if (code == 200)
+  {
+    int len = http.getSize();
+    WiFiClient *stream = http.getStreamPtr();
+    Serial.printf("tema: baixando animação (%d bytes, esperado %d)\n", len, expected);
+    if (len != expected)
+    {
+      Serial.printf("tema: tamanho da animação não bate (%dx%d, frames no json)\n", w, h);
+    }
+    else if (len > 0 && customThemeBeginAnimWrite())
+    {
+      uint8_t buf[1024];
+      int remaining = len;
+      ok = true;
+      while (remaining > 0)
+      {
+        int want = remaining < (int)sizeof(buf) ? remaining : (int)sizeof(buf);
+        int n = stream->readBytes(buf, want);
+        if (n <= 0)
+        {
+          Serial.printf("tema: leitura da animação parou em %d/%d bytes\n", len - remaining, len);
+          ok = false;
+          break;
+        }
+        if (!customThemeWriteAnimChunk(buf, n))
+        {
+          Serial.println("tema: gravação da animação falhou (RAM/LittleFS cheios?)");
+          ok = false;
+          break;
+        }
+        remaining -= n;
+      }
+      customThemeEndAnimWrite(ok);
+      Serial.println(ok ? "tema: animação baixada" : "tema: download da animação falhou");
+    }
+    else if (len <= 0)
+    {
+      Serial.println("tema: coletor não informou o tamanho da animação (sem Content-Length?)");
+    }
+    else
+    {
+      Serial.println("tema: sem storage (RAM/LittleFS) pra animação");
+    }
+  }
+  else if (code != 404)
+  {
+    Serial.printf("tema: GET /api/theme/background/anim -> HTTP %d\n", code);
+  }
+  http.end();
+  return ok;
+}
+
 // Auto-refresh do tema via SSE (backend envia `event: theme` ao salvar
 // em /api/theme/meta ou trocar o wallpaper). Enquanto a VIEW_THEME
 // estiver visível o firmware recarrega sozinho; fora dela o evento é
@@ -690,6 +763,36 @@ void themeClientReload()
     Serial.println("tema: coletor sem tema salvo");
     return;
   }
+  String themeJson = jsonText(doc["theme"]);
+  bool gif = false;
+  if (themeJson.length())
+  {
+    JsonDocument themeDoc;
+    if (!deserializeJson(themeDoc, themeJson))
+    {
+      gif = jsonText(themeDoc["background"]["type"]) == "gif";
+    }
+  }
+  if (gif)
+  {
+    if (!themeJson.length() || !customThemeApplyMeta(themeJson))
+    {
+      Serial.println("tema: JSON do coletor inválido");
+      return;
+    }
+    if (!themeClientFetchAnim(base))
+    {
+      Serial.println("tema: falha ao baixar a animação, tenta fundo estático");
+      if (doc["has_background"] | false)
+      {
+        themeClientFetchBackground(base);
+      }
+    }
+    customThemeInvalidateBackground();
+    uiPaint();
+    Serial.println("tema: recarregado do coletor (gif)");
+    return;
+  }
   if (doc["has_background"] | false)
   {
     if (!themeClientFetchBackground(base))
@@ -697,7 +800,6 @@ void themeClientReload()
       Serial.println("tema: falha ao baixar a imagem de fundo, segue só com o resto");
     }
   }
-  String themeJson = jsonText(doc["theme"]);
   if (!themeJson.length() || !customThemeApplyMeta(themeJson))
   {
     Serial.println("tema: JSON do coletor inválido");

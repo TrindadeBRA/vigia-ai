@@ -15,6 +15,23 @@ function wallpaperRawPath(wid: string, suffix = ""): string {
   if (suffix) return join(wallpapersDir(), `${wid}${suffix}.raw`);
   return join(wallpapersDir(), `${wid}.raw`);
 }
+function wallpaperAnimPath(wid: string, suffix = ""): string {
+  if (suffix === "_wokwi") return join(wallpapersDir(), `${wid}_anim_wokwi.raw`);
+  return join(wallpapersDir(), `${wid}_anim.raw`);
+}
+
+function selectedWallpaperKind(wid: string): string {
+  try {
+    const metaFile = join(dataDir(), "wallpapers.json");
+    if (!existsSync(metaFile)) return "static";
+    const raw = JSON.parse(readFileSync(metaFile, "utf-8")) as Record<string, unknown>;
+    const list = (raw.wallpapers ?? []) as Array<Record<string, unknown>>;
+    const found = list.find((w) => String(w.id) === wid);
+    return String(found?.kind ?? "static") === "gif" ? "gif" : "static";
+  } catch {
+    return "static";
+  }
+}
 
 function screenSuffix(request: unknown): string {
   const req = request as { headers: Record<string, string | undefined>; query: Record<string, string | undefined> };
@@ -36,7 +53,9 @@ function screenSuffix(request: unknown): string {
       const wi = parseInt(w, 10);
       const hi = parseInt(h, 10);
       if (wi === 160 && hi === 120) suffix = "_wokwi";
+      else if (wi === 80 && hi === 60) suffix = "_wokwi";
       else if (wi === 240 && hi === 160) suffix = "";
+      else if (wi === 120 && hi === 80) suffix = "";
     } catch {}
   }
   return suffix;
@@ -143,6 +162,17 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
       } catch {}
     }
     return reply.code(404).send({ ok: false, error: "papel de parede não encontrado" });
+  });
+
+  app.get("/api/theme/background/anim", { schema: { tags: ["Tema"] } }, async (request, reply) => {
+    const wid = await resolveSelectedId();
+    if (!wid) return reply.code(404).send({ ok: false, error: "nenhum papel de parede selecionado" });
+    if (selectedWallpaperKind(wid) !== "gif") return reply.code(404).send({ ok: false, error: "papel selecionado não é GIF" });
+    const suffix = screenSuffix(request);
+    let p = wallpaperAnimPath(wid, suffix);
+    if (!existsSync(p) && suffix) p = wallpaperAnimPath(wid);
+    if (!existsSync(p)) return reply.code(404).send({ ok: false, error: "animação não encontrada" });
+    return reply.type("application/octet-stream").send(readFileSync(p));
   });
 
   app.get("/api/theme/background/index", { schema: { tags: ["Tema"] } }, async () => {

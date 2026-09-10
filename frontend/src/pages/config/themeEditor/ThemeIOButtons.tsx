@@ -6,11 +6,13 @@ import { downloadThemeJson, parseThemeJson, type ThemeState } from "./themeState
 export function ThemeIOButtons({
   theme,
   hasWallpaper,
+  gif,
   onImport,
   c,
 }: {
   theme: ThemeState;
   hasWallpaper: boolean;
+  gif?: { frame_count: number; frame_delay_ms: number } | null;
   onImport: (t: ThemeState) => void;
   c: ThemeCopy;
 }) {
@@ -46,7 +48,7 @@ export function ThemeIOButtons({
         className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-edge bg-chip text-ink3 hover:border-accent hover:text-ink"
         title={c.exportTheme}
         aria-label={c.exportTheme}
-        onClick={() => downloadThemeJson(theme, hasWallpaper)}
+        onClick={() => downloadThemeJson(theme, hasWallpaper, gif)}
       >
         <DownloadIcon size={14} />
       </button>

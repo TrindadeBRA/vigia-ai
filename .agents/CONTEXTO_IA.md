@@ -72,7 +72,8 @@ backend/src/telegram/router.ts     rotas /api/telegram/*
 frontend/src/pages/config/AlarmsPage.tsx  painel de alarmes + notificações (/display/alarms), com exportar/importar
 frontend/src/pages/config/useTelegram.ts  hook do Telegram
 firmware/src/ui/customtheme.cpp    persistência (LittleFS/RAM) + render do tema (VIEW_THEME)
-backend/src/routers/wallpapers/router.ts     rotas /api/wallpapers/* — papéis de parede + busca/import Pexels/Wallhaven/Unsplash
+backend/src/routers/wallpapers/router.ts     rotas /api/wallpapers/* — papéis de parede + busca/import Pexels/Wallhaven/Unsplash/Giphy
+backend/src/routers/wallpapers/gif.ts        extração de frames de GIF animado (gifuct-js) → RAW RGB565 concatenado
 backend/src/routers/wallpapers/ssrfGuard.ts  guard SSRF (SECURITY_REVIEW.md Finding 1) — isolado por ser o trecho mais sensível
 backend/src/routers/wallpapers/rgb565.ts     conversão imagem <-> RAW RGB565 (Jimp)
 frontend/src/pages/config/wallpaperManager/context.tsx  estado + chamadas de API de papel de parede (usado em /display/theme)

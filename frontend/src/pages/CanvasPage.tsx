@@ -11,6 +11,8 @@ export default function CanvasPage() {
   const [data, setData] = useState<UsagePayload | null>(null);
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [wallpaperId, setWallpaperId] = useState<string | null>(null);
+  const [wallpaperKind, setWallpaperKind] = useState<string | null>(null);
+  const [wallpaperOriginalUrl, setWallpaperOriginalUrl] = useState<string | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 480, height: 320 });
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
@@ -75,7 +77,23 @@ export default function CanvasPage() {
         if (!next) next = await loadThemeDraft();
         if (cancelled) return;
         setTheme(next);
-        setWallpaperId(themeRes?.background_id || null);
+        const bgId = themeRes?.background_id || null;
+        setWallpaperId(bgId);
+        if (bgId) {
+          try {
+            const wr = await fetch("/api/wallpapers?scope=theme", { cache: "no-store" });
+            const wj = wr.ok ? ((await wr.json()) as { wallpapers?: Array<{ id: string; kind?: string; original_url?: string | null }> }) : null;
+            const found = (wj?.wallpapers || []).find((w) => w.id === bgId);
+            setWallpaperKind(found?.kind ?? null);
+            setWallpaperOriginalUrl(found?.original_url ?? null);
+          } catch {
+            setWallpaperKind(null);
+            setWallpaperOriginalUrl(null);
+          }
+        } else {
+          setWallpaperKind(null);
+          setWallpaperOriginalUrl(null);
+        }
       } catch {
         if (!cancelled) setTheme(await loadThemeDraft());
       } finally {
@@ -98,6 +116,8 @@ export default function CanvasPage() {
       usage={data}
       now={new Date(now + driftMs)}
       wallpaperId={wallpaperId}
+      wallpaperKind={wallpaperKind}
+      wallpaperOriginalUrl={wallpaperOriginalUrl}
       canvasSize={canvasSize}
       lang={outlet?.lang || "pt"}
       fullscreen

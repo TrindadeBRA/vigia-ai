@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../../cn";
 import { ConfirmModal } from "../../../components/ConfirmModal";
+import { ProviderSearchGrid, wallpaperMediaSrc } from "../../../components/ProviderSearchGrid";
 import { cfgStatus } from "../../../tw";
 import { Button, Card, FieldStatus, SelectField } from "../ui";
 import { useWp } from "./context";
@@ -106,6 +107,7 @@ export function WallpaperLibrary() {
                                             w={w}
                                             active={w.id === selectedId}
                                             selectedLabel={c.wallpaperSelected}
+                                            gifBadge={c.gifBadge}
                                             onSelect={() => void selectReq.run(() => handleSelect(w.id), { error: c.wallpaperSelectError })}
                                             onDelete={() => setConfirmingDeleteId(w.id)}
                                         />
@@ -129,6 +131,7 @@ export function WallpaperLibrary() {
                                 { value: "wallhaven", label: `Wallhaven ${providers?.wallhaven.configured ? "✓" : ""}` },
                                 { value: "pexels", label: `Pexels ${providers?.pexels.configured ? "✓" : " — precisa de key"}` },
                                 { value: "unsplash", label: `Unsplash ${providers?.unsplash.configured ? "✓" : " — precisa de key"}` },
+                                { value: "giphy", label: `Giphy ${providers?.giphy?.configured ? "✓" : " — precisa de key"}` },
                             ]}
                         />
                         <div className="flex flex-1 gap-2">
@@ -155,43 +158,23 @@ export function WallpaperLibrary() {
                     ) : null}
                     {!canSearch ? (
                         <p className={`${cfgStatus} text-warn`}>
-                            {c.searchNeedsKey(searchProvider === "pexels" ? c.providerPexels : c.providerUnsplash)}
+                            {c.searchNeedsKey(searchProvider === "pexels" ? c.providerPexels : searchProvider === "unsplash" ? c.providerUnsplash : c.providerGiphy)}
                         </p>
                     ) : null}
+                    {searchProvider === "giphy" ? <p className={`${cfgStatus} text-ink3`}>{c.gifBoardHint}</p> : null}
                     <FieldStatus status={searchReq.status} message={searchReq.message} />
                     {searchResults.length > 0 ? (
                         <>
                             <p className={cfgStatus}>
                                 {searchResults.length} {c.searchResults.toLowerCase()} {searchTotal ? `· total ~${searchTotal}` : ""}
                             </p>
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                {searchResults.map((r) => (
-                                    <div key={`${r.provider}-${r.id}`} className="overflow-hidden rounded-[12px] border border-edge bg-canvas">
-                                        <button
-                                            type="button"
-                                            className="aspect-[16/10] w-full overflow-hidden border-0 bg-black/10 p-0"
-                                            onClick={() => void importReq.run(() => handleImport(r), { success: c.imported, error: c.importError })}
-                                            disabled={importReq.busy}
-                                        >
-                                            <img src={r.thumb || r.preview || r.full || ""} alt={r.id} className="size-full object-cover" loading="lazy" />
-                                        </button>
-                                        <div className="p-2">
-                                            <p className="truncate text-[11px] font-medium text-ink2">
-                                                {r.provider} · {r.resolution || (r.width && r.height ? `${r.width}×${r.height}` : r.id)}
-                                            </p>
-                                            {r.photographer ? <p className="truncate text-[11px] text-ink3">{r.photographer}</p> : null}
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() => void importReq.run(() => handleImport(r), { success: c.imported, error: c.importError })}
-                                                loading={importReq.busy}
-                                                className="mt-2 w-full"
-                                            >
-                                                {importReq.busy ? c.importing : c.importButton}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <ProviderSearchGrid
+                                items={searchResults}
+                                busy={importReq.busy}
+                                useLabel={importReq.busy ? c.importing : c.importButton}
+                                gifBadge={c.gifBadge}
+                                onUse={(r) => void importReq.run(() => handleImport(r), { success: c.imported, error: c.importError })}
+                            />
                             <Button variant="ghost" onClick={() => void searchReq.run(() => handleSearch(searchPage + 1), { error: c.searchError })} loading={searchReq.busy}>
                                 Carregar mais
                             </Button>
@@ -219,7 +202,7 @@ export function WallpaperLibrary() {
     );
 }
 
-function SortableThemeWallpaperTile({ w, active, selectedLabel, onSelect, onDelete }: { w: { id: string; provider?: string | null; external_id?: string | null }; active: boolean; selectedLabel: string; onSelect: () => void; onDelete: () => void }) {
+function SortableThemeWallpaperTile({ w, active, selectedLabel, gifBadge, onSelect, onDelete }: { w: { id: string; provider?: string | null; external_id?: string | null; kind?: string | null; original_url?: string | null }; active: boolean; selectedLabel: string; gifBadge: string; onSelect: () => void; onDelete: () => void }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: w.id });
     const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
     return (
@@ -233,7 +216,7 @@ function SortableThemeWallpaperTile({ w, active, selectedLabel, onSelect, onDele
             className={cn("group relative cursor-pointer overflow-hidden rounded-[12px] border bg-canvas text-left", active ? "border-accent ring-2 ring-accent/40" : "border-edge hover:border-accent/50", isDragging && "ring-2 ring-accent/30")}
         >
             <div className="aspect-[16/10] overflow-hidden bg-black/10">
-                <img src={`/api/wallpapers/${w.id}/preview`} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                <img src={wallpaperMediaSrc(w)} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
             <div className="flex items-center justify-between gap-2 px-2 py-1.5">
                 <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}</span>
@@ -244,6 +227,7 @@ function SortableThemeWallpaperTile({ w, active, selectedLabel, onSelect, onDele
                     <button type="button" className="shrink-0 rounded-full bg-bad px-2 py-0.5 text-[11px] font-bold text-white hover:bg-bad/90" onClick={(e) => { e.stopPropagation(); onDelete(); }}>×</button>
                 </div>
             </div>
+            {w.kind === "gif" ? <span className="pointer-events-none absolute right-1 top-1 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{gifBadge}</span> : null}
             {active ? <span className="pointer-events-none absolute left-1 top-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-ink">{selectedLabel}</span> : null}
         </div>
     );

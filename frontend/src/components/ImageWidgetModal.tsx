@@ -4,6 +4,7 @@ import { useRequest } from "../hooks/useRequest";
 import type { Lang, T } from "../i18n";
 import { THEME_STR } from "../pages/config/themeCopy";
 import { Button, FieldStatus, Modal, SelectField } from "../pages/config/ui";
+import { ProviderSearchGrid, type ProviderSearchGridItem } from "./ProviderSearchGrid";
 
 type ProviderStatus = {
     pexels: { configured: boolean };
@@ -140,7 +141,7 @@ function ImageWidgetContent({
                 ? Boolean(providers?.pexels.configured)
                 : searchProvider === "unsplash"
                     ? Boolean(providers?.unsplash.configured)
-                    : Boolean(providers?.giphy.configured);
+                    : Boolean(providers?.giphy?.configured);
 
     async function handleFile(file: File) {
         if (!file.type.startsWith("image/")) throw new Error("Selecione uma imagem");
@@ -335,7 +336,7 @@ function ImageWidgetContent({
                                 { value: "wallhaven", label: `Wallhaven ${providers?.wallhaven.configured ? "✓" : ""}` },
                                 { value: "pexels", label: `Pexels ${providers?.pexels.configured ? "✓" : " — precisa de key"}` },
                                 { value: "unsplash", label: `Unsplash ${providers?.unsplash.configured ? "✓" : " — precisa de key"}` },
-                                { value: "giphy", label: `Giphy ${providers?.giphy.configured ? "✓" : " — precisa de key"}` },
+                                { value: "giphy", label: `Giphy ${providers?.giphy?.configured ? "✓" : " — precisa de key"}` },
                             ]}
                         />
                         <div className="flex flex-1 gap-2">
@@ -356,21 +357,13 @@ function ImageWidgetContent({
                     {searchResults.length > 0 ? (
                         <>
                             <p className="text-xs text-ink3">{searchResults.length} resultados</p>
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                {searchResults.map((r) => (
-                                    <div key={`${r.provider}-${r.id}`} className="overflow-hidden rounded-[12px] border border-edge bg-canvas">
-                                        <button type="button" className="aspect-[16/10] w-full overflow-hidden border-0 bg-black/10 p-0" onClick={() => handlePickSearch(r)} disabled={importReq.busy}>
-                                            <img src={r.thumb || r.preview || r.full || ""} alt={r.id} className="size-full object-cover" loading="lazy" />
-                                        </button>
-                                        <div className="p-2">
-                                            <p className="truncate text-[11px] font-medium text-ink2">{r.provider} · {r.resolution || r.title?.slice(0, 20) || r.id}</p>
-                                            <Button variant="secondary" onClick={() => handlePickSearch(r)} className="mt-2 w-full text-xs">
-                                                Usar
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <ProviderSearchGrid
+                                items={searchResults as ProviderSearchGridItem[]}
+                                busy={importReq.busy}
+                                useLabel="Usar"
+                                gifBadge="GIF"
+                                onUse={(r) => handlePickSearch(r as SearchItem)}
+                            />
                             <Button variant="ghost" onClick={() => void searchReq.run(() => handleSearch(searchPage + 1), { error: c.searchError })} loading={searchReq.busy}>
                                 Carregar mais
                             </Button>

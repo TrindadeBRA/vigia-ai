@@ -645,6 +645,7 @@ void uiTickClock()
   }
   if (g_view == VIEW_THEME)
   {
+    customThemeTickAnimation();
     customThemeTickClock();
     return;
   }

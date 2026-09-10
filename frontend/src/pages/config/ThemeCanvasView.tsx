@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
+import { wallpaperMediaSrc } from "../../components/ProviderSearchGrid";
 import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import type { Lang } from "../../i18n";
 import { IconCard } from "./themeCanvas/IconCard";
@@ -16,6 +17,8 @@ export function ThemeCanvasView({
   usage,
   now,
   wallpaperId,
+  wallpaperKind,
+  wallpaperOriginalUrl,
   canvasSize,
   className,
   maxWidth = 720,
@@ -26,6 +29,8 @@ export function ThemeCanvasView({
   usage: UsagePayload | null;
   now: Date;
   wallpaperId: string | null;
+  wallpaperKind?: string | null;
+  wallpaperOriginalUrl?: string | null;
   canvasSize: { width: number; height: number };
   className?: string;
   maxWidth?: number;
@@ -72,7 +77,7 @@ export function ThemeCanvasView({
     <div ref={canvasRef} className={cn("relative overflow-hidden", !fullscreen && className)} style={canvasStyle}>
       {wallpaperId ? (
         <img
-          src={`/api/wallpapers/${wallpaperId}/preview`}
+          src={wallpaperMediaSrc({ id: wallpaperId, kind: wallpaperKind, original_url: wallpaperOriginalUrl })}
           alt=""
           draggable={false}
           className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
