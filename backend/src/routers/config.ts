@@ -280,14 +280,14 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
 }
 
 export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/config", async (request) => {
+  app.get("/api/config", { schema: { tags: ["Config"] } }, async (request) => {
     const host = (app as unknown as { listenHost?: string }).listenHost ?? "0.0.0.0";
     const port = (app as unknown as { listenPort?: number }).listenPort ?? 8787;
     const hub = (app as unknown as { hub?: unknown }).hub ?? null;
     return configPublic(host, port, hub);
   });
 
-  app.post("/api/config", async (request, reply) => {
+  app.post("/api/config", { schema: { tags: ["Config"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
     const hostVal = (app as unknown as { listenHost?: string }).listenHost ?? "0.0.0.0";
@@ -394,7 +394,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, restart_needed_for_port: restart };
   });
 
-  app.post("/api/config/account", async (request, reply) => {
+  app.post("/api/config/account", { schema: { tags: ["Config"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body || typeof body.provider !== "string") return reply.code(400).send({ ok: false, error: "provider obrigatório" });
     const provider = String(body.provider);
@@ -443,7 +443,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, id: accountId };
   });
 
-  app.delete("/api/config/account/:provider/:account_id", async (request) => {
+  app.delete("/api/config/account/:provider/:account_id", { schema: { tags: ["Config"] } }, async (request) => {
     const { provider, account_id } = request.params as { provider: string; account_id: string };
     const valid = ["claude", "gpt", "cursor", "openrouter", "deepseek", "opencode", "fal", "bitcoin", "adsense", "retroachievements"];
     if (!valid.includes(provider)) return { ok: false, error: "provider inválido" };
@@ -459,7 +459,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.delete("/api/config/secret/:name", async (request) => {
+  app.delete("/api/config/secret/:name", { schema: { tags: ["Config"] } }, async (request) => {
     const { name } = request.params as { name: string };
     const mapping: Record<string, string> = {
       claude: "claude", claude_paste: "claude", CLAUDE_OAUTH_TOKEN: "claude",
@@ -508,7 +508,7 @@ export async function createConfigRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, cleared: name };
   });
 
-  app.get("/secrets.h", async (request, reply) => {
+  app.get("/secrets.h", { schema: { tags: ["Config"] } }, async (request, reply) => {
     const host = (app as unknown as { listenHost?: string }).listenHost ?? "0.0.0.0";
     const port = (app as unknown as { listenPort?: number }).listenPort ?? 8787;
     const pub = configPublic(host, port) as Record<string, unknown>;

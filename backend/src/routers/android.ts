@@ -258,7 +258,7 @@ function subscribeStream(deviceId: string, serial: string, sub: StreamSub): () =
 
 export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     // Status do ADB
-    app.get("/api/android/adb/status", async () => {
+    app.get("/api/android/adb/status", { schema: { tags: ["Android"] } }, async () => {
         const adb = await whichAdb();
         if (!adb) return { ok: false, adb: null, error: "adb não encontrado no PATH do coletor. Instale platform-tools (apt install adb / brew install android-platform-tools)." };
         const ver = await runAdb(["version"], 3000);
@@ -269,7 +269,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // Conectar TCP/IP genérico (sem salvar)
-    app.post("/api/android/adb/connect", async (request, reply) => {
+    app.post("/api/android/adb/connect", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const body = (request.body as Record<string, unknown>) ?? {};
         const host = String((body as Record<string, unknown>).host || "").trim();
         const port = Number((body as Record<string, unknown>).port || 5555);
@@ -283,7 +283,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(502).send({ ok: false, error: out.trim() || `falha ao conectar em ${target}` });
     });
 
-    app.post("/api/android/adb/disconnect", async (request) => {
+    app.post("/api/android/adb/disconnect", { schema: { tags: ["Android"] } }, async (request) => {
         const body = (request.body as Record<string, unknown>) ?? {};
         const target = String((body as Record<string, unknown>).target || "").trim();
         const args = target ? ["disconnect", target] : ["disconnect"];
@@ -292,13 +292,13 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // CRUD de dispositivos salvos
-    app.get("/api/android/devices", async () => {
+    app.get("/api/android/devices", { schema: { tags: ["Android"] } }, async () => {
         const file = load();
         const live = await listLiveDevices();
         return { devices: file.devices.map((d) => toPublic(d, live)) };
     });
 
-    app.post("/api/android/devices", async (request, reply) => {
+    app.post("/api/android/devices", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const parsed = AndroidCreateSchema.safeParse((request.body as Record<string, unknown>) ?? {});
         if (!parsed.success) return reply.code(400).send({ ok: false, error: parsed.error.message });
         const file = load();
@@ -309,7 +309,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, device: toPublic(item, live) };
     });
 
-    app.patch("/api/android/devices/:id", async (request, reply) => {
+    app.patch("/api/android/devices/:id", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const parsed = AndroidDeviceSchema.omit({ id: true }).partial().safeParse((request.body as Record<string, unknown>) ?? {});
         if (!parsed.success) return reply.code(400).send({ ok: false, error: parsed.error.message });
@@ -326,7 +326,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, device: toPublic(next, live) };
     });
 
-    app.delete("/api/android/devices/:id", async (request, reply) => {
+    app.delete("/api/android/devices/:id", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const file = load();
         const idx = file.devices.findIndex((d) => d.id === id);
@@ -338,7 +338,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // Conectar/desconectar dispositivo salvo (TCP)
-    app.post("/api/android/devices/:id/connect", async (request, reply) => {
+    app.post("/api/android/devices/:id/connect", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Dispositivo não encontrado" });
@@ -352,7 +352,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(502).send({ ok: false, error: out || `falha ao conectar em ${target}` });
     });
 
-    app.post("/api/android/devices/:id/disconnect", async (request, reply) => {
+    app.post("/api/android/devices/:id/disconnect", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Dispositivo não encontrado" });
@@ -363,7 +363,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // Info do dispositivo (tamanho, modelo, etc)
-    app.get("/api/android/devices/:id/info", async (request, reply) => {
+    app.get("/api/android/devices/:id/info", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Dispositivo não encontrado" });
@@ -377,7 +377,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // Screenshot único (PNG -> JPEG)
-    app.get("/api/android/devices/:id/screenshot", async (request, reply) => {
+    app.get("/api/android/devices/:id/screenshot", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Dispositivo não encontrado" });
@@ -399,7 +399,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     // Stream MJPEG (polling screencap) — inspirado no scrcpy, mas via adb screencap
     // Para scrcpy nativo (H.264), o usuário pode rodar `scrcpy --v4l2` externo; aqui
     // entregamos MJPEG leve que funciona sem scrcpy instalado.
-    app.get("/api/android/devices/:id/stream", async (request, reply) => {
+    app.get("/api/android/devices/:id/stream", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Dispositivo não encontrado" });
@@ -444,7 +444,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // Input (toque, swipe, teclas) — espelhamento interativo
-    app.post("/api/android/devices/:id/input", async (request, reply) => {
+    app.post("/api/android/devices/:id/input", { schema: { tags: ["Android"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Dispositivo não encontrado" });
@@ -508,7 +508,7 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // Atalho: listar dispositivos ADB ao vivo (sem precisar salvar)
-    app.get("/api/android/adb/devices", async () => {
+    app.get("/api/android/adb/devices", { schema: { tags: ["Android"] } }, async () => {
         const live = await listLiveDevices();
         const devices = [...live.entries()].map(([serial, info]) => ({ serial, state: info.state, model: info.model }));
         // Tenta pegar tamanho de cada device online

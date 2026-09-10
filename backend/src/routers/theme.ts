@@ -49,7 +49,7 @@ function partition(s: string, sep: string): [string, string, string] {
 }
 
 export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/theme", async () => {
+  app.get("/api/theme", { schema: { tags: ["Tema"] } }, async () => {
     let theme: string | null = null;
     const p = metaPath();
     if (existsSync(p)) {
@@ -95,7 +95,7 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  app.post("/api/theme/meta", async (request, reply) => {
+  app.post("/api/theme/meta", { schema: { tags: ["Tema"] } }, async (request, reply) => {
     const body = await getRawBody(request);
     if (!body || body.length === 0) return reply.code(400).send({ ok: false, error: "corpo vazio" });
     if (body.length > MAX_META_BYTES) return reply.code(413).send({ ok: false, error: "tema grande demais" });
@@ -116,7 +116,7 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.get("/api/theme/background", async (request, reply) => {
+  app.get("/api/theme/background", { schema: { tags: ["Tema"] } }, async (request, reply) => {
     // dynamic import wallpapers helpers
     const wid = await resolveSelectedId();
     if (!wid) return reply.code(404).send({ ok: false, error: "nenhum papel de parede selecionado" });
@@ -145,12 +145,12 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(404).send({ ok: false, error: "papel de parede não encontrado" });
   });
 
-  app.get("/api/theme/background/index", async () => {
+  app.get("/api/theme/background/index", { schema: { tags: ["Tema"] } }, async () => {
     const wid = await resolveSelectedId();
     return { enabled: false, index: 0, count: wid ? 1 : 0, interval: 0, current_id: wid };
   });
 
-  app.delete("/api/theme", async () => {
+  app.delete("/api/theme", { schema: { tags: ["Tema"] } }, async () => {
     try { unlinkSync(metaPath()); } catch {}
     try {
       const hub = (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub;

@@ -54,12 +54,12 @@ function save(store: MiningStore): void {
 
 export async function createMiningRoutes(app: FastifyInstance): Promise<void> {
   // GET pela placa (busca pool/wallet/worker/enabled) e pelo painel de config.
-  app.get("/api/mining/config", async () => {
+  app.get("/api/mining/config", { schema: { tags: ["Mineração"] } }, async () => {
     return load().config;
   });
 
   // PUT pelo painel de config (/display/config) — merge parcial.
-  app.put("/api/mining/config", async (request, reply) => {
+  app.put("/api/mining/config", { schema: { tags: ["Mineração"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     const parsed = MiningConfigPatchSchema.safeParse(body ?? {});
     if (!parsed.success) {
@@ -72,7 +72,7 @@ export async function createMiningRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // POST pela placa, só enquanto estiver de fato na VIEW_MINER minerando.
-  app.post("/api/mining/report", async (request, reply) => {
+  app.post("/api/mining/report", { schema: { tags: ["Mineração"] } }, async (request, reply) => {
     const parsed = MiningReportSchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.code(400).send({ ok: false, error: parsed.error.message });
@@ -84,7 +84,7 @@ export async function createMiningRoutes(app: FastifyInstance): Promise<void> {
 
   // GET pelo painel (/display) — snapshot em memória/disco, com `stale`
   // calculado agora (não fica gravado, é sempre relativo ao momento da leitura).
-  app.get("/api/mining/status", async () => {
+  app.get("/api/mining/status", { schema: { tags: ["Mineração"] } }, async () => {
     const { report, reportedAt } = load();
     const ageMs = reportedAt ? Date.now() - Date.parse(reportedAt) : Infinity;
     const stale = !reportedAt || !Number.isFinite(ageMs) || ageMs > STALE_AFTER_MS;

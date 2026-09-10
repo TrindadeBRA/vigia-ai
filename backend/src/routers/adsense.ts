@@ -50,7 +50,7 @@ function htmlRedirect(url: string, message: string): string {
 }
 
 export async function createAdsenseRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/oauth/adsense/start", async (request, reply) => {
+  app.get("/api/oauth/adsense/start", { schema: { tags: ["AdSense"] } }, async (request, reply) => {
     const cfg = load() as Record<string, unknown>;
     const p = providerCfg(cfg, "adsense") as Record<string, unknown>;
     const clientId = String(p.client_id ?? "").trim();
@@ -67,7 +67,7 @@ export async function createAdsenseRoutes(app: FastifyInstance): Promise<void> {
     return { url: authUrl(clientId, port, state) };
   });
 
-  app.get("/api/oauth/adsense/callback", async (request, reply) => {
+  app.get("/api/oauth/adsense/callback", { schema: { tags: ["AdSense"] } }, async (request, reply) => {
     const query = (request.query ?? {}) as Record<string, string | undefined>;
     const code = query.code ?? null;
     const state = query.state ?? null;
@@ -108,7 +108,7 @@ export async function createAdsenseRoutes(app: FastifyInstance): Promise<void> {
     return reply.type("text/html").send(html);
   });
 
-  app.post("/api/oauth/adsense/disconnect", async () => {
+  app.post("/api/oauth/adsense/disconnect", { schema: { tags: ["AdSense"] } }, async () => {
     update((cfg: Record<string, unknown>) => {
       const providers = (cfg.providers ?? {}) as Record<string, unknown>;
       const ads = (providers.adsense ?? {}) as Record<string, unknown>;

@@ -141,7 +141,7 @@ function patchThemeBackgroundType(kind: string): void {
 }
 
 export async function createWallpapersRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/wallpapers", async (request) => {
+  app.get("/api/wallpapers", { schema: { tags: ["Papéis de parede"] } }, async (request) => {
     const query = (request.query ?? {}) as Record<string, string>;
     let scope: string | null = query.scope ?? null;
     if (scope !== "theme" && scope !== "grid") scope = null;
@@ -150,9 +150,9 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return { wallpapers, selected_id: getSelectedId(), grid_selected_id: getGridSelectedId(), providers, count: wallpapers.length, scope };
   });
 
-  app.get("/api/wallpapers/selected", async () => ({ selected_id: getSelectedId() }));
+  app.get("/api/wallpapers/selected", { schema: { tags: ["Papéis de parede"] } }, async () => ({ selected_id: getSelectedId() }));
 
-  app.put("/api/wallpapers/selected", async (request, reply) => {
+  app.put("/api/wallpapers/selected", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "JSON inválido" });
     const wid = body.id as unknown;
@@ -166,9 +166,9 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return { ok: true, selected_id: getSelectedId() };
   });
 
-  app.get("/api/wallpapers/providers", async () => providerStatus());
+  app.get("/api/wallpapers/providers", { schema: { tags: ["Papéis de parede"] } }, async () => providerStatus());
 
-  app.put("/api/wallpapers/providers", async (request, reply) => {
+  app.put("/api/wallpapers/providers", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "JSON inválido" });
     const pexelsKey = body.pexels_key as unknown;
@@ -197,7 +197,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return { ok: true, ...providerStatus() };
   });
 
-  app.post("/api/wallpapers/upload", async (request, reply) => {
+  app.post("/api/wallpapers/upload", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const query = (request.query ?? {}) as Record<string, string>;
     let scopeParam: string | null = query.scope ?? null;
     if (scopeParam !== "theme" && scopeParam !== "grid") scopeParam = null;
@@ -290,7 +290,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return { ok: true, id: wid, scope: effectiveScope };
   });
 
-  app.delete("/api/wallpapers/:wid", async (request, reply) => {
+  app.delete("/api/wallpapers/:wid", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const { wid } = request.params as { wid: string };
     if (!wid || wid.includes("/") || wid.includes("\\") || wid.includes("..")) return reply.code(400).send({ ok: false, error: "id inválido" });
     const meta = loadMeta();
@@ -315,7 +315,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return { ok: true };
   });
 
-  app.get("/api/wallpapers/:wid/original", async (request, reply) => {
+  app.get("/api/wallpapers/:wid/original", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const { wid } = request.params as { wid: string };
     if (!wid || wid.includes("/") || wid.includes("\\")) return reply.code(400).send({ ok: false, error: "id inválido" });
     const orig = wallpaperOrigPath(wid);
@@ -336,7 +336,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return reply.code(404).send({ ok: false, error: "original não encontrado" });
   });
 
-  app.get("/api/wallpapers/:wid/preview", async (request, reply) => {
+  app.get("/api/wallpapers/:wid/preview", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const { wid } = request.params as { wid: string };
     if (!wid || wid.includes("/") || wid.includes("\\")) return reply.code(400).send({ ok: false, error: "id inválido" });
     const p = wallpaperPreviewPath(wid);
@@ -356,7 +356,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return reply.code(404).send({ ok: false, error: "preview não encontrado" });
   });
 
-  app.get("/api/wallpapers/:wid/raw", async (request, reply) => {
+  app.get("/api/wallpapers/:wid/raw", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const { wid } = request.params as { wid: string };
     if (!wid || wid.includes("/") || wid.includes("\\")) return reply.code(400).send({ ok: false, error: "id inválido" });
     const query = (request.query ?? {}) as Record<string, string>;
@@ -388,7 +388,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return reply.code(404).send({ ok: false, error: "wallpaper não encontrado" });
   });
 
-  app.get("/api/wallpapers/search/:provider", async (request, reply) => {
+  app.get("/api/wallpapers/search/:provider", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const { provider } = request.params as { provider: string };
     const prov = provider.toLowerCase().trim();
     if (!["pexels", "wallhaven", "unsplash", "giphy"].includes(prov)) return reply.code(400).send({ ok: false, error: "provider deve ser pexels, wallhaven, unsplash ou giphy" });
@@ -510,7 +510,7 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     }
   });
 
-  app.post("/api/wallpapers/import", async (request, reply) => {
+  app.post("/api/wallpapers/import", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "JSON inválido" });
     const query = (request.query ?? {}) as Record<string, string>;
@@ -556,13 +556,13 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return { ok: true, id: wid, provider };
   });
 
-  app.get("/api/wallpapers/grid/selected", async () => {
+  app.get("/api/wallpapers/grid/selected", { schema: { tags: ["Papéis de parede"] } }, async () => {
     let wid = getGridSelectedId();
     if (wid && !listWallpapers().some((w) => String(w.id) === wid)) { wid = null; setGridSelectedId(null); }
     return { grid_selected_id: wid };
   });
 
-  app.put("/api/wallpapers/grid/selected", async (request, reply) => {
+  app.put("/api/wallpapers/grid/selected", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "JSON inválido" });
     const wid = body.id as unknown;
@@ -577,9 +577,9 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
     return { ok: true, grid_selected_id: getGridSelectedId() };
   });
 
-  app.get("/api/wallpapers/providers/status", async () => providerStatus());
+  app.get("/api/wallpapers/providers/status", { schema: { tags: ["Papéis de parede"] } }, async () => providerStatus());
 
-  app.put("/api/wallpapers/reorder", async (request, reply) => {
+  app.put("/api/wallpapers/reorder", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "JSON inválido" });
     const idsRaw = body.ids as unknown;

@@ -8,7 +8,7 @@ const STARTED_AT = new Date();
 
 /** Saúde do próprio coletor (uptime/memória/CPU/último ciclo) — sem API externa, card "Sistema" no /display. */
 export async function createSystemRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/system", async () => {
+  app.get("/api/system", { schema: { tags: ["Sistema"] } }, async () => {
     const hub = (app as unknown as { hub?: UsageHub }).hub;
     const mem = process.memoryUsage();
     const load = os.loadavg();

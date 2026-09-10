@@ -12,14 +12,14 @@ function normalizeCalendarUnit(raw: unknown): string | null {
 }
 
 export async function createAlarmsRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/alarms", async () => {
+  app.get("/api/alarms", { schema: { tags: ["Alarmes"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const rules = (cfg.alarms ?? []) as Array<Record<string, unknown>>;
     const calendars = ((cfg.calendar ?? {}) as Record<string, unknown>).calendars as Array<Record<string, unknown>> | undefined;
     return { rules, metrics: catalogPublic(), calendars: Array.isArray(calendars) ? calendars.map((c) => ({ id: String(c.id), label: String(c.label ?? ""), url: String(c.url ?? ""), kind: String(c.kind ?? "events") })) : [] };
   });
 
-  app.post("/api/alarms", async (request, reply) => {
+  app.post("/api/alarms", { schema: { tags: ["Alarmes"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body || typeof body.provider !== "string" || typeof body.metric !== "string" || body.threshold === undefined) {
       return reply.code(400).send({ ok: false, error: "provider, metric, threshold obrigatórios" });
@@ -75,7 +75,7 @@ export async function createAlarmsRoutes(app: FastifyInstance): Promise<void> {
     return rule;
   });
 
-  app.patch("/api/alarms/:rule_id", async (request, reply) => {
+  app.patch("/api/alarms/:rule_id", { schema: { tags: ["Alarmes"] } }, async (request, reply) => {
     const { rule_id } = request.params as { rule_id: string };
     const body = request.body as Record<string, unknown> | null;
     const cfg = load() as Record<string, unknown>;
@@ -104,7 +104,7 @@ export async function createAlarmsRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.delete("/api/alarms/:rule_id", async (request) => {
+  app.delete("/api/alarms/:rule_id", { schema: { tags: ["Alarmes"] } }, async (request) => {
     const { rule_id } = request.params as { rule_id: string };
     update((c: Record<string, unknown>) => {
       const alarms = (c.alarms ?? []) as Array<Record<string, unknown>>;

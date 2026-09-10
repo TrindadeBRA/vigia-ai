@@ -10,12 +10,12 @@ function clampLimit(v: unknown): number {
 }
 
 export async function createRssRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/api/rss/config", async () => {
+    app.get("/api/rss/config", { schema: { tags: ["RSS"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         return (cfg.rss ?? { enabled: false, hidden: false, feeds: [] }) as Record<string, unknown>;
     });
 
-    app.patch("/api/rss/config", async (request, reply) => {
+    app.patch("/api/rss/config", { schema: { tags: ["RSS"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
         update((cfg: Record<string, unknown>) => {
@@ -28,7 +28,7 @@ export async function createRssRoutes(app: FastifyInstance): Promise<void> {
         return (cfg.rss ?? {}) as Record<string, unknown>;
     });
 
-    app.post("/api/rss/feeds", async (request, reply) => {
+    app.post("/api/rss/feeds", { schema: { tags: ["RSS"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.url !== "string" || !String(body.url).trim()) {
             return reply.code(400).send({ ok: false, error: "url é obrigatória (link do feed RSS/Atom)" });
@@ -60,7 +60,7 @@ export async function createRssRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, id, config: cfg.rss };
     });
 
-    app.patch("/api/rss/feeds/:id", async (request, reply) => {
+    app.patch("/api/rss/feeds/:id", { schema: { tags: ["RSS"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
@@ -96,7 +96,7 @@ export async function createRssRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, config: updated.rss };
     });
 
-    app.delete("/api/rss/feeds/:id", async (request) => {
+    app.delete("/api/rss/feeds/:id", { schema: { tags: ["RSS"] } }, async (request) => {
         const { id } = request.params as { id: string };
         update((cfg: Record<string, unknown>) => {
             const r = (cfg.rss ?? {}) as Record<string, unknown>;
@@ -107,7 +107,7 @@ export async function createRssRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true };
     });
 
-    app.get("/api/rss", async () => {
+    app.get("/api/rss", { schema: { tags: ["RSS"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         const r = (cfg.rss ?? {}) as Record<string, unknown>;
         if (r.hidden || !r.enabled) return { ok: true, error: null, updated_at: null, feeds: [] };
@@ -127,7 +127,7 @@ export async function createRssRoutes(app: FastifyInstance): Promise<void> {
         }
     });
 
-    app.post("/api/rss/preview", async (request, reply) => {
+    app.post("/api/rss/preview", { schema: { tags: ["RSS"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.url !== "string" || !String(body.url).trim()) {
             return reply.code(400).send({ ok: false, error: "url é obrigatória" });

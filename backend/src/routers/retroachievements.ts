@@ -3,7 +3,7 @@ import { fetchRetroOne, mockRetroPayload } from "../providers/retroachievements.
 import { load } from "../store.js";
 
 export async function createRetroachievementsRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/retroachievements", async () => {
+  app.get("/api/retroachievements", { schema: { tags: ["RetroAchievements"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const rcfg = (cfg.retroachievements ?? {}) as Record<string, unknown>;
     // hidden check is handled in usage hub; here just return live data if possible
@@ -24,7 +24,7 @@ export async function createRetroachievementsRoutes(app: FastifyInstance): Promi
     return data;
   });
 
-  app.post("/api/retroachievements/preview", async (request, reply) => {
+  app.post("/api/retroachievements/preview", { schema: { tags: ["RetroAchievements"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body || typeof body.secret !== "string" || !String(body.secret).trim()) {
       return reply.code(400).send({ ok: false, error: "secret é obrigatório (formato usuario:apikey)" });

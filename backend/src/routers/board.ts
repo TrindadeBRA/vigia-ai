@@ -10,7 +10,7 @@ function boardPath(): string {
 }
 
 export async function createBoardRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/board", async (request, reply) => {
+  app.get("/api/board", { schema: { tags: ["Board"] } }, async (request, reply) => {
     const p = boardPath();
     if (!existsSync(p)) {
       return reply.type("application/json").send("{}");
@@ -23,7 +23,7 @@ export async function createBoardRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.put("/api/board", async (request, reply) => {
+  app.put("/api/board", { schema: { tags: ["Board"] } }, async (request, reply) => {
     const body = (request as unknown as { body?: unknown }).body ?? (await getRawBody(request));
     // Fastify may have parsed body as object; we need raw bytes
     let raw: Buffer;
@@ -74,7 +74,7 @@ export async function createBoardRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.delete("/api/board", async () => {
+  app.delete("/api/board", { schema: { tags: ["Board"] } }, async () => {
     try {
       unlinkSync(boardPath());
     } catch {}

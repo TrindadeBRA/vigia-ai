@@ -4,12 +4,12 @@ import { fetchGithubProfile, fetchGithubRepo, fetchGithubTop, fetchGithubTrendin
 import { load, updateSync as update } from "../store.js";
 
 export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/api/github/config", async () => {
+    app.get("/api/github/config", { schema: { tags: ["GitHub"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         return (cfg.github ?? { enabled: false, hidden: false, repos: [], profiles: [] }) as Record<string, unknown>;
     });
 
-    app.patch("/api/github/config", async (request, reply) => {
+    app.patch("/api/github/config", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
         update((cfg: Record<string, unknown>) => {
@@ -22,7 +22,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         return (cfg.github ?? {}) as Record<string, unknown>;
     });
 
-    app.post("/api/github/repos", async (request, reply) => {
+    app.post("/api/github/repos", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.repo !== "string" || !String(body.repo).trim()) {
             return reply.code(400).send({ ok: false, error: "repo é obrigatório (formato owner/repo)" });
@@ -51,7 +51,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, id, config: cfg.github };
     });
 
-    app.patch("/api/github/repos/:id", async (request, reply) => {
+    app.patch("/api/github/repos/:id", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
@@ -86,7 +86,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, config: updated.github };
     });
 
-    app.delete("/api/github/repos/:id", async (request) => {
+    app.delete("/api/github/repos/:id", { schema: { tags: ["GitHub"] } }, async (request) => {
         const { id } = request.params as { id: string };
         update((cfg: Record<string, unknown>) => {
             const g = (cfg.github ?? {}) as Record<string, unknown>;
@@ -99,7 +99,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
 
     // ── Perfis (para ver bio + repositórios fixados) ──────────────────
 
-    app.post("/api/github/profiles", async (request, reply) => {
+    app.post("/api/github/profiles", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.username !== "string" || !String(body.username).trim()) {
             return reply.code(400).send({ ok: false, error: "usuário é obrigatório" });
@@ -127,7 +127,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, id, config: cfg.github };
     });
 
-    app.patch("/api/github/profiles/:id", async (request, reply) => {
+    app.patch("/api/github/profiles/:id", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
@@ -162,7 +162,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, config: updated.github };
     });
 
-    app.delete("/api/github/profiles/:id", async (request) => {
+    app.delete("/api/github/profiles/:id", { schema: { tags: ["GitHub"] } }, async (request) => {
         const { id } = request.params as { id: string };
         update((cfg: Record<string, unknown>) => {
             const g = (cfg.github ?? {}) as Record<string, unknown>;
@@ -174,7 +174,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // preview: testa um perfil sem salvar
-    app.post("/api/github/profiles/preview", async (request, reply) => {
+    app.post("/api/github/profiles/preview", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.username !== "string" || !String(body.username).trim()) {
             return reply.code(400).send({ ok: false, error: "usuário é obrigatório" });
@@ -184,7 +184,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         return result;
     });
 
-    app.get("/api/github", async () => {
+    app.get("/api/github", { schema: { tags: ["GitHub"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         const g = (cfg.github ?? {}) as Record<string, unknown>;
         if (g.hidden || !g.enabled) return { ok: true, error: null, updated_at: null, repos: [], profiles: [] };
@@ -204,7 +204,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // repositórios "em alta" (Search API, criados nos últimos 7 dias, mais estrelas primeiro)
-    app.get("/api/github/trending", async () => {
+    app.get("/api/github/trending", { schema: { tags: ["GitHub"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         if (cfg.mock) {
             const { mockGithubExplore } = await import("../providers/github.js");
@@ -214,7 +214,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // top repositórios por estrelas, com filtro opcional de linguagem/período
-    app.get("/api/github/top", async (request) => {
+    app.get("/api/github/top", { schema: { tags: ["GitHub"] } }, async (request) => {
         const query = request.query as { language?: string; period?: string };
         const cfg = load() as Record<string, unknown>;
         if (cfg.mock) {
@@ -225,7 +225,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // preview: testa um repo sem salvar
-    app.post("/api/github/preview", async (request, reply) => {
+    app.post("/api/github/preview", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.repo !== "string" || !String(body.repo).trim()) {
             return reply.code(400).send({ ok: false, error: "repo é obrigatório" });

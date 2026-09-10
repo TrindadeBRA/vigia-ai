@@ -13,13 +13,13 @@ import {
 import { load, updateSync as update } from "../store.js";
 
 export async function createWeatherRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/weather/config", async () => {
+  app.get("/api/weather/config", { schema: { tags: ["Clima"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const raw = (cfg.weather ?? {}) as Record<string, unknown>;
     return raw;
   });
 
-  app.patch("/api/weather/config", async (request, reply) => {
+  app.patch("/api/weather/config", { schema: { tags: ["Clima"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
     if (body.temperature_unit !== undefined && body.temperature_unit !== null && !VALID_TEMPERATURE_UNITS.has(String(body.temperature_unit))) {
@@ -88,7 +88,7 @@ export async function createWeatherRoutes(app: FastifyInstance): Promise<void> {
     return (cfg.weather ?? {}) as Record<string, unknown>;
   });
 
-  app.get("/api/weather/geocoding", async (request, reply) => {
+  app.get("/api/weather/geocoding", { schema: { tags: ["Clima"] } }, async (request, reply) => {
     const query = (request.query ?? {}) as Record<string, string>;
     const q = String(query.q ?? "");
     const count = Number(query.count ?? 5);
@@ -102,7 +102,7 @@ export async function createWeatherRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get("/api/weather", async () => {
+  app.get("/api/weather", { schema: { tags: ["Clima"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const wcfg = (cfg.weather ?? {}) as Record<string, unknown>;
     if (cfg.mock && wcfg.enabled) return mockWeatherPayload();
@@ -110,7 +110,7 @@ export async function createWeatherRoutes(app: FastifyInstance): Promise<void> {
     return data;
   });
 
-  app.post("/api/weather/location", async (request, reply) => {
+  app.post("/api/weather/location", { schema: { tags: ["Clima"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
     const name = String(body.name ?? "").trim();

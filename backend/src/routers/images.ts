@@ -17,12 +17,12 @@ function isValidSrc(s: string): boolean {
 }
 
 export async function createImagesRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/api/images", async () => {
+    app.get("/api/images", { schema: { tags: ["Imagens"] } }, async () => {
         const images = loadImages();
         return { images };
     });
 
-    app.post("/api/images", { bodyLimit: IMAGE_BODY_LIMIT }, async (request, reply) => {
+    app.post("/api/images", { bodyLimit: IMAGE_BODY_LIMIT, schema: { tags: ["Imagens"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         const src = String(body?.src ?? "").trim();
         if (!src) return reply.code(400).send({ ok: false, error: "src vazio" });
@@ -34,7 +34,7 @@ export async function createImagesRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, image };
     });
 
-    app.patch("/api/images/:id", { bodyLimit: IMAGE_BODY_LIMIT }, async (request, reply) => {
+    app.patch("/api/images/:id", { bodyLimit: IMAGE_BODY_LIMIT, schema: { tags: ["Imagens"] } }, async (request, reply) => {
         const params = request.params as Record<string, string>;
         const id = String(params.id ?? "");
         if (!id) return reply.code(400).send({ ok: false, error: "id vazio" });
@@ -62,7 +62,7 @@ export async function createImagesRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, image: updated };
     });
 
-    app.delete("/api/images/:id", async (request, reply) => {
+    app.delete("/api/images/:id", { schema: { tags: ["Imagens"] } }, async (request, reply) => {
         const params = request.params as Record<string, string>;
         const id = String(params.id ?? "");
         if (!id) return reply.code(400).send({ ok: false, error: "id vazio" });

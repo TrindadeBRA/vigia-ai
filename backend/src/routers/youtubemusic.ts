@@ -87,7 +87,7 @@ function friendlyError(e: unknown): string {
 const NOT_CONFIGURED = "Conecte sua conta do YouTube Music em Configurações primeiro.";
 
 export async function createYoutubeMusicRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/oauth/youtubemusic/start", async (request, reply) => {
+  app.get("/api/oauth/youtubemusic/start", { schema: { tags: ["YouTube Music"] } }, async (request, reply) => {
     const cfg = load() as Record<string, unknown>;
     const providers = (cfg.providers ?? {}) as Record<string, unknown>;
     const p = (providers.youtubemusic ?? {}) as Record<string, unknown>;
@@ -105,7 +105,7 @@ export async function createYoutubeMusicRoutes(app: FastifyInstance): Promise<vo
     return { url: authUrl(clientId, port, state) };
   });
 
-  app.get("/api/oauth/youtubemusic/callback", async (request, reply) => {
+  app.get("/api/oauth/youtubemusic/callback", { schema: { tags: ["YouTube Music"] } }, async (request, reply) => {
     const query = (request.query ?? {}) as Record<string, string | undefined>;
     const code = query.code ?? null;
     const state = query.state ?? null;
@@ -164,7 +164,7 @@ export async function createYoutubeMusicRoutes(app: FastifyInstance): Promise<vo
     return reply.type("text/html").send(html);
   });
 
-  app.post("/api/oauth/youtubemusic/disconnect", async () => {
+  app.post("/api/oauth/youtubemusic/disconnect", { schema: { tags: ["YouTube Music"] } }, async () => {
     update((cfg: Record<string, unknown>) => {
       const providers = (cfg.providers ?? {}) as Record<string, unknown>;
       const sp = (providers.youtubemusic ?? {}) as Record<string, unknown>;
@@ -175,7 +175,7 @@ export async function createYoutubeMusicRoutes(app: FastifyInstance): Promise<vo
     return { ok: true, cleared: "youtubemusic_oauth" };
   });
 
-  app.get("/api/youtubemusic", async () => {
+  app.get("/api/youtubemusic", { schema: { tags: ["YouTube Music"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const creds = ytmusicCreds(cfg);
     if (!creds) {
@@ -203,8 +203,8 @@ export async function createYoutubeMusicRoutes(app: FastifyInstance): Promise<vo
     }
   }
 
-  app.post("/api/youtubemusic/play", async () => runAction(playbackPlay));
-  app.post("/api/youtubemusic/pause", async () => runAction(playbackPause));
-  app.post("/api/youtubemusic/next", async () => runAction(playbackNext));
-  app.post("/api/youtubemusic/previous", async () => runAction(playbackPrevious));
+  app.post("/api/youtubemusic/play", { schema: { tags: ["YouTube Music"] } }, async () => runAction(playbackPlay));
+  app.post("/api/youtubemusic/pause", { schema: { tags: ["YouTube Music"] } }, async () => runAction(playbackPause));
+  app.post("/api/youtubemusic/next", { schema: { tags: ["YouTube Music"] } }, async () => runAction(playbackNext));
+  app.post("/api/youtubemusic/previous", { schema: { tags: ["YouTube Music"] } }, async () => runAction(playbackPrevious));
 }

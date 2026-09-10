@@ -397,9 +397,9 @@ function rtspFieldsChanged(a: CameraItem, b: CameraItem): boolean {
 }
 
 export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/camera/cameras", async () => ({ cameras: load().cameras.map(toPublic) }));
+  app.get("/api/camera/cameras", { schema: { tags: ["Câmeras"] } }, async () => ({ cameras: load().cameras.map(toPublic) }));
 
-  app.post("/api/camera/cameras", async (request, reply) => {
+  app.post("/api/camera/cameras", { schema: { tags: ["Câmeras"] } }, async (request, reply) => {
     const parsed = CameraCreateSchema.safeParse((request.body as Record<string, unknown>) ?? {});
     if (!parsed.success) {
       return reply.code(400).send({ ok: false, error: parsed.error.message });
@@ -411,7 +411,7 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, camera: toPublic(item) };
   });
 
-  app.patch("/api/camera/cameras/:id", async (request, reply) => {
+  app.patch("/api/camera/cameras/:id", { schema: { tags: ["Câmeras"] } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const parsed = CameraPatchSchema.safeParse((request.body as Record<string, unknown>) ?? {});
     if (!parsed.success) {
@@ -439,7 +439,7 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, camera: toPublic(next) };
   });
 
-  app.delete("/api/camera/cameras/:id", async (request, reply) => {
+  app.delete("/api/camera/cameras/:id", { schema: { tags: ["Câmeras"] } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const file = load();
     const idx = file.cameras.findIndex((c) => c.id === id);
@@ -457,7 +457,7 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.get("/api/camera/cameras/:id/snapshot", async (request, reply) => {
+  app.get("/api/camera/cameras/:id/snapshot", { schema: { tags: ["Câmeras"] } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const width = parseSnapshotWidth((request.query as { w?: string }).w);
     const config = load().cameras.find((c) => c.id === id);
@@ -485,7 +485,7 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get("/api/camera/cameras/:id/stream", async (request, reply) => {
+  app.get("/api/camera/cameras/:id/stream", { schema: { tags: ["Câmeras"] } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const q = request.query as { w?: string; h?: string; fit?: string };
     const sw = parseSnapshotWidth(q.w);
@@ -547,7 +547,7 @@ export async function createCameraRoutes(app: FastifyInstance): Promise<void> {
     });
   });
 
-  app.post("/api/camera/cameras/:id/ptz", async (request, reply) => {
+  app.post("/api/camera/cameras/:id/ptz", { schema: { tags: ["Câmeras"] } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const config = load().cameras.find((c) => c.id === id);
     if (!config) return reply.code(404).send({ ok: false, error: "Câmera não encontrada" });

@@ -38,6 +38,35 @@ import { TelegramPoller } from "./telegram/poller.js";
 import { createTelegramRoutes } from "./telegram/router.js";
 import { VERSION } from "./version.js";
 
+// Ordem = ordem de exibição no Swagger UI (/docs), não alfabética — segue o
+// fluxo de uso real: infra/config primeiro, depois os cards do board mais
+// genéricos, depois cada provedor/integração em blocos próprios.
+const OPENAPI_TAGS = [
+  { name: "Sistema", description: "Saúde do processo, preferências de exibição, stream de eventos (SSE) e easter egg retrô" },
+  { name: "Config", description: "Configuração geral, contas/tokens de provedores, segredos e secrets.h da placa" },
+  { name: "Board", description: "Layout do quadro do /display — posição e tamanho dos cards" },
+  { name: "Notas", description: "Post-its do board" },
+  { name: "Imagens", description: "Cards de imagem do board" },
+  { name: "Tema", description: "Editor de tema da placa (fundo, relógio, ícones) e seu rascunho" },
+  { name: "Papéis de parede", description: "Biblioteca de wallpapers — provedores, busca, import, seleção" },
+  { name: "Alarmes", description: "Regras de alarme (limiares de cota, calendário)" },
+  { name: "Telegram", description: "Bot do Telegram — conexão e envio de notificações" },
+  { name: "Clima", description: "Previsão do tempo (Open-Meteo)" },
+  { name: "Moedas", description: "Cotações de moedas/cripto" },
+  { name: "Mineração", description: "Status de mineração de Bitcoin" },
+  { name: "Calendário", description: "Calendários importados (ICS)" },
+  { name: "RSS", description: "Feeds RSS" },
+  { name: "Git", description: "Repositórios Git genéricos" },
+  { name: "GitHub", description: "Repositórios e perfis do GitHub" },
+  { name: "Spotify", description: "Player e OAuth do Spotify" },
+  { name: "YouTube Music", description: "Player e OAuth do YouTube Music" },
+  { name: "AdSense", description: "Receita do AdSense e OAuth Google" },
+  { name: "RetroAchievements", description: "Conquistas do RetroAchievements" },
+  { name: "Emulador", description: "EmulatorJS — ROMs, BIOS, saves, metadados (IGDB)" },
+  { name: "Câmeras", description: "Câmeras ONVIF/RTSP — stream, snapshot, PTZ" },
+  { name: "Android", description: "Dispositivos Android via ADB — espelhamento e input" },
+];
+
 function frontendDist(): string | null {
   const override = (process.env.VIGIA_FRONTEND_DIST || "").trim();
   if (override) {
@@ -79,11 +108,34 @@ export async function createApp() {
   // antes dos routers, pra @fastify/swagger capturar as rotas via onRoute.
   await fastify.register(swagger, {
     openapi: {
-      info: { title: "Vigia AI", version: VERSION },
+      info: {
+        title: "Vigia AI",
+        version: VERSION,
+        description: "API do coletor local. Rotas agrupadas por área — veja as tags na lateral.",
+      },
+      tags: OPENAPI_TAGS,
     },
   });
   await fastify.register(swaggerUi, {
     routePrefix: "/docs",
+    uiConfig: {
+      // sem isso vem tudo expandido — inviável com 160+ rotas
+      docExpansion: "list",
+      // preserva a ordem declarada em OPENAPI_TAGS (main.ts) em vez de
+      // alfabética — rodado só no browser (self-contained, ver README do
+      // @fastify/swagger-ui), por isso a lista vem hardcoded de novo aqui
+      // em vez de fechar sobre a constante do módulo.
+      tagsSorter: function (a: string, b: string) {
+        const order = [
+          "Sistema", "Config", "Board", "Notas", "Imagens", "Tema", "Papéis de parede",
+          "Alarmes", "Telegram", "Clima", "Moedas", "Mineração", "Calendário", "RSS",
+          "Git", "GitHub", "Spotify", "YouTube Music", "AdSense", "RetroAchievements",
+          "Emulador", "Câmeras", "Android",
+        ];
+        return order.indexOf(a) - order.indexOf(b);
+      },
+      deepLinking: true,
+    },
   });
 
   // FastAPI/Starlette liam o corpo cru independente do Content-Type; os
@@ -155,7 +207,7 @@ export async function createApp() {
     await hub.stop();
   });
 
-  fastify.get("/openapi.json", async () => fastify.swagger());
+  fastify.get("/openapi.json", { schema: { hide: true } }, async () => fastify.swagger());
 
   await fastify.register(createUsageRoutes, { prefix: "" });
   await fastify.register(createConfigRoutes, { prefix: "" });
@@ -218,16 +270,18 @@ export async function createApp() {
       reply.header("Content-Type", "text/html");
       return reply.send(data);
     };
-    fastify.get("/", serveIndex);
-    fastify.get("/setup", serveIndex);
-    fastify.get("/setup/", serveIndex);
-    fastify.get("/display", serveIndex);
-    fastify.get("/display/", serveIndex);
-    fastify.get("/display/config", serveIndex);
-    fastify.get("/display/config/", serveIndex);
-    fastify.get("/display/setup", serveIndex);
-    fastify.get("/display/setup/", serveIndex);
-    fastify.get("/assets/*", async (req: any, reply: any) => {
+    // servem o SPA do frontend, não são "API" — fora do Swagger (schema.hide)
+    const HIDE = { schema: { hide: true } };
+    fastify.get("/", HIDE, serveIndex);
+    fastify.get("/setup", HIDE, serveIndex);
+    fastify.get("/setup/", HIDE, serveIndex);
+    fastify.get("/display", HIDE, serveIndex);
+    fastify.get("/display/", HIDE, serveIndex);
+    fastify.get("/display/config", HIDE, serveIndex);
+    fastify.get("/display/config/", HIDE, serveIndex);
+    fastify.get("/display/setup", HIDE, serveIndex);
+    fastify.get("/display/setup/", HIDE, serveIndex);
+    fastify.get("/assets/*", HIDE, async (req: any, reply: any) => {
       const path = (req.params as any)["*"] ? `assets/${(req.params as any)["*"]}` : req.url.slice(1).split("?")[0];
       const p = resolve(join(dist, path));
       const root = resolve(dist);
@@ -241,7 +295,7 @@ export async function createApp() {
       }
       return reply.send(data);
     });
-    fastify.get("/icons/*", async (req: any, reply: any) => {
+    fastify.get("/icons/*", HIDE, async (req: any, reply: any) => {
       const path = (req.params as any)["*"] ? `icons/${(req.params as any)["*"]}` : req.url.slice(1).split("?")[0];
       const p = resolve(join(dist, path));
       const root = resolve(dist);
@@ -250,7 +304,7 @@ export async function createApp() {
       if (ct) reply.header("Content-Type", ct);
       return reply.send(readFileSync(p));
     });
-    fastify.get("/fonts/*", async (req: any, reply: any) => {
+    fastify.get("/fonts/*", HIDE, async (req: any, reply: any) => {
       const path = (req.params as any)["*"] ? `fonts/${(req.params as any)["*"]}` : req.url.slice(1).split("?")[0];
       const p = resolve(join(dist, path));
       const root = resolve(dist);
@@ -261,7 +315,7 @@ export async function createApp() {
       else if (path.endsWith(".otf")) reply.header("Content-Type", "font/otf");
       return reply.send(readFileSync(p));
     });
-    fastify.get("/:staticName", async (req: any, reply: any) => {
+    fastify.get("/:staticName", HIDE, async (req: any, reply: any) => {
       const name: string = req.params.staticName;
       if (!name || name.includes("/") || name.includes("\\") || name === "." || name === "..") {
         return reply.code(404).send({ ok: false, error: "not found" });

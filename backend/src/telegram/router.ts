@@ -4,7 +4,7 @@ import { displayLanUrl } from "../netutil.js";
 import { load } from "../store.js";
 
 export async function createTelegramRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/telegram/status", async () => {
+  app.get("/api/telegram/status", { schema: { tags: ["Telegram"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const tg = (cfg.telegram ?? {}) as Record<string, unknown>;
     const token = String(tg.bot_token ?? "");
@@ -16,7 +16,7 @@ export async function createTelegramRoutes(app: FastifyInstance): Promise<void> 
     return { configured: Boolean(token), bot_username: String(tg.bot_username ?? ""), chats };
   });
 
-  app.post("/api/telegram/token", async (request, reply) => {
+  app.post("/api/telegram/token", { schema: { tags: ["Telegram"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     const token = String(body?.bot_token ?? "").trim();
     if (!token) return reply.code(400).send({ ok: false, error: "token vazio" });
@@ -32,14 +32,14 @@ export async function createTelegramRoutes(app: FastifyInstance): Promise<void> 
     }
   });
 
-  app.post("/api/telegram/token/clear", async (request) => {
+  app.post("/api/telegram/token/clear", { schema: { tags: ["Telegram"] } }, async (request) => {
     telegramBot.clearToken();
     const poller = (app as unknown as { telegramPoller?: { stop: () => Promise<void> } }).telegramPoller;
     if (poller) await poller.stop();
     return { ok: true };
   });
 
-  app.post("/api/telegram/chats/remove", async (request) => {
+  app.post("/api/telegram/chats/remove", { schema: { tags: ["Telegram"] } }, async (request) => {
     const body = request.body as Record<string, unknown> | null;
     const chatId = String(body?.chat_id ?? "");
     if (!chatId) return { ok: false, error: "chat_id vazio" };
@@ -47,7 +47,7 @@ export async function createTelegramRoutes(app: FastifyInstance): Promise<void> 
     return { ok: true };
   });
 
-  app.post("/api/telegram/test", async (request, reply) => {
+  app.post("/api/telegram/test", { schema: { tags: ["Telegram"] } }, async (request, reply) => {
     const cfg = load() as Record<string, unknown>;
     const port = Number(((cfg.listen as Record<string, unknown>) ?? {}).port ?? 8787);
     const displayUrl = displayLanUrl(port) || null;

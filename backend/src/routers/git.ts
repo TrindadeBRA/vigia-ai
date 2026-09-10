@@ -10,12 +10,12 @@ function clampLimit(v: unknown): number {
 }
 
 export async function createGitRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/api/git/config", async () => {
+    app.get("/api/git/config", { schema: { tags: ["Git"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         return (cfg.git ?? { enabled: false, hidden: false, repos: [] }) as Record<string, unknown>;
     });
 
-    app.patch("/api/git/config", async (request, reply) => {
+    app.patch("/api/git/config", { schema: { tags: ["Git"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
         update((cfg: Record<string, unknown>) => {
@@ -28,7 +28,7 @@ export async function createGitRoutes(app: FastifyInstance): Promise<void> {
         return (cfg.git ?? {}) as Record<string, unknown>;
     });
 
-    app.post("/api/git/repos", async (request, reply) => {
+    app.post("/api/git/repos", { schema: { tags: ["Git"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.source !== "string" || !String(body.source).trim()) {
             return reply.code(400).send({ ok: false, error: "source é obrigatório (URL do repositório ou caminho local)" });
@@ -59,7 +59,7 @@ export async function createGitRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, id, config: cfg.git };
     });
 
-    app.patch("/api/git/repos/:id", async (request, reply) => {
+    app.patch("/api/git/repos/:id", { schema: { tags: ["Git"] } }, async (request, reply) => {
         const { id } = request.params as { id: string };
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
@@ -96,7 +96,7 @@ export async function createGitRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, config: updated.git };
     });
 
-    app.delete("/api/git/repos/:id", async (request) => {
+    app.delete("/api/git/repos/:id", { schema: { tags: ["Git"] } }, async (request) => {
         const { id } = request.params as { id: string };
         update((cfg: Record<string, unknown>) => {
             const g = (cfg.git ?? {}) as Record<string, unknown>;
@@ -107,7 +107,7 @@ export async function createGitRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true };
     });
 
-    app.get("/api/git", async () => {
+    app.get("/api/git", { schema: { tags: ["Git"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         const g = (cfg.git ?? {}) as Record<string, unknown>;
         if (g.hidden || !g.enabled) return { ok: true, error: null, updated_at: null, repos: [] };
@@ -127,7 +127,7 @@ export async function createGitRoutes(app: FastifyInstance): Promise<void> {
     });
 
     // preview: testa um source sem salvar
-    app.post("/api/git/preview", async (request, reply) => {
+    app.post("/api/git/preview", { schema: { tags: ["Git"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body || typeof body.source !== "string" || !String(body.source).trim()) {
             return reply.code(400).send({ ok: false, error: "source é obrigatório" });

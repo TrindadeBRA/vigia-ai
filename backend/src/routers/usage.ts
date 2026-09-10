@@ -11,7 +11,7 @@ const SSE_HEADERS = {
 };
 
 export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/health", async (request, reply) => {
+  app.get("/health", { schema: { tags: ["Sistema"] } }, async (request, reply) => {
     const hub = (app as unknown as { hub?: { seconds: number; deviceFirmwareVersion: string | null } }).hub;
     const listenHost = (app as unknown as { listenHost?: string }).listenHost ?? "0.0.0.0";
     const listenPort = (app as unknown as { listenPort?: number }).listenPort ?? 8787;
@@ -31,7 +31,7 @@ export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
-  app.get("/usage", async (request, reply) => {
+  app.get("/usage", { schema: { tags: ["Sistema"] } }, async (request, reply) => {
     const hub = (app as unknown as { hub?: { refresh: (opts: unknown) => Promise<unknown>; noteDevice: (ip: string | null, screen: string | null, firmware?: string | null) => void } }).hub;
     // note device via headers
     const device = (request.headers["x-vigia-device"] as string | undefined) ?? (request.headers["X-Vigia-Device"] as string | undefined);
@@ -47,7 +47,7 @@ export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
     return payload;
   });
 
-  app.get("/events", async (request, reply) => {
+  app.get("/events", { schema: { tags: ["Sistema"] } }, async (request, reply) => {
     const hub = (app as unknown as { hub?: InstanceType<typeof import("../hub.js").UsageHub> }).hub;
     if (!hub) return reply.code(503).send({ ok: false, error: "hub not ready" });
     const device = (request.headers["x-vigia-device"] as string | undefined);

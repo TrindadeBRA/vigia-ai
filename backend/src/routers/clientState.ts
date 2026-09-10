@@ -10,10 +10,11 @@ import { dataDir } from "../config.js";
 // pra qualquer outra coisa.
 const MAX_BYTES = 2_000_000;
 
-function registerBlobRoute(app: FastifyInstance, route: string, file: string): void {
+function registerBlobRoute(app: FastifyInstance, route: string, file: string, tag: string): void {
     const filePath = () => join(dataDir(), file);
+    const schema = { schema: { tags: [tag] } };
 
-    app.get(route, async (_request, reply) => {
+    app.get(route, schema, async (_request, reply) => {
         const p = filePath();
         if (!existsSync(p)) return reply.type("application/json").send("{}");
         try {
@@ -23,7 +24,7 @@ function registerBlobRoute(app: FastifyInstance, route: string, file: string): v
         }
     });
 
-    app.put(route, async (request, reply) => {
+    app.put(route, schema, async (request, reply) => {
         const body = request.body;
         if (body === null || typeof body !== "object" || Array.isArray(body)) {
             return reply.code(400).send({ ok: false, error: "corpo precisa ser um objeto JSON" });
@@ -40,7 +41,7 @@ function registerBlobRoute(app: FastifyInstance, route: string, file: string): v
 }
 
 export async function createClientStateRoutes(app: FastifyInstance): Promise<void> {
-    registerBlobRoute(app, "/api/prefs", "prefs.json");
-    registerBlobRoute(app, "/api/theme-draft", "theme-draft.json");
-    registerBlobRoute(app, "/api/retro", "retro.json");
+    registerBlobRoute(app, "/api/prefs", "prefs.json", "Sistema");
+    registerBlobRoute(app, "/api/theme-draft", "theme-draft.json", "Tema");
+    registerBlobRoute(app, "/api/retro", "retro.json", "Sistema");
 }

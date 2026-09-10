@@ -10,12 +10,12 @@ import {
 import { load, updateSync as update } from "../store.js";
 
 export async function createCurrenciesRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/currencies/config", async () => {
+  app.get("/api/currencies/config", { schema: { tags: ["Moedas"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     return (cfg.currencies ?? {}) as Record<string, unknown>;
   });
 
-  app.patch("/api/currencies/config", async (request, reply) => {
+  app.patch("/api/currencies/config", { schema: { tags: ["Moedas"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
     let baseClean: string | null = null;
@@ -34,7 +34,7 @@ export async function createCurrenciesRoutes(app: FastifyInstance): Promise<void
     return (cfg.currencies ?? {}) as Record<string, unknown>;
   });
 
-  app.post("/api/currencies/items", async (request, reply) => {
+  app.post("/api/currencies/items", { schema: { tags: ["Moedas"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body || typeof body.kind !== "string" || typeof body.code !== "string") return reply.code(400).send({ ok: false, error: "kind e code obrigatórios" });
     const kind = String(body.kind);
@@ -62,7 +62,7 @@ export async function createCurrenciesRoutes(app: FastifyInstance): Promise<void
     return (cfg.currencies ?? {}) as Record<string, unknown>;
   });
 
-  app.delete("/api/currencies/items/:item_id", async (request) => {
+  app.delete("/api/currencies/items/:item_id", { schema: { tags: ["Moedas"] } }, async (request) => {
     const { item_id } = request.params as { item_id: string };
     update((cfg: Record<string, unknown>) => {
       const cur = (cfg.currencies ?? {}) as Record<string, unknown>;
@@ -73,7 +73,7 @@ export async function createCurrenciesRoutes(app: FastifyInstance): Promise<void
     return { ok: true };
   });
 
-  app.get("/api/currencies/search", async (request) => {
+  app.get("/api/currencies/search", { schema: { tags: ["Moedas"] } }, async (request) => {
     const query = (request.query ?? {}) as Record<string, string>;
     const q = String(query.q ?? "");
     const count = Number(query.count ?? 8);
@@ -81,7 +81,7 @@ export async function createCurrenciesRoutes(app: FastifyInstance): Promise<void
     return { results };
   });
 
-  app.get("/api/currencies", async () => {
+  app.get("/api/currencies", { schema: { tags: ["Moedas"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const ccfg = (cfg.currencies ?? {}) as Record<string, unknown>;
     if (cfg.mock && ccfg.enabled) return mockCurrenciesPayload();

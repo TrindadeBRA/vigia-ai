@@ -86,7 +86,7 @@ function friendlyError(e: unknown): string {
 const NOT_CONFIGURED = "Conecte sua conta Spotify em Configurações primeiro.";
 
 export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/oauth/spotify/start", async (request, reply) => {
+  app.get("/api/oauth/spotify/start", { schema: { tags: ["Spotify"] } }, async (request, reply) => {
     const cfg = load() as Record<string, unknown>;
     const providers = (cfg.providers ?? {}) as Record<string, unknown>;
     const p = (providers.spotify ?? {}) as Record<string, unknown>;
@@ -104,7 +104,7 @@ export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
     return { url: authUrl(clientId, port, state) };
   });
 
-  app.get("/api/oauth/spotify/callback", async (request, reply) => {
+  app.get("/api/oauth/spotify/callback", { schema: { tags: ["Spotify"] } }, async (request, reply) => {
     const query = (request.query ?? {}) as Record<string, string | undefined>;
     const code = query.code ?? null;
     const state = query.state ?? null;
@@ -164,7 +164,7 @@ export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
     return reply.type("text/html").send(html);
   });
 
-  app.post("/api/oauth/spotify/disconnect", async () => {
+  app.post("/api/oauth/spotify/disconnect", { schema: { tags: ["Spotify"] } }, async () => {
     update((cfg: Record<string, unknown>) => {
       const providers = (cfg.providers ?? {}) as Record<string, unknown>;
       const sp = (providers.spotify ?? {}) as Record<string, unknown>;
@@ -175,7 +175,7 @@ export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, cleared: "spotify_oauth" };
   });
 
-  app.get("/api/spotify", async () => {
+  app.get("/api/spotify", { schema: { tags: ["Spotify"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const creds = spotifyCreds(cfg);
     if (!creds) {
@@ -203,8 +203,8 @@ export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
     }
   }
 
-  app.post("/api/spotify/play", async () => runAction(playbackPlay));
-  app.post("/api/spotify/pause", async () => runAction(playbackPause));
-  app.post("/api/spotify/next", async () => runAction(playbackNext));
-  app.post("/api/spotify/previous", async () => runAction(playbackPrevious));
+  app.post("/api/spotify/play", { schema: { tags: ["Spotify"] } }, async () => runAction(playbackPlay));
+  app.post("/api/spotify/pause", { schema: { tags: ["Spotify"] } }, async () => runAction(playbackPause));
+  app.post("/api/spotify/next", { schema: { tags: ["Spotify"] } }, async () => runAction(playbackNext));
+  app.post("/api/spotify/previous", { schema: { tags: ["Spotify"] } }, async () => runAction(playbackPrevious));
 }

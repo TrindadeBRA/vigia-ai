@@ -60,13 +60,13 @@ function saveFilePath(platform: string, game: string, kind: "sram" | "state"): s
 
 export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> {
     // GET config
-    app.get("/api/emulator/config", async () => {
+    app.get("/api/emulator/config", { schema: { tags: ["Emulador"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         return (cfg.emulator ?? {}) as Record<string, unknown>;
     });
 
     // PATCH config — global settings + platforms
-    app.patch("/api/emulator/config", async (request, reply) => {
+    app.patch("/api/emulator/config", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
 
@@ -185,7 +185,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // GET roms for a platform
-    app.get("/api/emulator/roms", async (request, reply) => {
+    app.get("/api/emulator/roms", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const query = (request.query ?? {}) as Record<string, string>;
         const platform = String(query.platform ?? "").trim();
         if (!platform) return reply.code(400).send({ ok: false, error: "platform obrigatório" });
@@ -233,7 +233,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // GET all roms grouped by platform (for unified card)
-    app.get("/api/emulator/roms/all", async (_request, _reply) => {
+    app.get("/api/emulator/roms/all", { schema: { tags: ["Emulador"] } }, async (_request, _reply) => {
         const cfg = load() as Record<string, unknown>;
         const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
         const platforms = (emu.platforms ?? []) as Array<Record<string, unknown>>;
@@ -277,7 +277,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // GET rom file
-    app.get("/api/emulator/rom/:platform/:file", async (request, reply) => {
+    app.get("/api/emulator/rom/:platform/:file", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const { platform, file } = request.params as { platform: string; file: string };
         const plat = EMULATOR_PLATFORMS.find((p) => p.id === platform);
         if (!plat) return reply.code(400).send({ ok: false, error: "plataforma desconhecida" });
@@ -311,7 +311,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // GET bios file (similar, but from biosFolder or per-platform biosPath)
-    app.get("/api/emulator/bios/:platform", async (request, reply) => {
+    app.get("/api/emulator/bios/:platform", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const { platform } = request.params as { platform: string };
         const plat = EMULATOR_PLATFORMS.find((p) => p.id === platform);
         if (!plat) return reply.code(400).send({ ok: false, error: "plataforma desconhecida" });
@@ -340,7 +340,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
         return reply.send(stream);
     });
 
-    app.get("/api/emulator/bios/:platform/:file", async (request, reply) => {
+    app.get("/api/emulator/bios/:platform/:file", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const { platform, file } = request.params as { platform: string; file: string };
         const cfg = load() as Record<string, unknown>;
         const emu = (cfg.emulator ?? {}) as Record<string, unknown>;
@@ -359,16 +359,16 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // GET platforms meta (for frontend to know exts, labels)
-    app.get("/api/emulator/platforms", async () => {
+    app.get("/api/emulator/platforms", { schema: { tags: ["Emulador"] } }, async () => {
         return { ok: true, platforms: EMULATOR_PLATFORMS };
     });
 
     // ── IGDB ──────────────────────────────────────────────────────────────
-    app.get("/api/emulator/igdb/status", async () => {
+    app.get("/api/emulator/igdb/status", { schema: { tags: ["Emulador"] } }, async () => {
         return { ok: true, configured: igdbConfigured() };
     });
 
-    app.get("/api/emulator/igdb/search", async (request, reply) => {
+    app.get("/api/emulator/igdb/search", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const q = String((request.query as Record<string, string>)?.q ?? "").trim();
         if (!q) return reply.code(400).send({ ok: false, error: "q obrigatório" });
         if (!igdbConfigured()) return reply.code(400).send({ ok: false, error: "IGDB não configurado — preencha Client ID e Secret em Configurações > Emulador" });
@@ -383,7 +383,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
         }
     });
 
-    app.get("/api/emulator/igdb/game/:id", async (request, reply) => {
+    app.get("/api/emulator/igdb/game/:id", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const id = Number((request.params as { id: string }).id);
         if (!Number.isFinite(id)) return reply.code(400).send({ ok: false, error: "id inválido" });
         if (!igdbConfigured()) return reply.code(400).send({ ok: false, error: "IGDB não configurado" });
@@ -427,11 +427,11 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     }
 
     // ── Game meta (capas IGDB por ROM) ───────────────────────────────────
-    app.get("/api/emulator/game-meta", async () => {
+    app.get("/api/emulator/game-meta", { schema: { tags: ["Emulador"] } }, async () => {
         return { ok: true, gameMeta: getGameMetaMap() };
     });
 
-    app.patch("/api/emulator/game-meta", async (request, reply) => {
+    app.patch("/api/emulator/game-meta", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
         const platform = String(body.platform ?? "").trim();
@@ -507,7 +507,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
         return { ok: true, key, gameMeta: getGameMetaMap()[key] };
     });
 
-    app.delete("/api/emulator/game-meta/:platform/:file", async (request, reply) => {
+    app.delete("/api/emulator/game-meta/:platform/:file", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const { platform, file } = request.params as { platform: string; file: string };
         const key = gameKey(platform, file);
         const before = getGameMetaMap()[key];
@@ -523,7 +523,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
 
     // ── Saves (sincronizados no servidor) ────────────────────────────────
     // Lista saves existentes
-    app.get("/api/emulator/saves", async () => {
+    app.get("/api/emulator/saves", { schema: { tags: ["Emulador"] } }, async () => {
         ensureSavesDir();
         let files: string[] = [];
         try { files = readdirSync(savesDir()); } catch { files = []; }
@@ -548,7 +548,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // Baixa um save específico
-    app.get("/api/emulator/saves/:platform/:game/:kind", async (request, reply) => {
+    app.get("/api/emulator/saves/:platform/:game/:kind", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const { platform, game, kind } = request.params as { platform: string; game: string; kind: string };
         if (kind !== "sram" && kind !== "state") return reply.code(400).send({ ok: false, error: "kind deve ser sram ou state" });
         const plat = sanitizeSegment(platform);
@@ -567,7 +567,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // Faz upload/salva um save (body = bytes brutos)
-    app.put("/api/emulator/saves/:platform/:game/:kind", async (request, reply) => {
+    app.put("/api/emulator/saves/:platform/:game/:kind", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const { platform, game, kind } = request.params as { platform: string; game: string; kind: string };
         if (kind !== "sram" && kind !== "state") return reply.code(400).send({ ok: false, error: "kind deve ser sram ou state" });
         const plat = sanitizeSegment(platform);
@@ -602,7 +602,7 @@ export async function createEmulatorRoutes(app: FastifyInstance): Promise<void> 
     });
 
     // Deleta um save
-    app.delete("/api/emulator/saves/:platform/:game/:kind", async (request, reply) => {
+    app.delete("/api/emulator/saves/:platform/:game/:kind", { schema: { tags: ["Emulador"] } }, async (request, reply) => {
         const { platform, game, kind } = request.params as { platform: string; game: string; kind: string };
         if (kind !== "sram" && kind !== "state") return reply.code(400).send({ ok: false, error: "kind deve ser sram ou state" });
         const plat = sanitizeSegment(platform);

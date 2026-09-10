@@ -2,12 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { createNote, deleteNote, loadNotes, NOTE_COLORS, updateNote } from "../notes.js";
 
 export async function createNotesRoutes(app: FastifyInstance): Promise<void> {
-    app.get("/api/notes", async () => {
+    app.get("/api/notes", { schema: { tags: ["Notas"] } }, async () => {
         const notes = loadNotes();
         return { notes };
     });
 
-    app.post("/api/notes", async (request, reply) => {
+    app.post("/api/notes", { schema: { tags: ["Notas"] } }, async (request, reply) => {
         const body = request.body as Record<string, unknown> | null;
         const text = String(body?.text ?? "");
         if (text.length > 10000) return reply.code(400).send({ ok: false, error: "texto muito longo (máx 10000)" });
@@ -18,7 +18,7 @@ export async function createNotesRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, note };
     });
 
-    app.patch("/api/notes/:id", async (request, reply) => {
+    app.patch("/api/notes/:id", { schema: { tags: ["Notas"] } }, async (request, reply) => {
         const params = request.params as Record<string, string>;
         const id = String(params.id ?? "");
         if (!id) return reply.code(400).send({ ok: false, error: "id vazio" });
@@ -42,7 +42,7 @@ export async function createNotesRoutes(app: FastifyInstance): Promise<void> {
         return { ok: true, note: updated };
     });
 
-    app.delete("/api/notes/:id", async (request, reply) => {
+    app.delete("/api/notes/:id", { schema: { tags: ["Notas"] } }, async (request, reply) => {
         const params = request.params as Record<string, string>;
         const id = String(params.id ?? "");
         if (!id) return reply.code(400).send({ ok: false, error: "id vazio" });

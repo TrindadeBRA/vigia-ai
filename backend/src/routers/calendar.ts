@@ -17,12 +17,12 @@ function normalizeUrl(raw: string): string {
 }
 
 export async function createCalendarRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/calendar/config", async () => {
+  app.get("/api/calendar/config", { schema: { tags: ["Calendário"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     return (cfg.calendar ?? { enabled: false, hidden: false, calendars: [] }) as Record<string, unknown>;
   });
 
-  app.patch("/api/calendar/config", async (request, reply) => {
+  app.patch("/api/calendar/config", { schema: { tags: ["Calendário"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
     update((cfg: Record<string, unknown>) => {
@@ -35,7 +35,7 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
     return (cfg.calendar ?? {}) as Record<string, unknown>;
   });
 
-  app.post("/api/calendar/calendars", async (request, reply) => {
+  app.post("/api/calendar/calendars", { schema: { tags: ["Calendário"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body || typeof body.url !== "string" || !String(body.url).trim()) {
       return reply.code(400).send({ ok: false, error: "url é obrigatória (link público do calendário)" });
@@ -71,7 +71,7 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
 
   // POST — envia um arquivo .ics local (sem link público disponível, ex.:
   // agenda corporativa cujo admin do Workspace desabilitou o endereço secreto).
-  app.post("/api/calendar/calendars/upload", async (request, reply) => {
+  app.post("/api/calendar/calendars/upload", { schema: { tags: ["Calendário"] } }, async (request, reply) => {
     const contentType = String(request.headers["content-type"] ?? "");
     if (!contentType.includes("multipart/form-data")) {
       return reply.code(400).send({ ok: false, error: "envie como multipart/form-data (campo file)" });
@@ -126,7 +126,7 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
     return { ok: true, id, config: cfg.calendar };
   });
 
-  app.patch("/api/calendar/calendars/:id", async (request, reply) => {
+  app.patch("/api/calendar/calendars/:id", { schema: { tags: ["Calendário"] } }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = request.body as Record<string, unknown> | null;
     if (!body) return reply.code(400).send({ ok: false, error: "corpo vazio" });
@@ -178,7 +178,7 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
     return { ok: true, config: updated.calendar };
   });
 
-  app.delete("/api/calendar/calendars/:id", async (request) => {
+  app.delete("/api/calendar/calendars/:id", { schema: { tags: ["Calendário"] } }, async (request) => {
     const { id } = request.params as { id: string };
     update((cfg: Record<string, unknown>) => {
       const c = (cfg.calendar ?? {}) as Record<string, unknown>;
@@ -191,7 +191,7 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
     return { ok: true };
   });
 
-  app.get("/api/calendar", async () => {
+  app.get("/api/calendar", { schema: { tags: ["Calendário"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const c = (cfg.calendar ?? {}) as Record<string, unknown>;
     if (c.hidden || !c.enabled) return { ok: true, error: null, updated_at: null, calendars: [] };
@@ -212,7 +212,7 @@ export async function createCalendarRoutes(app: FastifyInstance): Promise<void> 
   });
 
   // preview: testa uma URL sem salvar
-  app.post("/api/calendar/preview", async (request, reply) => {
+  app.post("/api/calendar/preview", { schema: { tags: ["Calendário"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
     if (!body || typeof body.url !== "string" || !String(body.url).trim()) {
       return reply.code(400).send({ ok: false, error: "url é obrigatória" });
