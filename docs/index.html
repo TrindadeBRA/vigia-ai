@@ -139,10 +139,8 @@
   <!-- NAV -->
   <header class="sticky top-0 z-50 border-b border-white/[0.07] bg-ink/75 glass">
     <div class="relative mx-auto flex max-w-[1200px] items-center justify-between px-6 py-3.5">
-      <a href="#top" class="flex items-center gap-2.5 text-[17px] font-extrabold tracking-tight text-white">
-        <span class="flex size-8 items-center justify-center rounded-lg bg-panel border border-edge shadow-sm">
-          <span class="size-3 rounded-full bg-accent shadow-[0_0_10px_rgba(230,57,49,.6)]"></span>
-        </span>
+      <a href="#top" class="group/brand flex items-center gap-2.5 text-[17px] font-extrabold tracking-tight text-white">
+        <span id="vigia-eye-nav" class="relative inline-flex shrink-0" style="width:32px;height:32px"></span>
         Vigia<span class="font-mono font-bold text-accent">AI</span>
         <span
           class="hidden sm:inline-flex ml-1 rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold tracking-widest text-neutral-400">OPEN
@@ -177,6 +175,10 @@
 
       <div id="mobile-menu"
         class="hidden absolute inset-x-0 top-full flex-col gap-1 border-t border-white/10 bg-surface px-6 py-6 text-sm text-neutral-300 lg:hidden">
+        <div class="mb-2 flex items-center gap-2.5 text-[15px] font-extrabold tracking-tight text-white">
+          <span id="vigia-eye-mobile" class="relative inline-flex shrink-0" style="width:26px;height:26px"></span>
+          Vigia<span class="font-mono font-bold text-accent">AI</span>
+        </div>
         <a class="py-2 hover:text-white" href="#problema">O problema</a>
         <a class="py-2 hover:text-white" href="#recursos">Recursos</a>
         <a class="py-2 hover:text-white" href="#provedores">Provedores</a>
@@ -1725,8 +1727,7 @@ brew install --cask vigia-ai</code>
     <div
       class="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 px-6 text-sm text-neutral-400 md:flex-row">
       <div class="flex items-center gap-2.5 font-extrabold tracking-tight text-white">
-        <span class="flex size-7 items-center justify-center rounded-lg bg-panel border border-edge"><span
-            class="size-2.5 rounded-full bg-accent"></span></span>
+        <span id="vigia-eye-footer" class="relative inline-flex shrink-0" style="width:26px;height:26px"></span>
         Vigia<span class="font-mono text-accent">AI</span>
         <span class="ml-2 text-xs font-medium text-neutral-500">Licença MIT · feito por <a
             class="font-semibold text-accent-soft hover:underline" href="https://github.com/TrindadeBRA" target="_blank"
@@ -1750,6 +1751,194 @@ brew install --cask vigia-ai</code>
       </div>
     </div>
   </footer>
+
+  <!-- Logo animado (porta do olho vivo de frontend/src/components/Logo.tsx) -->
+  <style>
+    .vigia-eye-tear {
+      animation: vigia-eye-tear-fall 1.05s cubic-bezier(.22, .6, .28, 1) forwards;
+      filter: drop-shadow(0 1.5px 2px rgba(0, 0, 0, .18));
+    }
+
+    @keyframes vigia-eye-tear-fall {
+      0% { transform: translate(50px, 78px) scale(0.55); opacity: 0; }
+      12% { transform: translate(50px, 82px) scale(1); opacity: 1; }
+      18% { transform: translate(50.6px, 86px) scale(1); opacity: 1; }
+      100% { transform: translate(49.2px, 138px) scale(0.92); opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .vigia-eye-tear { animation: none !important; opacity: 0 !important; }
+    }
+  </style>
+  <script>
+    (function () {
+      // Constantes e curvas idênticas às de frontend/src/components/Logo.tsx (EyeMark),
+      // portadas para JS puro pois esta página não roda React.
+      const EYE_R = 46, IRIS_R = 18, DILATED_IRIS_R = 26, PUPIL_R = 7.5, DILATED_PUPIL_R = 13.2;
+      const MAX_GAZE = 22, LID_TRAVEL = 52, POINTER_REACH = 260, POINTER_HOLD_MS = 1800;
+      let uidCounter = 0;
+
+      function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }
+
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+      function nextTarget(from) {
+        if (Math.random() < 0.18) return { x: 0, y: 0 };
+        const third = (Math.PI * 2) / 3;
+        const turn = third + Math.random() * third;
+        const angle = Math.atan2(from.y, from.x) + (Math.random() < 0.5 ? turn : -turn);
+        const radius = MAX_GAZE * (0.55 + Math.random() * 0.45);
+        return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * 0.8 };
+      }
+
+      function mountVigiaEye(mount, opts) {
+        if (!mount) return;
+        opts = opts || {};
+        const size = opts.size || 28;
+        const uid = 'vigia-eye-clip-' + (uidCounter++);
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('width', size);
+        svg.setAttribute('height', size);
+        svg.setAttribute('viewBox', '0 0 100 100');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('role', 'img');
+        svg.classList.add('block', 'shrink-0', 'overflow-visible', 'cursor-pointer', 'transition-transform', 'duration-[180ms]', 'ease-out', 'group-hover/brand:scale-[1.08]');
+        svg.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,.55))';
+        svg.innerHTML =
+          '<defs><clipPath id="' + uid + '"><circle cx="50" cy="50" r="' + EYE_R + '"/></clipPath></defs>' +
+          '<circle cx="50" cy="50" r="' + EYE_R + '" fill="#fff"/>' +
+          '<g clip-path="url(#' + uid + ')">' +
+          '<g class="vigia-eye-iris" style="filter:drop-shadow(0 0 4px rgba(230,57,49,.35))" transform="translate(50 50)">' +
+          '<circle class="vigia-eye-iris-circle" r="' + IRIS_R + '" fill="#e63931"/>' +
+          '<circle class="vigia-eye-pupil-circle" r="' + PUPIL_R + '" fill="rgba(0,0,0,.55)"/>' +
+          '<circle cx="-6" cy="-6.5" r="4.4" fill="#fff" opacity=".92"/>' +
+          '<circle cx="6.5" cy="7" r="2.1" fill="#fff" opacity=".45"/>' +
+          '</g>' +
+          '<rect class="vigia-eye-lid-top" x="-10" y="-104" width="120" height="104" fill="#0f0f0f" stroke="#a1a1a1" stroke-width="2.5"/>' +
+          '<rect class="vigia-eye-lid-bot" x="-10" y="100" width="120" height="104" fill="#0f0f0f" stroke="#a1a1a1" stroke-width="2.5"/>' +
+          '</g>' +
+          '<circle cx="50" cy="50" r="' + EYE_R + '" fill="none" stroke="#a1a1a1" stroke-width="2.5"/>';
+        mount.appendChild(svg);
+
+        const irisEl = svg.querySelector('.vigia-eye-iris');
+        const irisCircleEl = svg.querySelector('.vigia-eye-iris-circle');
+        const pupilCircleEl = svg.querySelector('.vigia-eye-pupil-circle');
+        const topLidEl = svg.querySelector('.vigia-eye-lid-top');
+        const botLidEl = svg.querySelector('.vigia-eye-lid-bot');
+
+        let hover = false;
+        let dilation = 0;
+        mount.addEventListener('pointerenter', () => { hover = true; });
+        mount.addEventListener('pointerleave', () => { hover = false; });
+
+        function spawnTear() {
+          if (prefersReducedMotion()) return;
+          const g = document.createElementNS(ns, 'g');
+          g.setAttribute('class', 'vigia-eye-tear');
+          g.innerHTML =
+            '<path transform="translate(50 78)" d="M 0 -7 C -3.8 -2.2 -3.8 4.2 0 7.2 C 3.8 4.2 3.8 -2.2 0 -7 Z" fill="#7ec8e8" stroke="#fff" stroke-width="0.9" stroke-opacity=".85" opacity=".96"/>' +
+            '<ellipse transform="translate(50 78) rotate(-18)" cx="-1.1" cy="-1.2" rx="1.15" ry="1.6" fill="#fff" opacity=".78"/>';
+          svg.appendChild(g);
+          window.setTimeout(() => g.remove(), 1150);
+        }
+
+        svg.addEventListener('click', () => {
+          if (hover && dilation >= 0.25) spawnTear();
+        });
+
+        const reduced = prefersReducedMotion();
+        if (reduced) {
+          irisEl.setAttribute('transform', 'translate(50 50)');
+          return;
+        }
+
+        let pointer = null;
+        function onPointerMove(e) {
+          pointer = { x: e.clientX, y: e.clientY, at: performance.now() };
+        }
+        window.addEventListener('pointermove', onPointerMove, { passive: true });
+
+        function tracked(now) {
+          if (!pointer || now - pointer.at > POINTER_HOLD_MS) return null;
+          const box = svg.getBoundingClientRect();
+          const dx = pointer.x - (box.left + box.width / 2);
+          const dy = pointer.y - (box.top + box.height / 2);
+          const dist = Math.hypot(dx, dy) || 1;
+          const reach = Math.min(1, dist / POINTER_REACH) * MAX_GAZE;
+          return { x: (dx / dist) * reach, y: (dy / dist) * reach };
+        }
+
+        let gaze = { x: 0, y: 0 }, from = { x: 0, y: 0 }, to = { x: 0, y: 0 };
+        const t0 = performance.now();
+        let saccadeAt = t0, saccadeMs = 120, holdUntil = t0 + 700;
+        let blinkAt = t0 + 2200, blinkFrom = -1, blinkMs = 160;
+        let raf = null;
+
+        function tick(now) {
+          const targetDilation = hover ? 1 : 0;
+          dilation += (targetDilation - dilation) * 0.13;
+          if (Math.abs(targetDilation - dilation) < 0.001) dilation = targetDilation;
+          const irisR = IRIS_R + (DILATED_IRIS_R - IRIS_R) * dilation;
+          const pupilR = PUPIL_R + (DILATED_PUPIL_R - PUPIL_R) * dilation;
+          irisCircleEl.setAttribute('r', irisR.toFixed(2));
+          pupilCircleEl.setAttribute('r', pupilR.toFixed(2));
+
+          const aim = tracked(now);
+          if (aim) {
+            gaze.x += (aim.x - gaze.x) * 0.16;
+            gaze.y += (aim.y - gaze.y) * 0.16;
+            from = { ...gaze };
+            to = { ...gaze };
+            holdUntil = now + 500;
+          } else if (now >= holdUntil) {
+            from = { ...gaze };
+            to = nextTarget(gaze);
+            saccadeAt = now;
+            saccadeMs = 90 + Math.random() * 70;
+            holdUntil = now + saccadeMs + 700 + Math.random() * 1800;
+            if (Math.random() < 0.3) blinkAt = Math.min(blinkAt, now + saccadeMs);
+          } else {
+            const p = Math.min(1, (now - saccadeAt) / saccadeMs);
+            const e = easeOutCubic(p);
+            gaze.x = from.x + (to.x - from.x) * e;
+            gaze.y = from.y + (to.y - from.y) * e;
+          }
+
+          if (blinkFrom < 0 && now >= blinkAt) {
+            blinkFrom = now;
+            blinkMs = 140 + Math.random() * 60;
+          }
+          let lid = 0;
+          if (blinkFrom >= 0) {
+            const p = (now - blinkFrom) / blinkMs;
+            if (p >= 1) {
+              blinkFrom = -1;
+              blinkAt = now + (Math.random() < 0.12 ? 180 : 2600 + Math.random() * 4200);
+            } else {
+              lid = p < 0.4 ? p / 0.4 : 1 - (p - 0.4) / 0.6;
+            }
+          }
+
+          const driftX = Math.sin(now / 700) * 0.5;
+          const driftY = Math.cos(now / 900) * 0.4;
+          const breath = 1 + Math.sin(now / 1400) * 0.025;
+          const dilateBreath = breath * (1 - dilation * 0.015);
+          irisEl.setAttribute('transform', 'translate(' + (50 + gaze.x + driftX).toFixed(2) + ' ' + (50 + gaze.y + driftY).toFixed(2) + ') scale(' + dilateBreath.toFixed(3) + ')');
+          topLidEl.setAttribute('transform', 'translate(0 ' + (LID_TRAVEL * lid).toFixed(2) + ')');
+          botLidEl.setAttribute('transform', 'translate(0 ' + (-LID_TRAVEL * lid).toFixed(2) + ')');
+          raf = requestAnimationFrame(tick);
+        }
+        raf = requestAnimationFrame(tick);
+      }
+
+      mountVigiaEye(document.getElementById('vigia-eye-nav'), { size: 32 });
+      mountVigiaEye(document.getElementById('vigia-eye-footer'), { size: 26 });
+      mountVigiaEye(document.getElementById('vigia-eye-mobile'), { size: 26 });
+    })();
+  </script>
 
   <script>
     const toggle = document.getElementById('nav-toggle');
