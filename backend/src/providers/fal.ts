@@ -49,6 +49,10 @@ export async function fetchFalOne(rawKey: string): Promise<Record<string, unknow
     data = await httpJson(FAL_BILLING_URL, {
       headers: { Authorization: `Key ${key}`, Accept: "application/json" },
       provider: "FAL",
+      // baseline já é mais lento que os outros provedores (~2s vs <1s) — em
+      // degradação do lado da fal.ai já vimos 200 OK legítimo chegando em
+      // 18.8s, quase estourando os 20s padrão (2026-09-10)
+      timeout: 30,
     });
   } catch (e) {
     return falFail(String(e));
