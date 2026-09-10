@@ -123,7 +123,7 @@ export function GitConfigCard({ git, c, onReload }: { git: GitConfig; c: ConfigC
     }
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-git" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>

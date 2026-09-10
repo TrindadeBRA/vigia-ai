@@ -176,7 +176,7 @@ export function CameraConfigCard({ c }: { c: ConfigCopy }) {
   }
 
   return (
-    <article className={`${cfgCard} gap-3`}>
+    <article id="cfg-camera" className={`${cfgCard} gap-3`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div className={iconChip}><CameraIcon /></div>

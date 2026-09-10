@@ -87,6 +87,11 @@ type Strings = {
   theme: string;
   alarms: string;
   mining: string;
+  emulatorLibrary: string;
+  cmdPaletteOpen: string;
+  cmdPalettePlaceholder: string;
+  cmdPaletteEmpty: string;
+  cmdPaletteNav: string;
   configCta: string;
   cardSmall: string;
   cardSmallWeek: string;
@@ -388,6 +393,11 @@ export const STR: Record<Lang, Strings> = {
     theme: "Tema",
     alarms: "Alarmes",
     mining: "Mineração",
+    emulatorLibrary: "Biblioteca de emuladores",
+    cmdPaletteOpen: "Buscar (Cmd/Ctrl+K)",
+    cmdPalettePlaceholder: "Buscar página, conta ou configuração…",
+    cmdPaletteEmpty: "Nada encontrado.",
+    cmdPaletteNav: "Navegação",
     configCta: "Configurar contas",
     cardSmall: "Pequeno · 5h",
     cardSmallWeek: "Pequeno · semana",
@@ -678,6 +688,11 @@ export const STR: Record<Lang, Strings> = {
     theme: "Theme",
     alarms: "Alarms",
     mining: "Mining",
+    emulatorLibrary: "Emulator library",
+    cmdPaletteOpen: "Search (Cmd/Ctrl+K)",
+    cmdPalettePlaceholder: "Search page, account or setting…",
+    cmdPaletteEmpty: "Nothing found.",
+    cmdPaletteNav: "Navigation",
     configCta: "Set up accounts",
     cardSmall: "Small · 5h",
     cardSmallWeek: "Small · week",
@@ -968,6 +983,11 @@ export const STR: Record<Lang, Strings> = {
     theme: "Tema",
     alarms: "Alarmas",
     mining: "Minería",
+    emulatorLibrary: "Biblioteca de emuladores",
+    cmdPaletteOpen: "Buscar (Cmd/Ctrl+K)",
+    cmdPalettePlaceholder: "Buscar página, cuenta o configuración…",
+    cmdPaletteEmpty: "No se encontró nada.",
+    cmdPaletteNav: "Navegación",
     configCta: "Configurar cuentas",
     cardSmall: "Pequeño · 5h",
     cardSmallWeek: "Pequeño · semana",

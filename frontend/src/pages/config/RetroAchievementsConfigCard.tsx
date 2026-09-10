@@ -71,7 +71,7 @@ export function RetroAchievementsConfigCard({ c, onReload, provider }: Props) {
     }
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-retroachievements" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>

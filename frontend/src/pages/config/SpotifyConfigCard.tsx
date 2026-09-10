@@ -88,7 +88,7 @@ export function SpotifyConfigCard({ p, listenPort, inDocker, c, onReload }: Prop
       : null;
 
   return (
-    <article className={`${cfgCard} gap-3`}>
+    <article id="cfg-spotify" className={`${cfgCard} gap-3`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div className={iconChip}>

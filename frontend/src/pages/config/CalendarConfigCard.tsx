@@ -154,7 +154,7 @@ export function CalendarConfigCard({ calendar, c, onReload }: { calendar: Calend
     }
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-calendar" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>

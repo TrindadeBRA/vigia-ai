@@ -121,7 +121,7 @@ export function RssConfigCard({ rss, c, onReload }: { rss: RssConfig; c: ConfigC
     }
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-rss" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>

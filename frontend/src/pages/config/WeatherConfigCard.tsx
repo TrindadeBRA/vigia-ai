@@ -127,7 +127,7 @@ export function WeatherConfigCard({ weather, c, onReload }: { weather: WeatherCo
     const cityFoldSummary = hasLocation ? c.weatherChangeCity : c.weatherCityLabel;
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-weather" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>

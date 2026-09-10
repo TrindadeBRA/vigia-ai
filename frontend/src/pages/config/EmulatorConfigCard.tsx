@@ -108,7 +108,7 @@ export function EmulatorConfigCard({ c, onReload }: { c: ConfigCopy; onReload: (
     }
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-emulator" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}><RetroarchIconBadge platform="all" theme={(cfg.iconTheme as RetroarchTheme) ?? "monochrome"} size={32} alt="Emulador" /></div>

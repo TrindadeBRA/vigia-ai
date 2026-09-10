@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import type { ProviderCardPublic } from "../../api/types";
 import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
@@ -34,6 +35,19 @@ rm -f "$tmp"
 
 export default function ConfigPage() {
   const { c, cfg, phase, reload, setPhase, lang } = usePublicConfig();
+  const { hash } = useLocation();
+
+  // Vindo da paleta de comando (Cmd/Ctrl+K): rola até o card certo e dá um
+  // pulso no contorno pra ficar claro qual seção foi encontrada.
+  useEffect(() => {
+    if (!hash) return;
+    const el = document.getElementById(hash.slice(1));
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("animate-ring-pulse");
+    const timer = setTimeout(() => el.classList.remove("animate-ring-pulse"), 2800);
+    return () => clearTimeout(timer);
+  }, [hash, cfg]);
 
   if (phase === "loading" && !cfg) {
     return <Skeleton page="config" />;
@@ -217,7 +231,7 @@ export default function ConfigPage() {
         <h2 className="mb-1 mt-0 text-base font-bold">{c.wallpaperProvidersTitle}</h2>
         <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.wallpaperProvidersLead}</p>
       </div>
-      <div className={cfgGrid}>
+      <div id="cfg-wallpapers" className={cfgGrid}>
         <WallpaperProviderCards c={c} />
       </div>
 

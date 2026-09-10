@@ -160,7 +160,7 @@ export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig
     }
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-github" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>
@@ -276,7 +276,7 @@ export function GithubProfilesConfigCard({ github, c, onReload }: { github: Gith
     }
 
     return (
-        <article className={`${cfgCard} gap-3`}>
+        <article id="cfg-github-profiles" className={`${cfgCard} gap-3`}>
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                     <div className={iconChip}>
