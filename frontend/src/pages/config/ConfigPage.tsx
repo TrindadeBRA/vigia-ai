@@ -107,7 +107,7 @@ export default function ConfigPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={c.configSearchPlaceholder}
-            className="w-full min-w-0 border-0 bg-transparent text-ink outline-none placeholder:text-ink3"
+            className="w-full min-w-0 border-0 bg-transparent text-ink outline-none focus-visible:!outline-none placeholder:text-ink3"
           />
         </label>
         <p ref={noResultsRef} className="m-0 mt-2 hidden text-[13px] text-ink3">{c.configSearchEmpty}</p>
@@ -119,7 +119,7 @@ export default function ConfigPage() {
           <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.accountsLead}</p>
         </div>
 
-        <div className={cfgGrid}>
+        <div className={`${cfgGrid} mt-3`}>
           <ProviderCard
             title="Claude"
             blurb={c.claudeBlurb}
@@ -217,7 +217,7 @@ export default function ConfigPage() {
           <h2 className="mb-1 mt-0 text-base font-bold">{c.financeiroTitle}</h2>
           <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.financeiroLead}</p>
         </div>
-        <div className={cfgGrid}>
+        <div className={`${cfgGrid} mt-3`}>
           <ProviderCard
             title="Bitcoin"
             blurb={c.bitcoinBlurb}
@@ -240,7 +240,7 @@ export default function ConfigPage() {
           <h2 className="mb-1 mt-0 text-base font-bold">{c.outrosTitle}</h2>
           <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.outrosLead}</p>
         </div>
-        <div className={cfgGrid}>
+        <div className={`${cfgGrid} mt-3`}>
           <WeatherConfigCard weather={cfg.weather} c={c} onReload={reload} />
           <GitConfigCard git={cfg.git} c={c} onReload={reload} />
           <RetroAchievementsConfigCard c={c} onReload={reload} provider={cfg.providers.retroachievements as unknown as { configured: boolean; hidden: boolean; label: string; suffix: string | null; mode: string; accounts: Array<{ id: string; label: string; suffix: string | null }> }} />
@@ -260,7 +260,7 @@ export default function ConfigPage() {
           <h2 className="mb-1 mt-0 text-base font-bold">Emulador</h2>
           <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">EmulatorJS via CDN — cada plataforma habilitada vira um card com seletor de jogos, reset e tela cheia. Saves sincronizados no servidor (entre dispositivos).</p>
         </div>
-        <div className={cfgGrid}>
+        <div className={`${cfgGrid} mt-3`}>
           <EmulatorConfigCard c={c} onReload={reload} />
         </div>
       </div>
@@ -270,7 +270,7 @@ export default function ConfigPage() {
           <h2 className="mb-1 mt-0 text-base font-bold">{c.wallpaperProvidersTitle}</h2>
           <p className="m-0 max-w-[72ch] text-[13.5px] leading-[1.55] text-ink2">{c.wallpaperProvidersLead}</p>
         </div>
-        <div id="cfg-wallpapers" className={cfgGrid}>
+        <div id="cfg-wallpapers" className={`${cfgGrid} mt-3`}>
           <WallpaperProviderCards c={c} />
         </div>
       </div>
