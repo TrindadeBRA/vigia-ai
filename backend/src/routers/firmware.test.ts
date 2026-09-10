@@ -1,9 +1,12 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
-import { parseSecretsH, renderSecretsH } from "../firmware.js";
+import { installFirmwareFromArchive, parseSecretsH, renderSecretsH } from "../firmware.js";
+import { downloadedFirmwareDir } from "../config.js";
 import { load } from "../store.js";
 import { createTestApp } from "../testUtils.js";
 
@@ -25,6 +28,7 @@ describe("firmware router", () => {
     await app?.close();
     if (prevDir === undefined) delete process.env.VIGIA_FIRMWARE_DIR;
     else process.env.VIGIA_FIRMWARE_DIR = prevDir;
+    delete process.env.VIGIA_FIRMWARE_ARCHIVE_URL;
   });
 
   it("GET /api/firmware devolve SSID e senha da Wi-Fi já gravados", async () => {
@@ -94,6 +98,38 @@ describe("firmware router", () => {
     });
     expect(r.statusCode).toBe(400);
     expect(r.json().ok).toBe(false);
-    expect(String(r.json().error)).toMatch(/firmware|Docker|PlatformIO|pio|checkout/i);
+    expect(String(r.json().error)).toMatch(/firmware|Docker|PlatformIO|pio|checkout|Baixar/i);
+  });
+
+  it("instala firmware/ a partir de um tar.gz na pasta de dados", () => {
+    const staging = mkdtempSync(join(tmpdir(), "vigia-fw-tar-"));
+    const tree = join(staging, "vigia-ai-test", "firmware", "src");
+    mkdirSync(tree, { recursive: true });
+    writeFileSync(join(staging, "vigia-ai-test", "firmware", "platformio.ini"), "[env]\n");
+    writeFileSync(join(tree, "main.cpp"), "// sketch\n");
+    const archive = join(staging, "firmware.tar.gz");
+    execFileSync("tar", ["-czf", archive, "vigia-ai-test"], { cwd: staging });
+
+    process.env.COLLECTOR_DATA = mkdtempSync(join(tmpdir(), "vigia-fw-data-"));
+    const { dest } = installFirmwareFromArchive(archive);
+    expect(dest).toBe(downloadedFirmwareDir());
+    expect(readFileSync(join(dest, "platformio.ini"), "utf8")).toContain("[env]");
+  });
+
+  it("POST /api/firmware/source instala a partir de VIGIA_FIRMWARE_ARCHIVE_URL", async () => {
+    const staging = mkdtempSync(join(tmpdir(), "vigia-fw-src-"));
+    mkdirSync(join(staging, "vigia-ai-test", "firmware", "src"), { recursive: true });
+    writeFileSync(join(staging, "vigia-ai-test", "firmware", "platformio.ini"), "[env]\n");
+    const archive = join(staging, "firmware.tar.gz");
+    execFileSync("tar", ["-czf", archive, "vigia-ai-test"], { cwd: staging });
+
+    process.env.VIGIA_FIRMWARE_ARCHIVE_URL = pathToFileURL(archive).href;
+    app = await createTestApp();
+    const r = await app.inject({ method: "POST", url: "/api/firmware/source" });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().ok).toBe(true);
+    expect(r.json().ref).toBe("local");
+    expect(String(r.json().dest)).toMatch(/firmware/);
+    delete process.env.VIGIA_FIRMWARE_ARCHIVE_URL;
   });
 });

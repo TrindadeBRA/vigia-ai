@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { firmwareDir, inDocker } from "../config.js";
 import {
+  downloadFirmwareSource,
   firmwarePublic,
   isFlashRunning,
   renderSecretsH,
@@ -66,7 +67,7 @@ export async function createFirmwareRoutes(app: FastifyInstance): Promise<void> 
     if (!saved.wrote_secrets) {
       return reply.code(400).send({
         ok: false,
-        error: `Não achei firmware/ em ${firmwareDir()}. Rode o coletor no checkout do Vigia.`,
+        error: `Não achei firmware/ em ${firmwareDir()}. Use “Baixar firmware” no painel.`,
       });
     }
 
@@ -86,5 +87,19 @@ export async function createFirmwareRoutes(app: FastifyInstance): Promise<void> 
       reply.raw.write(`\n${msg}\n`);
     }
     reply.raw.end();
+  });
+
+  app.post("/api/firmware/source", { schema: { tags: ["Firmware"] } }, async (request, reply) => {
+    if (inDocker()) {
+      return reply.code(400).send({ ok: false, error: "Não dá pra baixar o firmware de dentro do Docker." });
+    }
+    const out = await downloadFirmwareSource();
+    if (!out.ok) return reply.code(502).send({ ok: false, error: out.error ?? "não foi possível baixar o firmware" });
+    return {
+      ok: true,
+      dest: out.dest,
+      ref: out.ref,
+      firmware: firmwarePublic(usageLan(listenPortOf(app))),
+    };
   });
 }

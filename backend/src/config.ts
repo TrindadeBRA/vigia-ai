@@ -45,10 +45,17 @@ export function repoRoot(): string {
   return resolve(join(filePath, "..", "..", ".."));
 }
 
+/** Cópia gravável baixada pelo painel (app instalado / Brew). */
+export function downloadedFirmwareDir(): string {
+  return join(dataDir(), "firmware");
+}
+
 export function firmwareDir(): string {
   const override = (process.env.VIGIA_FIRMWARE_DIR || "").trim();
   if (override) return resolve(expandUser(override));
-  return join(repoRoot(), "firmware");
+  const repo = join(repoRoot(), "firmware");
+  if (existsSync(join(repo, "platformio.ini"))) return repo;
+  return downloadedFirmwareDir();
 }
 
 export function frontendDist(): string | null {

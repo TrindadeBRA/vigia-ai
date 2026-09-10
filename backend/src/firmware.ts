@@ -1,9 +1,13 @@
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
-import { firmwareDir, inDocker } from "./config.js";
+import { copyFileSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import { fileURLToPath } from "node:url";
+import { downloadedFirmwareDir, firmwareDir, inDocker } from "./config.js";
 import { load, updateSync } from "./store.js";
+import { VERSION } from "./version.js";
 
 const PLACEHOLDER_SSID = new Set(["", "SUA_REDE", "YOUR_SSID", "Wokwi-GUEST"]);
 const PLACEHOLDER_PASS = new Set(["", "SUA_SENHA", "YOUR_PASSWORD"]);
@@ -163,7 +167,9 @@ export function resolvedWifi(detected: string | null = null): {
 
 export function flashReason(opts: { pio: string | null; canWrite: boolean }): string | null {
   if (inDocker()) return "Não dá pra gravar a USB de dentro do Docker. Rode o coletor no Mac (`./dev up`) com a ESP32 no cabo.";
-  if (!opts.canWrite) return "O firmware do repositório não está neste computador (app instalado sem o checkout). Use `./dev up` na pasta do Vigia.";
+  if (!opts.canWrite) {
+    return "O firmware ainda não está neste computador. Use “Baixar firmware” (GitHub, tag desta versão) ou rode `./dev up` no checkout.";
+  }
   if (!opts.pio) return "PlatformIO (`pio`) não encontrado. Instale em https://docs.platformio.org/ ou rode `./dev firmware flash` no terminal.";
   if (flashProc && flashProc.exitCode === null) return "Já tem uma gravação em andamento.";
   return null;
@@ -185,6 +191,7 @@ export function firmwarePublic(usageUrl: string): Record<string, unknown> {
     secrets_path: path,
     secrets_present: Boolean(path && existsSync(path)),
     can_write: canWrite,
+    needs_source: !canWrite,
     can_flash: reason === null,
     pio,
     in_docker: inDocker(),
@@ -273,3 +280,120 @@ export function startFlash(onData: (chunk: string) => void): Promise<number> {
 }
 
 export { FLASH_TRAILER };
+
+export function firmwareArchiveUrls(): { tag: string; main: string } {
+  return {
+    tag: `https://codeload.github.com/TrindadeBRA/vigia-ai/tar.gz/refs/tags/v${VERSION}`,
+    main: "https://codeload.github.com/TrindadeBRA/vigia-ai/tar.gz/refs/heads/main",
+  };
+}
+
+function findFirmwareRoot(root: string, depth = 0): string | null {
+  if (existsSync(join(root, "platformio.ini"))) return root;
+  if (existsSync(join(root, "firmware", "platformio.ini"))) return join(root, "firmware");
+  if (depth >= 2) return null;
+  let names: string[] = [];
+  try {
+    names = readdirSync(root);
+  } catch {
+    return null;
+  }
+  for (const name of names) {
+    const p = join(root, name);
+    try {
+      if (statSync(p).isDirectory()) {
+        const found = findFirmwareRoot(p, depth + 1);
+        if (found) return found;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+function copyFirmwareTree(src: string, dest: string): void {
+  const secretsPath = join(dest, "src", "secrets.h");
+  const keepSecrets = existsSync(secretsPath) ? readFileSync(secretsPath) : null;
+  const staging = `${dest}.new`;
+  rmSync(staging, { recursive: true, force: true });
+  cpSync(src, staging, {
+    recursive: true,
+    filter: (from) => {
+      const name = basename(from);
+      return name !== ".pio" && name !== ".git" && name !== "secrets.h";
+    },
+  });
+  rmSync(dest, { recursive: true, force: true });
+  cpSync(staging, dest, { recursive: true });
+  rmSync(staging, { recursive: true, force: true });
+  if (keepSecrets) {
+    mkdirSync(join(dest, "src"), { recursive: true });
+    writeFileSync(secretsPath, keepSecrets);
+  }
+}
+
+export function installFirmwareFromArchive(archivePath: string): { dest: string } {
+  const extractDir = mkdtempSync(join(tmpdir(), "vigia-fw-extract-"));
+  try {
+    execFileSync("tar", ["-xzf", archivePath, "-C", extractDir], { timeout: 60_000, windowsHide: true });
+    const src = findFirmwareRoot(extractDir);
+    if (!src) throw new Error("O arquivo baixado não tem a pasta firmware/.");
+    const dest = downloadedFirmwareDir();
+    copyFirmwareTree(src, dest);
+    if (!existsSync(join(dest, "platformio.ini"))) {
+      throw new Error("A cópia do firmware ficou incompleta.");
+    }
+    return { dest };
+  } finally {
+    rmSync(extractDir, { recursive: true, force: true });
+  }
+}
+
+async function saveUrlToFile(url: string, dest: string): Promise<void> {
+  if (url.startsWith("file:")) {
+    copyFileSync(fileURLToPath(url), dest);
+    return;
+  }
+  const res = await fetch(url, {
+    headers: { "User-Agent": `vigia-ai-collector/${VERSION}` },
+    redirect: "follow",
+    signal: AbortSignal.timeout(120_000),
+  });
+  if (!res.ok) {
+    const err = new Error(`GitHub HTTP ${res.status} ao baixar o firmware.`) as Error & { httpStatus?: number };
+    err.httpStatus = res.status;
+    throw err;
+  }
+  if (!res.body) throw new Error("Resposta vazia ao baixar o firmware.");
+  await pipeline(Readable.fromWeb(res.body as never), createWriteStream(dest));
+}
+
+export async function downloadFirmwareSource(): Promise<{ ok: boolean; dest?: string; error?: string; ref?: string }> {
+  const work = mkdtempSync(join(tmpdir(), "vigia-fw-dl-"));
+  const archive = join(work, "firmware.tar.gz");
+  const override = (process.env.VIGIA_FIRMWARE_ARCHIVE_URL || "").trim();
+  try {
+    if (override) {
+      await saveUrlToFile(override, archive);
+      const { dest } = installFirmwareFromArchive(archive);
+      return { ok: true, dest, ref: "local" };
+    }
+    const urls = firmwareArchiveUrls();
+    try {
+      await saveUrlToFile(urls.tag, archive);
+      const { dest } = installFirmwareFromArchive(archive);
+      return { ok: true, dest, ref: `v${VERSION}` };
+    } catch (err) {
+      const status = err && typeof err === "object" && "httpStatus" in err ? Number((err as { httpStatus?: number }).httpStatus) : 0;
+      if (status !== 404) throw err;
+      await saveUrlToFile(urls.main, archive);
+      const { dest } = installFirmwareFromArchive(archive);
+      return { ok: true, dest, ref: "main" };
+    }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}

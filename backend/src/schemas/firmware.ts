@@ -15,6 +15,7 @@ export const FirmwarePublicSchema = z.object({
   secrets_path: z.string().nullable(),
   secrets_present: z.boolean(),
   can_write: z.boolean(),
+  needs_source: z.boolean(),
   can_flash: z.boolean(),
   pio: z.string().nullable(),
   in_docker: z.boolean(),

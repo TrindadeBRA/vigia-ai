@@ -805,6 +805,7 @@ export type FirmwarePublic = {
   secrets_path: string | null;
   secrets_present: boolean;
   can_write: boolean;
+  needs_source: boolean;
   can_flash: boolean;
   pio: string | null;
   in_docker: boolean;

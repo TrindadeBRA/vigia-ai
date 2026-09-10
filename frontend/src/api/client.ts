@@ -61,6 +61,11 @@ export async function fetchFirmware(): Promise<FirmwarePublic> {
   return res.json() as Promise<FirmwarePublic>;
 }
 
+export async function downloadFirmwareSource(): Promise<MutateResult> {
+  const res = await fetch("/api/firmware/source", { method: "POST" });
+  return readMutate(res);
+}
+
 export async function saveFirmware(body: { wifi_ssid: string; wifi_password?: string }): Promise<MutateResult> {
   const res = await fetch("/api/firmware", {
     method: "PUT",

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { downloadFirmwareFile, fetchFirmware, flashFirmware, saveFirmware } from "../../api/client";
+import { downloadFirmwareFile, downloadFirmwareSource, fetchFirmware, flashFirmware, saveFirmware } from "../../api/client";
 import type { ConfigPublic, FirmwarePublic } from "../../api/types";
 import { cn } from "../../cn";
 import { saveTextFile } from "../../desktop";
@@ -15,6 +15,8 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
   const save = useRequest();
   const flash = useRequest();
   const dl = useRequest();
+  const detect = useRequest();
+  const fetchSrc = useRequest();
   const [fw, setFw] = useState<FirmwarePublic | null>(null);
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
@@ -89,15 +91,21 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
-            onClick={() => {
-              if (fw?.detected_ssid) setSsid(fw.detected_ssid);
-              else {
-                void fetchFirmware().then((next) => {
+            loading={detect.busy}
+            onClick={() =>
+              void detect.run(
+                async () => {
+                  const next = await fetchFirmware();
                   applyStatus(next);
-                  if (next.detected_ssid) setSsid(next.detected_ssid);
-                });
-              }
-            }}
+                  if (next.detected_ssid) {
+                    setSsid(next.detected_ssid);
+                    return { ok: true };
+                  }
+                  return { ok: false, error: c.boardDetectFail };
+                },
+                { success: c.boardDetectOk, error: c.boardDetectFail },
+              )
+            }
           >
             {c.boardDetectWifi}
           </Button>
@@ -120,6 +128,7 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
           </Button>
         </div>
         <FieldStatus status={save.status} message={save.message} />
+        <FieldStatus status={detect.status} message={detect.message} />
       </div>
 
       <div className="h-px bg-edge" />
@@ -143,6 +152,25 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
           {canFlash ? c.boardFlashReady : fw?.reason || c.boardFlashUsb}
         </p>
         <div className="flex flex-wrap items-center gap-2">
+          {fw && !fw.can_write ? (
+            <Button
+              variant="secondary"
+              loading={fetchSrc.busy}
+              onClick={() =>
+                void fetchSrc.run(
+                  async () => {
+                    const out = await downloadFirmwareSource();
+                    if (out.ok && out.firmware) applyStatus(out.firmware);
+                    else if (out.ok) await loadFromCollector();
+                    return out;
+                  },
+                  { success: c.boardFetchFirmwareOk, error: c.boardFetchFirmwareFail },
+                )
+              }
+            >
+              {fetchSrc.busy ? c.boardFetchingFirmware : c.boardFetchFirmware}
+            </Button>
+          ) : null}
           <Button
             loading={flash.busy}
             disabled={flash.busy || Boolean(fw && !fw.can_flash)}
@@ -174,6 +202,7 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
             {log}
           </pre>
         ) : null}
+        <FieldStatus status={fetchSrc.status} message={fetchSrc.message} />
         <FieldStatus status={flash.status} message={flash.message} />
       </div>
 

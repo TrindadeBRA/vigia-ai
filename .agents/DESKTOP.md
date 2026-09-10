@@ -67,6 +67,10 @@ Na primeira execução o app **copia** o `backend/data/` do repositório, se
 existir — quem já usava `./dev up` não abre o app com as contas em branco.
 Logs ficam em `.../vigia-ai-desktop/logs/`. Os dois têm atalho no card Aplicativo.
 
+O instalador **não** traz o sketch da ESP32. Em `/display/setup`, **Baixar firmware**
+puxa a pasta `firmware/` da tag GitHub desta versão e grava em `data/firmware/`.
+Gravar na placa ainda exige PlatformIO (`pio`) neste computador.
+
 ## Porta e a placa
 
 A porta padrão continua **8787**, e ela importa: a ESP32 guarda

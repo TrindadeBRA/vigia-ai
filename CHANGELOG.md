@@ -6,6 +6,8 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- **Baixar firmware no app instalado**: em `/display/setup`, se a pasta `firmware/` não existir (Brew/cask), **Baixar firmware** puxa o tarball da tag GitHub desta versão (`POST /api/firmware/source`) e habilita o flash USB — ainda é preciso `pio` no host.
+
 - **Flash da ESP32 pelo painel** (`/display/setup`): preenche SSID (detectado na Wi-Fi do host) e `USAGE_URL` da LAN, grava `firmware/src/secrets.h` e dispara `pio run -e esp32dev -t upload` sem sair da tela — `GET/PUT /api/firmware`, `POST /api/firmware/flash`. O comando `./dev firmware flash` continua válido.
 
 - **Coletor em Node.js** — port completo de `backend/app` (FastAPI/Python, ~8.3k linhas) para **Node 22 LTS + Fastify + Zod + Vitest** (`backend/src/`). Mesma árvore de responsabilidades, mesmo contrato JSON (`CONTRATO_JSON.md`) e mesmo framing SSE (`GET /events`), mas sem PyInstaller: bundle `esbuild` + `node:sqlite` builtin + `jimp` puro JS. Harness `scripts/diff-contract.mjs` compara `GET /usage` byte-a-byte entre `backend-python-legacy/` (8788) e Node (8787) — paridade OK.

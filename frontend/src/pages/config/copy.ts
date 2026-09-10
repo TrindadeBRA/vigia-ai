@@ -30,6 +30,12 @@ export type ConfigCopy = {
   boardPassword: string;
   boardPasswordHint: string;
   boardDetectWifi: string;
+  boardDetectOk: string;
+  boardDetectFail: string;
+  boardFetchFirmware: string;
+  boardFetchingFirmware: string;
+  boardFetchFirmwareOk: string;
+  boardFetchFirmwareFail: string;
   boardSaveSecrets: string;
   boardSavingSecrets: string;
   boardSecretsOk: string;
@@ -495,6 +501,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     boardPassword: "Senha da Wi-Fi",
     boardPasswordHint: "Já está no coletor. Deixe em branco para manter.",
     boardDetectWifi: "Detectar Wi-Fi",
+    boardDetectOk: "Wi-Fi detectada.",
+    boardDetectFail: "Não achei o nome da Wi-Fi deste computador. Preencha na mão.",
+    boardFetchFirmware: "Baixar firmware",
+    boardFetchingFirmware: "Baixando…",
+    boardFetchFirmwareOk: "Firmware baixado. Se o PlatformIO (pio) estiver instalado, já dá para gravar na ESP32.",
+    boardFetchFirmwareFail: "Não deu para baixar o firmware do GitHub. Confira a rede e tente de novo.",
     boardSaveSecrets: "Salvar secrets.h",
     boardSavingSecrets: "Salvando…",
     boardSecretsOk: "secrets.h gravado em firmware/src.",
@@ -948,6 +960,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     boardPassword: "Wi-Fi password",
     boardPasswordHint: "Already stored in the collector. Leave blank to keep it.",
     boardDetectWifi: "Detect Wi-Fi",
+    boardDetectOk: "Wi-Fi detected.",
+    boardDetectFail: "Couldn't read this computer's Wi-Fi name. Type it in.",
+    boardFetchFirmware: "Download firmware",
+    boardFetchingFirmware: "Downloading…",
+    boardFetchFirmwareOk: "Firmware downloaded. If PlatformIO (pio) is installed, you can flash the ESP32.",
+    boardFetchFirmwareFail: "Couldn't download firmware from GitHub. Check the network and try again.",
     boardSaveSecrets: "Save secrets.h",
     boardSavingSecrets: "Saving…",
     boardSecretsOk: "secrets.h written under firmware/src.",
@@ -1401,6 +1419,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     boardPassword: "Contraseña del Wi-Fi",
     boardPasswordHint: "Ya está en el colector. Déjalo en blanco para mantenerla.",
     boardDetectWifi: "Detectar Wi-Fi",
+    boardDetectOk: "Wi-Fi detectada.",
+    boardDetectFail: "No encontré el nombre del Wi-Fi de este computador. Escríbelo a mano.",
+    boardFetchFirmware: "Descargar firmware",
+    boardFetchingFirmware: "Descargando…",
+    boardFetchFirmwareOk: "Firmware descargado. Si PlatformIO (pio) está instalado, ya puedes grabar en la ESP32.",
+    boardFetchFirmwareFail: "No se pudo descargar el firmware de GitHub. Revisa la red e inténtalo de nuevo.",
     boardSaveSecrets: "Guardar secrets.h",
     boardSavingSecrets: "Guardando…",
     boardSecretsOk: "secrets.h escrito en firmware/src.",

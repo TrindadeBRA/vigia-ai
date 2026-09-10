@@ -10,7 +10,7 @@ Vite + React + TypeScript em `frontend/`.
 | `/display/now`    | "Agora" — lista com todas as contas/cotas, no mesmo estilo da tela "Agora" da placa (sem o board arrastável)                                             |
 | `/display/canvas` | Espelha o tema da placa (fundo/relógio/ícones) em tela cheia no navegador — kiosk, sem chrome, Esc volta pro `/display`                                  |
 | `/display/config` | Configurações — contas, Financeiro (Bitcoin/AdSense/moedas), Clima, Papéis de parede                                                                     |
-| `/display/setup`  | Placa, `secrets.h` (SSID/senha/`USAGE_URL`) e flash USB da ESP32
+| `/display/setup`  | Placa, `secrets.h` (SSID/senha/`USAGE_URL`), baixar `firmware/` do GitHub no app instalado, e flash USB da ESP32
 | `/display/theme`  | Editor de tema da placa (fundo, relógio, ícones com a cota ao vivo) — biblioteca de papéis de parede embutida (chaves de API ficam em `/display/config`) |
 | `/display/alarms` | Alarmes e notificações Telegram, com exportar/importar regras em JSON                                                                                    |
 
