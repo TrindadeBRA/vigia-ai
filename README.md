@@ -17,6 +17,10 @@ rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
 
 <br>
 
+<img src=".agents/assets/firmware/hardware-desk.jpg" width="640" alt="ESP32 + TFT 3,5&quot; na mesa, tema custom com relógio, cotas e Spotify">
+
+<br><br>
+
 <img src=".agents/assets/firmware/wokwi-wiring.png" width="640" alt="Diagrama de montagem: ESP32 + TFT 3,5&quot; touch, simulado no Wokwi">
 
 <br><br>
