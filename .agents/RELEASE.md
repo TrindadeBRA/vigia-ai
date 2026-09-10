@@ -17,6 +17,9 @@ em qual GitHub Release publicar (ver "Por que a versão do desktop manda").
 | `desktop/package.json` | campo `version` — é o que o `electron-builder` usa pro nome dos instaladores **e** pra decidir a release do GitHub |
 | `desktop/package-lock.json` | roda `npm install --package-lock-only` dentro de `desktop/` depois de editar o `package.json`, senão o lockfile fica com a versão velha |
 
+> [!NOTE]
+> Feature nova de peso (novo provedor/integração, novo modo de instalação, mudança grande de UI)? Cheque se vale um bullet em [`README.md`](../README.md) (`## Recursos`) e/ou um card em [`docs/index.html`](../docs/index.html) (seção NOVIDADES). Esses dois arquivos não são bumpados automaticamente e já ficaram vários minors atrasados — ver [`PLANO_LANDING_README.md`](PLANO_LANDING_README.md).
+
 `./dev release x.y.z` (em `./dev`, `bump_all_versions()`) já bumpa os 3
 `package.json` + `version.ts` e comita — é o caminho recomendado. O que
 segue é o passo a passo manual, pra quando precisar bumpar sem o script

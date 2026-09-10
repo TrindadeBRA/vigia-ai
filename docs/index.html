@@ -182,7 +182,7 @@
         <a class="py-2 hover:text-white" href="#provedores">Provedores</a>
         <a class="py-2 hover:text-white" href="#dashboard">Dashboard</a>
         <a class="py-2 hover:text-white" href="#como-funciona">Como funciona</a>
-        <a class="py-2 font-semibold text-accent-soft hover:text-white" href="#instalacao">⚡ Instalação — 1 comando</a>
+        <a class="py-2 font-semibold text-accent-soft hover:text-white" href="#instalacao">⚡ Instalação — Mac · Linux · Windows</a>
         <a class="mt-2 inline-flex w-fit rounded-full bg-accent px-4 py-2 text-sm font-bold text-white"
           href="#instalacao">Instalar agora →</a>
         <a class="inline-flex w-fit rounded-full bg-white px-4 py-2 text-sm font-bold text-ink"
@@ -564,16 +564,17 @@
             até no celular. Você escolhe.</p>
         </div>
         <div class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">
-              🖥️</div>
-            <h3 class="mt-4 text-[15px] font-bold text-white">Físico — sempre à vista</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">ESP32 Dev Module + TFT SPI 3,5" touch (XPT2046).
-              Tela sempre ligada na mesa. QR code na tela abre o painel de qualquer aparelho na mesma Wi-Fi.</p>
-            <div
-              class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
-              ILI9488 320×480 · Touch nativo</div>
+          <div class="card-hover overflow-hidden rounded-2xl border border-white/10 bg-panel">
+            <img src="assets/hardware-desk.jpg" alt="ESP32 + TFT 3,5&quot; touch de verdade, ligado numa mesa"
+              class="h-36 w-full object-cover" loading="lazy" />
+            <div class="p-6 pt-5">
+              <h3 class="text-[15px] font-bold text-white">Físico — sempre à vista</h3>
+              <p class="mt-2 text-sm leading-relaxed text-neutral-400">ESP32 Dev Module + TFT SPI 3,5" touch (XPT2046).
+                Tela sempre ligada na mesa. QR code na tela abre o painel de qualquer aparelho na mesma Wi-Fi.</p>
+              <div
+                class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
+                ILI9488 320×480 · Touch nativo</div>
+            </div>
           </div>
           <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
             <div
@@ -627,7 +628,7 @@
             <span
               class="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-[11px] font-bold tracking-widest text-white">NOVIDADES
               · ÚLTIMOS RELEASES</span>
-            <span class="text-xs text-neutral-400">v2.4 → v2.9 — 15+ integrações novas + widgets + automações + polish</span>
+            <span class="text-xs text-neutral-400">Releases contínuos — 20+ integrações novas + widgets + automações + polish</span>
           </div>
           <!-- Linha 1: provedores de dados -->
           <div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -721,6 +722,25 @@
             <div class="rounded-2xl border border-white/10 bg-ink p-4">
               <div class="text-sm font-bold text-white">🎮 Gamepad + ⌨️ Atalhos</div>
               <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Suporte a gamepad (zoom e scroll no board), Konami code, breadcrumb, skeleton/loading states e refinamentos de i18n (PT/EN/ES).</p>
+            </div>
+          </div>
+          <!-- Linha 4: releases mais recentes -->
+          <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-2xl border border-white/10 bg-ink p-4">
+              <div class="flex items-center gap-2"><span class="text-base">🖼️</span><span class="text-sm font-bold text-white">Fundos animados</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
+              <p class="mt-2 text-xs leading-relaxed text-neutral-400">GIF animado como papel de parede do editor de tema — quadros extraídos e convertidos pra RAW RGB565, tocando direto na ESP32.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-ink p-4">
+              <div class="flex items-center gap-2"><span class="text-base">⌘</span><span class="text-sm font-bold text-white">Command palette + offline</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
+              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Atalho de teclado abre uma busca rápida por qualquer tela do painel. Service worker deixa o `/display` web funcionando mesmo com a rede instável.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-ink p-4">
+              <div class="flex items-center gap-2"><span class="text-base">🔌</span><span class="text-sm font-bold text-white">Flash pelo painel</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
+              <p class="mt-2 text-xs leading-relaxed text-neutral-400"><code class="font-mono text-accent-soft">/display/setup</code> grava a ESP32 via USB sem terminal, e baixa o firmware da release atual quando a pasta local não existe (instalação via Homebrew/instalador).</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-ink p-4">
+              <div class="flex items-center gap-2"><span class="text-base">🎨</span><span class="text-sm font-bold text-white">RGB channel swap</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
+              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Corrige cores trocadas (azul/vermelho) em painéis com wiring RGB invertido, direto na tela de tema — sem reflashar o firmware.</p>
             </div>
           </div>
           <p class="mt-4 text-center text-xs text-neutral-500">Tudo já no <code class="font-mono text-accent-soft">/display</code> e em <code class="font-mono text-accent-soft">/display/config</code> — sem quebrar o contrato JSON existente.</p>
@@ -1090,7 +1110,7 @@
           </div>
         </div>
 
-        <!-- Segunda linha: novos provedores v2.4–v2.9 -->
+        <!-- Segunda linha: novos provedores -->
         <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div class="rounded-2xl border border-white/10 bg-panel p-5">
             <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">⭐</span>
@@ -1484,80 +1504,164 @@
     <section id="instalacao" class="border-y border-white/[0.06] bg-white/[0.02] py-16 md:py-20">
       <div class="mx-auto max-w-[1100px] px-6">
         <div class="mx-auto max-w-3xl text-center">
-          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">INSTALAÇÃO — 1 COMANDO</p>
-          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[38px]">Do clone ao mostrador em
-            um comando.</h2>
-          <p class="mt-3 text-[15px] leading-relaxed text-neutral-400">Sem instalador: <strong class="text-white">clona
-              o repo e sobe o coletor + o mostrador web</strong> — o próprio <code
-              class="font-mono text-accent-soft">./dev</code> instala as dependências Node na primeira vez.
-            Gravar a ESP32 física é um passo à parte, opcional (veja abaixo).
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">INSTALAÇÃO — MAC · LINUX · WINDOWS</p>
+          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[38px]">Um instalador pro seu
+            sistema. Sem Python, sem Node.</h2>
+          <p class="mt-3 text-[15px] leading-relaxed text-neutral-400">O app desktop já vem com o coletor embarcado —
+            <strong class="text-white">baixa e roda</strong>. Continua servindo <code
+              class="font-mono text-accent-soft">/display</code> pra ESP32 e pro navegador na mesma LAN. Gravar a
+            ESP32 física é um passo à parte, opcional (veja abaixo).
           </p>
         </div>
 
-        <!-- Oneliner card -->
-        <div
-          class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,.45)]">
-          <div class="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3">
+        <!-- 3 caminhos por SO -->
+        <div class="mx-auto mt-10 grid max-w-4xl gap-4 md:grid-cols-3">
+          <!-- macOS -->
+          <div class="flex flex-col rounded-2xl border border-white/10 bg-ink p-5">
             <div class="flex items-center gap-2">
-              <span class="size-2.5 rounded-full bg-[#ff5f56]"></span>
-              <span class="size-2.5 rounded-full bg-[#ffbd2e]"></span>
-              <span class="size-2.5 rounded-full bg-[#27c93f]"></span>
-              <span class="ml-2 font-mono text-xs font-semibold tracking-widest text-neutral-400">TERMINAL</span>
+              <span class="flex size-8 items-center justify-center rounded-lg bg-white/[0.06] border border-white/10 text-base">🍎</span>
+              <span class="text-sm font-bold text-white">macOS</span>
+              <span class="ml-auto rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">RECOMENDADO</span>
             </div>
-            <span
-              class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><span
-                class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span> COPIAR E COLAR</span>
+            <p class="mt-3 text-xs text-neutral-400">Via Homebrew — evita o aviso de "app danificado" do Gatekeeper.</p>
+            <div class="mt-3 flex-1 rounded-xl border border-white/10 bg-panel p-3">
+              <code class="block overflow-x-auto whitespace-pre font-mono text-[11.5px] leading-relaxed text-accent-soft">brew tap TrindadeBRA/vigia-ai
+brew install --cask vigia-ai</code>
+            </div>
+            <button data-copy="brew tap TrindadeBRA/vigia-ai && brew install --cask vigia-ai"
+              class="copy-btn mt-3 w-full rounded-full bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar
+              comando</button>
+            <p class="mt-3 text-[11px] leading-relaxed text-neutral-500">Ou baixe o <code
+                class="text-neutral-400">.dmg</code> direto nos releases — ver nota do Gatekeeper abaixo.</p>
           </div>
-
-          <!-- Code block -->
-          <div class="p-4 sm:p-5">
-            <div
-              class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-panel px-3 py-3 sm:px-4">
+          <!-- Linux -->
+          <div class="flex flex-col rounded-2xl border border-white/10 bg-ink p-5">
+            <div class="flex items-center gap-2">
+              <span class="flex size-8 items-center justify-center rounded-lg bg-white/[0.06] border border-white/10 text-base">🐧</span>
+              <span class="text-sm font-bold text-white">Linux</span>
+              <span class="ml-auto rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">RECOMENDADO</span>
+            </div>
+            <p class="mt-3 text-xs text-neutral-400">Um comando — baixa o <code class="text-neutral-300">.tar.gz</code>
+              do release, extrai e cria o atalho no menu.</p>
+            <div class="mt-3 flex-1 rounded-xl border border-white/10 bg-panel p-3">
               <code
-                class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-semibold text-accent-soft">git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up</code>
-              <button data-copy="git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up"
-                class="copy-btn shrink-0 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar</button>
+                class="block overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11.5px] leading-relaxed text-accent-soft">curl -fsSL .../install.sh | bash</code>
             </div>
-            <p class="mt-2 text-center font-mono text-xs text-neutral-500">Linux e macOS direto no Terminal · Windows
-              via <span class="text-neutral-300">WSL</span> ou <span class="text-neutral-300">Git Bash</span> (o
-              <code class="text-neutral-300">./dev</code> é um script bash)
-            </p>
-
-            <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300"><span
-                  class="size-1.5 rounded-full bg-emerald-400"></span> Sem expor tokens</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300">LAN
-                only · :8787</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300">MIT
-                · Open Source</span>
+            <button data-copy="curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash"
+              class="copy-btn mt-3 w-full rounded-full bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar
+              comando</button>
+            <p class="mt-3 text-[11px] leading-relaxed text-neutral-500">Pergunta <code
+                class="text-neutral-400">--user</code> (sem sudo) ou <code class="text-neutral-400">--system</code>. Ou
+              baixe <code class="text-neutral-400">.AppImage</code>/<code class="text-neutral-400">.deb</code> direto
+              nos releases.</p>
+          </div>
+          <!-- Windows -->
+          <div class="flex flex-col rounded-2xl border border-white/10 bg-ink p-5">
+            <div class="flex items-center gap-2">
+              <span class="flex size-8 items-center justify-center rounded-lg bg-white/[0.06] border border-white/10 text-base">🪟</span>
+              <span class="text-sm font-bold text-white">Windows</span>
             </div>
+            <p class="mt-3 text-xs text-neutral-400">Baixa o instalador (NSIS) e roda — não pede admin.</p>
+            <div class="mt-3 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-panel p-3 text-center">
+              <span class="font-mono text-[11.5px] text-neutral-300">Vigia AI Setup.exe</span>
+              <span class="mt-1 text-[11px] text-neutral-500">nos releases do GitHub</span>
+            </div>
+            <a href="https://github.com/TrindadeBRA/vigia-ai/releases/latest" target="_blank" rel="noopener"
+              class="mt-3 w-full rounded-full bg-white px-4 py-2 text-center text-xs font-bold text-ink hover:bg-neutral-100 transition">Baixar
+              .exe →</a>
+            <p class="mt-3 text-[11px] leading-relaxed text-neutral-500">Primeira execução mostra um aviso do
+              SmartScreen — normal, ver nota abaixo.</p>
           </div>
         </div>
 
-        <!-- O que faz -->
-        <div class="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
-          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <div class="text-xs font-bold tracking-widest text-accent-soft">1 · CLONA</div>
-            <div class="mt-1 text-sm font-semibold text-white">Baixa o repositório</div>
-            <div class="text-xs leading-relaxed text-neutral-400"><code class="font-mono text-xs">git clone</code> —
-              firmware, backend e frontend num monorepo só</div>
+        <!-- Avisos de assinatura de código -->
+        <div class="mx-auto mt-6 grid max-w-4xl gap-4 md:grid-cols-2">
+          <div class="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
+            <div class="text-xs font-bold text-amber-300">⚠️ macOS: "app está danificado e não pode ser aberto"</div>
+            <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Só acontece baixando o <code
+                class="text-neutral-300">.dmg</code> direto (não pelo Homebrew) — não há certificado pago da Apple
+              (Developer ID) pra assinar/notarizar, e o Gatekeeper marca qualquer download assim. Resolve com
+              Homebrew (acima), com o <code class="text-neutral-300">fix-gatekeeper.command</code> que vem no
+              <code class="text-neutral-300">.dmg</code>, ou via Terminal: <code
+                class="text-neutral-300">xattr -cr "/Applications/Vigia AI.app"</code>.</p>
           </div>
-          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <div class="text-xs font-bold tracking-widest text-accent-soft">2 · PREPARA</div>
-            <div class="mt-1 text-sm font-semibold text-white">npm install</div>
-            <div class="text-xs leading-relaxed text-neutral-400"><code class="font-mono text-xs">./dev up</code>
-              instala
-              as dependências do backend e frontend na primeira vez</div>
+          <div class="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
+            <div class="text-xs font-bold text-amber-300">⚠️ Windows: "O Windows protegeu o computador"</div>
+            <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Mesmo motivo do macOS: sem certificado
+              Authenticode pago, o SmartScreen desconfia de instalador novo. Clique em <strong
+                class="text-neutral-300">"Mais informações"</strong> → <strong class="text-neutral-300">"Executar assim
+                mesmo"</strong>. O código é aberto — dá pra conferir tudo no repositório.</p>
           </div>
-          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <div class="text-xs font-bold tracking-widest text-accent-soft">3 · SOBE</div>
-            <div class="mt-1 text-sm font-semibold text-white">Coletor + mostrador</div>
-            <div class="text-xs leading-relaxed text-neutral-400">Fastify (:8787) + Vite (:5173) — mostrador em
-              <code class="font-mono text-xs">/display</code>, painel em <code
-                class="font-mono text-xs">/display/config</code>
+        </div>
+
+        <!-- A partir do código (contribuidores) -->
+        <div class="mx-auto mt-8 max-w-3xl">
+          <p class="text-center text-xs font-semibold tracking-widest text-neutral-500">OU, PRA CONTRIBUIR — A PARTIR
+            DO CÓDIGO</p>
+          <div
+            class="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,.45)]">
+            <div class="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="size-2.5 rounded-full bg-[#ff5f56]"></span>
+                <span class="size-2.5 rounded-full bg-[#ffbd2e]"></span>
+                <span class="size-2.5 rounded-full bg-[#27c93f]"></span>
+                <span class="ml-2 font-mono text-xs font-semibold tracking-widest text-neutral-400">TERMINAL</span>
+              </div>
+              <span
+                class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><span
+                  class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span> COPIAR E COLAR</span>
+            </div>
+
+            <!-- Code block -->
+            <div class="p-4 sm:p-5">
+              <div
+                class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-panel px-3 py-3 sm:px-4">
+                <code
+                  class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-semibold text-accent-soft">git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up</code>
+                <button data-copy="git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up"
+                  class="copy-btn shrink-0 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar</button>
+              </div>
+              <p class="mt-2 text-center font-mono text-xs text-neutral-500">Linux e macOS direto no Terminal · Windows
+                via <span class="text-neutral-300">WSL</span> ou <span class="text-neutral-300">Git Bash</span> (o
+                <code class="text-neutral-300">./dev</code> é um script bash)
+              </p>
+
+              <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300"><span
+                    class="size-1.5 rounded-full bg-emerald-400"></span> Sem expor tokens</span>
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300">LAN
+                  only · :8787</span>
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300">MIT
+                  · Open Source</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- O que faz -->
+          <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div class="text-xs font-bold tracking-widest text-accent-soft">1 · CLONA</div>
+              <div class="mt-1 text-sm font-semibold text-white">Baixa o repositório</div>
+              <div class="text-xs leading-relaxed text-neutral-400"><code class="font-mono text-xs">git clone</code> —
+                firmware, backend e frontend num monorepo só</div>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div class="text-xs font-bold tracking-widest text-accent-soft">2 · PREPARA</div>
+              <div class="mt-1 text-sm font-semibold text-white">npm install</div>
+              <div class="text-xs leading-relaxed text-neutral-400"><code class="font-mono text-xs">./dev up</code>
+                instala
+                as dependências do backend e frontend na primeira vez</div>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+              <div class="text-xs font-bold tracking-widest text-accent-soft">3 · SOBE</div>
+              <div class="mt-1 text-sm font-semibold text-white">Coletor + mostrador</div>
+              <div class="text-xs leading-relaxed text-neutral-400">Fastify (:8787) + Vite (:5173) — mostrador em
+                <code class="font-mono text-xs">/display</code>, painel em <code
+                  class="font-mono text-xs">/display/config</code>
+              </div>
             </div>
           </div>
         </div>

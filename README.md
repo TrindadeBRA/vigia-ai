@@ -5,8 +5,8 @@
 
 ### Painel de mesa para cotas de IA — sem nunca expor um token
 
-**Claude** · **GPT** (ChatGPT / Codex) · **Cursor** · **OpenRouter** · **DeepSeek** · **OpenCode Go** · **OpenCode Zen** · **fal.ai** · **Bitcoin** · **AdSense**
-rodando em **ESP32 + TFT 3,5" touch** (ou no navegador)
+**20+ integrações**: cotas de IA (**Claude**, **GPT**, **Cursor**, **OpenRouter**, **DeepSeek**, **OpenCode**, **fal.ai**), **Git/GitHub**, **Bitcoin**, **AdSense**, Moedas, Clima, Calendário, RSS, ISS, RetroAchievements, Spotify, YouTube Music, Câmera, Android, Emulador e Mineração Bitcoin —
+rodando em **ESP32 + TFT 3,5" touch**, no navegador ou no **app desktop** (Mac/Linux/Windows)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-e63931?style=flat-square)](LICENSE)
 [![Node](https://img.shields.io/badge/node-22%20LTS-339933?style=flat-square&logo=node.js&logoColor=white)](backend)
@@ -56,14 +56,16 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 
 ## Recursos
 
-- **10 provedores, múltiplas contas cada** — Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go, OpenCode Zen, fal.ai, Bitcoin, AdSense
+- **20+ integrações, múltiplas contas cada** — **Cotas de IA:** Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go/Zen, fal.ai · **Financeiro:** Bitcoin, AdSense, Moedas · **Dev:** Git, GitHub · **Vida:** RetroAchievements, Calendário ICS, RSS, Clima, ISS · **Mídia:** Spotify, YouTube Music · **Hardware:** Câmera (RTSP + ONVIF PTZ), Android (ADB), Emulador (EmulatorJS), Mineração Bitcoin, Sistema (CPU/RAM/disco)
 - **Tempo real** — um único ciclo de consulta no coletor, distribuído por SSE; placa e abas de `/display` não multiplicam chamadas
 - **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
 - **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela
-- **Board arrastável no `/display` web** — vários tamanhos de card (do compacto ao super largo), arraste e redimensione, packing sem sobreposição; layout sincroniza entre dispositivos na mesma LAN
-- **Papéis de parede** — fundo do editor de tema e do board web com imagem própria (upload) ou buscada em Pexels/Wallhaven/Unsplash
+- **Board arrastável no `/display` web** — vários tamanhos de card (do compacto ao super largo), arraste e redimensione, packing sem sobreposição; notas e imagens como post-its; layout sincroniza entre dispositivos na mesma LAN
+- **Papéis de parede** — fundo do editor de tema e do board web com imagem própria (upload), busca em Pexels/Wallhaven/Unsplash/Giphy, ou **GIF animado** convertido em quadros direto pra ESP32
 - **Alarmes + Telegram** — avise quando uma cota passar de um limiar ou o saldo de créditos ficar baixo, por mensagem no Telegram, com exportar/importar regras em JSON; ver [`.agents/NOTIFICACOES.md`](.agents/NOTIFICACOES.md)
 - **Cotação de moedas e clima** — lista livre de moedas fiat/cripto convertidas numa moeda base, e previsão do tempo (Open-Meteo); cards opcionais na Início, Agora e detalhe
+- **Flash e download de firmware pelo painel** — grava a ESP32 via USB e baixa o firmware da release atual direto em `/display/setup`, sem terminal
+- **Command palette + suporte offline** — busca rápida por qualquer tela do painel; service worker mantém o `/display` web funcionando com a rede instável
 - **3 temas × 7 cores de destaque**, **PT / EN / ES**
 - **QR code na tela** — abre o painel de configuração de qualquer aparelho na mesma Wi-Fi
 - **Resiliente** — falha numa conta (`ok: false`) nunca derruba as outras
@@ -254,6 +256,8 @@ O app é o mesmo produto: continua servindo `/display` na rede local para a ESP3
 
 > [!IMPORTANT]
 > **macOS: "Vigia AI está danificado e não pode ser aberto"** — só acontece baixando o `.dmg` direto (não pelo Homebrew). O app não está corrompido: não temos certificado pago da Apple (Developer ID) pra assinar/notarizar o build, e o macOS marca todo download da internet sem essa assinatura como "danificado", mesmo íntegro. Três saídas: **(1)** instalar via Homebrew (comando acima, resolve sozinho); **(2)** o `.dmg` já vem com um `fix-gatekeeper.command` — dê dois cliques nele (depois de arrastar o app pra Applications) e abra o Vigia AI normalmente; **(3)** via Terminal: `xattr -cr "/Applications/Vigia AI.app"`.
+>
+> **Windows: "O Windows protegeu o computador"** — mesmo motivo do macOS: o instalador (`.exe`, NSIS) não tem certificado Authenticode pago, e o SmartScreen desconfia de qualquer app novo sem assinatura. Clique em **"Mais informações"** → **"Executar assim mesmo"**. O código é aberto, dá pra conferir tudo no repositório antes de rodar.
 
 ### A partir do código
 
