@@ -31,5 +31,7 @@ describe("defaultConfig", () => {
     expect(cfg.providers.gpt).toBeDefined();
     expect(cfg.providers.gpt.hidden).toBe(false);
     expect(cfg.paths.codex_auth).toBe("");
+    expect(cfg.firmware.wifi_ssid).toBe("");
+    expect(cfg.firmware.wifi_password).toBe("");
   });
 });

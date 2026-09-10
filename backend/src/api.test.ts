@@ -68,12 +68,14 @@ describe("GET /api/config não vaza token", () => {
     const providers = cfg.providers as Record<string, unknown>;
     const claude = providers.claude as Record<string, unknown>;
     claude.paste_secret = "super-secret-token-value";
+    (cfg as Record<string, unknown>).firmware = { wifi_ssid: "Casa", wifi_password: "wifi-secret-psk" };
     saveSync(cfg as any);
 
     const r = await app.inject({ method: "GET", url: "/api/config" });
     expect(r.statusCode).toBe(200);
     const text = r.payload;
     expect(text.includes("super-secret-token-value")).toBe(false);
+    expect(text.includes("wifi-secret-psk")).toBe(false);
     const body = JSON.parse(text);
     const suffix = (body.providers?.claude as Record<string, unknown>)?.suffix;
     if (suffix) expect(suffix).toBe("alue");

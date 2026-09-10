@@ -184,6 +184,7 @@ Regras ficam em `backend/data/config.json` (`alarms[]`); token e chats em `teleg
 Pinos, alimentação e partição `huge_app`: [`HARDWARE.md`](HARDWARE.md) · [`FIRMWARE.md`](FIRMWARE.md). Views e calibração: [`TOUCH.md`](TOUCH.md). Guia completo da placa: [`../firmware/README.md`](../firmware/README.md).
 
 ```bash
+# ou preencha Wi-Fi e grave pela tela Placa e rede (/display/setup)
 cp firmware/src/secrets.h.example firmware/src/secrets.h
 # SSID, senha Wi-Fi, USAGE_URL = http://IP-DO-MAC:8787/usage
 ./dev firmware flash

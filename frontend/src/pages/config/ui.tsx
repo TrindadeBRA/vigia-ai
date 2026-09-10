@@ -7,25 +7,38 @@ import { CloseIcon } from "../../components/icons";
 import { useRequest, type RequestStatus } from "../../hooks/useRequest";
 import { cfgCard, cfgFieldLabel, cfgStatus, iconBtn } from "../../tw";
 
+export function StepBadge({ n }: { n: string }) {
+  return (
+    <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-chip text-[13px] font-bold text-accent shadow-[inset_0_0_0_1px_var(--card-border)]">
+      {n}
+    </span>
+  );
+}
+
 export function Card({
   title,
   lead,
   action,
+  step,
   className,
   children,
 }: {
   title: string;
   lead?: string;
   action?: ReactNode;
+  step?: string;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <section className={cn(cfgCard, className)}>
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="m-0 text-[15.5px] font-bold">{title}</h2>
-          {lead ? <p className="mb-0 mt-1 text-[13.5px] leading-[1.55] text-ink2">{lead}</p> : null}
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          {step ? <StepBadge n={step} /> : null}
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-[15.5px] font-bold">{title}</h2>
+            {lead ? <p className="mb-0 mt-1 text-[13.5px] leading-[1.55] text-ink2">{lead}</p> : null}
+          </div>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>

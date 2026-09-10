@@ -86,7 +86,7 @@ frontend/src/hooks/useServerNotes.ts  hook das notas (só backend, migra localSt
 backend/src/images.ts              CRUD de imagens (cards de imagem do board) — backend/data/images.json, src em base64 ou URL
 backend/src/routers/images.ts      rotas /api/images — GET/POST + PATCH/DELETE por id, bodyLimit maior (base64)
 frontend/src/hooks/useImageWidgets.ts  hook das imagens (só backend, migra localStorage antigo uma vez)
-backend/src/routers/clientState.ts  rotas /api/prefs, /api/theme-draft, /api/retro — blobs JSON simples (GET/PUT), sem CRUD por item
+backend/src/routers/firmware.ts      secrets.h da ESP32 + flash PlatformIO pelo painel (/display/setup)
 frontend/src/pages/display/usePrefs.ts  hook das preferências de exibição (tema/cor/idioma/foco/widgets) — só backend (/api/prefs)
 backend/src/providers/spotify.ts   OAuth Spotify + chamadas ao player (play/pause/next/previous) — ver APIS_SPOTIFY.md
 backend/src/routers/spotify.ts     rotas /api/oauth/spotify/* + /api/spotify* (estado + comandos do player) — protótipo, fora do contrato JSON
@@ -120,4 +120,4 @@ scripts/build-desktop.sh           build completo do instalador
 - `./dev app` — o mesmo painel dentro do app Electron (ver [DESKTOP.md](DESKTOP.md))
 - `./dev test`
 - `./dev wokwi` e Wokwi: Start Simulator
-- Hardware: `firmware/src/secrets.h` + `./dev firmware flash`
+- Hardware: `firmware/src/secrets.h` + `./dev firmware flash` (ou o botão **Gravar na ESP32** em `/display/setup`)

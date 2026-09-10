@@ -178,6 +178,7 @@ export function defaultConfig(): Record<string, unknown> {
     rss: deepClone(_RSS_DEFAULT),
     github: deepClone(_GITHUB_DEFAULT),
     emulator: deepClone(_EMULATOR_DEFAULT),
+    firmware: { wifi_ssid: "", wifi_password: "" },
   };
   const providers = cfg.providers as Record<string, unknown>;
   for (const name of PROVIDERS) {
@@ -760,6 +761,11 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
     }
     emu.gameMeta = cleaned;
   }
+
+  const rawFw = (typeof raw.firmware === "object" && raw.firmware !== null ? raw.firmware : {}) as Record<string, unknown>;
+  const fw = cfg.firmware as Record<string, unknown>;
+  fw.wifi_ssid = String(rawFw.wifi_ssid ?? "");
+  fw.wifi_password = String(rawFw.wifi_password ?? "");
 
   return cfg;
 }

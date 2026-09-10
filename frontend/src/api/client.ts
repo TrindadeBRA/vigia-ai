@@ -1,4 +1,4 @@
-import type { AlarmRule, AlarmsPublic, CameraCreate, CameraItem, CameraPatch, ConfigPublic, GithubExploreResult, GithubTopPeriod, MiningConfig, MiningStatus, PtzAction, UsagePayload } from "./types";
+import type { AlarmRule, AlarmsPublic, CameraCreate, CameraItem, CameraPatch, ConfigPublic, FirmwarePublic, GithubExploreResult, GithubTopPeriod, MiningConfig, MiningStatus, PtzAction, UsagePayload } from "./types";
 
 export async function fetchUsage(): Promise<UsagePayload> {
   const res = await fetch("/usage", { cache: "no-store" });
@@ -35,7 +35,7 @@ export function openUsageEvents(onPayload: (data: UsagePayload) => void, onFail:
   };
 }
 
-type MutateResult = { ok: boolean; error?: string; restart_needed_for_port?: boolean };
+type MutateResult = { ok: boolean; error?: string; restart_needed_for_port?: boolean; firmware?: FirmwarePublic };
 
 function errorFromBody(data: { detail?: unknown; error?: string }, status: number): string {
   if (typeof data.error === "string" && data.error) return data.error;
@@ -53,6 +53,67 @@ export async function fetchConfig(): Promise<ConfigPublic> {
   const res = await fetch("/api/config", { cache: "no-store" });
   if (!res.ok) throw new Error(`config HTTP ${res.status}`);
   return res.json() as Promise<ConfigPublic>;
+}
+
+export async function fetchFirmware(): Promise<FirmwarePublic> {
+  const res = await fetch("/api/firmware", { cache: "no-store" });
+  if (!res.ok) throw new Error(`firmware HTTP ${res.status}`);
+  return res.json() as Promise<FirmwarePublic>;
+}
+
+export async function saveFirmware(body: { wifi_ssid: string; wifi_password?: string }): Promise<MutateResult> {
+  const res = await fetch("/api/firmware", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res);
+}
+
+export async function downloadFirmwareFile(body: { wifi_ssid: string; wifi_password?: string }): Promise<string> {
+  const res = await fetch("/api/firmware/file", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error || `firmware file HTTP ${res.status}`);
+  }
+  return res.text();
+}
+
+const FLASH_TRAILER = "__VIGIA_FLASH_EXIT__:";
+
+export async function flashFirmware(
+  body: { wifi_ssid: string; wifi_password?: string },
+  onLog: (log: string) => void,
+): Promise<MutateResult> {
+  const res = await fetch("/api/firmware/flash", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    return readMutate(res);
+  }
+  if (!res.body) return { ok: false, error: `firmware flash HTTP ${res.status}` };
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let log = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    log += decoder.decode(value, { stream: true });
+    onLog(log);
+  }
+  log += decoder.decode();
+  onLog(log);
+  const m = log.match(new RegExp(`${FLASH_TRAILER}(\\d+)`));
+  const code = m ? Number(m[1]) : res.ok ? 0 : 1;
+  if (code === 0) return { ok: true };
+  return { ok: false, error: `gravação saiu com código ${code}` };
 }
 
 export async function patchConfig(body: Record<string, unknown>): Promise<MutateResult> {

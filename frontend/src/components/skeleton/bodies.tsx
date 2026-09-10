@@ -1,6 +1,6 @@
 import { cn } from "../../cn";
 import { cfgCard, cfgGrid, metricsGrid, overviewGrid, skelShine } from "../../tw";
-import { Bone, MetricCardSkel, PageHeader, PanelSkel, SectionLead, SkelCard, StepSkel, TileSkel } from "./atoms";
+import { Bone, MetricCardSkel, PageHeader, SectionLead, SkelCard, TileSkel } from "./atoms";
 
 export function OverviewBody() {
   return (
@@ -52,23 +52,28 @@ export function SetupBody() {
     <>
       <PageHeader lines={1} titleW="w-48" />
       <SectionLead />
-      <ol className={`${cfgGrid} m-0 list-none p-0`}>
-        {Array.from({ length: 5 }, (_, i) => (
-          <StepSkel key={i} />
-        ))}
-      </ol>
-      <SectionLead lead={false} />
       <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge bg-panel px-[18px] py-3.5 shadow-card [.flat_&]:shadow-none">
         <Bone className="h-3.5 w-[min(100%,36ch)]" />
         <Bone className="h-9 w-28 shrink-0 rounded-[10px]" delay={40} />
       </div>
-      <div className={cfgGrid}>
-        <PanelSkel fields={2} action />
-        <PanelSkel fields={1} />
-        <PanelSkel fields={1} action />
-        <PanelSkel fields={2} action />
-      </div>
-      <PanelSkel fields={1} />
+      <section className="flex w-full min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border border-edge bg-panel px-[18px] py-4 shadow-card [.flat_&]:shadow-none">
+        <div className="flex items-center gap-2.5">
+          <Bone className="size-7 shrink-0 rounded-lg" />
+          <Bone className="h-4 w-40" delay={40} />
+        </div>
+        <Bone className="h-3.5 w-[min(100%,48ch)]" delay={60} />
+        <Bone className="h-10 w-full rounded-[10px]" delay={80} />
+        <div className="grid grid-cols-1 gap-3 min-[560px]:grid-cols-2">
+          <Bone className="h-10 w-full rounded-[10px]" delay={100} />
+          <Bone className="h-10 w-full rounded-[10px]" delay={120} />
+        </div>
+        <div className="h-px bg-edge" />
+        <div className="flex items-center gap-2.5">
+          <Bone className="size-7 shrink-0 rounded-lg" delay={140} />
+          <Bone className="h-4 w-44" delay={160} />
+        </div>
+        <Bone className="h-[42px] w-40 rounded-[10px]" delay={180} />
+      </section>
     </>
   );
 }

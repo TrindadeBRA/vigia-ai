@@ -16,7 +16,7 @@ Código em `firmware/`. **Dois ambientes, um sketch** (`firmware/src/main.cpp`):
 ```bash
 ./dev firmware build    # compila esp32dev (pio run -e esp32dev)
 ./dev firmware wokwi    # compila wokwi (pio run -e wokwi)
-./dev firmware flash    # grava esp32dev na placa (pio run -e esp32dev -t upload)
+./dev firmware flash    # grava esp32dev na placa (pio run -e esp32dev -t upload); o painel /display/setup faz o mesmo
 ./dev firmware monitor  # serial 115200 baud
 ./dev wokwi             # coletor + gateway wokwigw + build wokwi (atalhos: simulador, sim)
 ./dev up                # coletor :8788 (dev, ver DESKTOP.md) + frontend :5173 (precisa estar na mesma LAN da placa)
@@ -25,6 +25,8 @@ Código em `firmware/`. **Dois ambientes, um sketch** (`firmware/src/main.cpp`):
 `wokwi.toml` e `diagram.json` na **raiz** apontam para `firmware/.pio/build/wokwi/…` para a extensão Wokwi no workspace. Cópias existem em `firmware/` se você abrir só essa pasta.
 
 ## Segredos Wi-Fi (`secrets.h`)
+
+O painel **Placa e rede** (`/display/setup`) preenche o que puder (SSID da Wi-Fi deste computador, `USAGE_URL` com o IP LAN) e grava `firmware/src/secrets.h`. A senha da rede você digita uma vez — fica em `backend/data/config.json` (gitignored) e no `secrets.h`. O botão **Gravar na ESP32** chama o mesmo `pio run -e esp32dev -t upload` do comando abaixo. Continua valendo o fluxo manual:
 
 ```bash
 cp firmware/src/secrets.h.example firmware/src/secrets.h

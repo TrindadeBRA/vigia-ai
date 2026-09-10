@@ -5,6 +5,7 @@ import { credentialsPath, missingLoginHint } from "../local/claudeOauth.js";
 import { cursorMissingHint, cursorTokenCandidates, jwtExpired } from "../local/cursorState.js";
 import { authPath as gptAuthPath, gptMissingHint, gptTokenCandidates, gptTokenExpired } from "../local/gptOauth.js";
 import { authPath as opencodeAuthPath, opencodeMissingHint, opencodeTokenCandidates } from "../local/opencodeAuth.js";
+import { renderSecretsH, resolvedWifi } from "../firmware.js";
 import { lanIPv4 } from "../netutil.js";
 import { cleanBitcoinAddress } from "../providers/bitcoin.js";
 import { cleanDeepseekKey } from "../providers/deepseek.js";
@@ -206,7 +207,10 @@ function _keyCard(cfg: Record<string, unknown>, name: string): Record<string, un
 }
 
 function secretsHFile(usageLan: string): string {
-  return `#pragma once\n\n#define WIFI_SSID "SUA_REDE"\n#define WIFI_PASSWORD "SUA_SENHA"\n#define USAGE_URL "${usageLan}"\n`;
+  const wifi = resolvedWifi();
+  const ssid = wifi.ssid || "SUA_REDE";
+  // GET /api/config nunca devolve a senha da Wi-Fi — o download real é POST /api/firmware/file.
+  return renderSecretsH(ssid, "SUA_SENHA", usageLan);
 }
 
 function devicePublic(hub: unknown): Record<string, unknown> {

@@ -796,6 +796,22 @@ export type EmulatorConfig = {
   gameMeta: Record<string, EmulatorGameMeta>;
 };
 
+export type FirmwarePublic = {
+  wifi_ssid: string;
+  wifi_password: string;
+  wifi_password_set: boolean;
+  detected_ssid: string | null;
+  usage_url: string;
+  secrets_path: string | null;
+  secrets_present: boolean;
+  can_write: boolean;
+  can_flash: boolean;
+  pio: string | null;
+  in_docker: boolean;
+  running: boolean;
+  reason: string | null;
+};
+
 export type ConfigPublic = {
   ok: boolean;
   in_docker: boolean;

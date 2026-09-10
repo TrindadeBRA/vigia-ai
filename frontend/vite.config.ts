@@ -26,7 +26,11 @@ export default defineConfig({
         timeout: 0,
         proxyTimeout: 0,
       },
-      "/api": backendOrigin,
+      "/api": {
+        target: backendOrigin,
+        timeout: 0,
+        proxyTimeout: 0,
+      },
       "/health": backendOrigin,
       "/docs": backendOrigin,
       "/openapi.json": backendOrigin,

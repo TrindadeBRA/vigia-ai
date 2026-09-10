@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { AlarmEngine } from "./alarms/engine.js";
 import { createAlarmsRoutes } from "./alarms/router.js";
 import { UsageHub } from "./hub.js";
+import { createFirmwareRoutes } from "./routers/firmware.js";
 import { lanIPv4 } from "./netutil.js";
 import { createAdsenseRoutes } from "./routers/adsense.js";
 import { createAndroidRoutes } from "./routers/android.js";
@@ -65,6 +66,7 @@ const OPENAPI_TAGS = [
   { name: "Emulador", description: "EmulatorJS — ROMs, BIOS, saves, metadados (IGDB)" },
   { name: "Câmeras", description: "Câmeras ONVIF/RTSP — stream, snapshot, PTZ" },
   { name: "Android", description: "Dispositivos Android via ADB — espelhamento e input" },
+  { name: "Firmware", description: "secrets.h da ESP32 e gravação via PlatformIO no host" },
 ];
 
 function frontendDist(): string | null {
@@ -104,7 +106,7 @@ export async function createApp() {
 
   // Nunca foi registrado no port inicial (só um placeholder em /openapi.json) —
   // /docs sempre voltava 404, apesar de anunciado no README, no console de
-  // boot e num link clicável do painel (NetworkCard.tsx). Registrar cedo,
+  // boot e num link clicável do painel. Registrar cedo,
   // antes dos routers, pra @fastify/swagger capturar as rotas via onRoute.
   await fastify.register(swagger, {
     openapi: {
@@ -130,7 +132,7 @@ export async function createApp() {
           "Sistema", "Config", "Board", "Notas", "Imagens", "Tema", "Papéis de parede",
           "Alarmes", "Telegram", "Clima", "Moedas", "Mineração", "Calendário", "RSS",
           "Git", "GitHub", "Spotify", "YouTube Music", "AdSense", "RetroAchievements",
-          "Emulador", "Câmeras", "Android",
+          "Emulador", "Câmeras", "Android", "Firmware",
         ];
         return order.indexOf(a) - order.indexOf(b);
       },
@@ -234,6 +236,7 @@ export async function createApp() {
   await fastify.register(createClientStateRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });
   await fastify.register(createEmulatorRoutes, { prefix: "" });
+  await fastify.register(createFirmwareRoutes, { prefix: "" });
 
   const IMAGE_CONTENT_TYPES: Record<string, string> = {
     ".svg": "image/svg+xml",

@@ -39,6 +39,18 @@ export function configPath(): string {
   return join(dataDir(), "config.json");
 }
 
+/** Raiz do git checkout. No app instalado isso pode não ter `firmware/`. */
+export function repoRoot(): string {
+  const filePath = fileURLToPath(import.meta.url);
+  return resolve(join(filePath, "..", "..", ".."));
+}
+
+export function firmwareDir(): string {
+  const override = (process.env.VIGIA_FIRMWARE_DIR || "").trim();
+  if (override) return resolve(expandUser(override));
+  return join(repoRoot(), "firmware");
+}
+
 export function frontendDist(): string | null {
   const override = (process.env.VIGIA_FRONTEND_DIST || "").trim();
   if (override) {
