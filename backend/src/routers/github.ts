@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
-import { fetchGithubProfile, fetchGithubRepo, fetchGithubTop, fetchGithubTrending, isValidGithubRepo, isValidGithubUsername } from "../providers/github.js";
+import { fetchGithubProfile, fetchGithubRepo, fetchGithubTop, fetchGithubTrending, githubSectionFlags, isValidGithubRepo, isValidGithubUsername } from "../providers/github.js";
 import { load, updateSync as update } from "../store.js";
 
 export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
     app.get("/api/github/config", { schema: { tags: ["GitHub"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
-        return (cfg.github ?? { enabled: false, hidden: false, repos: [], profiles: [] }) as Record<string, unknown>;
+        return (cfg.github ?? { enabled: false, hidden: false, reposEnabled: false, profilesEnabled: false, repos: [], profiles: [] }) as Record<string, unknown>;
     });
 
     app.patch("/api/github/config", { schema: { tags: ["GitHub"] } }, async (request, reply) => {
@@ -15,8 +15,21 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
         update((cfg: Record<string, unknown>) => {
             const g = (cfg.github ?? {}) as Record<string, unknown>;
             if (!cfg.github) cfg.github = g;
-            if (body.enabled !== undefined && body.enabled !== null) { g.enabled = Boolean(body.enabled); g.hidden = !Boolean(body.enabled); }
-            else if (body.hidden !== undefined && body.hidden !== null) { g.hidden = Boolean(body.hidden); g.enabled = !Boolean(body.hidden); }
+            const hasRepos = body.reposEnabled !== undefined && body.reposEnabled !== null;
+            const hasProfiles = body.profilesEnabled !== undefined && body.profilesEnabled !== null;
+            if (hasRepos) g.reposEnabled = Boolean(body.reposEnabled);
+            if (hasProfiles) g.profilesEnabled = Boolean(body.profilesEnabled);
+            if (!hasRepos && !hasProfiles) {
+                const next = body.enabled !== undefined && body.enabled !== null
+                    ? Boolean(body.enabled)
+                    : (body.hidden !== undefined && body.hidden !== null ? !Boolean(body.hidden) : undefined);
+                if (next !== undefined) {
+                    g.reposEnabled = next;
+                    g.profilesEnabled = next;
+                }
+            }
+            g.enabled = Boolean(g.reposEnabled) || Boolean(g.profilesEnabled);
+            g.hidden = !g.enabled;
         });
         const cfg = load() as Record<string, unknown>;
         return (cfg.github ?? {}) as Record<string, unknown>;
@@ -44,6 +57,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
             const repos = Array.isArray(g.repos) ? [...(g.repos as unknown[])] : [];
             repos.push({ id, repo, label });
             g.repos = repos;
+            g.reposEnabled = true;
             g.enabled = true;
             g.hidden = false;
         });
@@ -120,6 +134,7 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
             const profiles = Array.isArray(g.profiles) ? [...(g.profiles as unknown[])] : [];
             profiles.push({ id, username, label });
             g.profiles = profiles;
+            g.profilesEnabled = true;
             g.enabled = true;
             g.hidden = false;
         });
@@ -187,15 +202,22 @@ export async function createGithubRoutes(app: FastifyInstance): Promise<void> {
     app.get("/api/github", { schema: { tags: ["GitHub"] } }, async () => {
         const cfg = load() as Record<string, unknown>;
         const g = (cfg.github ?? {}) as Record<string, unknown>;
-        if (g.hidden || !g.enabled) return { ok: true, error: null, updated_at: null, repos: [], profiles: [] };
+        const flags = githubSectionFlags(g);
+        if (!flags.repos && !flags.profiles) return { ok: true, error: null, updated_at: null, repos: [], profiles: [] };
         if (cfg.mock) {
             const { mockGithubPayload } = await import("../providers/github.js");
-            return mockGithubPayload();
+            const mock = mockGithubPayload();
+            if (!flags.repos) mock.repos = [];
+            if (!flags.profiles) mock.profiles = [];
+            return mock;
         }
         const { fetchGithubRepos, fetchGithubProfiles } = await import("../providers/github.js");
         const { utcNow } = await import("../formatting.js");
         try {
-            const [repos, profiles] = await Promise.all([fetchGithubRepos(cfg), fetchGithubProfiles(cfg)]);
+            const [repos, profiles] = await Promise.all([
+                flags.repos ? fetchGithubRepos(cfg) : Promise.resolve([]),
+                flags.profiles ? fetchGithubProfiles(cfg) : Promise.resolve([]),
+            ]);
             return { ok: true, error: null, updated_at: utcNow(), repos, profiles };
         } catch (e) {
             const { utcNow: now } = await import("../formatting.js");

@@ -539,6 +539,8 @@ export type GithubPayload = {
 export type GithubConfig = {
   enabled: boolean;
   hidden: boolean;
+  reposEnabled?: boolean;
+  profilesEnabled?: boolean;
   repos: Array<{ id: string; repo: string; label: string }>;
   profiles: Array<{ id: string; username: string; label: string }>;
 };

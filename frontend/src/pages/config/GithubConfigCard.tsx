@@ -8,7 +8,21 @@ import { Button, FieldStatus, Fold, Switch, TextField } from "./ui";
 
 type GithubRepoConfig = { id: string; repo: string; label: string };
 type GithubProfileConfig = { id: string; username: string; label: string };
-type GithubConfig = { enabled: boolean; hidden: boolean; repos: GithubRepoConfig[]; profiles: GithubProfileConfig[] };
+type GithubConfig = {
+    enabled: boolean;
+    hidden: boolean;
+    reposEnabled?: boolean;
+    profilesEnabled?: boolean;
+    repos: GithubRepoConfig[];
+    profiles: GithubProfileConfig[];
+};
+
+function reposOnBoard(github: GithubConfig): boolean {
+    return github.reposEnabled ?? (github.enabled && !github.hidden);
+}
+function profilesOnBoard(github: GithubConfig): boolean {
+    return github.profilesEnabled ?? (github.enabled && !github.hidden);
+}
 
 async function apiPost(path: string, body: unknown) {
     const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -173,12 +187,12 @@ export function GithubConfigCard({ github, c, onReload }: { github: GithubConfig
                 </div>
                 <Switch
                     label={c.showOnBoard}
-                    checked={github.enabled && !github.hidden}
+                    checked={reposOnBoard(github)}
                     busy={toggleEnabled.busy}
                     onChange={async (e) => {
                         const next = e.target.checked;
                         await toggleEnabled.run(async () => {
-                            const res = await apiPatch("/api/github/config", { enabled: next, hidden: !next });
+                            const res = await apiPatch("/api/github/config", { reposEnabled: next });
                             await onReload();
                             return res as { ok: boolean; error?: string };
                         }, { success: c.saved, error: c.offline });
@@ -289,12 +303,12 @@ export function GithubProfilesConfigCard({ github, c, onReload }: { github: Gith
                 </div>
                 <Switch
                     label={c.showOnBoard}
-                    checked={github.enabled && !github.hidden}
+                    checked={profilesOnBoard(github)}
                     busy={toggleEnabled.busy}
                     onChange={async (e) => {
                         const next = e.target.checked;
                         await toggleEnabled.run(async () => {
-                            const res = await apiPatch("/api/github/config", { enabled: next, hidden: !next });
+                            const res = await apiPatch("/api/github/config", { profilesEnabled: next });
                             await onReload();
                             return res as { ok: boolean; error?: string };
                         }, { success: c.saved, error: c.offline });

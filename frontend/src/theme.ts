@@ -94,6 +94,7 @@ export const PROVIDER_ICON: Record<string, string> = {
   currencies: "/icons/currencies.png",
   git: "/icons/git.png",
   github: "/icons/github.png",
+  "github-profile": "/icons/github.png",
   calendar: "/icons/calendar.png",
   calendarTasks: "/icons/calendar.png",
   rss: "/icons/rss.png?v=20260908",

@@ -20,7 +20,7 @@ type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "image" | "note" | "emulator" | "android";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "github-profile" | "image" | "note" | "emulator" | "android";
 };
 
 function Icon({ id }: { id: string }) {
@@ -37,7 +37,7 @@ function barFillStyle(pct: number, pal: Pal) {
 }
 
 function ProviderCard({ p, pal, t, onNavigate }: { p: ProviderMeta; pal: Pal; t: T; onNavigate: () => void }) {
-  if (p.provider === "weather" || p.kind === "weather" || p.provider === "currencies" || p.kind === "currencies" || p.provider === "git" || p.kind === "git" || p.provider === "retroachievements" || p.kind === "retroachievements" || p.provider === "github" || p.kind === "github") {
+  if (p.provider === "weather" || p.kind === "weather" || p.provider === "currencies" || p.kind === "currencies" || p.provider === "git" || p.kind === "git" || p.provider === "retroachievements" || p.kind === "retroachievements" || p.provider === "github" || p.kind === "github" || p.provider === "github-profile" || p.kind === "github-profile") {
     return null;
   }
 

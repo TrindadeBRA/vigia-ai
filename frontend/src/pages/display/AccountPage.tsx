@@ -201,7 +201,7 @@ export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: Prov
   if (meta.provider === "rss" || meta.kind === "rss") {
     return <RssAccountPage data={data} t={t} />;
   }
-  if (meta.provider === "github" || meta.kind === "github") {
+  if (meta.provider === "github" || meta.kind === "github" || meta.provider === "github-profile" || meta.kind === "github-profile") {
     return <GithubAccountPage meta={meta} t={t} />;
   }
   let body: ReactNode = null;

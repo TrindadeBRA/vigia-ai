@@ -241,7 +241,7 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
   const gitRaw = (cfg.git ?? {}) as Record<string, unknown>;
   const calendarRaw = (cfg.calendar ?? { enabled: false, hidden: false, calendars: [] }) as Record<string, unknown>;
   const rssRaw = (cfg.rss ?? { enabled: false, hidden: false, feeds: [] }) as Record<string, unknown>;
-  const githubRaw = (cfg.github ?? { enabled: false, hidden: false, repos: [], profiles: [] }) as Record<string, unknown>;
+  const githubRaw = (cfg.github ?? { enabled: false, hidden: false, reposEnabled: false, profilesEnabled: false, repos: [], profiles: [] }) as Record<string, unknown>;
   const emulatorRaw = (cfg.emulator ?? { enabled: false, hidden: false, cdnVersion: "stable", platforms: [] }) as Record<string, unknown>;
   return {
     in_docker: inDocker(),

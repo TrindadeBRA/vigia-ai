@@ -77,6 +77,22 @@ describe("refreshCache", () => {
     expect(fingerprint(cfg as Record<string, unknown>, "bitcoin")).not.toBe(fingerprint(cfg2 as Record<string, unknown>, "bitcoin"));
   });
 
+  it("fingerprint github/git usa o bloco sidecar, não providers.*", () => {
+    const a = { github: { repos: [{ id: "1", repo: "a/b" }] }, git: { repos: [{ id: "g1" }] }, providers: {} };
+    const b = { github: { repos: [{ id: "1", repo: "a/b" }, { id: "2", repo: "c/d" }] }, git: { repos: [{ id: "g1" }] }, providers: {} };
+    expect(fingerprint(a as Record<string, unknown>, "github")).not.toBe(fingerprint(b as Record<string, unknown>, "github"));
+    expect(fingerprint(a as Record<string, unknown>, "git")).toBe(fingerprint(b as Record<string, unknown>, "git"));
+    const sameGithub = {
+      github: { repos: [{ id: "1", repo: "a/b" }] },
+      providers: { github: { hidden: true } },
+    };
+    const sameGithub2 = {
+      github: { repos: [{ id: "1", repo: "a/b" }] },
+      providers: { github: { hidden: false } },
+    };
+    expect(fingerprint(sameGithub as Record<string, unknown>, "github")).toBe(fingerprint(sameGithub2 as Record<string, unknown>, "github"));
+  });
+
   it("TTL_S tem valores esperados", () => {
     expect(TTL_S.adsense).toBe(300);
     expect(TTL_S.weather).toBe(600);

@@ -177,9 +177,11 @@ export class RefreshCache {
   }
 }
 
+const SIDECAR_FINGERPRINT = new Set(["weather", "currencies", "git", "calendar", "rss", "github"]);
+
 export function fingerprint(cfg: Record<string, unknown>, name: string): string {
   let blob: unknown;
-  if (name === "weather" || name === "currencies") {
+  if (SIDECAR_FINGERPRINT.has(name)) {
     blob = (cfg as Record<string, unknown>)[name] ?? {};
   } else {
     blob = providerCfg(cfg as Record<string, unknown>, name);

@@ -361,7 +361,7 @@ export function CalendarTileCard({ p, size, dragging, lifted, t, grip, bg, reado
 }
 
 export function GithubTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
-  const isProfile = Boolean(p.githubProfile);
+  const isProfile = p.kind === "github-profile" || p.provider === "github-profile" || Boolean(p.githubProfile);
   const allowed = isProfile ? githubProfileAllowedSizes(p.githubProfile ?? null) : githubAllowedSizes(p.githubRepo ?? null);
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);

@@ -13,7 +13,7 @@ export type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "image" | "note" | "emulator" | "android";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "github-profile" | "image" | "note" | "emulator" | "android";
   weather?: WeatherPayload | null;
   weatherConfig?: WeatherConfig | null;
   currencies?: CurrenciesPayload | null;

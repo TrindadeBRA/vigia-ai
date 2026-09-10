@@ -241,6 +241,8 @@ export type GithubPinnedRepo = {
 };
 
 export type GithubProfileResult = {
+    id: string;
+    label: string;
     ok: boolean;
     error: string | null;
     username: string;
@@ -253,6 +255,15 @@ export type GithubProfileResult = {
     pinned: GithubPinnedRepo[];
     updated_at: string;
 };
+
+/** Toggles independentes dos dois cards de config (repos vs perfis). Config antiga só tinha `enabled`/`hidden`. */
+export function githubSectionFlags(gh: Record<string, unknown>): { repos: boolean; profiles: boolean } {
+    const legacyOn = Boolean(gh.enabled) && !Boolean(gh.hidden);
+    return {
+        repos: typeof gh.reposEnabled === "boolean" ? gh.reposEnabled : legacyOn,
+        profiles: typeof gh.profilesEnabled === "boolean" ? gh.profilesEnabled : legacyOn,
+    };
+}
 
 const USERNAME_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 export function isValidGithubUsername(raw: string): boolean {
@@ -304,6 +315,7 @@ const profileCache = new Map<string, ProfileCacheEntry>();
 
 function profileFail(username: string, error: string): GithubProfileResult {
     return {
+        id: "", label: "",
         ok: false, error, username,
         name: null, avatar_url: null, bio: null, followers: null, public_repos: null,
         html_url: username ? `https://github.com/${username}` : "",
@@ -350,6 +362,7 @@ export async function fetchGithubProfile(usernameRaw: string): Promise<GithubPro
         const pinned = html ? parsePinnedItems(html) : [];
 
         const result: GithubProfileResult = {
+            id: "", label: "",
             ok: true, error: null, username,
             name: typeof userData.name === "string" ? userData.name : null,
             avatar_url: typeof userData.avatar_url === "string" ? userData.avatar_url : null,
@@ -373,12 +386,18 @@ export async function fetchGithubProfiles(cfg: Record<string, unknown>): Promise
     const ghCfg = (cfg.github ?? {}) as Record<string, unknown>;
     const profiles = Array.isArray(ghCfg.profiles) ? ghCfg.profiles as Array<Record<string, unknown>> : [];
     if (profiles.length === 0) return [];
-    return Promise.all(profiles.map((p) => fetchGithubProfile(String(p.username ?? ""))));
+    return Promise.all(profiles.map(async (p) => {
+        const id = String(p.id ?? "");
+        const label = String(p.label ?? "");
+        const result = await fetchGithubProfile(String(p.username ?? ""));
+        return { ...result, id, label };
+    }));
 }
 
 export function mockGithubProfile(): GithubProfileResult {
     const now = utcNow();
     return {
+        id: "demo-profile", label: "",
         ok: true, error: null, username: "octocat",
         name: "The Octocat", avatar_url: "https://avatars.githubusercontent.com/u/583231?v=4",
         bio: "Mascote do GitHub", followers: 12345, public_repos: 8,

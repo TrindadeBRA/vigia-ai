@@ -124,6 +124,8 @@ const _RSS_DEFAULT: Record<string, unknown> = {
 const _GITHUB_DEFAULT: Record<string, unknown> = {
   enabled: false,
   hidden: false,
+  reposEnabled: false,
+  profilesEnabled: false,
   repos: [],
   profiles: [],
 };
@@ -639,8 +641,11 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   // github
   const rawGithub = (typeof raw.github === "object" && raw.github !== null ? raw.github : {}) as Record<string, unknown>;
   const github = cfg.github as Record<string, unknown>;
-  github.enabled = Boolean(rawGithub.enabled ?? github.enabled);
-  github.hidden = Boolean(rawGithub.hidden ?? github.hidden);
+  const githubLegacyOn = Boolean(rawGithub.enabled ?? github.enabled) && !Boolean(rawGithub.hidden ?? github.hidden);
+  github.reposEnabled = typeof rawGithub.reposEnabled === "boolean" ? rawGithub.reposEnabled : githubLegacyOn;
+  github.profilesEnabled = typeof rawGithub.profilesEnabled === "boolean" ? rawGithub.profilesEnabled : githubLegacyOn;
+  github.enabled = Boolean(github.reposEnabled) || Boolean(github.profilesEnabled);
+  github.hidden = !github.enabled;
   const rawGhRepos = rawGithub.repos;
   if (Array.isArray(rawGhRepos)) {
     const cleaned: Array<Record<string, unknown>> = [];

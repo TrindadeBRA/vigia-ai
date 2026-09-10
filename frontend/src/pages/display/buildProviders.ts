@@ -419,14 +419,14 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
         ]
         : [{ label: profileName, pct: null, value: null, sub: profile.error ?? t.noData }];
       list.push({
-        id: `github-profile:${profile.id}`,
-        provider: "github",
+        id: `github-profile:${profile.id || profile.username}`,
+        provider: "github-profile",
         ok: profile.ok,
         error: profile.error,
         title: profileName,
         label: profile.username,
         metrics,
-        kind: "github",
+        kind: "github-profile",
         github,
         githubProfile: profile,
       });
