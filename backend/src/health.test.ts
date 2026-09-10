@@ -88,4 +88,33 @@ describe("SSE framing (§6.1)", () => {
     await hub.stop();
     await hub2.stop();
   });
+
+  it("não descarta github (repos e perfis) no SSE", async () => {
+    const { formatSse } = await import("./hub.js");
+    const payload = {
+      updated_at: "2026-09-10T18:00:00-03:00",
+      claude: [], gpt: [], cursor: [], openrouter: [], deepseek: [], opencode: [], fal: [], bitcoin: [], adsense: [],
+      retroachievements: [], weather: null, currencies: null, git: null, calendar: null, rss: null,
+      github: {
+        ok: true, error: null, updated_at: "2026-09-10T18:00:00-03:00",
+        repos: [{
+          id: "abc123", label: "", repo: "TrindadeBRA/vigia-ai", ok: true, error: null,
+          full_name: "TrindadeBRA/vigia-ai", description: null, stars: 6, forks: 0, open_issues: 1,
+          watchers: 1, default_branch: "main", html_url: "https://github.com/TrindadeBRA/vigia-ai",
+          pushed_at: null, updated_at: "2026-09-10T18:00:00-03:00",
+        }],
+        profiles: [{
+          id: "def456", label: "", ok: true, error: null, username: "TrindadeBRA",
+          name: "Lucas", avatar_url: null, bio: null, followers: 25, public_repos: 50,
+          html_url: "https://github.com/TrindadeBRA", pinned: [], updated_at: "2026-09-10T18:00:00-03:00",
+        }],
+      },
+    };
+    const frame = formatSse(payload);
+    const dataLine = frame.split("\n").find((l) => l.startsWith("data: "));
+    expect(dataLine).toBeTruthy();
+    const parsed = JSON.parse(dataLine!.slice("data: ".length));
+    expect(parsed.github?.repos?.[0]?.id).toBe("abc123");
+    expect(parsed.github?.profiles?.[0]?.id).toBe("def456");
+  });
 });

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CalendarPayloadSchema } from "./calendar.js";
 import { CurrenciesPayloadSchema } from "./currencies.js";
 import { GitPayloadSchema } from "./git.js";
+import { GithubPayloadSchema } from "./github.js";
 import { RetroAchievementsAccountSchema } from "./retroachievements.js";
 import { RssPayloadSchema } from "./rss.js";
 import { WeatherPayloadSchema } from "./weather.js";
@@ -259,7 +260,8 @@ export const UsagePayloadSchema = z.object({
   git: GitPayloadSchema.nullable().default(null),
   calendar: CalendarPayloadSchema.nullable().default(null),
   rss: RssPayloadSchema.nullable().default(null),
-});
+  github: GithubPayloadSchema.nullable().optional(),
+}).passthrough();
 export type UsagePayload = z.infer<typeof UsagePayloadSchema>;
 
 export const HealthPayloadSchema = z.object({

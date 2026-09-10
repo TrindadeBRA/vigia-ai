@@ -8,6 +8,7 @@ export * from "./currencies.js";
 export * from "./emulator.js";
 export * from "./firmware.js";
 export * from "./git.js";
+export * from "./github.js";
 export * from "./mining.js";
 export * from "./retroachievements.js";
 export * from "./rss.js";

@@ -4,6 +4,8 @@ O firmware **depende** deste formato. Mudança = atualizar este doc, os schemas 
 
 O JSON viaja em `GET /usage` (uma vez) e em `GET /events` (SSE, `event: usage`). O payload é o mesmo.
 
+Campos extras do **mostrador web** (`git`, `rss`, `calendar`, `github`, `storage`, `system`, …) podem vir no mesmo JSON. A placa **ignora** chaves que não conhece. Sem o campo no schema Zod do SSE, o coletor **descartava** esses blocos no `/events` — o `/display` perdia o card no próximo ciclo.
+
 `Content-Type` em `/usage`: `application/json; charset=utf-8`. Em `/events`: `text/event-stream` (`event: usage` + `data:` o JSON).
 
 **v2**: cada provedor (`claude`, `gpt`, `cursor`, `openrouter`, `deepseek`, `opencode_go`, `opencode_zen`, `fal`, `bitcoin`, `adsense`) é uma **lista de contas**, não mais um objeto único — suporta N assinaturas do mesmo provedor (ex.: Claude pessoal + Claude da empresa), cada uma com um apelido opcional. Quem tem uma conta só continua vendo exatamente o mesmo card de sempre (lista com 1 item, `label` vazio).
