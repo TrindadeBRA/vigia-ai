@@ -4,11 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vigia AI — Nunca mais seja pego sem cota no meio do flow</title>
+  <title>Vigia AI — Suas cotas de IA, num único mostrador</title>
   <meta name="description"
-    content="Vigia AI: o painel de mesa que vigia suas cotas de IA 24/7. Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai, Bitcoin, AdSense, Git, GitHub, RetroAchievements, Calendário ICS, RSS, Clima, Moedas, ISS, Spotify, YouTube Music, Câmera, Android, Emulador e Mineração Bitcoin num único mostrador — ESP32 + TFT touch, navegador ou app desktop. Notas, imagens, alarmes via Telegram. Sem expor um token sequer. Open source, MIT." />
+    content="Vigia AI: painel de mesa que vigia suas cotas de Claude, GPT, Cursor e mais de 20 outras integrações, em tempo real e sem expor um token sequer. ESP32 + TFT touch, navegador ou app desktop. Gratuito e open source (MIT)." />
   <meta name="keywords"
-    content="Vigia AI, cotas IA, Claude, GPT, Cursor, OpenRouter, DeepSeek, OpenCode, fal.ai, Bitcoin, AdSense, Git, GitHub, RetroAchievements, Calendário ICS, RSS, Clima, Moedas, ISS, Spotify, YouTube Music, Câmera, Android, Emulador, Mineração Bitcoin, notas, imagens, ESP32, TFT, dashboard, monitoramento, uso IA, alarmes, Telegram, notificações, Wallhaven, Pexels, Unsplash" />
+    content="Vigia AI, cotas IA, Claude, GPT, Cursor, OpenRouter, DeepSeek, dashboard, ESP32, TFT, open source, MIT, Telegram, monitoramento de uso" />
   <meta name="author" content="Vigia AI" />
   <meta name="theme-color" content="#0f0f0f" />
   <link rel="canonical" href="https://trindadebra.github.io/vigia-ai/" />
@@ -16,9 +16,9 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://trindadebra.github.io/vigia-ai/" />
-  <meta property="og:title" content="Vigia AI — Nunca mais seja pego sem cota no meio do flow" />
+  <meta property="og:title" content="Vigia AI — Suas cotas de IA, num único mostrador" />
   <meta property="og:description"
-    content="25+ integrações, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT 3,5&quot; touch, navegador ou app desktop. Cotas de IA, Git/GitHub, RetroAchievements, Calendário, RSS, Clima, Moedas, ISS, Spotify, YouTube Music, Câmera, Android, Emulador e Mineração Bitcoin. Zero tokens expostos. Alarmes via Telegram, notas, imagens, temas e wallpapers." />
+    content="Claude, GPT, Cursor e mais de 20 integrações num só painel, sempre ligado. ESP32 + TFT touch, navegador ou app desktop. Gratuito e open source." />
   <meta property="og:image" content="https://trindadebra.github.io/vigia-ai/assets/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -26,9 +26,9 @@
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Vigia AI — Nunca mais seja pego sem cota no meio do flow" />
+  <meta name="twitter:title" content="Vigia AI — Suas cotas de IA, num único mostrador" />
   <meta name="twitter:description"
-    content="25+ integrações, múltiplas contas, um único mostrador sempre ligado. ESP32 + TFT touch, navegador ou app desktop. Cotas de IA, Git/GitHub, Clima, Moedas, Spotify, Câmera, Emulador e Mineração Bitcoin. Zero tokens expostos." />
+    content="Claude, GPT, Cursor e mais de 20 integrações num só painel, sempre ligado. Gratuito e open source." />
   <meta name="twitter:image" content="https://trindadebra.github.io/vigia-ai/assets/og-image.png" />
 
   <!-- Icons -->
@@ -52,24 +52,18 @@
             surface: '#0f0f0f',
             panel: '#1c1c1c',
             edge: '#2e2e2e',
-            track: '#2a2a2a',
-            chip: '#232323',
-            accent: { DEFAULT: '#e63931', soft: '#ff8f89', glow: 'rgba(230,57,49,.14)' },
+            accent: { DEFAULT: '#e63931', soft: '#ff8f89' },
           },
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
           },
           animation: {
-            'fade-in': 'fadeIn .6s ease-out',
             'slide-up': 'slideUp .7s ease-out',
-            'pulse-glow': 'pulseGlow 2.5s ease-in-out infinite',
             'float': 'float 6s ease-in-out infinite',
           },
           keyframes: {
-            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
             slideUp: { '0%': { opacity: '0', transform: 'translateY(18px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-            pulseGlow: { '0%,100%': { boxShadow: '0 0 20px rgba(230,57,49,.25)' }, '50%': { boxShadow: '0 0 36px rgba(230,57,49,.45)' } },
             float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
           },
         },
@@ -77,11 +71,6 @@
     };
   </script>
   <style>
-    :root {
-      --accent: #e63931;
-      --accent-ink: #fff;
-    }
-
     * {
       scrollbar-width: thin;
       scrollbar-color: #2e2e2e transparent;
@@ -108,28 +97,8 @@
 
     .card-hover:hover {
       transform: translateY(-3px);
-      border-color: rgba(230, 57, 49, .35) !important;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, .35), 0 0 0 1px rgba(230, 57, 49, .08);
-    }
-
-    .shimmer {
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .06), transparent);
-      background-size: 200% 100%;
-      animation: shimmer 2.2s infinite;
-    }
-
-    @keyframes shimmer {
-      0% {
-        background-position: -200% 0;
-      }
-
-      100% {
-        background-position: 200% 0;
-      }
-    }
-
-    .bar-fill {
-      background: linear-gradient(180deg, rgba(255, 255, 255, .18), transparent);
+      border-color: rgba(230, 57, 49, .35);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
     }
   </style>
 </head>
@@ -138,53 +107,34 @@
 
   <!-- NAV -->
   <header class="sticky top-0 z-50 border-b border-white/[0.07] bg-ink/75 glass">
-    <div class="relative mx-auto flex max-w-[1200px] items-center justify-between px-6 py-3.5">
-      <a href="#top" class="flex items-center gap-2.5 text-[17px] font-extrabold tracking-tight text-white">
-        <span class="flex size-8 items-center justify-center rounded-lg bg-panel border border-edge shadow-sm">
-          <span class="size-3 rounded-full bg-accent shadow-[0_0_10px_rgba(230,57,49,.6)]"></span>
-        </span>
+    <div class="mx-auto flex max-w-[1080px] items-center justify-between px-6 py-3.5">
+      <a href="#top" class="group/brand flex items-center gap-2.5 text-[17px] font-extrabold tracking-tight text-white">
+        <span id="vigia-eye-nav" class="relative inline-flex shrink-0" style="width:32px;height:32px"></span>
         Vigia<span class="font-mono font-bold text-accent">AI</span>
-        <span
-          class="hidden sm:inline-flex ml-1 rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold tracking-widest text-neutral-400">OPEN
-          SOURCE · MIT</span>
       </a>
 
-      <nav class="hidden items-center gap-1 text-[13.5px] font-medium text-neutral-400 lg:flex">
-        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#problema">O
-          problema</a>
-        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition"
-          href="#recursos">Recursos</a>
-        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition"
-          href="#provedores">Provedores</a>
-        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition"
-          href="#dashboard">Dashboard</a>
-        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#como-funciona">Como
-          funciona</a>
-        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition"
-          href="#instalacao">Instalação</a>
+      <nav class="hidden items-center gap-1 text-[13.5px] font-medium text-neutral-400 md:flex">
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#recursos">Recursos</a>
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#como-funciona">Como funciona</a>
+        <a class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white transition" href="#instalacao">Instalação</a>
         <a class="ml-2 inline-flex items-center gap-1.5 rounded-full bg-accent text-white px-4 py-1.5 text-[13px] font-bold hover:bg-[#d6322b] transition"
           href="#instalacao">Instalar →</a>
         <a class="inline-flex items-center gap-1.5 rounded-full bg-white text-ink px-4 py-1.5 text-[13px] font-bold hover:bg-neutral-100 transition"
-          href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">GitHub <span
-            aria-hidden="true">↗</span></a>
+          href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">GitHub ↗</a>
       </nav>
 
-      <button id="nav-toggle" aria-label="Abrir menu" aria-expanded="false" class="flex flex-col gap-1.5 p-2 lg:hidden">
+      <button id="nav-toggle" aria-label="Abrir menu" aria-expanded="false" class="flex flex-col gap-1.5 p-2 md:hidden">
         <span class="h-0.5 w-6 rounded bg-white"></span>
         <span class="h-0.5 w-6 rounded bg-white"></span>
         <span class="h-0.5 w-6 rounded bg-white"></span>
       </button>
 
       <div id="mobile-menu"
-        class="hidden absolute inset-x-0 top-full flex-col gap-1 border-t border-white/10 bg-surface px-6 py-6 text-sm text-neutral-300 lg:hidden">
-        <a class="py-2 hover:text-white" href="#problema">O problema</a>
+        class="hidden absolute inset-x-0 top-full flex-col gap-1 border-t border-white/10 bg-surface px-6 py-6 text-sm text-neutral-300 md:hidden">
         <a class="py-2 hover:text-white" href="#recursos">Recursos</a>
-        <a class="py-2 hover:text-white" href="#provedores">Provedores</a>
-        <a class="py-2 hover:text-white" href="#dashboard">Dashboard</a>
         <a class="py-2 hover:text-white" href="#como-funciona">Como funciona</a>
-        <a class="py-2 font-semibold text-accent-soft hover:text-white" href="#instalacao">⚡ Instalação — Mac · Linux · Windows</a>
-        <a class="mt-2 inline-flex w-fit rounded-full bg-accent px-4 py-2 text-sm font-bold text-white"
-          href="#instalacao">Instalar agora →</a>
+        <a class="py-2 hover:text-white" href="#instalacao">Instalação</a>
+        <a class="mt-2 inline-flex w-fit rounded-full bg-accent px-4 py-2 text-sm font-bold text-white" href="#instalacao">Instalar agora →</a>
         <a class="inline-flex w-fit rounded-full bg-white px-4 py-2 text-sm font-bold text-ink"
           href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">GitHub ↗</a>
       </div>
@@ -196,358 +146,110 @@
     <section class="relative overflow-hidden">
       <div class="pointer-events-none absolute inset-0">
         <div
-          class="absolute inset-0 bg-[radial-gradient(900px_520px_at_18%_-8%,rgba(230,57,49,0.18),transparent_60%),radial-gradient(700px_420px_at_88%_12%,rgba(58,178,222,0.10),transparent_60%),radial-gradient(600px_380px_at_50%_100%,rgba(74,210,82,0.07),transparent_60%)]">
-        </div>
-        <div class="absolute inset-0 opacity-[0.035]"
-          style="background-image: linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px); background-size: 32px 32px;">
+          class="absolute inset-0 bg-[radial-gradient(900px_520px_at_18%_-8%,rgba(230,57,49,0.16),transparent_60%),radial-gradient(700px_420px_at_88%_12%,rgba(58,178,222,0.09),transparent_60%)]">
         </div>
       </div>
 
-      <div class="relative mx-auto max-w-[1200px] px-6 py-14 md:py-20">
-        <div class="grid gap-10 md:grid-cols-[1.05fr_.95fr] md:items-center">
-          <div class="animate-slide-up">
-            <div
-              class="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-bold tracking-widest text-accent-soft">
-              <span class="size-1.5 rounded-full bg-accent animate-pulse"></span>
-              SEMPRE LIGADO · TEMPO REAL · 100% LOCAL
-            </div>
-            <h1 class="mt-5 text-[34px] font-extrabold leading-[0.95] tracking-tight text-white md:text-[48px]">
-              Nunca mais seja
-              <span class="bg-gradient-to-r from-accent to-[#ff8f89] bg-clip-text text-transparent">pego sem cota</span>
-              no meio do flow.
-            </h1>
-            <p class="mt-5 max-w-[56ch] text-[17px] leading-relaxed text-neutral-300">
-              <strong class="font-semibold text-white">25+ integrações. Múltiplas contas cada. Um único
-                mostrador.</strong>
-              O <span class="font-semibold text-white">Vigia AI</span> vigia suas cotas de IA, repos, clima, moedas,
-              mídia e até mineração — na sua mesa com
-              <strong class="text-white">ESP32 + TFT 3,5" touch</strong>, no navegador ou no <strong
-                class="text-white">app desktop</strong>. Configure alarmes e
-              receba aviso no <strong class="text-white">Telegram</strong> antes de travar no meio da entrega — sem
-              expor
-              um token sequer.
-            </p>
-
-            <!-- Provider pills -->
-            <div class="mt-6 flex flex-wrap gap-2">
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/claude.png" alt="" class="size-4 object-contain" /> Claude</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/gpt.png" alt="" class="size-4 object-contain" /> GPT</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/cursor.png" alt="" class="size-4 object-contain" /> Cursor</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/openrouter.png" alt="" class="size-4 object-contain" /> OpenRouter</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/deepseek.png" alt="" class="size-4 object-contain" /> DeepSeek</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/opencode.png" alt="" class="size-4 object-contain" /> OpenCode</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/fal.png" alt="" class="size-4 object-contain" /> fal.ai</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/bitcoin.png" alt="" class="size-4 object-contain" /> Bitcoin</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/adsense.png" alt="" class="size-4 object-contain" /> AdSense</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/git.png" alt="" class="size-4 object-contain" /> Git</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">⭐ GitHub</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/retroachievements.png" alt="" class="size-4 object-contain" />
-                RetroAchievements</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/calendar.png" alt="" class="size-4 object-contain" /> Calendário</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/rss.png" alt="" class="size-4 object-contain" /> RSS</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white"><img
-                  src="assets/icons/weather.png" alt="" class="size-4 object-contain" /> Clima</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">💱 Moedas</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">🛰️ ISS</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">🎵 Spotify</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">▶️ YouTube Music</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">📷 Câmera</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">📱 Android</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">🎮 Emulador</span>
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white">⛏️ Mineração</span>
-            </div>
-
-            <div class="mt-8 flex flex-wrap gap-3">
-              <a class="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(230,57,49,.35)] hover:bg-[#d6322b] transition"
-                href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">
-                <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                  <path
-                    d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.7 5.47 7.78.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.7-.96-.09-.24-.48-.96-.82-1.16-.28-.15-.68-.53-.01-.54.63-.01 1.08.6 1.23.85.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.2-3.64-.91-3.64-4.05 0-.89.31-1.63.82-2.2-.08-.2-.36-1.05.08-2.18 0 0 .67-.22 2.2.85a7.34 7.34 0 0 1 4 0c1.53-1.07 2.2-.85 2.2-.85.44 1.13.16 1.98.08 2.18.51.57.82 1.3.82 2.2 0 3.15-1.87 3.85-3.65 4.05.29.26.54.76.54 1.53 0 1.11-.01 2-.01 2.27 0 .22.15.48.55.4A8.22 8.22 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z" />
-                </svg>
-                Começar agora — é grátis
-              </a>
-              <a class="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-7 py-3.5 text-[15px] font-semibold text-white hover:bg-white/10 transition"
-                href="#dashboard">
-                Ver o dashboard ao vivo →
-              </a>
-            </div>
-
-            <div class="mt-6 flex flex-wrap items-center gap-3 text-xs text-neutral-400">
-              <span class="inline-flex items-center gap-1.5"><span class="size-2 rounded-full bg-emerald-400"></span>
-                MIT · Open Source</span>
-              <span class="opacity-40">·</span>
-              <span>Node 22 LTS · Fastify · React · PlatformIO</span>
-            </div>
-
-            <!-- Trust bar -->
-            <div class="mt-8 grid grid-cols-3 gap-3 max-w-[520px]">
-              <div class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
-                <div class="font-mono text-xl font-bold text-white">25+</div>
-                <div class="text-[11px] font-semibold tracking-widest text-neutral-400">INTEGRAÇÕES</div>
-              </div>
-              <div class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
-                <div class="font-mono text-xl font-bold text-white">∞</div>
-                <div class="text-[11px] font-semibold tracking-widest text-neutral-400">CONTAS</div>
-              </div>
-              <div class="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center">
-                <div class="font-mono text-xl font-bold text-white">0</div>
-                <div class="text-[11px] font-semibold tracking-widest text-neutral-400">TOKENS EXPOSTOS</div>
-              </div>
-            </div>
+      <div class="relative mx-auto max-w-[1080px] px-6 py-16 md:py-24">
+        <div class="mx-auto max-w-2xl text-center animate-slide-up">
+          <div
+            class="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-bold tracking-widest text-accent-soft">
+            <span class="size-1.5 rounded-full bg-accent animate-pulse"></span>
+            GRATUITO · OPEN SOURCE · MIT
           </div>
-
-          <!-- Hero visual: dashboard mock -->
-          <div class="relative animate-float">
-            <div
-              class="absolute -inset-4 -z-10 rounded-[28px] bg-gradient-to-br from-accent/20 via-transparent to-[#3ab2de]/15 blur-2xl">
-            </div>
-            <div
-              class="overflow-hidden rounded-[20px] border border-white/10 bg-panel shadow-[0_24px_64px_rgba(0,0,0,.55)]">
-              <!-- Window chrome -->
-              <div class="flex items-center justify-between border-b border-white/10 bg-ink/60 px-4 py-3">
-                <div class="flex items-center gap-1.5">
-                  <span class="size-3 rounded-full bg-[#ff5f56]"></span>
-                  <span class="size-3 rounded-full bg-[#ffbd2e]"></span>
-                  <span class="size-3 rounded-full bg-[#27c93f]"></span>
-                </div>
-                <span class="font-mono text-[11px] font-semibold tracking-widest text-neutral-400">VIGIA AI ·
-                  /display</span>
-                <span
-                  class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><span
-                    class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span> AO VIVO</span>
-              </div>
-              <!-- Mock cards -->
-              <div class="p-4 sm:p-5">
-                <div class="grid grid-cols-2 gap-3">
-                  <!-- Claude -->
-                  <div class="rounded-2xl border border-edge bg-ink p-4">
-                    <div class="flex items-center gap-2">
-                      <img src="assets/icons/claude.png" alt="" class="size-7 rounded-lg bg-white p-1 object-contain" />
-                      <div class="min-w-0">
-                        <div class="text-[12px] font-bold leading-none text-white">Claude</div>
-                        <div class="text-[11px] text-neutral-400">Sessão 5h · Semana</div>
-                      </div>
-                      <span
-                        class="ml-auto rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">OK</span>
-                    </div>
-                    <div class="mt-3 space-y-2.5">
-                      <div>
-                        <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Sessão</span><span
-                            class="font-mono font-semibold text-white">42%</span></div>
-                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track">
-                          <div class="h-full rounded-full bg-[#e63931] bar-fill" style="width:42%"></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Semana</span><span
-                            class="font-mono font-semibold text-white">18%</span></div>
-                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track">
-                          <div class="h-full rounded-full bg-[#8cbe94] bar-fill" style="width:18%"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <!-- Cursor -->
-                  <div class="rounded-2xl border border-edge bg-ink p-4">
-                    <div class="flex items-center gap-2">
-                      <img src="assets/icons/cursor.png" alt="" class="size-7 rounded-lg bg-white p-1 object-contain" />
-                      <div class="min-w-0">
-                        <div class="text-[12px] font-bold leading-none text-white">Cursor</div>
-                        <div class="text-[11px] text-neutral-400">Pro · Ciclo mensal</div>
-                      </div>
-                      <span
-                        class="ml-auto rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-300">35%</span>
-                    </div>
-                    <div class="mt-3 space-y-2.5">
-                      <div>
-                        <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Modelos
-                            Cursor</span><span class="font-mono font-semibold text-white">35%</span></div>
-                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track">
-                          <div class="h-full rounded-full bg-[#e6a65a] bar-fill" style="width:35%"></div>
-                        </div>
-                      </div>
-                      <div class="flex justify-between text-[11px] text-neutral-400"><span>Restam</span><span
-                          class="font-mono text-white">$13,00</span></div>
-                    </div>
-                  </div>
-                  <!-- GPT -->
-                  <div class="rounded-2xl border border-edge bg-ink p-4">
-                    <div class="flex items-center gap-2">
-                      <img src="assets/icons/gpt.png" alt="" class="size-7 rounded-lg bg-white p-1 object-contain" />
-                      <div class="min-w-0">
-                        <div class="text-[12px] font-bold leading-none text-white">GPT</div>
-                        <div class="text-[11px] text-neutral-400">Plus · Codex</div>
-                      </div>
-                      <span
-                        class="ml-auto rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-300">OK</span>
-                    </div>
-                    <div class="mt-3">
-                      <div class="flex justify-between text-[11px]"><span class="text-neutral-400">Janela
-                          curta</span><span class="font-mono font-semibold text-white">12%</span></div>
-                      <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-track">
-                        <div class="h-full rounded-full bg-[#8cbe94] bar-fill" style="width:12%"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <!-- OpenRouter + extras -->
-                  <div class="rounded-2xl border border-edge bg-ink p-4">
-                    <div class="flex items-center gap-2">
-                      <img src="assets/icons/openrouter.png" alt=""
-                        class="size-7 rounded-lg bg-white p-1 object-contain" />
-                      <div class="min-w-0">
-                        <div class="text-[12px] font-bold leading-none text-white">OpenRouter</div>
-                        <div class="text-[11px] text-neutral-400">Créditos</div>
-                      </div>
-                      <span class="ml-auto font-mono text-xs font-bold text-white">$24,50</span>
-                    </div>
-                    <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-                      <div class="rounded-lg bg-white/[0.04] border border-white/5 py-2">
-                        <div class="text-[10px] tracking-widest text-neutral-400">DEEPSEEK</div>
-                        <div class="font-mono text-xs font-bold text-white">$8,20</div>
-                      </div>
-                      <div class="rounded-lg bg-white/[0.04] border border-white/5 py-2">
-                        <div class="text-[10px] tracking-widest text-neutral-400">FAL.AI</div>
-                        <div class="font-mono text-xs font-bold text-white">$12,40</div>
-                      </div>
-                      <div class="rounded-lg bg-white/[0.04] border border-white/5 py-2">
-                        <div class="text-[10px] tracking-widest text-neutral-400">BTC</div>
-                        <div class="font-mono text-xs font-bold text-white">0.0012</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  class="mt-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                  <span class="text-xs text-neutral-400">Atualizado agora · <span class="font-mono text-white">SSE
-                      /events</span> · 1 ciclo para todos</span>
-                  <span class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300"><span
-                      class="size-1.5 rounded-full bg-emerald-400"></span> Tempo real</span>
-                </div>
-              </div>
-            </div>
-            <!-- Floating badge -->
-            <div
-              class="absolute -bottom-3 -right-2 hidden sm:flex items-center gap-2 rounded-full border border-white/10 bg-panel px-3 py-2 shadow-xl">
-              <span class="flex size-7 items-center justify-center rounded-full bg-accent text-white">⚡</span>
-              <span class="text-xs font-semibold text-white">Um ciclo. Todos os clientes.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- SOCIAL PROOF / LOGOS -->
-    <section class="border-y border-white/[0.06] bg-white/[0.02] py-6">
-      <div class="mx-auto max-w-[1200px] px-6">
-        <p class="text-center text-[11px] font-bold tracking-[0.18em] text-neutral-500">FEITO PARA QUEM VIVE DE IA —
-          DEV, CRIADOR, POWER USER · 25+ INTEGRAÇÕES</p>
-        <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-neutral-400">
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Claude Code</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Codex CLI</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Cursor IDE</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">OpenRouter</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">DeepSeek</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">OpenCode</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">fal.ai</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Bitcoin</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">AdSense</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Git</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">GitHub</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">RetroAchievements</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Calendário ICS</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">RSS</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Clima</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Moedas</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">ISS</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Spotify</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">YouTube Music</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Câmera</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Android</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Emulador</span>
-          <span class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">Mineração BTC</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- O PROBLEMA -->
-    <section id="problema" class="py-16 md:py-20">
-      <div class="mx-auto grid max-w-[1200px] gap-10 px-6 md:grid-cols-2 md:items-center">
-        <div>
-          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">O PROBLEMA QUE NINGUÉM AGUENTA MAIS</p>
-          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">5 assinaturas, 5 abas, 0
-            visibilidade. Até travar no meio da entrega.</h2>
-          <p class="mt-4 leading-relaxed text-neutral-300">
-            Você usa <strong class="text-white">Claude, ChatGPT/Codex, Cursor, OpenRouter e DeepSeek</strong> no mesmo
-            dia — cada um com sua cota, sua janela de reset e sua aba pra checar. Na prática, só descobre que estourou o
-            limite quando o autocomplete morre no meio da task.
+          <h1 class="mt-5 text-[34px] font-extrabold leading-[1.05] tracking-tight text-white md:text-[46px]">
+            Suas cotas de IA, num
+            <span class="bg-gradient-to-r from-accent to-[#ff8f89] bg-clip-text text-transparent">único mostrador</span>.
+          </h1>
+          <p class="mx-auto mt-5 max-w-[52ch] text-[17px] leading-relaxed text-neutral-300">
+            O Vigia AI acompanha Claude, GPT, Cursor e outras 20+ integrações em tempo real —
+            na sua mesa, no navegador ou no app desktop. Sem expor um token sequer.
           </p>
-          <div class="mt-6 grid gap-3">
-            <div class="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <span
-                class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-300">✕</span>
-              <div>
-                <div class="text-sm font-semibold text-white">Sem Vigia</div>
-                <div class="text-sm text-neutral-400">Abrir 5 abas, lembrar de conferir, levar susto no meio do flow.
-                </div>
+
+          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a class="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_8px_24px_rgba(230,57,49,.35)] hover:bg-[#d6322b] transition"
+              href="#instalacao">Instalar grátis</a>
+            <a class="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-7 py-3.5 text-[15px] font-semibold text-white hover:bg-white/10 transition"
+              href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener">Ver no GitHub ↗</a>
+          </div>
+
+          <p class="mt-5 text-xs text-neutral-500">Node 22 · Fastify · React · PlatformIO — sem custo, sem conta, sem
+            cadastro.</p>
+        </div>
+
+        <!-- Hero visual: real screenshot -->
+        <div class="relative mx-auto mt-14 max-w-3xl animate-float">
+          <div class="absolute -inset-4 -z-10 rounded-[28px] bg-gradient-to-br from-accent/15 via-transparent to-[#3ab2de]/10 blur-2xl"></div>
+          <div class="overflow-hidden rounded-[20px] border border-white/10 bg-panel shadow-[0_24px_64px_rgba(0,0,0,.55)]">
+            <div class="flex items-center justify-between border-b border-white/10 bg-ink/60 px-4 py-3">
+              <div class="flex items-center gap-1.5">
+                <span class="size-3 rounded-full bg-[#ff5f56]"></span>
+                <span class="size-3 rounded-full bg-[#ffbd2e]"></span>
+                <span class="size-3 rounded-full bg-[#27c93f]"></span>
               </div>
-            </div>
-            <div class="flex gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+              <span class="font-mono text-[11px] font-semibold tracking-widest text-neutral-400">/display</span>
               <span
-                class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300">✓</span>
-              <div>
-                <div class="text-sm font-semibold text-white">Com Vigia</div>
-                <div class="text-sm text-neutral-300">Um mostrador sempre ligado — e alarmes no <strong
-                    class="text-white">Telegram</strong> quando a cota cruzar o limiar. Você olha e já sabe. Sem <code
-                    class="rounded bg-white/10 px-1 py-0.5 font-mono text-xs text-accent-soft">curl</code>, sem susto.
-                </div>
-              </div>
+                class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><span
+                  class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span> AO VIVO</span>
             </div>
+            <img src="assets/web/web-overview.png" alt="Painel Vigia AI mostrando cotas de IA em tempo real" class="w-full" loading="eager" />
           </div>
         </div>
-        <div class="relative">
-          <div class="absolute -inset-3 -z-10 rounded-[20px] bg-gradient-to-br from-accent/15 to-transparent blur-xl">
+      </div>
+    </section>
+
+    <!-- COMPATIBILIDADE -->
+    <section class="border-y border-white/[0.06] bg-white/[0.02] py-8">
+      <div class="mx-auto max-w-[1080px] px-6">
+        <p class="text-center text-[11px] font-bold tracking-[0.18em] text-neutral-500">FUNCIONA COM</p>
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300"><img src="assets/icons/claude.png" alt="" class="size-4 object-contain" /> Claude</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300"><img src="assets/icons/gpt.png" alt="" class="size-4 object-contain" /> GPT</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300"><img src="assets/icons/cursor.png" alt="" class="size-4 object-contain" /> Cursor</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300"><img src="assets/icons/openrouter.png" alt="" class="size-4 object-contain" /> OpenRouter</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300"><img src="assets/icons/deepseek.png" alt="" class="size-4 object-contain" /> DeepSeek</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300"><img src="assets/icons/git.png" alt="" class="size-4 object-contain" /> Git/GitHub</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300">🌦️ Clima</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300">🎵 Spotify</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-300">₿ Bitcoin</span>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-accent-soft">+ 15 outras →</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECURSOS -->
+    <section id="recursos" class="py-16 md:py-20">
+      <div class="mx-auto max-w-[1080px] px-6">
+        <div class="mx-auto max-w-xl text-center">
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">POR QUE USAR</p>
+          <h2 class="mt-3 text-[26px] font-extrabold leading-tight text-white md:text-[32px]">Um jeito simples de nunca
+            mais ser pego sem cota.</h2>
+        </div>
+
+        <div class="mt-10 grid gap-4 sm:grid-cols-2">
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-accent/15 border border-accent/20 text-accent">⚡</div>
+            <h3 class="mt-4 font-bold text-white">Tempo real, sem esforço</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Um ciclo a cada 60 segundos atualiza a placa, o
+              navegador e o app ao mesmo tempo. Você olha e já sabe.</p>
           </div>
-          <div class="overflow-hidden rounded-2xl border border-white/10 bg-panel shadow-xl">
-            <img src="assets/firmware/display-home-grid.png" alt="Início em grade com as contas no firmware"
-              class="w-full" loading="lazy" />
-            <div class="border-t border-white/10 bg-ink/60 px-4 py-3 text-center text-xs text-neutral-400">Firmware real
-              — ESP32 + TFT 3,5" touch · grade, lista e detalhe por conta</div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-sky-500/15 border border-sky-500/20 text-sky-300">🔒</div>
+            <h3 class="mt-4 font-bold text-white">Zero tokens expostos</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Seus tokens ficam só no seu computador. O que
+              trafega na rede é apenas percentual e status — nunca uma credencial.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/20 text-amber-300">🔔</div>
+            <h3 class="mt-4 font-bold text-white">Alarmes no Telegram</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Defina um limite e receba aviso antes de travar no
+              meio da entrega — direto no celular.</p>
+          </div>
+          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/20 text-violet-300">🧩</div>
+            <h3 class="mt-4 font-bold text-white">Muito mais que cotas</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Clima, calendário, RSS, Bitcoin, Spotify, câmeras e
+              mais 20 integrações — tudo no mesmo board, com múltiplas contas.</p>
           </div>
         </div>
       </div>
@@ -555,1005 +257,105 @@
 
     <!-- ONDE RODA -->
     <section class="border-y border-white/[0.06] bg-white/[0.02] py-16">
-      <div class="mx-auto max-w-[1200px] px-6">
-        <div class="mx-auto max-w-2xl text-center">
+      <div class="mx-auto max-w-[1080px] px-6">
+        <div class="mx-auto max-w-xl text-center">
           <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">ONDE RODA</p>
-          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">Um gadget de mesa — mas o
-            firmware é opcional.</h2>
-          <p class="mt-3 text-neutral-400">Do tamanho de um despertador na mesa, ou como página web num monitor extra e
-            até no celular. Você escolhe.</p>
+          <h2 class="mt-3 text-[26px] font-extrabold leading-tight text-white md:text-[32px]">O hardware é opcional.</h2>
+          <p class="mt-3 text-neutral-400">Do tamanho de um despertador na mesa, ou como página web. Você escolhe.</p>
         </div>
-        <div class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <div class="mt-10 grid gap-5 md:grid-cols-3">
           <div class="card-hover overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/hardware-desk.jpg" alt="ESP32 + TFT 3,5&quot; touch de verdade, ligado numa mesa"
-              class="h-36 w-full object-cover" loading="lazy" />
-            <div class="p-6 pt-5">
-              <h3 class="text-[15px] font-bold text-white">Físico — sempre à vista</h3>
-              <p class="mt-2 text-sm leading-relaxed text-neutral-400">ESP32 Dev Module + TFT SPI 3,5" touch (XPT2046).
-                Tela sempre ligada na mesa. QR code na tela abre o painel de qualquer aparelho na mesma Wi-Fi.</p>
-              <div
-                class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
-                ILI9488 320×480 · Touch nativo</div>
+            <img src="assets/hardware-desk.jpg" alt="ESP32 + TFT 3,5&quot; touch ligado numa mesa" class="h-36 w-full object-cover" loading="lazy" />
+            <div class="p-6">
+              <h3 class="text-[15px] font-bold text-white">Físico</h3>
+              <p class="mt-2 text-sm leading-relaxed text-neutral-400">ESP32 + tela touch 3,5" sempre ligada na mesa.
+                Opcional — dá pra simular sem soldar nada.</p>
             </div>
           </div>
           <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">
-              🌐</div>
-            <h3 class="mt-4 text-[15px] font-bold text-white">Web — sem hardware</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><code
-                class="font-mono text-accent-soft">/display</code> replica a placa no navegador. Responsivo, com sidebar
-              no desktop e menu no mobile. Tema e cor salvos no backend (<code class="font-mono text-xs">/api/prefs</code>), sincroniza entre dispositivos.</p>
-            <div
-              class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
-              React + SSE · Drag & drop</div>
+            <div class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">🌐</div>
+            <h3 class="mt-4 text-[15px] font-bold text-white">Navegador</h3>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">A mesma tela em <code class="font-mono text-accent-soft">/display</code>,
+              responsiva, em qualquer aparelho na sua rede.</p>
           </div>
           <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">
-              💻</div>
+            <div class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">💻</div>
             <h3 class="mt-4 text-[15px] font-bold text-white">App desktop</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Instalador para <strong class="text-white">Linux, macOS e Windows</strong> — <code class="font-mono text-xs">.dmg</code>, <code class="font-mono text-xs">.exe</code>, <code class="font-mono text-xs">.AppImage</code>, <code class="font-mono text-xs">.deb</code>. Coletor embarcado, sem Python/Node. Bandeja, autostart e auto-update.</p>
-            <div
-              class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
-              Electron · <code class="font-mono text-xs">./dev app</code></div>
+            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Instalador para Linux, macOS e Windows. Baixa e
+              roda — sem precisar instalar Python ou Node.</p>
           </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-11 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xl">
-              🧪</div>
-            <h3 class="mt-4 text-[15px] font-bold text-white">Simulado — sem soldar</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><a
-                class="font-semibold text-accent-soft hover:underline" href="https://wokwi.com/" target="_blank"
-                rel="noopener">Wokwi</a> no VS Code. Mesmo sketch, Wi-Fi simulada + coletor real via <code
-                class="font-mono text-xs">wokwigw</code>. Teste tudo antes de comprar a placa.</p>
-            <div
-              class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
-              PlatformIO · wokwi env</div>
-          </div>
-        </div>
-        <div class="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-ink">
-          <img src="assets/firmware/wokwi-wiring.png" alt="Diagrama de montagem ESP32 + TFT 3,5&quot; touch no Wokwi"
-            class="w-full" loading="lazy" />
-        </div>
-      </div>
-    </section>
-
-    <!-- NOVIDADES — o que chegou recentemente -->
-    <section class="py-10">
-      <div class="mx-auto max-w-[1200px] px-6">
-        <div
-          class="rounded-[20px] border border-accent/20 bg-gradient-to-br from-accent/10 via-panel to-panel p-6 md:p-8">
-          <div class="flex flex-wrap items-center gap-3">
-            <span
-              class="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-[11px] font-bold tracking-widest text-white">NOVIDADES
-              · ÚLTIMOS RELEASES</span>
-            <span class="text-xs text-neutral-400">Releases contínuos — 20+ integrações novas + widgets + automações + polish</span>
-          </div>
-          <!-- Linha 1: provedores de dados -->
-          <div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><img src="assets/icons/git.png" alt=""
-                  class="size-6 object-contain" /><span class="text-sm font-bold text-white">Git</span><span
-                  class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">URL (https/ssh) ou caminho local. Clone raso <code class="font-mono text-accent-soft">--depth</code> + <code class="font-mono text-accent-soft">git log</code> com hash, autor, data e mensagem. Até 50 commits por repo.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">⭐</span><span class="text-sm font-bold text-white">GitHub</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Stars, forks, issues e branch padrão por repo. API pública com token opcional. Um card por repositório no board.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><img src="assets/icons/retroachievements.png" alt=""
-                  class="size-6 object-contain" /><span class="text-sm font-bold text-white">RetroAchievements</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Perfil gamer via RA API: pontos, rank, mastery/beaten, jogos e conquistas recentes. <code class="font-mono text-accent-soft">username:apikey</code>.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><img src="assets/icons/calendar.png" alt=""
-                  class="size-6 object-contain" /><span class="text-sm font-bold text-white">Calendário ICS</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Qualquer URL <code class="font-mono text-accent-soft">text/calendar</code> — Google/Outlook/iCloud. <code class="font-mono text-accent-soft">webcal://</code> → <code class="font-mono text-accent-soft">https://</code>, SSRF check, 2 MB max.</p>
-            </div>
-          </div>
-          <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><img src="assets/icons/rss.png" alt=""
-                  class="size-6 object-contain" /><span class="text-sm font-bold text-white">RSS / Atom</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Feeds RSS 2.0 e Atom sem dependências — parse nativo, título, link, categorias e enclosure. Até 50 itens por feed.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><img src="assets/icons/weather.png" alt="" class="size-6 object-contain" /><span class="text-sm font-bold text-white">Clima</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Open-Meteo: atual, horária e diária, com geocoding, unidades e campos configuráveis. Card único com localização.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">💱</span><span class="text-sm font-bold text-white">Moedas</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Lista livre fiat/cripto convertidas numa moeda base. Fiat via open.er-api, cripto via CoinGecko com busca embutida.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🛰️</span><span class="text-sm font-bold text-white">ISS</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Posição da Estação Espacial Internacional em tempo real — altitude, velocidade e visibilidade (daylight/eclipsed).</p>
-            </div>
-          </div>
-          <!-- Linha 2: mídia e hardware -->
-          <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🎵</span><span class="text-sm font-bold text-white">Spotify</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">OAuth + player remoto: capa, título, artista, progresso e controles play/pause/next/previous. Poll de 5s, fora do ciclo de cotas.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">▶️</span><span class="text-sm font-bold text-white">YouTube Music</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">OAuth Google + controles de reprodução. Mesmo padrão do Spotify — widget dedicado no board, sem expor token.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">📷</span><span class="text-sm font-bold text-white">Câmera</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Multi-câmera RTSP + ONVIF PTZ. Cada câmera vira um card no board com stream compartilhado e controle pan/tilt/zoom.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">📱</span><span class="text-sm font-bold text-white">Android</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Espelhamento via ADB <code class="font-mono text-accent-soft">screencap</code> — cada dispositivo vira um card no board, sem scrcpy.</p>
-            </div>
-          </div>
-          <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🎮</span><span class="text-sm font-bold text-white">Emulador</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">EmulatorJS via CDN — plataformas, ROMs, BIOS, saves sincronizados no servidor, toolbar RetroArch e biblioteca dedicada <code class="font-mono text-accent-soft">/display/emulator</code>.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">⛏️</span><span class="text-sm font-bold text-white">Mineração BTC</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Motor Stratum + SHA256 na ESP32 (VIEW_MINER). Config remota, hashrate, shares e melhor dificuldade em <code class="font-mono text-accent-soft">/display/mining</code>.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🖥️</span><span class="text-sm font-bold text-white">Sistema</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Saúde do host: storage (uso por partição), hostname, uptime e métricas do último ciclo. Card dedicado no board.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🎨</span><span class="text-sm font-bold text-white">Wallpapers</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Pexels/Wallhaven/Unsplash/Giphy com filtros avançados, rotação automática a cada ciclo e biblioteca com import/export.</p>
-            </div>
-          </div>
-          <!-- Linha 3: board polish -->
-          <div class="mt-4 grid gap-4 md:grid-cols-3">
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="text-sm font-bold text-white">📝 Notas + 🖼️ Imagens</div>
-              <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Post-its com Markdown leve, 8 cores e 5 tamanhos + widgets de imagem com upload/URL, <code class="font-mono text-accent-soft">cover/contain</code>, pan & zoom e 8 tamanhos. Persistência no backend (<code class="font-mono text-accent-soft">/api/notes</code>, <code class="font-mono text-accent-soft">/api/images</code>), sem localStorage.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="text-sm font-bold text-white">🎛️ Board polish</div>
-              <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Tamanho livre (popup altura×largura), import/export JSON do board, TileColorPicker, NameToColor, rotação automática de wallpaper, reordenação e melhorias de UI.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="text-sm font-bold text-white">🎮 Gamepad + ⌨️ Atalhos</div>
-              <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Suporte a gamepad (zoom e scroll no board), Konami code, breadcrumb, skeleton/loading states e refinamentos de i18n (PT/EN/ES).</p>
-            </div>
-          </div>
-          <!-- Linha 4: releases mais recentes -->
-          <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🖼️</span><span class="text-sm font-bold text-white">Fundos animados</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">GIF animado como papel de parede do editor de tema — quadros extraídos e convertidos pra RAW RGB565, tocando direto na ESP32.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">⌘</span><span class="text-sm font-bold text-white">Command palette + offline</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Atalho de teclado abre uma busca rápida por qualquer tela do painel. Service worker deixa o `/display` web funcionando mesmo com a rede instável.</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🔌</span><span class="text-sm font-bold text-white">Flash pelo painel</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400"><code class="font-mono text-accent-soft">/display/setup</code> grava a ESP32 via USB sem terminal, e baixa o firmware da release atual quando a pasta local não existe (instalação via Homebrew/instalador).</p>
-            </div>
-            <div class="rounded-2xl border border-white/10 bg-ink p-4">
-              <div class="flex items-center gap-2"><span class="text-base">🎨</span><span class="text-sm font-bold text-white">RGB channel swap</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-white">NOVO</span></div>
-              <p class="mt-2 text-xs leading-relaxed text-neutral-400">Corrige cores trocadas (azul/vermelho) em painéis com wiring RGB invertido, direto na tela de tema — sem reflashar o firmware.</p>
-            </div>
-          </div>
-          <p class="mt-4 text-center text-xs text-neutral-500">Tudo já no <code class="font-mono text-accent-soft">/display</code> e em <code class="font-mono text-accent-soft">/display/config</code> — sem quebrar o contrato JSON existente.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- RECURSOS — grade apelativa -->
-    <section id="recursos" class="py-16 md:py-20">
-      <div class="mx-auto max-w-[1200px] px-6">
-        <div class="mx-auto max-w-2xl text-center">
-          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">POR QUE O VIGIA VAI VIRAR SEU FAVORITO</p>
-          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">Tudo que um mostrador de
-            cotas precisa ser — e um pouco mais.</h2>
-          <p class="mt-3 text-neutral-400">Feito para quem vive de IA e não pode se dar ao luxo de parar no meio.</p>
-        </div>
-
-        <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-accent/15 border border-accent/20 text-accent">
-              ◉</div>
-            <h3 class="mt-4 font-bold text-white">25+ integrações, N contas cada</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><strong class="text-neutral-200">Cotas de IA:</strong> Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go/Zen, fal.ai · <strong class="text-neutral-200">Financeiro:</strong> Bitcoin, AdSense, Moedas · <strong class="text-neutral-200">Dev:</strong> Git, GitHub · <strong class="text-neutral-200">Vida:</strong> RetroAchievements, Calendário ICS, RSS, Clima, ISS · <strong class="text-neutral-200">Mídia:</strong> Spotify, YouTube Music · <strong class="text-neutral-200">Hardware:</strong> Câmera, Android, Emulador, Mineração BTC, Sistema. Cada um vira cards com apelido opcional.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/20 text-emerald-300">
-              ⚡</div>
-            <h3 class="mt-4 font-bold text-white">Tempo real de verdade</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Um único ciclo no coletor a cada 60s, distribuído
-              por <code class="font-mono text-xs text-accent-soft">SSE /events</code>. Placa e abas não multiplicam
-              chamadas. <code class="font-mono text-xs">GET /usage</code> força um ciclo extra.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-sky-500/15 border border-sky-500/20 text-sky-300">
-              🔒</div>
-            <h3 class="mt-4 font-bold text-white">Zero tokens expostos</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">A placa e o navegador só veem percentuais, datas e
-              <code class="font-mono text-xs text-accent-soft">ok: true/false</code>. Tokens ficam no host (Keychain,
-              <code class="font-mono text-xs">auth.json</code>, <code class="font-mono text-xs">state.vscdb</code>).
-            </p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/20 text-violet-300">
-              👆</div>
-            <h3 class="mt-4 font-bold text-white">Touch nativo + drag & drop</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Grade ou lista na Início, detalhe por conta com
-              paginador <span class="font-mono text-xs">‹ i/N ›</span>, configurações direto na tela. No web, arraste
-              cards e redimensione.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/20 text-amber-300">
-              🔔</div>
-            <h3 class="mt-4 font-bold text-white">Alarmes no Telegram</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Regras por provedor + métrica + limiar,
-              edge-triggered. Quando cruzar, dispara mensagem no <strong class="text-neutral-200">Telegram</strong> —
-              no celular, sem HTTPS nem service worker. Crie um bot com o @BotFather, cole o token em <code
-                class="font-mono text-xs text-accent-soft">/display/alarms</code>, mande <code
-                class="font-mono text-xs text-accent-soft">/start</code> e pronto.</p>
-            <div
-              class="mt-4 inline-flex rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 text-xs font-semibold text-neutral-300">
-              Long-polling · funciona em LAN</div>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-pink-500/15 border border-pink-500/20 text-pink-300">
-              🎨</div>
-            <h3 class="mt-4 font-bold text-white">3 temas × 7 cores · PT/EN/ES</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Escuro, claro e alto contraste. 7 cores de
-              destaque. Papel de parede próprio (upload) ou buscado em Pexels/Wallhaven/Unsplash — agora com <strong
-                class="text-neutral-200">filtros avançados Wallhaven</strong> (categorias, purity, sorting, resoluções,
-              proporções, cores e seed). Editor de tema visual com ícones, textos e relógio.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-500/20 text-cyan-300">
-              🌦️</div>
-            <h3 class="mt-4 font-bold text-white">Clima, moedas e Bitcoin</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Open-Meteo (atual, horária, diária) com geocoding, <strong class="text-neutral-200">moedas fiat/cripto</strong> numa base única e <strong class="text-neutral-200">Bitcoin</strong> via Blockstream + CoinGecko — sem chave privada, só endereço público. Tudo no mesmo board.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-yellow-500/15 border border-yellow-500/20 text-yellow-300">
-              📝</div>
-            <h3 class="mt-4 font-bold text-white">Notas post-it no board</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Post-its com <strong
-                class="text-neutral-200">Markdown leve</strong> (negrito, itálico, links, listas, code), 8 cores, 5
-              tamanhos e persistência no backend (<code class="font-mono text-xs text-accent-soft">/api/notes</code>). Crie, edite e arraste direto no <code
-                class="font-mono text-xs text-accent-soft">/display</code> — sincroniza entre dispositivos.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-fuchsia-500/15 border border-fuchsia-500/20 text-fuchsia-300">
-              🖼️</div>
-            <h3 class="mt-4 font-bold text-white">Imagens no board</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Widgets de imagem com <strong
-                class="text-neutral-200">upload, URL/base64 ou busca</strong>, fit <code
-                class="font-mono text-xs">cover/contain</code>, pan & zoom e 8 tamanhos (xs → wxl). Persistência em <code class="font-mono text-xs text-accent-soft">/api/images</code>, placeholder elegante.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-indigo-500/15 border border-indigo-500/20 text-indigo-300">
-              🎯</div>
-            <h3 class="mt-4 font-bold text-white">Alarmes de calendário</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Regras para <strong
-                class="text-neutral-200">eventos e tarefas ICS</strong> — dispare no Telegram <em>X minutos/horas/dias
-                antes</em> do <code class="font-mono text-xs">DTSTART/DUE</code>. Threshold configurável por regra, com
-              label humano (“1 hora antes”, “2 dias antes”).</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/20 text-emerald-300">
-              🎵</div>
-            <h3 class="mt-4 font-bold text-white">Spotify + YouTube Music</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">OAuth + <strong class="text-neutral-200">player remoto</strong>: capa, título, artista, progresso e controles play/pause/next/previous. Poll de 5s fora do ciclo de cotas. Cada um vira um widget no board.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-sky-500/15 border border-sky-500/20 text-sky-300">
-              📷</div>
-            <h3 class="mt-4 font-bold text-white">Câmera + Android</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><strong class="text-neutral-200">Multi-câmera RTSP</strong> com ONVIF PTZ e <strong class="text-neutral-200">espelhamento Android via ADB</strong> (<code class="font-mono text-xs">screencap</code>). Cada câmera/dispositivo vira um card no board com stream compartilhado.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-violet-500/15 border border-violet-500/20 text-violet-300">
-              🎮</div>
-            <h3 class="mt-4 font-bold text-white">Emulador + Mineração BTC</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><strong class="text-neutral-200">EmulatorJS</strong> via CDN com saves sincronizados e biblioteca <code class="font-mono text-xs text-accent-soft">/display/emulator</code> + <strong class="text-neutral-200">mineração Stratum</strong> na ESP32 (VIEW_MINER) com config remota em <code class="font-mono text-xs text-accent-soft">/display/mining</code>.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-orange-500/15 border border-orange-500/20 text-orange-300">
-              🛰️</div>
-            <h3 class="mt-4 font-bold text-white">GitHub + ISS + Sistema</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400"><strong class="text-neutral-200">GitHub</strong> (stars/forks/issues), <strong class="text-neutral-200">ISS</strong> em tempo real (altitude/velocidade) e <strong class="text-neutral-200">saúde do host</strong> (storage, uptime, último ciclo). Cards dedicados no board.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-neutral-500/15 border border-white/10 text-neutral-200">
-              ↻</div>
-            <h3 class="mt-4 font-bold text-white">Resiliente por design</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Falha numa conta (<code
-                class="font-mono text-xs text-accent-soft">ok: false</code>) nunca derruba as outras. HTTP 200 sempre.
-              Sem OAuth próprio — reusa o login que você já fez. Cache com TTL por provedor.</p>
-          </div>
-          <div class="card-hover rounded-2xl border border-white/10 bg-panel p-6">
-            <div
-              class="flex size-10 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-white">
-              QR</div>
-            <h3 class="mt-4 font-bold text-white">QR code + rede sem dor</h3>
-            <p class="mt-2 text-sm leading-relaxed text-neutral-400">Tela Sistema mostra IP, painel e QR code. Qualquer
-              aparelho na mesma Wi-Fi abre as configurações. Board e prefs sincronizam via backend (<code class="font-mono text-xs">/api/board</code>, <code class="font-mono text-xs">/api/prefs</code>). Sem expor nada na internet.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- PROVEDORES — detalhado -->
-    <section id="provedores" class="border-y border-white/[0.06] bg-white/[0.02] py-16">
-      <div class="mx-auto max-w-[1200px] px-6">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">PROVEDORES SUPORTADOS</p>
-            <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white">Cada cota no seu lugar. Cada conta com
-              seu card.</h2>
-          </div>
-          <p class="max-w-[48ch] text-sm text-neutral-400">Múltiplas contas por provedor (ex.: Claude pessoal +
-            empresa). O firmware mostra a que mais precisa de atenção; o web mostra todas.</p>
-        </div>
-
-        <div class="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/claude.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">Claude</div>
-                <div class="text-xs text-neutral-400">Anthropic · OAuth</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Sessão 5h + semana + Sonnet/Opus</li>
-              <li>• Keychain / <code class="font-mono">~/.claude</code></li>
-              <li>• <code class="font-mono">GET /api/oauth/usage</code></li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/gpt.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">GPT</div>
-                <div class="text-xs text-neutral-400">ChatGPT / Codex</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Janela curta + longa + plano</li>
-              <li>• <code class="font-mono">~/.codex/auth.json</code></li>
-              <li>• <code class="font-mono">/backend-api/wham/usage</code></li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/cursor.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">Cursor</div>
-                <div class="text-xs text-neutral-400">Dashboard Connect</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Modelos Cursor + outros + ciclo</li>
-              <li>• <code class="font-mono">state.vscdb</code> (cópia)</li>
-              <li>• Connect RPC + fallback</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/openrouter.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">OpenRouter</div>
-                <div class="text-xs text-neutral-400">Créditos</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Saldo em centavos</li>
-              <li>• API key colada no painel</li>
-              <li>• Consulta de créditos</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/deepseek.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">DeepSeek</div>
-                <div class="text-xs text-neutral-400">Saldo</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• <code class="font-mono">GET /user/balance</code></li>
-              <li>• API key no painel</li>
-              <li>• Sem barra histórica — saldo direto</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/opencode.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">OpenCode</div>
-                <div class="text-xs text-neutral-400">Go + Zen</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Go: assinatura mensal</li>
-              <li>• Zen: créditos pré-pagos</li>
-              <li>• Rolling / semanal / mensal</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/fal.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">fal.ai</div>
-                <div class="text-xs text-neutral-400">Créditos</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• <code class="font-mono">GET /v1/account/billing</code></li>
-              <li>• API key escopo Admin</li>
-              <li>• Saldo pré-pago</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/bitcoin.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">Bitcoin</div>
-                <div class="text-xs text-neutral-400">Carteira · só leitura</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Endereço público (sem chave privada)</li>
-              <li>• Blockstream Esplora + CoinGecko</li>
-              <li>• BTC + USD/BRL</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/adsense.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="text-sm font-bold text-white">AdSense</div>
-                <div class="text-xs text-neutral-400">Google · OAuth</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Ganhos estimados de hoje</li>
-              <li>• Saldo não pago</li>
-              <li>• OAuth Google, sem senha colada</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5 ring-1 ring-accent/20">
-            <div class="flex items-center gap-3"><img src="assets/icons/git.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Git</span><span
-                    class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span>
-                </div>
-                <div class="text-xs text-neutral-400">Commits · local ou remoto</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• URL (https/ssh) ou caminho local</li>
-              <li>• Clone raso <code class="font-mono">--depth</code> + <code class="font-mono">git log</code></li>
-              <li>• Últimos N commits, branch e head</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5 ring-1 ring-accent/20">
-            <div class="flex items-center gap-3"><img src="assets/icons/retroachievements.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="flex items-center gap-1.5"><span
-                    class="text-sm font-bold text-white">RetroAchievements</span><span
-                    class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span>
-                </div>
-                <div class="text-xs text-neutral-400">Perfil gamer · RA API</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Pontos, rank, mastery/beaten</li>
-              <li>• Jogos e conquistas recentes</li>
-              <li>• <code class="font-mono">username:apikey</code> ou JSON</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5 ring-1 ring-accent/20">
-            <div class="flex items-center gap-3"><img src="assets/icons/calendar.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Calendário</span><span
-                    class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span>
-                </div>
-                <div class="text-xs text-neutral-400">ICS · Google/Outlook/iCloud</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• <code class="font-mono">webcal://</code> → <code class="font-mono">https://</code></li>
-              <li>• Eventos e tarefas, <code class="font-mono">DTSTART/DUE</code></li>
-              <li>• SSRF check, 2 MB max, 50 eventos</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5 ring-1 ring-accent/20">
-            <div class="flex items-center gap-3"><img src="assets/icons/rss.png" alt=""
-                class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">RSS / Atom</span><span
-                    class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span>
-                </div>
-                <div class="text-xs text-neutral-400">Feeds · sem dependências</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• RSS 2.0 e Atom, parse nativo</li>
-              <li>• Título, link, categorias, enclosure</li>
-              <li>• Até 50 itens por feed</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Segunda linha: novos provedores -->
-        <div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">⭐</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">GitHub</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">Stars · forks · issues</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Um card por repositório</li>
-              <li>• API pública + token opcional</li>
-              <li>• Branch padrão e contadores</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><img src="assets/icons/weather.png" alt="" class="size-9 rounded-xl bg-white p-1.5 object-contain" />
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Clima</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">Open-Meteo · geocoding</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Atual, horária e diária</li>
-              <li>• Unidades e campos configuráveis</li>
-              <li>• Card único com localização</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">💱</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Moedas</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">Fiat + cripto · base única</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Fiat via open.er-api</li>
-              <li>• Cripto via CoinGecko</li>
-              <li>• Busca embutida, N cotações</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">🛰️</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">ISS</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">Estação Espacial</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Altitude e velocidade</li>
-              <li>• Visibilidade daylight/eclipsed</li>
-              <li>• Atualização em tempo real</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">🎵</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Spotify</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">OAuth · player remoto</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Capa, título, artista, progresso</li>
-              <li>• play/pause/next/previous</li>
-              <li>• Poll 5s fora do ciclo de cotas</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">▶️</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">YouTube Music</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">OAuth Google · player</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Controles de reprodução</li>
-              <li>• Widget dedicado no board</li>
-              <li>• Mesmo padrão do Spotify</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">📷</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Câmera</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">RTSP · ONVIF PTZ</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Multi-câmera, cada uma um card</li>
-              <li>• Stream compartilhado</li>
-              <li>• Pan/tilt/zoom</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">📱</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Android</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">ADB screencap</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Espelhamento leve</li>
-              <li>• Cada device um card</li>
-              <li>• Sem scrcpy</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">🎮</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Emulador</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">EmulatorJS · CDN</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Plataformas, ROMs, BIOS</li>
-              <li>• Saves sincronizados</li>
-              <li>• Biblioteca <code class="font-mono">/display/emulator</code></li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">⛏️</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Mineração BTC</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">Stratum · ESP32</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• VIEW_MINER na placa</li>
-              <li>• Hashrate, shares, best diff</li>
-              <li>• Config remota <code class="font-mono">/display/mining</code></li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">🖥️</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Sistema</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">Host · storage</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Uso por partição</li>
-              <li>• Hostname, uptime</li>
-              <li>• Métricas do último ciclo</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-xl bg-white text-sm">🎨</span>
-              <div>
-                <div class="flex items-center gap-1.5"><span class="text-sm font-bold text-white">Wallpapers</span><span class="rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-white">NOVO</span></div>
-                <div class="text-xs text-neutral-400">Pexels/Wallhaven/Unsplash/Giphy</div>
-              </div>
-            </div>
-            <ul class="mt-3 space-y-1 text-xs leading-relaxed text-neutral-400">
-              <li>• Filtros avançados Wallhaven</li>
-              <li>• Rotação automática por ciclo</li>
-              <li>• Biblioteca + import/export</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="mt-6 flex flex-wrap gap-2">
-          <span
-            class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">+
-            Alarmes via Telegram (<code class="font-mono text-accent-soft">/display/alarms</code>) + calendário com threshold</span>
-          <span
-            class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">+
-            Notas e imagens no board (backend, sem localStorage)</span>
-          <span
-            class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">Múltiplas
-            contas por provedor · apelido opcional</span>
-          <span
-            class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-300">Resiliente:
-            <code class="font-mono text-accent-soft">ok: false</code> isola a falha · TTL por provedor</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- DASHBOARD AO VIVO — estilo do app -->
-    <section id="dashboard" class="py-16 md:py-20">
-      <div class="mx-auto max-w-[1200px] px-6">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">O MOSTRADOR</p>
-            <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[34px]">O mesmo visual na mesa e
-              no navegador.</h2>
-            <p class="mt-2 max-w-[60ch] text-sm leading-relaxed text-neutral-400">Firmware TFT e <code
-                class="font-mono text-accent-soft">/display</code> compartilham o mesmo contrato JSON. Tema, cor e
-              idioma salvos no backend (<code class="font-mono text-accent-soft">/api/prefs</code>) e sincronizam entre dispositivos. Arraste, redimensione, escolha grade ou lista — com rotação automática de wallpaper e tamanho livre.</p>
-          </div>
-          <a href="https://github.com/TrindadeBRA/vigia-ai" target="_blank" rel="noopener"
-            class="hidden md:inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.08] transition">Ver
-            capturas no GitHub →</a>
-        </div>
-
-        <!-- Gallery -->
-        <div class="mt-8 grid gap-4 md:grid-cols-3">
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/firmware/display-home-grid.png" alt="Início em grade no firmware" class="w-full"
-              loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Firmware — grade
-              · toque para detalhar</figcaption>
-          </figure>
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/firmware/display-detail-claude.png" alt="Detalhe Claude no firmware" class="w-full"
-              loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Firmware —
-              detalhe Claude · sessão, semana, Sonnet/Opus</figcaption>
-          </figure>
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/firmware/display-settings-theme.png" alt="Temas e cores" class="w-full" loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Firmware — temas
-              e cor de destaque</figcaption>
-          </figure>
-        </div>
-        <div class="mt-4 grid gap-4 md:grid-cols-3">
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel md:col-span-2">
-            <img src="assets/web/web-overview.png" alt="Visão geral do mostrador web" class="w-full" loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Web — visão
-              geral · sidebar no desktop, hambúrguer no mobile</figcaption>
-          </figure>
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/web/web-mobile.png" alt="Mostrador web no celular"
-              class="mx-auto h-full max-h-[420px] w-auto object-contain p-2" loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Web — responsivo
-              · cabe no bolso</figcaption>
-          </figure>
-        </div>
-        <div class="mt-4 grid gap-4 md:grid-cols-2">
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/web/web-config.png" alt="Painel de configuração" class="w-full" loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Painel — contas,
-              rede, wallpapers, clima e alarmes via Telegram</figcaption>
-          </figure>
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/web/web-settings.png" alt="Aparência" class="w-full" loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Aparência — 3
-              temas × 7 cores · PT / EN / ES</figcaption>
-          </figure>
-        </div>
-        <div class="mt-4 grid gap-4 md:grid-cols-2">
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/web/web-theme-editor.png"
-              alt="Editor de tema com canvas, papel de parede e lista de elementos" class="w-full" loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">Editor de tema
-              (<code class="font-mono text-accent-soft">/display/theme</code>) — monte o canvas com relógio, ícones e
-              papel de parede</figcaption>
-          </figure>
-          <figure class="overflow-hidden rounded-2xl border border-white/10 bg-panel">
-            <img src="assets/firmware/display-theme-custom.png" alt="Tema personalizado rodando na tela ILI9341"
-              class="mx-auto h-full max-h-[420px] w-auto object-contain p-2" loading="lazy" />
-            <figcaption class="border-t border-white/10 px-4 py-3 text-xs font-medium text-neutral-400">O mesmo tema,
-              aplicado de verdade na placa</figcaption>
-          </figure>
         </div>
       </div>
     </section>
 
     <!-- COMO FUNCIONA -->
-    <section id="como-funciona" class="border-y border-white/[0.06] bg-white/[0.02] py-16">
-      <div class="mx-auto grid max-w-[1200px] gap-10 px-6 md:grid-cols-2 md:items-center">
-        <div class="order-2 md:order-1">
-          <div class="rounded-2xl border border-white/10 bg-panel p-5 shadow-xl">
-            <div class="flex flex-col items-center gap-2.5">
-              <div class="w-full rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-center">
-                <div class="text-sm font-bold text-white">25+ Integrações</div>
-                <div class="font-mono text-xs text-neutral-400">Claude · GPT · Cursor · OpenRouter · DeepSeek · OpenCode · fal.ai · Bitcoin · AdSense</div>
-                <div class="font-mono text-[11px] text-neutral-500 mt-1">+ Git · GitHub · RetroAchievements · Calendário · RSS · Clima · Moedas · ISS</div>
-                <div class="font-mono text-[11px] text-neutral-500">+ Spotify · YouTube Music · Câmera · Android · Emulador · Mineração · Sistema</div>
-              </div>
-              <div class="font-mono text-[11px] tracking-widest text-neutral-500">↓ TOKENS SÓ NO HOST</div>
-              <div class="w-full rounded-xl border border-white/10 bg-ink px-4 py-3 text-center">
-                <div class="text-sm font-bold text-white">Backend Fastify (Node 22) · :8787</div>
-                <div class="font-mono text-xs text-neutral-400">GET /events (SSE) · GET /usage · GET /docs (Swagger)
-                </div>
-                <div class="mt-1 font-mono text-[11px] text-neutral-500">/api/alarms · /api/telegram · /api/notes · /api/images · /api/board</div>
-                <div class="font-mono text-[11px] text-neutral-500">/api/git · /api/github · /api/calendar · /api/rss · /api/weather · /api/currencies</div>
-                <div class="font-mono text-[11px] text-neutral-500">/api/spotify · /api/youtubemusic · /api/camera · /api/android · /api/emulator · /api/mining</div>
-              </div>
-              <div class="font-mono text-[11px] tracking-widest text-neutral-500">↓ JSON SEM TOKEN</div>
-              <div class="grid w-full grid-cols-2 gap-3">
-                <div class="rounded-xl border border-white/10 bg-ink px-3 py-3 text-center">
-                  <div class="text-sm font-bold text-white">ESP32 / Wokwi</div>
-                  <div class="text-xs text-neutral-400">escuta o stream</div>
-                </div>
-                <div class="rounded-xl border border-white/10 bg-ink px-3 py-3 text-center">
-                  <div class="text-sm font-bold text-white">React <span
-                      class="font-mono text-accent-soft">/display</span></div>
-                  <div class="text-xs text-neutral-400">réplica da placa</div>
-                </div>
-              </div>
-              <div class="w-full rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-center">
-                <div class="text-xs font-bold text-amber-100">Alarme cruzou o limiar</div>
-                <div class="text-[11px] text-amber-100/80">→ mensagem no <strong>Telegram</strong> (long-polling, sem
-                  webhook público)</div>
-              </div>
-            </div>
-            <div
-              class="mt-4 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-neutral-400">
-              <span class="text-white">GET /usage</span> → JSON com <span class="text-white">percentuais e datas</span>,
-              nunca Bearer.<br />
-              <span class="text-white">GET /events</span> → <span class="text-white">SSE</span> · um ciclo para todos os
-              clientes.
-            </div>
+    <section id="como-funciona" class="py-16 md:py-20">
+      <div class="mx-auto max-w-[1080px] px-6">
+        <div class="mx-auto max-w-xl text-center">
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">COMO FUNCIONA</p>
+          <h2 class="mt-3 text-[26px] font-extrabold leading-tight text-white md:text-[32px]">Sem mágica, sem OAuth
+            próprio.</h2>
+        </div>
+        <div class="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-3">
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <span class="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-white">1</span>
+            <p class="mt-3 text-sm leading-relaxed text-neutral-300">Reusa o login que os apps oficiais já fizeram no
+              seu computador — sem pedir senha nem token novo.</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <span class="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-white">2</span>
+            <p class="mt-3 text-sm leading-relaxed text-neutral-300">Um ciclo consulta tudo e transmite o mesmo JSON
+              para placa, navegador e app — em tempo real.</p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-panel p-5">
+            <span class="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-white">3</span>
+            <p class="mt-3 text-sm leading-relaxed text-neutral-300">Cruzou o limite? Você recebe um aviso no Telegram
+              — antes de travar no meio do trabalho.</p>
           </div>
         </div>
-        <div class="order-1 md:order-2">
-          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">COMO FUNCIONA — SEM MÁGICA</p>
-          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white">Um ciclo. Todos os clientes. Sem susto.
-          </h2>
-          <ol class="mt-6 space-y-4">
-            <li class="flex gap-3"><span
-                class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">1</span><span
-                class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">Tokens ficam no seu
-                  computador</strong> (Keychain, <code
-                  class="font-mono text-xs text-accent-soft">~/.codex/auth.json</code>, <code
-                  class="font-mono text-xs text-accent-soft">state.vscdb</code>). O Vigia <strong
-                  class="text-white">reusa</strong> o login que os apps oficiais já fizeram — igual eles fazem pra
-                desenhar a própria barra de uso.</span></li>
-            <li class="flex gap-3"><span
-                class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">2</span><span
-                class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">Um ciclo a cada 60s</strong>
-                consulta todas as APIs e empurra o mesmo JSON por SSE. Placa e abas não multiplicam chamadas. <code
-                  class="font-mono text-xs text-accent-soft">GET /usage</code> força um ciclo extra.</span></li>
-            <li class="flex gap-3"><span
-                class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">3</span><span
-                class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">JSON na LAN tem percentuais
-                  e datas, nunca o Bearer.</strong> Falha numa conta (<code
-                  class="font-mono text-xs text-accent-soft">ok: false</code>) não derruba as outras. HTTP 200
-                sempre.</span></li>
-            <li class="flex gap-3"><span
-                class="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white">4</span><span
-                class="text-sm leading-relaxed text-neutral-300"><strong class="text-white">Alarmes avisam no
-                  Telegram</strong> — regras em <code class="font-mono text-xs text-accent-soft">/display/alarms</code>,
-                bot via @BotFather, chats com <code class="font-mono text-xs text-accent-soft">/start</code>. Funciona
-                no celular, sem expor o coletor na
-                internet.</span></li>
-          </ol>
-          <div class="mt-6 flex flex-wrap gap-2">
-            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition"
-              href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/SETUP.md" target="_blank"
-              rel="noopener">Guia técnico completo →</a>
-            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition"
-              href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/CONTRATO_JSON.md" target="_blank"
-              rel="noopener">Contrato JSON →</a>
-            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition"
-              href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/ARQUITETURA.md" target="_blank"
-              rel="noopener">Arquitetura →</a>
-            <a class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/[0.08] transition"
-              href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/NOTIFICACOES.md" target="_blank"
-              rel="noopener">Alarmes & Telegram →</a>
-          </div>
-        </div>
+        <p class="mt-8 text-center text-sm text-neutral-500">Feito para rodar na sua rede local — nunca exponha o
+          coletor na internet. <a class="font-semibold text-accent-soft hover:underline"
+            href="https://github.com/TrindadeBRA/vigia-ai/blob/main/AGENTS.md" target="_blank" rel="noopener">Documentação
+            técnica completa →</a></p>
       </div>
     </section>
 
-    <!-- SEGURANÇA -->
-    <section class="py-12">
-      <div class="mx-auto max-w-[1200px] px-6">
-        <div
-          class="flex flex-col gap-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5 md:flex-row md:items-start md:gap-4">
-          <span
-            class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300">⚠️</span>
-          <div class="min-w-0">
-            <div class="text-sm font-bold text-amber-100">LAN only — e isso é proposital.</div>
-            <p class="mt-1 text-sm leading-relaxed text-amber-100/80">Os endpoints de cota do Claude, GPT e Cursor
-              <strong>não são API pública</strong> — são os mesmos que o CLI/IDE já usam neste computador. <strong>Não
-                exponha a porta 8787 na internet.</strong> A placa <strong>nunca</strong> guarda tokens — só percentuais
-              e datas. O coletor não é OAuth client: não emite, não renova, só reusa o que já está no host.
-            </p>
-          </div>
-        </div>
-        <div class="mt-4 grid gap-3 md:grid-cols-3">
-          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <div class="text-xs font-bold tracking-widest text-neutral-400">PRIVACIDADE</div>
-            <div class="mt-1 text-sm text-neutral-300">JSON público nunca carrega Bearer, Keychain ou dump de SQLite.
-            </div>
-          </div>
-          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <div class="text-xs font-bold tracking-widest text-neutral-400">RESILIÊNCIA</div>
-            <div class="mt-1 text-sm text-neutral-300">Token expirado vira <code
-                class="font-mono text-xs text-accent-soft">ok: false</code> só naquela conta.</div>
-          </div>
-          <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <div class="text-xs font-bold tracking-widest text-neutral-400">SEM SURPRESA</div>
-            <div class="mt-1 text-sm text-neutral-300">Endpoints não oficiais podem mudar — a quebra fica isolada.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- INSTALAÇÃO — 1 COMANDO -->
+    <!-- INSTALAÇÃO -->
     <section id="instalacao" class="border-y border-white/[0.06] bg-white/[0.02] py-16 md:py-20">
-      <div class="mx-auto max-w-[1100px] px-6">
-        <div class="mx-auto max-w-3xl text-center">
-          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">INSTALAÇÃO — MAC · LINUX · WINDOWS</p>
-          <h2 class="mt-3 text-[28px] font-extrabold leading-tight text-white md:text-[38px]">Um instalador pro seu
-            sistema. Sem Python, sem Node.</h2>
-          <p class="mt-3 text-[15px] leading-relaxed text-neutral-400">O app desktop já vem com o coletor embarcado —
-            <strong class="text-white">baixa e roda</strong>. Continua servindo <code
-              class="font-mono text-accent-soft">/display</code> pra ESP32 e pro navegador na mesma LAN. Gravar a
-            ESP32 física é um passo à parte, opcional (veja abaixo).
-          </p>
+      <div class="mx-auto max-w-[1000px] px-6">
+        <div class="mx-auto max-w-2xl text-center">
+          <p class="text-[11px] font-bold tracking-[0.18em] text-accent-soft">INSTALAÇÃO — GRATUITA</p>
+          <h2 class="mt-3 text-[26px] font-extrabold leading-tight text-white md:text-[34px]">Baixe e rode. Sem custo,
+            sem cadastro.</h2>
+          <p class="mt-3 text-[15px] leading-relaxed text-neutral-400">O app desktop já vem com tudo embarcado. Escolha
+            seu sistema:</p>
         </div>
 
-        <!-- 3 caminhos por SO -->
         <div class="mx-auto mt-10 grid max-w-4xl gap-4 md:grid-cols-3">
           <!-- macOS -->
           <div class="flex flex-col rounded-2xl border border-white/10 bg-ink p-5">
             <div class="flex items-center gap-2">
               <span class="flex size-8 items-center justify-center rounded-lg bg-white/[0.06] border border-white/10 text-base">🍎</span>
               <span class="text-sm font-bold text-white">macOS</span>
-              <span class="ml-auto rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">RECOMENDADO</span>
             </div>
-            <p class="mt-3 text-xs text-neutral-400">Via Homebrew — evita o aviso de "app danificado" do Gatekeeper.</p>
             <div class="mt-3 flex-1 rounded-xl border border-white/10 bg-panel p-3">
               <code class="block overflow-x-auto whitespace-pre font-mono text-[11.5px] leading-relaxed text-accent-soft">brew tap TrindadeBRA/vigia-ai
 brew install --cask vigia-ai</code>
             </div>
             <button data-copy="brew tap TrindadeBRA/vigia-ai && brew install --cask vigia-ai"
-              class="copy-btn mt-3 w-full rounded-full bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar
-              comando</button>
-            <p class="mt-3 text-[11px] leading-relaxed text-neutral-500">Ou baixe o <code
-                class="text-neutral-400">.dmg</code> direto nos releases — ver nota do Gatekeeper abaixo.</p>
+              class="copy-btn mt-3 w-full rounded-full bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar comando</button>
           </div>
           <!-- Linux -->
           <div class="flex flex-col rounded-2xl border border-white/10 bg-ink p-5">
             <div class="flex items-center gap-2">
               <span class="flex size-8 items-center justify-center rounded-lg bg-white/[0.06] border border-white/10 text-base">🐧</span>
               <span class="text-sm font-bold text-white">Linux</span>
-              <span class="ml-auto rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">RECOMENDADO</span>
             </div>
-            <p class="mt-3 text-xs text-neutral-400">Um comando — baixa o <code class="text-neutral-300">.tar.gz</code>
-              do release, extrai e cria o atalho no menu.</p>
             <div class="mt-3 flex-1 rounded-xl border border-white/10 bg-panel p-3">
-              <code
-                class="block overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11.5px] leading-relaxed text-accent-soft">curl -fsSL .../install.sh | bash</code>
+              <code class="block overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11.5px] leading-relaxed text-accent-soft">curl -fsSL .../install.sh | bash</code>
             </div>
             <button data-copy="curl -fsSL https://raw.githubusercontent.com/TrindadeBRA/vigia-ai/main/install.sh | bash"
-              class="copy-btn mt-3 w-full rounded-full bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar
-              comando</button>
-            <p class="mt-3 text-[11px] leading-relaxed text-neutral-500">Pergunta <code
-                class="text-neutral-400">--user</code> (sem sudo) ou <code class="text-neutral-400">--system</code>. Ou
-              baixe <code class="text-neutral-400">.AppImage</code>/<code class="text-neutral-400">.deb</code> direto
-              nos releases.</p>
+              class="copy-btn mt-3 w-full rounded-full bg-white px-4 py-2 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar comando</button>
           </div>
           <!-- Windows -->
           <div class="flex flex-col rounded-2xl border border-white/10 bg-ink p-5">
@@ -1561,133 +363,27 @@ brew install --cask vigia-ai</code>
               <span class="flex size-8 items-center justify-center rounded-lg bg-white/[0.06] border border-white/10 text-base">🪟</span>
               <span class="text-sm font-bold text-white">Windows</span>
             </div>
-            <p class="mt-3 text-xs text-neutral-400">Baixa o instalador (NSIS) e roda — não pede admin.</p>
             <div class="mt-3 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-white/15 bg-panel p-3 text-center">
               <span class="font-mono text-[11.5px] text-neutral-300">Vigia AI Setup.exe</span>
-              <span class="mt-1 text-[11px] text-neutral-500">nos releases do GitHub</span>
             </div>
             <a href="https://github.com/TrindadeBRA/vigia-ai/releases/latest" target="_blank" rel="noopener"
-              class="mt-3 w-full rounded-full bg-white px-4 py-2 text-center text-xs font-bold text-ink hover:bg-neutral-100 transition">Baixar
-              .exe →</a>
-            <p class="mt-3 text-[11px] leading-relaxed text-neutral-500">Primeira execução mostra um aviso do
-              SmartScreen — normal, ver nota abaixo.</p>
+              class="mt-3 w-full rounded-full bg-white px-4 py-2 text-center text-xs font-bold text-ink hover:bg-neutral-100 transition">Baixar .exe →</a>
           </div>
         </div>
+        <p class="mx-auto mt-4 max-w-4xl text-center text-xs text-neutral-500">Sem certificado pago de assinatura de
+          código — no primeiro uso o macOS e o Windows podem avisar que o app não é reconhecido. É normal em projetos
+          open source: o código está todo público no repositório.</p>
 
-        <!-- Avisos de assinatura de código -->
-        <div class="mx-auto mt-6 grid max-w-4xl gap-4 md:grid-cols-2">
-          <div class="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
-            <div class="text-xs font-bold text-amber-300">⚠️ macOS: "app está danificado e não pode ser aberto"</div>
-            <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Só acontece baixando o <code
-                class="text-neutral-300">.dmg</code> direto (não pelo Homebrew) — não há certificado pago da Apple
-              (Developer ID) pra assinar/notarizar, e o Gatekeeper marca qualquer download assim. Resolve com
-              Homebrew (acima), com o <code class="text-neutral-300">fix-gatekeeper.command</code> que vem no
-              <code class="text-neutral-300">.dmg</code>, ou via Terminal: <code
-                class="text-neutral-300">xattr -cr "/Applications/Vigia AI.app"</code>.</p>
+        <!-- A partir do código -->
+        <div class="mx-auto mt-8 max-w-2xl">
+          <p class="text-center text-xs font-semibold tracking-widest text-neutral-500">OU, A PARTIR DO CÓDIGO</p>
+          <div class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-ink px-3 py-3 sm:px-4">
+            <code class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-semibold text-accent-soft">git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up</code>
+            <button data-copy="git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up"
+              class="copy-btn shrink-0 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar</button>
           </div>
-          <div class="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
-            <div class="text-xs font-bold text-amber-300">⚠️ Windows: "O Windows protegeu o computador"</div>
-            <p class="mt-1.5 text-xs leading-relaxed text-neutral-400">Mesmo motivo do macOS: sem certificado
-              Authenticode pago, o SmartScreen desconfia de instalador novo. Clique em <strong
-                class="text-neutral-300">"Mais informações"</strong> → <strong class="text-neutral-300">"Executar assim
-                mesmo"</strong>. O código é aberto — dá pra conferir tudo no repositório.</p>
-          </div>
-        </div>
-
-        <!-- A partir do código (contribuidores) -->
-        <div class="mx-auto mt-8 max-w-3xl">
-          <p class="text-center text-xs font-semibold tracking-widest text-neutral-500">OU, PRA CONTRIBUIR — A PARTIR
-            DO CÓDIGO</p>
-          <div
-            class="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-ink shadow-[0_24px_64px_rgba(0,0,0,.45)]">
-            <div class="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3">
-              <div class="flex items-center gap-2">
-                <span class="size-2.5 rounded-full bg-[#ff5f56]"></span>
-                <span class="size-2.5 rounded-full bg-[#ffbd2e]"></span>
-                <span class="size-2.5 rounded-full bg-[#27c93f]"></span>
-                <span class="ml-2 font-mono text-xs font-semibold tracking-widest text-neutral-400">TERMINAL</span>
-              </div>
-              <span
-                class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><span
-                  class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span> COPIAR E COLAR</span>
-            </div>
-
-            <!-- Code block -->
-            <div class="p-4 sm:p-5">
-              <div
-                class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-panel px-3 py-3 sm:px-4">
-                <code
-                  class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-semibold text-accent-soft">git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up</code>
-                <button data-copy="git clone https://github.com/TrindadeBRA/vigia-ai.git && cd vigia-ai && ./dev up"
-                  class="copy-btn shrink-0 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-ink hover:bg-neutral-100 transition">Copiar</button>
-              </div>
-              <p class="mt-2 text-center font-mono text-xs text-neutral-500">Linux e macOS direto no Terminal · Windows
-                via <span class="text-neutral-300">WSL</span> ou <span class="text-neutral-300">Git Bash</span> (o
-                <code class="text-neutral-300">./dev</code> é um script bash)
-              </p>
-
-              <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300"><span
-                    class="size-1.5 rounded-full bg-emerald-400"></span> Sem expor tokens</span>
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300">LAN
-                  only · :8787</span>
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300">MIT
-                  · Open Source</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- O que faz -->
-          <div class="mt-4 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <div class="text-xs font-bold tracking-widest text-accent-soft">1 · CLONA</div>
-              <div class="mt-1 text-sm font-semibold text-white">Baixa o repositório</div>
-              <div class="text-xs leading-relaxed text-neutral-400"><code class="font-mono text-xs">git clone</code> —
-                firmware, backend e frontend num monorepo só</div>
-            </div>
-            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <div class="text-xs font-bold tracking-widest text-accent-soft">2 · PREPARA</div>
-              <div class="mt-1 text-sm font-semibold text-white">npm install</div>
-              <div class="text-xs leading-relaxed text-neutral-400"><code class="font-mono text-xs">./dev up</code>
-                instala
-                as dependências do backend e frontend na primeira vez</div>
-            </div>
-            <div class="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <div class="text-xs font-bold tracking-widest text-accent-soft">3 · SOBE</div>
-              <div class="mt-1 text-sm font-semibold text-white">Coletor + mostrador</div>
-              <div class="text-xs leading-relaxed text-neutral-400">Fastify (:8787) + Vite (:5173) — mostrador em
-                <code class="font-mono text-xs">/display</code>, painel em <code
-                  class="font-mono text-xs">/display/config</code>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Requisitos + firmware físico -->
-        <div class="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <h3 class="text-sm font-bold text-white">Requisitos</h3>
-            <ul class="mt-3 space-y-1.5 text-sm leading-relaxed text-neutral-400">
-              <li>• <strong class="text-white">Node 22 LTS</strong> já instalado no sistema</li>
-              <li>• <strong class="text-white">Git</strong></li>
-              <li>• Para gravar a placa física: <strong class="text-white">PlatformIO Core</strong> + cabo USB + driver
-                CH340/CP210x</li>
-              <li>• Linux: grupo <code class="rounded bg-white/10 px-1 py-0.5 font-mono text-xs">dialout</code> para
-                /dev/ttyUSB*</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border border-white/10 bg-panel p-5">
-            <h3 class="text-sm font-bold text-white">Placa física ou Wokwi?</h3>
-            <pre
-              class="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-ink px-3 py-3 font-mono text-xs leading-relaxed text-neutral-300">./dev firmware flash   # grava a ESP32 pelo USB
-./dev wokwi             # simula sem hardware nenhum</pre>
-            <p class="mt-2 text-xs text-neutral-500">Sem placa física? O <code
-                class="font-mono text-accent-soft">./dev wokwi</code> simula a tela inteira no navegador, com o coletor
-              real. Detalhes no <code class="font-mono text-accent-soft">.agents/FIRMWARE.md</code>.</p>
-          </div>
+          <p class="mt-3 text-center text-xs text-neutral-500">Requer Node 22 LTS e Git. Sobe o coletor e o mostrador
+            em <span class="text-accent-soft">http://127.0.0.1:8787/display</span>.</p>
         </div>
 
         <div class="mt-8 flex flex-wrap justify-center gap-3">
@@ -1697,59 +393,214 @@ brew install --cask vigia-ai</code>
             href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/SETUP.md" target="_blank" rel="noopener">📖
             Guia completo</a>
         </div>
-        <div class="mt-6 flex flex-wrap justify-center gap-2 text-xs">
-          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition"
-            href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/HARDWARE.md" target="_blank"
-            rel="noopener">Hardware</a>
-          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition"
-            href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/FIRMWARE.md" target="_blank"
-            rel="noopener">Firmware</a>
-          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition"
-            href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/NOTIFICACOES.md" target="_blank"
-            rel="noopener">Alarmes & Telegram</a>
-          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition"
-            href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/CONTRATO_TEMA.md" target="_blank"
-            rel="noopener">Temas</a>
-          <a class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-neutral-300 hover:text-white hover:bg-white/[0.08] transition"
-            href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CONTRIBUTING.md" target="_blank"
-            rel="noopener">Contribuir</a>
-        </div>
-        <p class="mt-6 text-center font-mono text-xs text-neutral-500">Sobe coletor + mostrador em <span
-            class="text-accent-soft">http://127.0.0.1:8787/display</span> · Swagger em <span
-            class="text-accent-soft">/docs</span></p>
       </div>
     </section>
   </main>
 
   <footer class="border-t border-white/10 py-8">
-    <div
-      class="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-4 px-6 text-sm text-neutral-400 md:flex-row">
+    <div class="mx-auto flex max-w-[1080px] flex-col items-center justify-between gap-4 px-6 text-sm text-neutral-400 md:flex-row">
       <div class="flex items-center gap-2.5 font-extrabold tracking-tight text-white">
-        <span class="flex size-7 items-center justify-center rounded-lg bg-panel border border-edge"><span
-            class="size-2.5 rounded-full bg-accent"></span></span>
+        <span id="vigia-eye-footer" class="relative inline-flex shrink-0" style="width:26px;height:26px"></span>
         Vigia<span class="font-mono text-accent">AI</span>
         <span class="ml-2 text-xs font-medium text-neutral-500">Licença MIT · feito por <a
             class="font-semibold text-accent-soft hover:underline" href="https://github.com/TrindadeBRA" target="_blank"
             rel="noopener">TrindadeBRA</a></span>
       </div>
       <div class="flex flex-wrap items-center gap-5 text-xs font-medium">
-        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CONTRIBUTING.md"
-          target="_blank" rel="noopener">Contribuir</a>
-        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/SECURITY.md"
-          target="_blank" rel="noopener">Segurança</a>
-        <a class="hover:text-white transition"
-          href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CODE_OF_CONDUCT.md" target="_blank"
-          rel="noopener">Código de Conduta</a>
-        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/LICENSE"
-          target="_blank" rel="noopener">Licença</a>
-        <a class="hover:text-white transition"
-          href="https://github.com/TrindadeBRA/vigia-ai/blob/main/.agents/NOTIFICACOES.md" target="_blank"
-          rel="noopener">Alarmes & Telegram</a>
-        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CHANGELOG.md"
-          target="_blank" rel="noopener">Changelog</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribuir</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/SECURITY.md" target="_blank" rel="noopener">Segurança</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/LICENSE" target="_blank" rel="noopener">Licença</a>
+        <a class="hover:text-white transition" href="https://github.com/TrindadeBRA/vigia-ai/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
       </div>
     </div>
   </footer>
+
+  <!-- Logo animado (porta do olho vivo de frontend/src/components/Logo.tsx) -->
+  <style>
+    .vigia-eye-tear {
+      animation: vigia-eye-tear-fall 1.05s cubic-bezier(.22, .6, .28, 1) forwards;
+      filter: drop-shadow(0 1.5px 2px rgba(0, 0, 0, .18));
+    }
+
+    @keyframes vigia-eye-tear-fall {
+      0% { transform: translate(50px, 78px) scale(0.55); opacity: 0; }
+      12% { transform: translate(50px, 82px) scale(1); opacity: 1; }
+      18% { transform: translate(50.6px, 86px) scale(1); opacity: 1; }
+      100% { transform: translate(49.2px, 138px) scale(0.92); opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .vigia-eye-tear { animation: none !important; opacity: 0 !important; }
+    }
+  </style>
+  <script>
+    (function () {
+      // Constantes e curvas idênticas às de frontend/src/components/Logo.tsx (EyeMark),
+      // portadas para JS puro pois esta página não roda React.
+      const EYE_R = 46, IRIS_R = 18, DILATED_IRIS_R = 26, PUPIL_R = 7.5, DILATED_PUPIL_R = 13.2;
+      const MAX_GAZE = 22, LID_TRAVEL = 52, POINTER_REACH = 260, POINTER_HOLD_MS = 1800;
+      let uidCounter = 0;
+
+      function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }
+
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+      function nextTarget(from) {
+        if (Math.random() < 0.18) return { x: 0, y: 0 };
+        const third = (Math.PI * 2) / 3;
+        const turn = third + Math.random() * third;
+        const angle = Math.atan2(from.y, from.x) + (Math.random() < 0.5 ? turn : -turn);
+        const radius = MAX_GAZE * (0.55 + Math.random() * 0.45);
+        return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius * 0.8 };
+      }
+
+      function mountVigiaEye(mount, opts) {
+        if (!mount) return;
+        opts = opts || {};
+        const size = opts.size || 28;
+        const uid = 'vigia-eye-clip-' + (uidCounter++);
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('width', size);
+        svg.setAttribute('height', size);
+        svg.setAttribute('viewBox', '0 0 100 100');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('role', 'img');
+        svg.classList.add('block', 'shrink-0', 'overflow-visible', 'cursor-pointer', 'transition-transform', 'duration-[180ms]', 'ease-out', 'group-hover/brand:scale-[1.08]');
+        svg.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,.55))';
+        svg.innerHTML =
+          '<defs><clipPath id="' + uid + '"><circle cx="50" cy="50" r="' + EYE_R + '"/></clipPath></defs>' +
+          '<circle cx="50" cy="50" r="' + EYE_R + '" fill="#fff"/>' +
+          '<g clip-path="url(#' + uid + ')">' +
+          '<g class="vigia-eye-iris" style="filter:drop-shadow(0 0 4px rgba(230,57,49,.35))" transform="translate(50 50)">' +
+          '<circle class="vigia-eye-iris-circle" r="' + IRIS_R + '" fill="#e63931"/>' +
+          '<circle class="vigia-eye-pupil-circle" r="' + PUPIL_R + '" fill="rgba(0,0,0,.55)"/>' +
+          '<circle cx="-6" cy="-6.5" r="4.4" fill="#fff" opacity=".92"/>' +
+          '<circle cx="6.5" cy="7" r="2.1" fill="#fff" opacity=".45"/>' +
+          '</g>' +
+          '<rect class="vigia-eye-lid-top" x="-10" y="-104" width="120" height="104" fill="#0f0f0f" stroke="#a1a1a1" stroke-width="2.5"/>' +
+          '<rect class="vigia-eye-lid-bot" x="-10" y="100" width="120" height="104" fill="#0f0f0f" stroke="#a1a1a1" stroke-width="2.5"/>' +
+          '</g>' +
+          '<circle cx="50" cy="50" r="' + EYE_R + '" fill="none" stroke="#a1a1a1" stroke-width="2.5"/>';
+        mount.appendChild(svg);
+
+        const irisEl = svg.querySelector('.vigia-eye-iris');
+        const irisCircleEl = svg.querySelector('.vigia-eye-iris-circle');
+        const pupilCircleEl = svg.querySelector('.vigia-eye-pupil-circle');
+        const topLidEl = svg.querySelector('.vigia-eye-lid-top');
+        const botLidEl = svg.querySelector('.vigia-eye-lid-bot');
+
+        let hover = false;
+        let dilation = 0;
+        mount.addEventListener('pointerenter', () => { hover = true; });
+        mount.addEventListener('pointerleave', () => { hover = false; });
+
+        function spawnTear() {
+          if (prefersReducedMotion()) return;
+          const g = document.createElementNS(ns, 'g');
+          g.setAttribute('class', 'vigia-eye-tear');
+          g.innerHTML =
+            '<path transform="translate(50 78)" d="M 0 -7 C -3.8 -2.2 -3.8 4.2 0 7.2 C 3.8 4.2 3.8 -2.2 0 -7 Z" fill="#7ec8e8" stroke="#fff" stroke-width="0.9" stroke-opacity=".85" opacity=".96"/>' +
+            '<ellipse transform="translate(50 78) rotate(-18)" cx="-1.1" cy="-1.2" rx="1.15" ry="1.6" fill="#fff" opacity=".78"/>';
+          svg.appendChild(g);
+          window.setTimeout(() => g.remove(), 1150);
+        }
+
+        svg.addEventListener('click', () => {
+          if (hover && dilation >= 0.25) spawnTear();
+        });
+
+        const reduced = prefersReducedMotion();
+        if (reduced) {
+          irisEl.setAttribute('transform', 'translate(50 50)');
+          return;
+        }
+
+        let pointer = null;
+        function onPointerMove(e) {
+          pointer = { x: e.clientX, y: e.clientY, at: performance.now() };
+        }
+        window.addEventListener('pointermove', onPointerMove, { passive: true });
+
+        function tracked(now) {
+          if (!pointer || now - pointer.at > POINTER_HOLD_MS) return null;
+          const box = svg.getBoundingClientRect();
+          const dx = pointer.x - (box.left + box.width / 2);
+          const dy = pointer.y - (box.top + box.height / 2);
+          const dist = Math.hypot(dx, dy) || 1;
+          const reach = Math.min(1, dist / POINTER_REACH) * MAX_GAZE;
+          return { x: (dx / dist) * reach, y: (dy / dist) * reach };
+        }
+
+        let gaze = { x: 0, y: 0 }, from = { x: 0, y: 0 }, to = { x: 0, y: 0 };
+        const t0 = performance.now();
+        let saccadeAt = t0, saccadeMs = 120, holdUntil = t0 + 700;
+        let blinkAt = t0 + 2200, blinkFrom = -1, blinkMs = 160;
+        let raf = null;
+
+        function tick(now) {
+          const targetDilation = hover ? 1 : 0;
+          dilation += (targetDilation - dilation) * 0.13;
+          if (Math.abs(targetDilation - dilation) < 0.001) dilation = targetDilation;
+          const irisR = IRIS_R + (DILATED_IRIS_R - IRIS_R) * dilation;
+          const pupilR = PUPIL_R + (DILATED_PUPIL_R - PUPIL_R) * dilation;
+          irisCircleEl.setAttribute('r', irisR.toFixed(2));
+          pupilCircleEl.setAttribute('r', pupilR.toFixed(2));
+
+          const aim = tracked(now);
+          if (aim) {
+            gaze.x += (aim.x - gaze.x) * 0.16;
+            gaze.y += (aim.y - gaze.y) * 0.16;
+            from = { ...gaze };
+            to = { ...gaze };
+            holdUntil = now + 500;
+          } else if (now >= holdUntil) {
+            from = { ...gaze };
+            to = nextTarget(gaze);
+            saccadeAt = now;
+            saccadeMs = 90 + Math.random() * 70;
+            holdUntil = now + saccadeMs + 700 + Math.random() * 1800;
+            if (Math.random() < 0.3) blinkAt = Math.min(blinkAt, now + saccadeMs);
+          } else {
+            const p = Math.min(1, (now - saccadeAt) / saccadeMs);
+            const e = easeOutCubic(p);
+            gaze.x = from.x + (to.x - from.x) * e;
+            gaze.y = from.y + (to.y - from.y) * e;
+          }
+
+          if (blinkFrom < 0 && now >= blinkAt) {
+            blinkFrom = now;
+            blinkMs = 140 + Math.random() * 60;
+          }
+          let lid = 0;
+          if (blinkFrom >= 0) {
+            const p = (now - blinkFrom) / blinkMs;
+            if (p >= 1) {
+              blinkFrom = -1;
+              blinkAt = now + (Math.random() < 0.12 ? 180 : 2600 + Math.random() * 4200);
+            } else {
+              lid = p < 0.4 ? p / 0.4 : 1 - (p - 0.4) / 0.6;
+            }
+          }
+
+          const driftX = Math.sin(now / 700) * 0.5;
+          const driftY = Math.cos(now / 900) * 0.4;
+          const breath = 1 + Math.sin(now / 1400) * 0.025;
+          const dilateBreath = breath * (1 - dilation * 0.015);
+          irisEl.setAttribute('transform', 'translate(' + (50 + gaze.x + driftX).toFixed(2) + ' ' + (50 + gaze.y + driftY).toFixed(2) + ') scale(' + dilateBreath.toFixed(3) + ')');
+          topLidEl.setAttribute('transform', 'translate(0 ' + (LID_TRAVEL * lid).toFixed(2) + ')');
+          botLidEl.setAttribute('transform', 'translate(0 ' + (-LID_TRAVEL * lid).toFixed(2) + ')');
+          raf = requestAnimationFrame(tick);
+        }
+        raf = requestAnimationFrame(tick);
+      }
+
+      mountVigiaEye(document.getElementById('vigia-eye-nav'), { size: 32 });
+      mountVigiaEye(document.getElementById('vigia-eye-footer'), { size: 26 });
+    })();
+  </script>
 
   <script>
     const toggle = document.getElementById('nav-toggle');
@@ -1768,7 +619,6 @@ brew install --cask vigia-ai</code>
       })
     );
 
-    // Copiar oneliner
     document.querySelectorAll('.copy-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const text = btn.getAttribute('data-copy') || '';
@@ -1784,7 +634,6 @@ brew install --cask vigia-ai</code>
             btn.classList.add('bg-white', 'text-ink');
           }, 1800);
         } catch {
-          // fallback: seleciona o code
           const code = btn.previousElementSibling;
           if (code) {
             const range = document.createRange();
@@ -1804,7 +653,7 @@ brew install --cask vigia-ai</code>
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Vigia AI",
-    "description": "Painel de mesa para cotas de IA — 25+ integrações, múltiplas contas, tempo real, sem expor tokens. ESP32 + TFT touch, navegador ou app desktop. Cotas de IA, Git/GitHub, RetroAchievements, Calendário, RSS, Clima, Moedas, ISS, Spotify, YouTube Music, Câmera, Android, Emulador e Mineração Bitcoin. Notas, imagens, alarmes via Telegram.",
+    "description": "Painel de mesa para cotas de IA — Claude, GPT, Cursor e mais de 20 integrações, em tempo real, sem expor tokens. ESP32 + TFT touch, navegador ou app desktop.",
     "url": "https://trindadebra.github.io/vigia-ai/",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Linux, macOS, Windows",
