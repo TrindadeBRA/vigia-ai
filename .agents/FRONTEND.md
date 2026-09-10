@@ -53,6 +53,22 @@ Toda funcionalidade que remove algo de forma permanente (conta, wallpaper, regra
 - Padrão: um `useState` local guarda o id/alvo pendente (ex.: `const [toRemove, setToRemove] = useState<string | null>(null)`); o botão de excluir só seta esse state (abre o modal); a chamada de exclusão de fato roda em `onConfirm`, que também limpa o state.
 - Já usado em: `GithubConfigCard`, `GitConfigCard`, `CalendarConfigCard`, `CameraConfigCard`, `RetroAchievementsConfigCard`, `ExtraAccounts`, `AndroidConfigCard`, `CurrenciesConfigCard`, `RssConfigCard`, `alarmsPage/RulesList`, `alarmsPage/TelegramConnectedPanel`, `wallpaperManager/Library`, `GridWallpaperModal`, `display/Overview` (remover card do board) — usar esses como referência de integração, não reinventar um `window.confirm()` ou modal próprio.
 
+## Carregamento — sempre via Skeleton
+
+Toda página com carregamento assíncrono inicial (fetch de config/status antes do primeiro render útil) **deve** mostrar `Skeleton` (`frontend/src/components/Skeleton.tsx`) em vez de tela em branco ou spinner solto, até o dado chegar.
+
+- `<Skeleton page="..." />` recebe um `SkeletonPage` (`overview | config | setup | account | alarms | theme | now`) e monta o corpo placeholder daquela página (`frontend/src/components/skeleton/bodies.tsx`) — não é um skeleton genérico por elemento, é um layout dedicado por tela.
+- Padrão: `if (phase === "loading" && !data) return <Skeleton page="..." />;` antes do return normal da página.
+- Já usado em: `Display.tsx` (`now`/`account`/`overview` conforme a seção), `MiningPage.tsx`, `SetupPage.tsx`, `AlarmsPage.tsx`, `ConfigPage.tsx`, `ThemeEditorPage.tsx` — usar esses como referência. Uma tela nova precisa de um `SkeletonPage` (e corpo) próprio antes de usar o componente; não force um tipo existente que não bate com o layout real.
+
+## Sucesso/erro — sempre via toast (dentro de useRequest)
+
+Toda ação assíncrona disparada pelo usuário (salvar, testar conexão, importar/exportar, etc.) **deve** reportar sucesso/erro via `toast` (`frontend/src/components/Toast.tsx`), não `alert()`/`window.confirm()` nem mensagem inline solta.
+
+- Não chame `toast.success`/`toast.error` direto no componente — use `useRequest()` (`frontend/src/hooks/useRequest.ts`): `const { run, busy } = useRequest(); run(() => api.doThing(), { success: "Feito!", error: "Falhou." })` já dispara o toast certo (e também mantém `status`/`message` pra UI inline que precisar, tipo desabilitar botão durante `busy`). `useRequest` é o único lugar do app que chama `toast` diretamente — é o padrão estabelecido, não um detalhe de implementação pra contornar.
+- `success` aceita string ou `(result) => string` (pra mensagem com dado da resposta); se omitido, não mostra toast de sucesso (útil pra ações silenciosas). `error` cobre `catch` e resposta `{ ok: false, error }`.
+- Já usado em praticamente todos os cards de `pages/config/*` e `alarmsPage/*`, além de `GridWallpaperModal`, `ImageWidgetModal`, `wallpaperManager/context.tsx` — usar esses como referência em vez de reinventar `try/catch` com toast manual.
+
 ## Emulador (EmulatorJS)
 
 Cards de jogos retro (`EmulatorCard.tsx`) + biblioteca dedicada (`/display/emulator`) carregando o EmulatorJS direto da CDN oficial, sem pacote npm — arquitetura, rotas do backend, o bug de foco no Mac corrigido em 2026-09 e outras pegadinhas (menu interno, resize, `noAutoFocus`) estão em [APIS_EMULATOR.md](APIS_EMULATOR.md).
