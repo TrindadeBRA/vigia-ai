@@ -260,7 +260,7 @@ Precisa de **Node 22 LTS** e, para o firmware, [PlatformIO Core](https://platfor
 ./dev app     # o mesmo, dentro do app desktop
 ```
 
-Isso já sobe o coletor e o mostrador web em `http://127.0.0.1:8787/display`. Para gravar a placa física, simular no Wokwi, configurar provedores e ver todos os comandos disponíveis:
+Isso já sobe o coletor (`:8788` em dev) e o mostrador web em `http://127.0.0.1:5173/display`. Para gravar a placa física, simular no Wokwi, configurar provedores e ver todos os comandos disponíveis:
 
 ### 📖 [Guia completo de instalação e setup → `.agents/SETUP.md`](.agents/SETUP.md)
 

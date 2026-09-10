@@ -110,7 +110,7 @@ provedores. Nunca comitar.
 
 ## Como testar
 
-1. `./dev up`, abrir `http://127.0.0.1:5173/display/alarms` (ou `:8787` no build).
+1. `./dev up`, abrir `http://127.0.0.1:5173/display/alarms` (ou `:8788` direto no coletor de dev; `:8787` é o app instalado/produção).
 2. Criar bot de teste via @BotFather, colar o token → deve validar e mostrar
    o link do bot.
 3. Mandar `/start` pro bot → painel deve mostrar o chat conectado.

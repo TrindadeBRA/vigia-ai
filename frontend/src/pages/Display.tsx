@@ -5,7 +5,6 @@ import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, Cur
 import { colsForWidth, sameBoard } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
-import { CommandPalette } from "../components/CommandPalette";
 import { GamepadLegend } from "../components/GamepadLegend";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
 import { MenuIcon, SettingsIcon } from "../components/icons";
@@ -81,7 +80,6 @@ export default function Display() {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [pixModalOpen, setPixModalOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const { gridId: gridWallpaperId, wallpapers: gridWallpapers, setGridWallpaper: setGridWallpaperId } = useGridWallpaper();
   const imageWidgets = useImageWidgets();
   const serverNotes = useServerNotes();
@@ -284,18 +282,6 @@ export default function Display() {
   }
 
   const providers = data ? buildProviders(data, t, now) : [];
-
-  // Cmd/Ctrl+K abre a paleta de comando de qualquer lugar do /display.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setPaletteOpen((v) => !v);
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
   const imageProvidersRaw = buildImageProviders(imageWidgets.items, t);
   const imageProviders = imageProvidersRaw.map((p) => Object.assign(p, {
     _onImageTransform: (id: string, next: { x: number; y: number; scale: number }) => void imageWidgets.update(id, { transform: next }),
@@ -891,7 +877,6 @@ export default function Display() {
               onSelect={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
               onClose={() => setSidebarOpen(false)}
               onOpenPix={() => setPixModalOpen(true)}
-              onOpenPalette={() => setPaletteOpen(true)}
             />
           ) : null}
         </div>
@@ -993,15 +978,6 @@ export default function Display() {
         onSaveEdit={(src, fit, label) => { if (editingImageId) void imageWidgets.update(editingImageId, { src, fit, label }); }}
       />
       <PixDonateModal open={pixModalOpen} onClose={() => setPixModalOpen(false)} />
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onOverview={goOverview}
-        onSelectAccount={(id) => { navigate("/display"); setSection("account"); setSelectedId(id); }}
-        providers={providers}
-        lang={prefs.lang}
-        t={t}
-      />
       <GamepadLegend key={gamepadTick} section={section} isNested={isNested} insideCard={gamepadInsideRef.current} />
     </div>
   );

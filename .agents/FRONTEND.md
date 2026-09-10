@@ -14,7 +14,7 @@ Vite + React + TypeScript em `frontend/`.
 | `/display/theme`  | Editor de tema da placa (fundo, relógio, ícones com a cota ao vivo) — biblioteca de papéis de parede embutida (chaves de API ficam em `/display/config`) |
 | `/display/alarms` | Alarmes e notificações Telegram, com exportar/importar regras em JSON                                                                                    |
 
-Em desenvolvimento o Vite (`:5173`) faz proxy para o Fastify (Node 22) (`:8787`). Em produção o backend serve `frontend/dist`. `./dev up` e `./dev wokwi` rebuildam esse dist — o coletor na LAN / QR da placa usa o build, não o Vite.
+Em desenvolvimento o Vite (`:5173`) faz proxy para o Fastify (Node 22) (`:8788` — `VITE_BACKEND_PORT`, exportado pelo `./dev up`; `:8787` é fixo pro app instalado, ver [DESKTOP.md](DESKTOP.md)). Em produção o backend serve `frontend/dist`. `./dev up` e `./dev wokwi` rebuildam esse dist — o coletor na LAN / QR da placa usa o build, não o Vite.
 
 Tema/cor/idioma do mostrador (`Prefs` em `frontend/src/pages/display/usePrefs.ts`) ficam no backend (`/api/prefs`, `backend/data/prefs.json`) — sem `localStorage` como fonte de verdade, só uma migração única do `vigia_display_prefs` antigo na primeira carga. Paleta em `frontend/src/theme.ts` — mesmos RGB do firmware (`firmware/src/ui/theme.cpp`).
 

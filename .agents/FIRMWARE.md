@@ -19,7 +19,7 @@ Código em `firmware/`. **Dois ambientes, um sketch** (`firmware/src/main.cpp`):
 ./dev firmware flash    # grava esp32dev na placa (pio run -e esp32dev -t upload)
 ./dev firmware monitor  # serial 115200 baud
 ./dev wokwi             # coletor + gateway wokwigw + build wokwi (atalhos: simulador, sim)
-./dev up                # coletor :8787 + frontend :5173 (precisa estar na mesma LAN da placa)
+./dev up                # coletor :8788 (dev, ver DESKTOP.md) + frontend :5173 (precisa estar na mesma LAN da placa)
 ```
 
 `wokwi.toml` e `diagram.json` na **raiz** apontam para `firmware/.pio/build/wokwi/…` para a extensão Wokwi no workspace. Cópias existem em `firmware/` se você abrir só essa pasta.
@@ -41,6 +41,7 @@ cp firmware/src/secrets.h.example firmware/src/secrets.h
 - Arquivo **gitignored** — nunca commitar com senha real.
 - No Wokwi não precisa: `USAGE_URL="http://host.wokwi.internal:8787/usage"`.
 - IP LAN no macOS: `ipconfig getifaddr en0`.
+- `8787` aqui é de propósito: é a porta fixa (app instalado / `./dev up` com `VIGIA_DEV_PORT=8787`). Se você aponta a placa/Wokwi pro coletor de dev "solto" (`./dev up` sem essa variável, que sobe em `:8788`), troque a porta no `USAGE_URL` também.
 
 ## Ambientes e `platformio.ini`
 

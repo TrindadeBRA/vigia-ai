@@ -13,7 +13,7 @@ Esse card **não** faz parte do contrato JSON (`/usage`/`/events`) nem aparece n
 1. Acesse o [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) e crie um app (**Create app**).
 2. Em **Redirect URIs**, cadastre:
    `http://127.0.0.1:8787/api/oauth/spotify/callback`
-   (a porta segue a do coletor; o painel mostra a URI exata no fold "Credenciais do Spotify"). O Spotify aceita `http://127.0.0.1:<porta>/...` sem HTTPS para apps rodando localmente — é uma exceção documentada nas [regras de Redirect URI](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri).
+   (a porta segue a do coletor — `:8787` em produção/instalado, `:8788` em `./dev up`; o painel mostra a URI exata no fold "Credenciais do Spotify"). O Spotify aceita `http://127.0.0.1:<porta>/...` sem HTTPS para apps rodando localmente — é uma exceção documentada nas [regras de Redirect URI](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri).
 3. Em **Which API/SDKs are you planning to use?**, marque **Web API**.
 4. Salve e abra **Settings** do app para pegar o **Client ID** e o **Client Secret** (botão "View client secret").
 5. Cole os dois no fold **Credenciais do Spotify** da seção Outros do painel.

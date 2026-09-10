@@ -58,18 +58,12 @@ export default {
           "42%": { transform: "scale(1.1)" },
           "70%": { transform: "scale(1)" },
         },
-        ringPulse: {
-          "0%": { boxShadow: "0 0 0 0 var(--glow)" },
-          "70%": { boxShadow: "0 0 0 12px rgba(230, 57, 49, 0)" },
-          "100%": { boxShadow: "0 0 0 0 rgba(230, 57, 49, 0)" },
-        },
       },
       animation: {
         fade: "fadeIn .18s ease both",
         "slide-in": "slideIn .18s ease both",
         shimmer: "shimmer 1.2s ease infinite",
         heartbeat: "heartbeat 1.8s ease-in-out infinite",
-        "ring-pulse": "ringPulse 1.4s ease-out 2",
       },
     },
   },

@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "../../cn";
-import { BellIcon, ChipIcon, ClockIcon, GitHubIcon, GridIcon, HeartIcon, PaletteIcon, PickaxeIcon, SearchIcon, SlidersIcon } from "../../components/icons";
+import { BellIcon, ChipIcon, ClockIcon, GitHubIcon, GridIcon, HeartIcon, PaletteIcon, PickaxeIcon, SlidersIcon } from "../../components/icons";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { accentLink, sideItem, sideItemActive } from "../../tw";
@@ -21,10 +21,9 @@ export function Sidebar(props: {
   alarmsActive: boolean;
   miningActive: boolean;
   onOpenPix: () => void;
-  onOpenPalette: () => void;
   t: T;
 }) {
-  const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, themeActive, alarmsActive, miningActive, onOpenPix, onOpenPalette, t } = props;
+  const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, themeActive, alarmsActive, miningActive, onOpenPix, t } = props;
   const onPage = configActive || setupActive || themeActive || alarmsActive || miningActive || nowActive;
   const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
   const dests = [{ to: "/display/now", Icon: ClockIcon, label: t.now, active: nowActive }] as const;
@@ -44,18 +43,6 @@ export function Sidebar(props: {
         open && "max-[860px]:translate-x-0",
       )}
     >
-      <div className="mb-1.5 shrink-0">
-        <button
-          type="button"
-          onClick={() => { onOpenPalette(); onClose(); }}
-          title={t.cmdPaletteOpen}
-          className="flex w-full cursor-pointer items-center gap-2.5 rounded-[9px] border border-edge bg-canvas px-[9px] py-2 text-left text-[13px] text-ink3 transition-colors duration-150 hover:bg-chip hover:text-ink2"
-        >
-          <SearchIcon size={14} />
-          <span className="flex-1">{t.cmdPalettePlaceholder.replace(/…$/, "")}</span>
-          <kbd className="rounded-md border border-edge bg-chip px-1.5 py-0.5 text-[10px] font-semibold leading-none text-ink3">⌘K</kbd>
-        </button>
-      </div>
       <div className="flex shrink-0 flex-col gap-px">
         <button className={cn(sideItem, section === "overview" && !onPage && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
           <GridIcon size={16} /> {t.overview}

@@ -23,7 +23,7 @@ Pacote oficial: [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp)
 }
 ```
 
-URLs locais: Vite `http://127.0.0.1:5173/display` (`./dev up`); dist no coletor `http://127.0.0.1:8787/display` (`./dev wokwi` / `./dev up` em produção). Tokens **nunca** entram no browser — o MCP não precisa de credenciais das APIs.
+URLs locais: Vite `http://127.0.0.1:5173/display` (`./dev up` / `./dev wokwi`); dist no coletor `http://127.0.0.1:8788/display` em dev ou `:8787` no app instalado/produção. Tokens **nunca** entram no browser — o MCP não precisa de credenciais das APIs.
 
 ## dnd-kit
 

@@ -4,6 +4,8 @@ import type { Lang } from "../../i18n";
 export type ConfigCopy = {
   title: string;
   lead: string;
+  configSearchPlaceholder: string;
+  configSearchEmpty: string;
   setup: string;
   retry: string;
   loadError: string;
@@ -446,6 +448,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
   pt: {
     title: "Configurações",
     lead: "Escolha quais contas aparecem no painel da mesa. Os logins ficam só neste computador — a placa nunca vê senhas nem tokens.",
+    configSearchPlaceholder: "Buscar card de configuração…",
+    configSearchEmpty: "Nenhum card encontrado.",
     setup: "Ajustes",
     retry: "Tentar de novo",
     loadError: "Não foi possível carregar as configurações.",
@@ -876,6 +880,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
   en: {
     title: "Settings",
     lead: "Choose which accounts show on the desk display. Logins stay on this computer — the board never sees passwords or tokens.",
+    configSearchPlaceholder: "Search a settings card…",
+    configSearchEmpty: "No card found.",
     setup: "Setup",
     retry: "Try again",
     loadError: "Could not load settings.",
@@ -1306,6 +1312,8 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
   es: {
     title: "Configuración",
     lead: "Elige qué cuentas aparecen en el panel de mesa. Los inicios de sesión quedan solo en este computador — la placa nunca ve contraseñas ni tokens.",
+    configSearchPlaceholder: "Buscar una tarjeta de configuración…",
+    configSearchEmpty: "No se encontró ninguna tarjeta.",
     setup: "Ajustes",
     retry: "Intentar de nuevo",
     loadError: "No se pudo cargar la configuración.",

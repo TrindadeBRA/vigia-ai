@@ -27,11 +27,16 @@ Precisa de **Node 22 LTS** e, para firmware, [PlatformIO Core](https://platformi
 | Tema da placa | http://127.0.0.1:5173/display/theme |
 | Alarmes e Telegram | http://127.0.0.1:5173/display/alarms |
 | Mostrador web | http://127.0.0.1:5173/display |
-| Swagger | http://127.0.0.1:8787/docs |
-| Contrato JSON | `GET http://127.0.0.1:8787/usage` |
-| Stream SSE | `GET http://127.0.0.1:8787/events` |
+| Swagger | http://127.0.0.1:8788/docs (ou `/docs` via 5173, proxy) |
+| Contrato JSON | `GET http://127.0.0.1:8788/usage` (ou `/usage` via 5173, proxy) |
+| Stream SSE | `GET http://127.0.0.1:8788/events` (ou `/events` via 5173, proxy) |
 
 `Ctrl+C` encerra. Se as portas ficarem ocupadas: `./dev down`.
+
+Coletor de dev sobe em **`:8788`**, não `:8787` — essa é fixa pro app
+instalado (brew/Electron), porque a ESP32 grava `USAGE_URL` com ela no
+`secrets.h` (ver [DESKTOP.md](DESKTOP.md) "Porta e a placa"). Override:
+`VIGIA_DEV_PORT=8787 ./dev up`.
 
 Docker (backend serve o `frontend/dist` em `:8787`):
 
@@ -43,8 +48,8 @@ Docker (backend serve o `frontend/dist` em `:8787`):
 
 | Comando | Faz |
 | --- | --- |
-| `./dev up` | Backend + Vite; rebuilda `frontend/dist` (coletor em `:8787`) |
-| `./dev down` | Encerra o que ficou em `:8787` / `:5173` |
+| `./dev up` | Backend + Vite; rebuilda `frontend/dist` (coletor em `:8788`) |
+| `./dev down` | Encerra o que ficou em `:8788` / `:5173` |
 | `./dev test` | vitest + `tsc` |
 | `./dev lint` | eslint |
 | `./dev wokwi` | Coletor + gateway Wokwi + firmware simulado; rebuilda o dist |

@@ -5,7 +5,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MONITOR_BAUD=115200
-BACKEND_PORT=8787
+# 8788, não 8787: a 8787 é a porta fixa de produção/instalado (a ESP32 grava
+# USAGE_URL com ela no secrets.h — não pode ser trocada em silêncio, ver
+# .agents/DESKTOP.md "Porta e a placa"). Com o app instalado (brew) sempre
+# ocupando 8787, o dev usa uma porta própria pra não colidir. Se você aponta
+# a placa/Wokwi pro coletor de dev (em vez do instalado), troque USAGE_URL no
+# secrets.h pra essa porta. Override: VIGIA_DEV_PORT=8787 ./dev up.
+BACKEND_PORT="${VIGIA_DEV_PORT:-8788}"
 FRONTEND_PORT=5173
 # wokwigw expõe a porta 80 da placa simulada em 127.0.0.1:9080 por padrão
 # (forward embutido dele, sem precisar de --forward) — dá pra testar o
@@ -45,7 +51,7 @@ uso: ./dev <comando>
   ./dev up              backend Node + frontend Vite
   ./dev up --docker     Compose na raiz (anexado, Ctrl+C encerra)
   ./dev up --docker -d  Compose na raiz em background (sobrevive ao terminal)
-  ./dev down            encerra o que este script deixou em :8787 / :5173
+  ./dev down            encerra o que este script deixou em :8788 / :5173
   ./dev down --docker   docker compose down
   ./dev wokwi           coletor + gateway Wokwi + compila o firmware simulado
                      (atalhos: simulador, sim)
@@ -127,7 +133,7 @@ ensure_python() {
 }
 
 ensure_frontend_dist() {
-  # Sempre rebuilda: :8787 serve frontend/dist, e pular o build deixava o
+  # Sempre rebuilda: o coletor serve frontend/dist, e pular o build deixava o
   # mostrador da LAN / Wokwi com UI velha depois de mudar o React.
   ensure_node
   echo "== build frontend (painel na :${BACKEND_PORT} pra LAN / QR da placa) =="
@@ -225,6 +231,7 @@ run_backend() {
   echo "== backend Node :${BACKEND_PORT} (Swagger em /docs) =="
   (
     cd "$ROOT_DIR/backend"
+    export PORT="$BACKEND_PORT"
     exec node dist/main.js
   ) &
   local backend_pid=$!
@@ -249,13 +256,14 @@ run_frontend() {
   echo "== frontend Vite :${FRONTEND_PORT} (proxy para o backend) =="
   (
     cd "$ROOT_DIR/frontend"
+    export VITE_BACKEND_PORT="$BACKEND_PORT"
     exec npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT" --strictPort
   ) &
   PIDS+=("$!")
 }
 
 ours_on_port() {
-  # Só os processos deste repo: node dist/main.js (8787) e Vite (5173), + legado Python.
+  # Só os processos deste repo: node dist/main.js (BACKEND_PORT) e Vite (5173), + legado Python.
   local pid="$1"
   local cmd
   cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"

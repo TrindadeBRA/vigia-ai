@@ -116,7 +116,7 @@ scripts/build-desktop.sh           build completo do instalador
 
 ## Como validar
 
-- `./dev up` — mostrador em http://127.0.0.1:5173/display ; configs em http://127.0.0.1:5173/display/config ; Swagger em http://127.0.0.1:8787/docs
+- `./dev up` — mostrador em http://127.0.0.1:5173/display ; configs em http://127.0.0.1:5173/display/config ; Swagger em http://127.0.0.1:8788/docs (coletor de dev sobe em `:8788`, não `:8787` — essa é fixa pro app instalado, ver [DESKTOP.md](DESKTOP.md))
 - `./dev app` — o mesmo painel dentro do app Electron (ver [DESKTOP.md](DESKTOP.md))
 - `./dev test`
 - `./dev wokwi` e Wokwi: Start Simulator

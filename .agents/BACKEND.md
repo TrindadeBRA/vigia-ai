@@ -1,6 +1,6 @@
 # Backend (coletor)
 
-Node 22 + Fastify em `backend/` (port do Python/FastAPI). Sobe em `0.0.0.0:8787`.
+Node 22 + Fastify em `backend/` (port do Python/FastAPI). Sobe em `0.0.0.0:8787` por padrão (produção/instalado — fixo por causa do `secrets.h` da ESP32, ver [DESKTOP.md](DESKTOP.md)); `./dev up` usa `:8788` pra não colidir com um app instalado já rodando em `:8787`.
 
 ```bash
 ./dev up                 # + frontend Vite
@@ -16,7 +16,7 @@ Node 22 + Fastify em `backend/` (port do Python/FastAPI). Sobe em `0.0.0.0:8787`
 - Notas (post-its do `/display`): `GET/POST /api/notes`, `PATCH/DELETE /api/notes/{id}` — `backend/data/notes.json` (`backend/src/notes.ts`); criadas pelo painel ou pelo Telegram (`/note {texto}`, `backend/src/telegram/bot.ts`)
 - Imagens (cards de imagem do `/display`): `GET/POST /api/images`, `PATCH/DELETE /api/images/{id}` — `backend/data/images.json` (`backend/src/images.ts`); `src` aceita `data:image/...` base64 (até ~8MB de arquivo) ou URL http(s), corpo com `bodyLimit` próprio de 16MB
 - Preferências de exibição, rascunho do editor de tema e o easter egg retrô: `GET/PUT /api/prefs`, `/api/theme-draft`, `/api/retro` — blobs JSON simples (`backend/src/routers/clientState.ts`), sem CRUD por item, cada um seu próprio arquivo em `backend/data/`
-- Swagger: http://127.0.0.1:8787/docs — OpenAPI vivo (`/openapi.json`), incluindo SSE (`GET /events`). Rotas agrupadas por tag (uma por área/router — `Clima`, `GitHub`, `Câmeras`, etc.), não vêm mais tudo junto sem categoria. **Toda rota nova precisa de `{ schema: { tags: ["X"] } }`** como segundo argumento do `app.get/post/put/patch/delete(...)` — se `X` for uma área nova, também adiciona em `OPENAPI_TAGS` (`backend/src/main.ts`, controla a ordem de exibição) e no array hardcoded de `tagsSorter` (duplicado de propósito: roda só no browser, ver comentário ali). Rotas que servem o SPA do frontend (`/`, `/assets/*`, etc., não é "API") usam `{ schema: { hide: true } }` em vez de tag.
+- Swagger: http://127.0.0.1:8788/docs em dev (`/docs` via 5173 também funciona, é proxy) ou http://127.0.0.1:8787/docs em produção/instalado — OpenAPI vivo (`/openapi.json`), incluindo SSE (`GET /events`). Rotas agrupadas por tag (uma por área/router — `Clima`, `GitHub`, `Câmeras`, etc.), não vêm mais tudo junto sem categoria. **Toda rota nova precisa de `{ schema: { tags: ["X"] } }`** como segundo argumento do `app.get/post/put/patch/delete(...)` — se `X` for uma área nova, também adiciona em `OPENAPI_TAGS` (`backend/src/main.ts`, controla a ordem de exibição) e no array hardcoded de `tagsSorter` (duplicado de propósito: roda só no browser, ver comentário ali). Rotas que servem o SPA do frontend (`/`, `/assets/*`, etc., não é "API") usam `{ schema: { hide: true } }` em vez de tag.
 - Contrato JSON: `GET /usage` — consulta as APIs na hora e avisa o SSE
 - Stream: `GET /events` — `text/event-stream`, snapshot a cada `USAGE_INTERVAL_S` (padrão 60 s) para todos os clientes
 

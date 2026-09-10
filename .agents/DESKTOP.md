@@ -71,9 +71,12 @@ Logs ficam em `.../vigia-ai-desktop/logs/`. Os dois têm atalho no card Aplicati
 
 A porta padrão continua **8787**, e ela importa: a ESP32 guarda
 `USAGE_URL` no `secrets.h`. Por isso o app **nunca** troca de porta sozinho.
+Por isso também `./dev up` usa **`:8788`** (não 8787) — pra rodar ao lado do
+app instalado sem os dois brigarem pela mesma porta, ver [SETUP.md](SETUP.md).
 
-- Se a porta estiver ocupada por **outro Vigia** (um `./dev up` aberto), o app
-  se conecta a ele em vez de subir um segundo coletor.
+- Se a porta estiver ocupada por **outro Vigia** (outra instância do próprio
+  app, ou um `./dev up` com `VIGIA_DEV_PORT=8787`), o app se conecta a ele em
+  vez de subir um segundo coletor.
 - Se estiver ocupada por outro programa, o app avisa e propõe uma porta livre —
   deixando claro que trocar exige gerar e regravar o `secrets.h` pelo painel.
 
@@ -113,7 +116,7 @@ Se acontecer, os caminhos alternativos continuam valendo:
 
 | Sintoma                            | O que fazer                                                                     |
 | ---------------------------------- | ------------------------------------------------------------------------------- |
-| "A porta 8787 está ocupada"        | Feche o `./dev up` ou aceite a porta que o app propõe (e regrave o `secrets.h`) |
+| "A porta 8787 está ocupada"        | `./dev up` já usa `:8788`, não deveria brigar mais; se ainda ocupada, feche o outro programa ou aceite a porta que o app propõe (e regrave o `secrets.h`) |
 | "Coletor não encontrado" (em dev)  | Rode `./dev up` uma vez para preparar o coletor (`npm install` em `backend/`)   |
 | A placa parou de achar o coletor   | Confira o toggle **Acesso pela rede local** no card Aplicativo                  |
 | O app não abre depois de atualizar | Card Aplicativo → **Abrir a pasta de logs** e veja `main.log`                   |
