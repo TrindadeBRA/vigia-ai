@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "../components/Toast";
 
 export type RequestStatus = "idle" | "loading" | "success" | "error";
 
@@ -20,6 +21,7 @@ export function useRequest() {
     window.clearTimeout(timerRef.current);
     setStatus("error");
     setMessage(msg);
+    if (msg) toast.error(msg);
   }, []);
 
   const run = useCallback(async <T extends ResultLike | void>(fn: () => Promise<T>, opts: RunOpts<T> = {}): Promise<T | undefined> => {
@@ -33,11 +35,13 @@ export function useRequest() {
         const err = (result && typeof result === "object" && result.error) || opts.error || "";
         setStatus("error");
         setMessage(err);
+        if (err) toast.error(err);
         return result;
       }
       const successMsg = typeof opts.success === "function" ? opts.success(result) : opts.success || "";
       setStatus("success");
       setMessage(successMsg);
+      if (successMsg) toast.success(successMsg);
       timerRef.current = window.setTimeout(() => {
         setStatus("idle");
         setMessage("");
@@ -46,6 +50,7 @@ export function useRequest() {
     } catch {
       setStatus("error");
       setMessage(opts.error || "");
+      if (opts.error) toast.error(opts.error);
       return undefined;
     }
   }, []);

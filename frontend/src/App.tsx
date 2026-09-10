@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ToastViewport } from "./components/Toast";
 import { useKonamiCode } from "./hooks/useKonamiCode";
 import "./index.css";
 import CanvasPage from "./pages/CanvasPage";
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="biblioteca" element={<Navigate to="/display/emulator" replace />} />
         </Route>
       </Routes>
+      <ToastViewport />
     </BrowserRouter>
   );
 }
