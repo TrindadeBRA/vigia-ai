@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "author": "TrindadeBRA",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "board-ili9341-cap-touch",
+      "id": "lcd1",
+      "top": 19.2,
+      "left": 182.4,
+      "rotate": 90,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btnPrev",
+      "top": 326.2,
+      "left": -96,
+      "attrs": { "color": "blue", "label": "Prev", "bounce": "0" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btnNext",
+      "top": 326.2,
+      "left": 0,
+      "attrs": { "color": "green", "label": "Prox", "bounce": "0" }
+    }
+  ],
+  "connections": [
+    ["esp:TX", "$serialMonitor:RX", "", []],
+    ["esp:RX", "$serialMonitor:TX", "", []],
+    ["esp:3V3", "lcd1:VCC", "red", ["h-38.4", "v-48", "*", "h-19.2"]],
+    ["esp:3V3", "lcd1:LED", "white", ["h-28.8", "v-38.4", "*", "h-28.8"]],
+    ["esp:GND.2", "lcd1:GND", "black", ["h19.2", "*", "h-19.2"]],
+    ["esp:23", "lcd1:MOSI", "green", ["h19.2", "*", "h-19.2"]],
+    ["esp:22", "lcd1:SCL", "blue", ["h28.8", "*", "h-28.8"]],
+    ["esp:21", "lcd1:SDA", "green", ["h38.4", "*", "h-38.4"]],
+    ["esp:19", "lcd1:MISO", "blue", ["h48", "*", "h-48"]],
+    ["esp:18", "lcd1:SCK", "gold", ["h57.6", "*", "h-57.6"]],
+    ["esp:15", "lcd1:CS", "orange", ["h67.2", "*", "h-67.2"]],
+    ["esp:2", "lcd1:D/C", "purple", ["h76.8", "*", "h-76.8"]],
+    ["esp:4", "lcd1:RST", "gray", ["h86.4", "*", "h-86.4"]],
+    ["esp:13", "btnPrev:2.l", "violet", ["h-19.2", "v105.6"]],
+    ["esp:5", "btnNext:2.l", "green", ["h9.6", "v115.2"]],
+    ["esp:GND.1", "btnPrev:1.r", "black", ["h-9.6", "v96"]],
+    ["btnPrev:1.l", "btnNext:1.r", "black", ["h0"]]
+  ],
+  "dependencies": {}
+}
