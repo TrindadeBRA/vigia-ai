@@ -1,6 +1,6 @@
 {
   "name": "vigia-ai-collector",
-  "version": "2.13.8",
+  "version": "2.13.9",
   "private": true,
   "description": "Coletor Vigia AI — Node + Fastify (port do Python)",
   "type": "module",
