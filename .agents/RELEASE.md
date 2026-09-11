@@ -21,11 +21,32 @@ em qual GitHub Release publicar (ver "Por que a versão do desktop manda").
 > Feature nova de peso (novo provedor/integração, novo modo de instalação, mudança grande de UI)? Cheque se vale um bullet em [`README.md`](../README.md) (`## Recursos`) e/ou um card em [`docs/index.html`](../docs/index.html) (seção NOVIDADES). Esses dois arquivos não são bumpados automaticamente e já ficaram vários minors atrasados — ver [`PLANO_LANDING_README.md`](PLANO_LANDING_README.md).
 
 `./dev release x.y.z` (em `./dev`, `bump_all_versions()`) já bumpa os 3
-`package.json` + `version.ts` e comita — é o caminho recomendado. O que
-segue é o passo a passo manual, pra quando precisar bumpar sem o script
-ou entender o que ele faz por baixo.
+`package.json` + `version.ts` e comita — é o caminho recomendado. O script
+**não** atualiza a `main`: a tag vai no HEAD da branch atual (`develop`).
+O que segue é o passo a passo manual, pra quando precisar bumpar sem o
+script ou entender o que ele faz por baixo.
 
-## Passo a passo
+## Caminho recomendado
+
+Rode **em `develop`**, árvore limpa e já sincronizada com `origin/develop`.
+
+```bash
+./dev release x.y.z
+
+# o script faz bump + commit + push em develop, testes, tag anotada e
+# push da tag. A main continua atrás até o fast-forward:
+git checkout main && git merge --ff-only develop && git push origin main
+git checkout develop
+
+# depois que a matriz de 4 runners terminar:
+./dev cask
+```
+
+`./dev release` recusa árvore suja, branch dessincronizada com o origin,
+e tag que já existe (local ou remoto). `--skip-tests` pula o `./dev test`
+antes da tag; `--status` lista as runs de `release-desktop.yml`.
+
+## Passo a passo (manual)
 
 ```bash
 # 1. edita os 3 package.json + version.ts pra mesma versão nova
@@ -58,8 +79,8 @@ git checkout develop
 
 `git push` da tag dispara `.github/workflows/release-desktop.yml` (matriz
 macOS arm64/x64, Windows, Linux) automaticamente. `./dev release x.y.z`
-faz os passos 1, 4 e 6 (com as travas de `release_guards`); `./dev cask`
-faz o 7.
+faz os passos 1, 4 e 6 (com as travas de `release_guards`); o passo 5
+continua manual. `./dev cask` faz o 7.
 
 ## Por que a versão do desktop manda
 
