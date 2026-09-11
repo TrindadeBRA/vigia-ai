@@ -287,6 +287,10 @@ type Strings = {
   apodVideoToday: string;
   apodVideoBadge: string;
   apodArchiveLink: string;
+  apodTranslation: string;
+  apodTranslating: string;
+  apodTranslationFail: string;
+  apodTranslationNote: string;
   rssEmpty: string;
   rssNoItems: string;
   rssLatest: string;
@@ -597,6 +601,10 @@ export const STR: Record<Lang, Strings> = {
     apodVideoToday: "Hoje é um vídeo APOD.",
     apodVideoBadge: "Vídeo",
     apodArchiveLink: "Ver arquivo APOD na NASA",
+    apodTranslation: "Tradução",
+    apodTranslating: "Traduzindo…",
+    apodTranslationFail: "Não foi possível traduzir agora.",
+    apodTranslationNote: "Tradução automática e gratuita (MyMemory). O original em inglês fica acima.",
     rssEmpty: "Nenhum feed configurado.",
     rssNoItems: "Nenhuma notícia no feed.",
     rssLatest: "Última notícia",
@@ -904,6 +912,10 @@ export const STR: Record<Lang, Strings> = {
     apodVideoToday: "Today's APOD is a video.",
     apodVideoBadge: "Video",
     apodArchiveLink: "Browse APOD archive on NASA",
+    apodTranslation: "Translation",
+    apodTranslating: "Translating…",
+    apodTranslationFail: "Could not translate right now.",
+    apodTranslationNote: "Automatic free translation (MyMemory). The original English text is above.",
     rssEmpty: "No feed configured.",
     rssNoItems: "No items in feed.",
     rssLatest: "Latest",
@@ -1211,6 +1223,10 @@ export const STR: Record<Lang, Strings> = {
     apodVideoToday: "El APOD de hoy es un video.",
     apodVideoBadge: "Video",
     apodArchiveLink: "Ver archivo APOD en la NASA",
+    apodTranslation: "Traducción",
+    apodTranslating: "Traduciendo…",
+    apodTranslationFail: "No se pudo traducir ahora.",
+    apodTranslationNote: "Traducción automática y gratuita (MyMemory). El original en inglés queda arriba.",
     rssEmpty: "Ningún feed configurado.",
     rssNoItems: "Ningún artículo en el feed.",
     rssLatest: "Último",

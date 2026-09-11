@@ -218,6 +218,17 @@ export async function fetchGithubTop(language: string, period: GithubTopPeriod):
   return res.json() as Promise<GithubExploreResult>;
 }
 
+export async function fetchApodTranslate(text: string, lang: "pt" | "es"): Promise<{ ok: boolean; translated: string | null; error?: string | null }> {
+  const res = await fetch("/api/apod/translate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, lang }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; translated?: string | null; error?: string | null };
+  if (!res.ok) throw new Error(data.error || `apod translate HTTP ${res.status}`);
+  return { ok: Boolean(data.ok), translated: data.translated ?? null, error: data.error };
+}
+
 // ── Android via ADB (scrcpy-like) ──────────────────────────────────
 
 export async function fetchAndroidDevices(): Promise<import("./types").AndroidDevice[]> {

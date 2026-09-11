@@ -58,6 +58,7 @@ const OPENAPI_TAGS = [
   { name: "Mineração", description: "Status de mineração de Bitcoin" },
   { name: "Calendário", description: "Calendários importados (ICS)" },
   { name: "RSS", description: "Feeds RSS" },
+  { name: "APOD", description: "NASA Astronomy Picture of the Day — config, foto e tradução gratuita" },
   { name: "Git", description: "Repositórios Git genéricos" },
   { name: "GitHub", description: "Repositórios e perfis do GitHub" },
   { name: "Spotify", description: "Player e OAuth do Spotify" },
@@ -131,7 +132,7 @@ export async function createApp() {
       tagsSorter: function (a: string, b: string) {
         const order = [
           "Sistema", "Config", "Board", "Notas", "Imagens", "Tema", "Papéis de parede",
-          "Alarmes", "Telegram", "Clima", "Moedas", "Mineração", "Calendário", "RSS",
+          "Alarmes", "Telegram", "Clima", "Moedas", "Mineração", "Calendário", "RSS", "APOD",
           "Git", "GitHub", "Spotify", "YouTube Music", "AdSense", "RetroAchievements",
           "Emulador", "Câmeras", "Android", "Firmware",
         ];

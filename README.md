@@ -56,7 +56,7 @@ Um gadget físico de mesa — do tamanho de um despertador — mas o firmware é
 
 ## Recursos
 
-- **20+ integrações, múltiplas contas cada** — **Cotas de IA:** Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go/Zen, fal.ai · **Financeiro:** Bitcoin, AdSense, Moedas · **Dev:** Git, GitHub · **Vida:** RetroAchievements, Calendário ICS, RSS, Clima, ISS · **Mídia:** Spotify, YouTube Music · **Hardware:** Câmera (RTSP + ONVIF PTZ), Android (ADB), Emulador (EmulatorJS), Mineração Bitcoin, Sistema (CPU/RAM/disco)
+- **20+ integrações, múltiplas contas cada** — **Cotas de IA:** Claude, GPT (ChatGPT/Codex), Cursor, OpenRouter, DeepSeek, OpenCode Go/Zen, fal.ai · **Financeiro:** Bitcoin, AdSense, Moedas · **Dev:** Git, GitHub · **Vida:** RetroAchievements, Calendário ICS, RSS, Clima, ISS, NASA APOD · **Mídia:** Spotify, YouTube Music · **Hardware:** Câmera (RTSP + ONVIF PTZ), Android (ADB), Emulador (EmulatorJS), Mineração Bitcoin, Sistema (CPU/RAM/disco)
 - **Tempo real** — um único ciclo de consulta no coletor, distribuído por SSE; placa e abas de `/display` não multiplicam chamadas
 - **Zero tokens expostos** — a placa e o navegador só veem percentuais, datas e `ok: true/false`
 - **Touch nativo** — grade ou lista na Início, detalhe por conta, configurações direto na tela

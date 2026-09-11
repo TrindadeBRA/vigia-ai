@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { fetchApod, mockApodPayload } from "../providers/apod.js";
+import { translateApodExplanation } from "../providers/apodTranslate.js";
+import { ApodTranslateRequestSchema } from "../schemas/apod.js";
 import { load, updateSync as update } from "../store.js";
 import { utcNow } from "../formatting.js";
 
@@ -51,5 +53,19 @@ export async function createApodRoutes(app: FastifyInstance): Promise<void> {
         }
         if (cfg.mock) return mockApodPayload();
         return fetchApod(cfg);
+    });
+
+    app.post("/api/apod/translate", { schema: { tags: ["APOD"] } }, async (request, reply) => {
+        const parsed = ApodTranslateRequestSchema.safeParse(request.body);
+        if (!parsed.success) {
+            return reply.code(400).send({ ok: false, lang: "", translated: null, error: "lang pt/es e texto são obrigatórios" });
+        }
+        try {
+            const translated = await translateApodExplanation(parsed.data.text, parsed.data.lang);
+            return { ok: true, lang: parsed.data.lang, translated, error: null };
+        } catch (exc) {
+            const error = exc instanceof Error ? exc.message : String(exc);
+            return reply.code(502).send({ ok: false, lang: parsed.data.lang, translated: null, error });
+        }
     });
 }

@@ -56,7 +56,7 @@ Idioma da UI e da documentação: **português (Brasil)**. Código (identificado
 ```
 backend/src/main.ts           Fastify, Swagger /docs (port de app/main.py)
 backend/src/schemas/          contrato OpenAPI (Zod, port de app/schemas.py), dividido por domínio + index.ts barrel
-backend/src/providers/        claude, gpt, cursor, openrouter, deepseek, opencode, fal, bitcoin, adsense, currencies, weather
+backend/src/providers/        claude, gpt, cursor, openrouter, deepseek, opencode, fal, bitcoin, adsense, currencies, weather, apod (+ apodTranslate, MyMemory, só detalhe)
 backend/src/local/            Keychain, credentials, state.vscdb, auth.json (Codex) — port de app/local/
 (Python removido do repo — não há mais backend-python-legacy/)
 frontend/src/pages/Display.tsx         mostrador (SSE GET /events) — orquestrador; grid/tiles/sidebar/etc. em pages/display/

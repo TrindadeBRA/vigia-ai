@@ -15,7 +15,7 @@ import { RssDetail } from "../../components/cards/RssCard";
 import { ApodDetail } from "../../components/cards/ApodCard";
 import { WeatherDetail } from "../../components/cards/WeatherCard";
 import { ExternalLinkIcon } from "../../components/icons";
-import type { T } from "../../i18n";
+import type { Lang, T } from "../../i18n";
 import { PROVIDER_SITE_URL } from "../../theme";
 import { cardLabel, errorText, metricCard, num, viewFade } from "../../tw";
 import { Icon } from "./MetricRow";
@@ -149,17 +149,17 @@ function RssAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   );
 }
 
-function ApodAccountPage({ data, t }: { data: UsagePayload; t: T }) {
+function ApodAccountPage({ data, t, lang }: { data: UsagePayload; t: T; lang: Lang }) {
   return (
     <div className={`w-full ${viewFade}`}>
       <div className="mb-4 flex items-center gap-3">
-        <span className="text-[28px]" aria-hidden>🛰️</span>
+        <Icon id="apod" large />
         <div>
           <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.apod}</div>
           {data.apod?.date ? <div className={cardLabel}>{data.apod.date}</div> : null}
         </div>
       </div>
-      <ApodDetail apod={data.apod} t={t} />
+      <ApodDetail apod={data.apod} t={t} lang={lang} />
     </div>
   );
 }
@@ -197,7 +197,7 @@ function GithubAccountPage({ meta, t }: { meta: ProviderMeta; t: T }) {
   );
 }
 
-export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | RetroAchievementsAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number }) {
+export function AccountPage({ meta, account, data, t, pal, nowMs, lang }: { meta: ProviderMeta; account: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | RetroAchievementsAccount | null; data: UsagePayload; t: T; pal: Pal; nowMs: number; lang: Lang }) {
   // Weather, Moedas, Git e RetroAchievements têm página própria
   if (meta.provider === "weather" || meta.kind === "weather") {
     return <WeatherAccountPage data={data} t={t} />;
@@ -218,7 +218,7 @@ export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: Prov
     return <RssAccountPage data={data} t={t} />;
   }
   if (meta.provider === "apod" || meta.kind === "apod") {
-    return <ApodAccountPage data={data} t={t} />;
+    return <ApodAccountPage data={data} t={t} lang={lang} />;
   }
   if (meta.provider === "github" || meta.kind === "github" || meta.provider === "github-profile" || meta.kind === "github-profile") {
     return <GithubAccountPage meta={meta} t={t} />;

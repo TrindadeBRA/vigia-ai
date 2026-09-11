@@ -28,3 +28,17 @@ export const ApodPatchSchema = z.object({
     api_key: z.string().nullable().default(null),
 });
 export type ApodPatch = z.infer<typeof ApodPatchSchema>;
+
+export const ApodTranslateRequestSchema = z.object({
+    text: z.string().min(1).max(4000),
+    lang: z.enum(["pt", "es"]),
+});
+export type ApodTranslateRequest = z.infer<typeof ApodTranslateRequestSchema>;
+
+export const ApodTranslateResponseSchema = z.object({
+    ok: z.boolean(),
+    lang: z.string(),
+    translated: z.string().nullable(),
+    error: z.string().nullable().default(null),
+});
+export type ApodTranslateResponse = z.infer<typeof ApodTranslateResponseSchema>;

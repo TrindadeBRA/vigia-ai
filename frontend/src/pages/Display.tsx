@@ -950,7 +950,7 @@ export default function Display() {
               {section === "account" && meta && !hideChrome ? (
                 <PageBreadcrumb current={meta.title} lang={prefs.lang} onBack={goOverview} className="mb-3" />
               ) : null}
-              {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} /> : null}
+              {section === "account" && meta ? <AccountPage key={meta.id} meta={meta} account={rawAccount} data={data} t={t} pal={pal} nowMs={now} lang={prefs.lang} /> : null}
             </>
           )}
         </main>

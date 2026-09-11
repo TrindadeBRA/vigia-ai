@@ -29,6 +29,10 @@ Notas (`frontend/src/hooks/useServerNotes.ts`, `/api/notes`) e imagens (`fronten
 
 O mesmo padrão (backend-only + migração única) vale pro rascunho do editor de tema (`useThemeDraft` em `pages/config/themeEditor/themeState.ts`, `loadThemeDraft` em `pages/config/themeCanvas/state.ts`, ambos em `/api/theme-draft`) e pro easter egg retrô (`useKonamiCode.ts`, `/api/retro`). Como efeito colateral bom: o rascunho de tema agora é o mesmo em qualquer dispositivo, então `/display/canvas` passa a espelhar de verdade o que está sendo editado em outra tela/aparelho, não só na mesma aba do navegador.
 
+## NASA APOD — tradução só no detalhe
+
+Na rota de detalhes da foto do dia (`ApodDetail`), o texto original em inglês fica no lugar; abaixo, se o idioma da UI for `pt` ou `es`, o coletor pede uma tradução **gratuita** ao MyMemory (`POST /api/apod/translate`). Não entra no `/usage`, não aparece no card do board e não usa chave paga. Inglês não traduz (já é o original). Falha ou texto idêntico: some a duplicata e mostra um aviso curto, sem toast — não é ação disparada pelo usuário.
+
 ## Marca
 
 `frontend/src/components/Logo.tsx` — `EyeMark` (olho SVG animado) e `Logo` (olho + `VIGIA AI`). A íris usa `var(--accent)`, então acompanha o tema. O olho dá sacadas para posições aleatórias, pisca em intervalos irregulares e segue o ponteiro do mouse quando ele passa perto (`follow`, ligado por padrão). Com `prefers-reduced-motion` o olho fica parado no centro. Versão estática em `frontend/public/favicon.svg`.

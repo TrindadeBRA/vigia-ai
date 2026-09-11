@@ -105,6 +105,10 @@ esperado). Por isso o default é `public-pool.io:3333` (e equivalentes da lista
 NerdMiner), não pool de ASIC. Block height fica de fora do MVP (sempre `—`).
 Detalhe: [`MINERACAO.md`](MINERACAO.md).
 
+## Tradução do APOD sem custo
+
+O texto da NASA vem só em inglês. No detalhe da foto do dia (não no card do board) o coletor traduz via **MyMemory** (`api.mymemory.translated.net`, sem chave, ~1000 palavras/dia anônimo). Google gtx 429a demais pra ser primário. O original fica acima; `en` na UI não chama a API. Fora do contrato `/usage`.
+
 ## Um build do frontend para web e desktop
 
 O painel não sabe se está num navegador ou no app: ele testa `window.vigia` em
