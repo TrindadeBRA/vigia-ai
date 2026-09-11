@@ -7,6 +7,8 @@ export type ImageWidget = {
     src: string;
     fit: "cover" | "contain";
     label?: string;
+    countdownAt?: string | null;
+    countdownLabel?: string | null;
     createdAt: string;
     transform?: ImageTransform | null;
 };
@@ -130,13 +132,19 @@ export function useImageWidgets() {
         };
     }, [refresh]);
 
-    const add = useCallback(async (src: string, fit: "cover" | "contain" = "cover", label?: string) => {
+    const add = useCallback(async (src: string, fit: "cover" | "contain" = "cover", label?: string, countdownAt?: string | null, countdownLabel?: string | null) => {
         let image: ImageWidget | null = null;
         try {
             const res = await fetch("/api/images", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ src: src.trim(), fit, label: label?.trim() || undefined }),
+                body: JSON.stringify({
+                    src: src.trim(),
+                    fit,
+                    label: label?.trim() || undefined,
+                    countdownAt: countdownAt || undefined,
+                    countdownLabel: countdownLabel?.trim() || undefined,
+                }),
             });
             if (res.ok) {
                 const data = (await res.json()) as { image?: ImageWidget };
@@ -149,7 +157,7 @@ export function useImageWidgets() {
         return image;
     }, [refresh]);
 
-    const update = useCallback(async (id: string, patch: Partial<Pick<ImageWidget, "src" | "fit" | "label" | "transform">>) => {
+    const update = useCallback(async (id: string, patch: Partial<Pick<ImageWidget, "src" | "fit" | "label" | "countdownAt" | "countdownLabel" | "transform">>) => {
         try {
             await fetch(`/api/images/${encodeURIComponent(id)}`, {
                 method: "PATCH",

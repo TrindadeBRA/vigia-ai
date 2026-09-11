@@ -27,6 +27,7 @@ import { createMiningRoutes } from "./routers/mining.js";
 import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
+import { createApodRoutes } from "./routers/apod.js";
 import { createSpotifyRoutes } from "./routers/spotify.js";
 import { createSystemRoutes } from "./routers/system.js";
 import { createThemeRoutes } from "./routers/theme.js";
@@ -227,6 +228,7 @@ export async function createApp() {
   await fastify.register(createRetroachievementsRoutes, { prefix: "" });
   await fastify.register(createCalendarRoutes, { prefix: "" });
   await fastify.register(createRssRoutes, { prefix: "" });
+  await fastify.register(createApodRoutes, { prefix: "" });
   await fastify.register(createGithubRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
   await fastify.register(createMiningRoutes, { prefix: "" });

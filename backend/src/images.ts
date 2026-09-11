@@ -10,6 +10,8 @@ export type ImageWidget = {
     src: string;
     fit: ImageFit;
     label: string | null;
+    countdownAt: string | null;
+    countdownLabel: string | null;
     createdAt: string;
     transform: ImageTransform | null;
 };
@@ -30,6 +32,21 @@ function normalizeTransform(v: unknown): ImageTransform | null {
     const scale = Number(r.scale);
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(scale)) return null;
     return { x, y, scale };
+}
+
+function normalizeCountdownAt(v: unknown): string | null {
+    if (v == null || v === "") return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    const ms = Date.parse(s);
+    if (Number.isNaN(ms)) return null;
+    return new Date(ms).toISOString();
+}
+
+function normalizeOptionalLabel(v: unknown): string | null {
+    if (v == null) return null;
+    const s = String(v).trim();
+    return s || null;
 }
 
 export function loadImages(): ImageWidget[] {
@@ -57,6 +74,8 @@ function normalizeList(arr: unknown[]): ImageWidget[] {
             src,
             fit: normalizeFit(r.fit),
             label: r.label != null ? String(r.label) : null,
+            countdownAt: normalizeCountdownAt(r.countdownAt ?? r.countdown_at),
+            countdownLabel: normalizeOptionalLabel(r.countdownLabel ?? r.countdown_label),
             createdAt: String(r.createdAt ?? r.created_at ?? new Date().toISOString()),
             transform: normalizeTransform(r.transform),
         });
@@ -72,7 +91,7 @@ export function saveImages(images: ImageWidget[]): void {
     renameSync(tmp, p);
 }
 
-export function createImage(src: string, opts: { fit?: ImageFit; label?: string | null } = {}): ImageWidget {
+export function createImage(src: string, opts: { fit?: ImageFit; label?: string | null; countdownAt?: string | null; countdownLabel?: string | null } = {}): ImageWidget {
     const images = loadImages();
     const id = `img:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 6)}`;
     const image: ImageWidget = {
@@ -80,6 +99,8 @@ export function createImage(src: string, opts: { fit?: ImageFit; label?: string 
         src: String(src ?? "").trim(),
         fit: normalizeFit(opts.fit ?? "cover"),
         label: (opts.label ?? "").toString().trim() || null,
+        countdownAt: normalizeCountdownAt(opts.countdownAt),
+        countdownLabel: normalizeOptionalLabel(opts.countdownLabel),
         createdAt: new Date().toISOString(),
         transform: null,
     };
@@ -88,13 +109,15 @@ export function createImage(src: string, opts: { fit?: ImageFit; label?: string 
     return image;
 }
 
-export function updateImage(id: string, patch: Partial<Pick<ImageWidget, "src" | "fit" | "label" | "transform">>): ImageWidget | null {
+export function updateImage(id: string, patch: Partial<Pick<ImageWidget, "src" | "fit" | "label" | "countdownAt" | "countdownLabel" | "transform">>): ImageWidget | null {
     const images = loadImages();
     const idx = images.findIndex((n) => n.id === id);
     if (idx === -1) return null;
     if (patch.src !== undefined) images[idx].src = String(patch.src).trim();
     if (patch.fit !== undefined) images[idx].fit = normalizeFit(patch.fit);
     if (patch.label !== undefined) images[idx].label = patch.label == null ? null : String(patch.label).trim() || null;
+    if (patch.countdownAt !== undefined) images[idx].countdownAt = normalizeCountdownAt(patch.countdownAt);
+    if (patch.countdownLabel !== undefined) images[idx].countdownLabel = normalizeOptionalLabel(patch.countdownLabel);
     if (patch.transform !== undefined) images[idx].transform = normalizeTransform(patch.transform);
     saveImages(images);
     return images[idx];

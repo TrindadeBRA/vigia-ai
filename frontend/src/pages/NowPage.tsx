@@ -20,7 +20,7 @@ type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "github" | "github-profile" | "image" | "note" | "emulator" | "android";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "apod" | "github" | "github-profile" | "image" | "note" | "emulator" | "android";
 };
 
 function Icon({ id }: { id: string }) {

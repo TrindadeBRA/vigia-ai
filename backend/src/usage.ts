@@ -14,6 +14,7 @@ import { fetchOpencodeAccounts, opencodeFail } from "./providers/opencode.js";
 import { fetchOpenrouterAccounts, openrouterFail } from "./providers/openrouter.js";
 import { fetchRetroachievementsAccounts, mockRetroPayload, retroFail } from "./providers/retroachievements.js";
 import { fetchRssFeeds, mockRssPayload } from "./providers/rss.js";
+import { fetchApod, mockApodPayload } from "./providers/apod.js";
 import { fetchWeatherData, mockWeatherPayload } from "./providers/weather.js";
 import { cache, fingerprint } from "./refreshCache.js";
 import { load, provider as providerCfg } from "./store.js";
@@ -160,6 +161,7 @@ export function mockPayload(): Record<string, unknown> {
     git: mockGitPayload(),
     calendar: mockCalendarPayload(),
     rss: mockRssPayload(),
+    apod: mockApodPayload(),
     github: mockGithubPayload(),
     storage: getStorageInfo().map((d) => ({
       id: d.mount,
@@ -289,6 +291,31 @@ async function fetchRss(cfg: Record<string, unknown>, force: boolean): Promise<R
   }
 }
 
+async function fetchApodData(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
+  const apodCfg = (cfg.apod ?? {}) as Record<string, unknown>;
+  if (apodCfg.hidden || !apodCfg.enabled) return null;
+  if (cfg.mock) return mockApodPayload() as Record<string, unknown>;
+  const fp = fingerprint(cfg, "apod");
+  if (!cache.due("apod", { fingerprint: fp, force })) {
+    const hit = cache.get("apod");
+    if (hit !== null && hit !== undefined) return hit as Record<string, unknown>;
+  }
+  try {
+    const value = await fetchApod(cfg);
+    if ((value as { ok?: boolean }).ok) {
+      return cache.take("apod", value, { fingerprint: fp }) as Record<string, unknown>;
+    }
+    const hit = cache.get("apod") as Record<string, unknown> | null | undefined;
+    if (hit?.ok) return hit as Record<string, unknown>;
+    return value as Record<string, unknown>;
+  } catch (exc) {
+    const hit = cache.get("apod") as Record<string, unknown> | null | undefined;
+    if (hit?.ok) return hit as Record<string, unknown>;
+    const value = { ok: false, error: String(exc), updated_at: utcNow(), date: null, title: null, explanation: null, url: null, hdurl: null, media_type: null, copyright: null, service_version: null };
+    return value as Record<string, unknown>;
+  }
+}
+
 async function fetchGithub(cfg: Record<string, unknown>, force: boolean): Promise<Record<string, unknown> | null> {
   const ghCfg = (cfg.github ?? {}) as Record<string, unknown>;
   const flags = githubSectionFlags(ghCfg);
@@ -387,6 +414,8 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     if (rssCfg.hidden || !rssCfg.enabled || (Array.isArray(rssCfg.feeds) && (rssCfg.feeds as unknown[]).length === 0)) {
       if (!rssCfg.enabled || (Array.isArray(rssCfg.feeds) && (rssCfg.feeds as unknown[]).length === 0)) payload.rss = null;
     }
+    const apodCfg = (cfg.apod ?? {}) as Record<string, unknown>;
+    if (apodCfg.hidden || !apodCfg.enabled) payload.apod = null;
     const ghCfg = (cfg.github ?? {}) as Record<string, unknown>;
     const ghFlags = githubSectionFlags(ghCfg);
     const ghHasRepos = ghFlags.repos && Array.isArray(ghCfg.repos) && (ghCfg.repos as unknown[]).length > 0;
@@ -436,6 +465,19 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     updated_at: utcNow(),
     feeds: [],
   }));
+  const apodPromise = fetchApodData(cfg, forceQuota).catch((exc) => ({
+    ok: false,
+    error: String(exc),
+    updated_at: utcNow(),
+    date: null,
+    title: null,
+    explanation: null,
+    url: null,
+    hdurl: null,
+    media_type: null,
+    copyright: null,
+    service_version: null,
+  }));
   const githubPromise = fetchGithub(cfg, forceQuota).catch((exc) => ({
     ok: false,
     error: String(exc),
@@ -477,6 +519,11 @@ export async function buildPayload(opts: { forceQuota?: boolean } = {}): Promise
     results.rss = await rssPromise;
   } catch (exc) {
     results.rss = { ok: false, error: String(exc), updated_at: utcNow(), feeds: [] };
+  }
+  try {
+    results.apod = await apodPromise;
+  } catch (exc) {
+    results.apod = { ok: false, error: String(exc), updated_at: utcNow(), date: null, title: null, explanation: null, url: null, hdurl: null, media_type: null, copyright: null, service_version: null };
   }
   try {
     results.github = await githubPromise;

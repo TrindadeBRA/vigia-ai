@@ -17,6 +17,7 @@ import { GitConfigCard } from "./GitConfigCard";
 import { GithubConfigCard, GithubProfilesConfigCard } from "./GithubConfigCard";
 import { ProviderCard } from "./ProviderCard";
 import { RetroAchievementsConfigCard } from "./RetroAchievementsConfigCard";
+import { ApodConfigCard } from "./ApodConfigCard";
 import { RssConfigCard } from "./RssConfigCard";
 import { SpotifyConfigCard } from "./SpotifyConfigCard";
 import { WallpaperProviderCards } from "./WallpaperProvidersConfigCard";
@@ -246,6 +247,7 @@ export default function ConfigPage() {
           <RetroAchievementsConfigCard c={c} onReload={reload} provider={cfg.providers.retroachievements as unknown as { configured: boolean; hidden: boolean; label: string; suffix: string | null; mode: string; accounts: Array<{ id: string; label: string; suffix: string | null }> }} />
           <CalendarConfigCard calendar={cfg.calendar} c={c} onReload={reload} />
           <RssConfigCard rss={cfg.rss} c={c} onReload={reload} />
+          <ApodConfigCard apod={cfg.apod ?? { enabled: false, hidden: false, api_key: "" }} c={c} onReload={reload} />
           <GithubConfigCard github={cfg.github} c={c} onReload={reload} />
           <GithubProfilesConfigCard github={cfg.github} c={c} onReload={reload} />
           <CameraConfigCard c={c} />

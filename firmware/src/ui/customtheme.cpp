@@ -1900,39 +1900,27 @@ static void drawThemeSpotify(const ThemeIcon &icon, int idx)
   // Trunca para caber no chip
   const uint8_t fontTitle = icon.scale >= 1.8f ? 2 : 2;
   const uint8_t fontSub = 1;
-  // Largura máxima estimada para texto (evita box gigante)
-  int maxTextW = 110;
-  if (icon.scale > 1.5f) maxTextW = (int)(110 * icon.scale);
-  if (maxTextW > tft.width() - 20) maxTextW = tft.width() - 20;
-  // Corta título se precisar
-  while (title.length() > 0 && tft.textWidth(title, fontTitle) > maxTextW) {
+  const float sc = icon.scale;
+  const int boxW = constrain((int)roundf(140 * sc), 90, tft.width() - 4);
+  const int padX = 6;
+  const int padY = 4;
+  int iconW = 0, iconH = 0;
+  bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
+  int gap = hasIcon ? 6 : 0;
+  const int innerTextW = boxW - padX * 2 - (hasIcon ? iconW + gap : 0) - 12;
+  while (title.length() > 0 && tft.textWidth(title, fontTitle) > innerTextW) {
     title.remove(title.length() - 1);
   }
-  while (subtitle.length() > 0 && tft.textWidth(subtitle, fontSub) > maxTextW) {
+  while (subtitle.length() > 0 && tft.textWidth(subtitle, fontSub) > innerTextW) {
     subtitle.remove(subtitle.length() - 1);
   }
   if (title.length() == 0) title = "--";
-  int titleW = tft.textWidth(title, fontTitle);
-  int subW = subtitle.length() ? tft.textWidth(subtitle, fontSub) : 0;
-  int textW = max(titleW, subW);
   int titleH = tft.fontHeight(fontTitle);
   int subH = subtitle.length() ? tft.fontHeight(fontSub) : 0;
   int textH = titleH + (subtitle.length() ? 2 + subH : 0);
-  int iconW = 0, iconH = 0;
-  // Sem tint automático: o ícone já traz as cores da marca (verde Spotify)
-  // pintadas no próprio PNG (ver assets/icons/spotify.png) — aplicar uma cor
-  // por cima (ex.: "verde quando tocando") só achatava o ícone pra monocromo,
-  // e o valor usado pra isso nem era verde em RGB565 (saía azulado).
-  bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
-  int gap = hasIcon ? 6 : 0;
-  int padX = 6;
-  int padY = 4;
   int innerH = max(hasIcon ? iconH : 0, textH);
-  int boxW = padX * 2 + (hasIcon ? iconW + gap : 0) + textW + 6;
   int boxH = innerH + padY * 2;
-  if (boxW < 70) boxW = 70;
   if (boxH < 28) boxH = 28;
-  if (boxW > tft.width() - 4) boxW = tft.width() - 4;
   clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
   int y0 = cy - boxH / 2;

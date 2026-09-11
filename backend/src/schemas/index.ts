@@ -2,6 +2,7 @@
 // Cada consumidor pode importar do domínio específico (ex.: "./schemas/alarms.js")
 // ou deste barrel, que reexporta tudo.
 export * from "./alarms.js";
+export * from "./apod.js";
 export * from "./calendar.js";
 export * from "./config.js";
 export * from "./currencies.js";

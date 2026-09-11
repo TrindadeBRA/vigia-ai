@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
+import { fmtCountdown } from "../../format";
 import type { T } from "../../i18n";
 
 export type ImageFit = "cover" | "contain";
@@ -40,10 +41,44 @@ function ImagePlaceholder({ t, compact }: { t: T; compact?: boolean }) {
     );
 }
 
+function CountdownOverlay({
+    countdownAt,
+    countdownLabel,
+    compact,
+    t,
+}: {
+    countdownAt: string;
+    countdownLabel?: string | null;
+    compact?: boolean;
+    t: T;
+}) {
+    const [nowMs, setNowMs] = useState(Date.now());
+    useEffect(() => {
+        const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+        return () => window.clearInterval(id);
+    }, [countdownAt]);
+    const targetMs = Date.parse(countdownAt);
+    const launched = !Number.isNaN(targetMs) && targetMs <= nowMs;
+    const clock = launched ? null : fmtCountdown(countdownAt, nowMs);
+    if (!launched && !clock) return null;
+    return (
+        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center">
+            <div className={cn("flex max-w-[92%] flex-col items-center rounded-2xl bg-black/55 px-3 py-2 text-center text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-[2px]", compact ? "gap-0.5 px-2.5 py-1.5" : "gap-1 px-4 py-3")}>
+                {countdownLabel ? <span className={cn("font-semibold uppercase tracking-wide text-white/85", compact ? "text-[10px]" : "text-[11px]")}>{countdownLabel}</span> : null}
+                <span className={cn("font-bold tabular-nums leading-none", compact ? "text-[18px]" : "text-[24px]")}>
+                    {launched ? (t.imageCountdownDone ?? "Lançado!") : clock}
+                </span>
+            </div>
+        </div>
+    );
+}
+
 export function ImageBoardCard({
     src,
     fit = "cover",
     transform,
+    countdownAt,
+    countdownLabel,
     t,
     size,
     readonly,
@@ -53,6 +88,8 @@ export function ImageBoardCard({
     src: string | null | undefined;
     fit?: ImageFit;
     transform?: { x: number; y: number; scale: number } | null;
+    countdownAt?: string | null;
+    countdownLabel?: string | null;
     t: T;
     size: CardSize;
     readonly?: boolean;
@@ -181,7 +218,7 @@ export function ImageBoardCard({
     // contain: simple object-contain, no transform
     if (!isCover) {
         return (
-            <div className="flex h-full min-h-0 w-full flex-1 overflow-hidden rounded-[10px] bg-black/5">
+            <div className="relative flex h-full min-h-0 w-full flex-1 overflow-hidden rounded-[10px] bg-black/5">
                 <img
                     src={src!}
                     alt=""
@@ -190,6 +227,7 @@ export function ImageBoardCard({
                     style={{ imageRendering: "auto" }}
                     onError={() => setErr(true)}
                 />
+                {countdownAt ? <CountdownOverlay countdownAt={countdownAt} countdownLabel={countdownLabel} compact={compact} t={t} /> : null}
             </div>
         );
     }
@@ -199,7 +237,7 @@ export function ImageBoardCard({
     return (
         <div
             ref={containerRef}
-            className={cn("flex h-full min-h-0 w-full flex-1 overflow-hidden rounded-[10px] bg-black/5", canPanZoom && "cursor-grab active:cursor-grabbing touch-none select-none")}
+            className={cn("relative flex h-full min-h-0 w-full flex-1 overflow-hidden rounded-[10px] bg-black/5", canPanZoom && "cursor-grab active:cursor-grabbing touch-none select-none")}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -220,6 +258,7 @@ export function ImageBoardCard({
                 }}
                 onError={() => setErr(true)}
             />
+            {countdownAt ? <CountdownOverlay countdownAt={countdownAt} countdownLabel={countdownLabel} compact={compact} t={t} /> : null}
         </div>
     );
 }

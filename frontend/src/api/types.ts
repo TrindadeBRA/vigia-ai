@@ -485,6 +485,26 @@ export type RssConfig = {
   feeds: Array<{ id: string; url: string; label: string; limit: number }>;
 };
 
+export type ApodPayload = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  date: string | null;
+  title: string | null;
+  explanation: string | null;
+  url: string | null;
+  hdurl: string | null;
+  media_type: string | null;
+  copyright: string | null;
+  service_version: string | null;
+};
+
+export type ApodConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  api_key?: string;
+};
+
 export type GithubRepo = {
   id: string;
   label: string;
@@ -581,6 +601,7 @@ export type UsagePayload = {
   git?: GitPayload | null;
   calendar?: CalendarPayload | null;
   rss?: RssPayload | null;
+  apod?: ApodPayload | null;
   github?: GithubPayload | null;
 };
 
@@ -841,6 +862,7 @@ export type ConfigPublic = {
   git: GitConfig;
   calendar: CalendarConfig;
   rss: RssConfig;
+  apod: ApodConfig;
   github: GithubConfig;
   emulator: EmulatorConfig;
   device: DevicePublic;

@@ -471,6 +471,18 @@ export type ConfigCopy = {
   rssNoPreview: string;
   rssPreviewOk: string;
   rssPreviewFail: string;
+  apodTitle: string;
+  apodLead: string;
+  apodEnabledHint: string;
+  apodDisabledHint: string;
+  apodApiKeyLabel: string;
+  apodApiKeyPh: string;
+  apodApiKeyHint: string;
+  apodPreview: string;
+  apodPreviewing: string;
+  apodPreviewOk: string;
+  apodPreviewFail: string;
+  apodPoweredBy: string;
 };
 
 export const CONFIG_STR: Record<Lang, ConfigCopy> = {
@@ -935,6 +947,18 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     rssNoPreview: "Cole uma URL para testar.",
     rssPreviewOk: "Feed acessível.",
     rssPreviewFail: "Não foi possível acessar.",
+    apodTitle: "NASA — Picture of the Day",
+    apodLead: "Mostra a Astronomy Picture of the Day da NASA no painel. Funciona com a chave DEMO_KEY; para uso intenso, cadastre sua key em api.nasa.gov.",
+    apodEnabledHint: "Card APOD visível no painel",
+    apodDisabledHint: "Ative para ver a foto do dia da NASA",
+    apodApiKeyLabel: "API key NASA (opcional)",
+    apodApiKeyPh: "DEMO_KEY ou sua key",
+    apodApiKeyHint: "Sem key personalizada usamos DEMO_KEY (limite baixo). Gere a sua gratuitamente em api.nasa.gov.",
+    apodPreview: "Testar hoje",
+    apodPreviewing: "Buscando…",
+    apodPreviewOk: "APOD carregado.",
+    apodPreviewFail: "Não foi possível buscar o APOD.",
+    apodPoweredBy: "Dados via NASA Open APIs",
   },
   en: {
     title: "Settings",
@@ -1397,6 +1421,18 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     rssNoPreview: "Paste a URL to test.",
     rssPreviewOk: "Feed reachable.",
     rssPreviewFail: "Could not reach feed.",
+    apodTitle: "NASA — Picture of the Day",
+    apodLead: "Shows NASA's Astronomy Picture of the Day on the board. Works with DEMO_KEY; for heavy use, register your key at api.nasa.gov.",
+    apodEnabledHint: "APOD card visible on the board",
+    apodDisabledHint: "Enable to show NASA's photo of the day",
+    apodApiKeyLabel: "NASA API key (optional)",
+    apodApiKeyPh: "DEMO_KEY or your key",
+    apodApiKeyHint: "Without a personal key we use DEMO_KEY (low rate limit). Get yours free at api.nasa.gov.",
+    apodPreview: "Test today",
+    apodPreviewing: "Fetching…",
+    apodPreviewOk: "APOD loaded.",
+    apodPreviewFail: "Could not fetch APOD.",
+    apodPoweredBy: "Data via NASA Open APIs",
   },
   es: {
     title: "Configuración",
@@ -1859,6 +1895,18 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     rssNoPreview: "Pega una URL para probar.",
     rssPreviewOk: "Feed accesible.",
     rssPreviewFail: "No se pudo acceder.",
+    apodTitle: "NASA — Picture of the Day",
+    apodLead: "Muestra la Astronomy Picture of the Day de la NASA en el panel. Funciona con DEMO_KEY; para uso intenso, registra tu key en api.nasa.gov.",
+    apodEnabledHint: "Card APOD visible en el panel",
+    apodDisabledHint: "Activa para ver la foto del día de la NASA",
+    apodApiKeyLabel: "API key NASA (opcional)",
+    apodApiKeyPh: "DEMO_KEY o tu key",
+    apodApiKeyHint: "Sin key personal usamos DEMO_KEY (límite bajo). Obtén la tuya gratis en api.nasa.gov.",
+    apodPreview: "Probar hoy",
+    apodPreviewing: "Buscando…",
+    apodPreviewOk: "APOD cargado.",
+    apodPreviewFail: "No se pudo obtener el APOD.",
+    apodPoweredBy: "Datos vía NASA Open APIs",
   },
 };
 

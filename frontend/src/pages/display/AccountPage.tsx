@@ -12,6 +12,7 @@ import { GithubDetail, GithubProfileDetail } from "../../components/cards/Github
 import { GptDetail } from "../../components/cards/GptCard";
 import { RetroAchievementsDetail } from "../../components/cards/RetroAchievementsCard";
 import { RssDetail } from "../../components/cards/RssCard";
+import { ApodDetail } from "../../components/cards/ApodCard";
 import { WeatherDetail } from "../../components/cards/WeatherCard";
 import { ExternalLinkIcon } from "../../components/icons";
 import type { T } from "../../i18n";
@@ -148,6 +149,21 @@ function RssAccountPage({ data, t }: { data: UsagePayload; t: T }) {
   );
 }
 
+function ApodAccountPage({ data, t }: { data: UsagePayload; t: T }) {
+  return (
+    <div className={`w-full ${viewFade}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="text-[28px]" aria-hidden>🛰️</span>
+        <div>
+          <div className="text-[19px] font-[750] leading-none tracking-[-.1px]">{t.apod}</div>
+          {data.apod?.date ? <div className={cardLabel}>{data.apod.date}</div> : null}
+        </div>
+      </div>
+      <ApodDetail apod={data.apod} t={t} />
+    </div>
+  );
+}
+
 function GithubAccountPage({ meta, t }: { meta: ProviderMeta; t: T }) {
   if (meta.githubProfile) {
     const profile = meta.githubProfile;
@@ -200,6 +216,9 @@ export function AccountPage({ meta, account, data, t, pal, nowMs }: { meta: Prov
   }
   if (meta.provider === "rss" || meta.kind === "rss") {
     return <RssAccountPage data={data} t={t} />;
+  }
+  if (meta.provider === "apod" || meta.kind === "apod") {
+    return <ApodAccountPage data={data} t={t} />;
   }
   if (meta.provider === "github" || meta.kind === "github" || meta.provider === "github-profile" || meta.kind === "github-profile") {
     return <GithubAccountPage meta={meta} t={t} />;

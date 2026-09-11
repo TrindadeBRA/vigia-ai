@@ -73,7 +73,7 @@ describe("SSE framing (§6.1)", () => {
     const first = await gen.next();
     expect(first.value).toBe(": connected\n\n");
     // payload mock
-    const payload = { updated_at: "2026-09-04T18:00:00-03:00", claude: [], gpt: [], cursor: [], openrouter: [], deepseek: [], opencode: [], fal: [], bitcoin: [], adsense: [], retroachievements: [], weather: null, currencies: null, git: null, calendar: null, rss: null } as any;
+    const payload = { updated_at: "2026-09-04T18:00:00-03:00", claude: [], gpt: [], cursor: [], openrouter: [], deepseek: [], opencode: [], fal: [], bitcoin: [], adsense: [], retroachievements: [], weather: null, currencies: null, git: null, calendar: null, rss: null, apod: null } as any;
     expect(formatSse(payload)).toBe(`event: usage\ndata: ${JSON.stringify(payload)}\n\n`);
     // com snapshot, próximo yield deve ser event: usage
     hub["snapshot"] = () => payload; // monkey patch private for test
@@ -94,7 +94,7 @@ describe("SSE framing (§6.1)", () => {
     const payload = {
       updated_at: "2026-09-10T18:00:00-03:00",
       claude: [], gpt: [], cursor: [], openrouter: [], deepseek: [], opencode: [], fal: [], bitcoin: [], adsense: [],
-      retroachievements: [], weather: null, currencies: null, git: null, calendar: null, rss: null,
+      retroachievements: [], weather: null, currencies: null, git: null, calendar: null, rss: null, apod: null,
       github: {
         ok: true, error: null, updated_at: "2026-09-10T18:00:00-03:00",
         repos: [{

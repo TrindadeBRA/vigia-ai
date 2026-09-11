@@ -27,6 +27,7 @@ import {
   NoteTileCard,
   RetroAchievementsTileCard,
   RssTileCard,
+  ApodTileCard,
   SpotifyTileCard,
   SystemTileCard,
   WeatherTileCard,
@@ -105,6 +106,9 @@ export function ProviderCard({
   }
   if (p.provider === "rss" || p.kind === "rss") {
     return <RssTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "apod" || p.kind === "apod") {
+    return <ApodTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "github" || p.kind === "github" || p.provider === "github-profile" || p.kind === "github-profile") {
     return <GithubTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onOpen={onOpen} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { defaultConfig, migrateLegacy } from "./store.js";
+import { defaultConfig, migrateLegacy, _normalize, updateSync } from "./store.js";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 describe("migrateLegacy", () => {
   it("migrates flat env vars into the v1 shape", () => {
@@ -33,5 +36,43 @@ describe("defaultConfig", () => {
     expect(cfg.paths.codex_auth).toBe("");
     expect(cfg.firmware.wifi_ssid).toBe("");
     expect(cfg.firmware.wifi_password).toBe("");
+  });
+});
+
+describe("_normalize apod", () => {
+  it("preserves apod enabled/hidden and api_key from raw config", () => {
+    const cfg = _normalize({
+      version: 1,
+      providers: {},
+      apod: { enabled: true, hidden: false, api_key: "NASA-KEY-123" },
+    }) as Record<string, any>;
+    expect(cfg.apod.enabled).toBe(true);
+    expect(cfg.apod.hidden).toBe(false);
+    expect(cfg.apod.api_key).toBe("NASA-KEY-123");
+  });
+});
+
+describe("updateSync apod", () => {
+  it("persists apod settings through update and reload", () => {
+    const dir = mkdtempSync(join(tmpdir(), "vigia-apod-"));
+    const prev = process.env.VIGIA_DATA;
+    process.env.VIGIA_DATA = dir;
+    try {
+      updateSync((cfg) => {
+        const apod = (cfg.apod ?? {}) as Record<string, unknown>;
+        apod.enabled = true;
+        apod.hidden = false;
+        apod.api_key = "my-nasa-key";
+        cfg.apod = apod;
+      });
+      const reloaded = updateSync(() => {}) as Record<string, any>;
+      expect(reloaded.apod.enabled).toBe(true);
+      expect(reloaded.apod.hidden).toBe(false);
+      expect(reloaded.apod.api_key).toBe("my-nasa-key");
+    } finally {
+      if (prev === undefined) delete process.env.VIGIA_DATA;
+      else process.env.VIGIA_DATA = prev;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

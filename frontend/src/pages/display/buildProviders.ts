@@ -370,6 +370,20 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
       rss,
     });
   }
+  const apod = data.apod;
+  if (apod) {
+    list.push({
+      id: "apod:main",
+      provider: "apod",
+      ok: apod.ok,
+      error: apod.error,
+      title: t.apod || "NASA APOD",
+      label: apod.date || "",
+      metrics: [],
+      kind: "apod",
+      apod,
+    });
+  }
   // GitHub — um card por repositório
   const github = data.github;
   if (github && github.repos) {
@@ -475,7 +489,7 @@ export function buildMusicProviders(providers: { spotify?: MusicProviderStatus; 
   return list;
 }
 
-export function buildImageProviders(items: Array<{ id: string; src: string; fit: "cover" | "contain"; label?: string }>, t: T): ProviderMeta[] {
+export function buildImageProviders(items: Array<{ id: string; src: string; fit: "cover" | "contain"; label?: string; countdownAt?: string | null; countdownLabel?: string | null }>, t: T): ProviderMeta[] {
   return items.map((it) => ({
     id: it.id,
     provider: "image",
@@ -488,6 +502,8 @@ export function buildImageProviders(items: Array<{ id: string; src: string; fit:
     imageSrc: it.src,
     imageFit: it.fit,
     imageTransform: (it as unknown as { transform?: { x: number; y: number; scale: number } }).transform ?? null,
+    imageCountdownAt: it.countdownAt ?? null,
+    imageCountdownLabel: it.countdownLabel ?? null,
   }));
 }
 

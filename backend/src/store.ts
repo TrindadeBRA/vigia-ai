@@ -121,6 +121,12 @@ const _RSS_DEFAULT: Record<string, unknown> = {
   feeds: [],
 };
 
+const _APOD_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+  api_key: "",
+};
+
 const _GITHUB_DEFAULT: Record<string, unknown> = {
   enabled: false,
   hidden: false,
@@ -178,6 +184,7 @@ export function defaultConfig(): Record<string, unknown> {
     git: deepClone(_GIT_DEFAULT),
     calendar: deepClone(_CALENDAR_DEFAULT),
     rss: deepClone(_RSS_DEFAULT),
+    apod: deepClone(_APOD_DEFAULT),
     github: deepClone(_GITHUB_DEFAULT),
     emulator: deepClone(_EMULATOR_DEFAULT),
     firmware: { wifi_ssid: "", wifi_password: "" },
@@ -636,6 +643,15 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
       });
     }
     rss.feeds = cleaned;
+  }
+
+  // apod
+  const rawApod = (typeof raw.apod === "object" && raw.apod !== null ? raw.apod : {}) as Record<string, unknown>;
+  const apod = cfg.apod as Record<string, unknown>;
+  apod.enabled = Boolean(rawApod.enabled ?? apod.enabled);
+  apod.hidden = Boolean(rawApod.hidden ?? apod.hidden);
+  if ("api_key" in rawApod && rawApod.api_key != null) {
+    apod.api_key = String(rawApod.api_key).trim();
   }
 
   // github

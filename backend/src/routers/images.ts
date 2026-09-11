@@ -30,7 +30,9 @@ export async function createImagesRoutes(app: FastifyInstance): Promise<void> {
         if (!isValidSrc(src)) return reply.code(400).send({ ok: false, error: "src inválido — use http(s) ou data:image/" });
         const fit = body?.fit === "contain" ? "contain" : "cover";
         const label = body?.label != null ? String(body.label) : null;
-        const image = createImage(src, { fit, label });
+        const countdownAt = body?.countdownAt ?? body?.countdown_at ?? null;
+        const countdownLabel = body?.countdownLabel ?? body?.countdown_label ?? null;
+        const image = createImage(src, { fit, label, countdownAt: countdownAt as string | null, countdownLabel: countdownLabel as string | null });
         return { ok: true, image };
     });
 
@@ -39,7 +41,7 @@ export async function createImagesRoutes(app: FastifyInstance): Promise<void> {
         const id = String(params.id ?? "");
         if (!id) return reply.code(400).send({ ok: false, error: "id vazio" });
         const body = request.body as Record<string, unknown> | null;
-        if (!body || (body.src === undefined && body.fit === undefined && body.label === undefined && body.transform === undefined)) {
+        if (!body || (body.src === undefined && body.fit === undefined && body.label === undefined && body.transform === undefined && body.countdownAt === undefined && body.countdown_at === undefined && body.countdownLabel === undefined && body.countdown_label === undefined)) {
             return reply.code(400).send({ ok: false, error: "nada para atualizar" });
         }
         const patch: Record<string, unknown> = {};
@@ -56,6 +58,8 @@ export async function createImagesRoutes(app: FastifyInstance): Promise<void> {
             patch.fit = f;
         }
         if (body.label !== undefined) patch.label = body.label == null ? null : String(body.label);
+        if (body.countdownAt !== undefined || body.countdown_at !== undefined) patch.countdownAt = body.countdownAt ?? body.countdown_at;
+        if (body.countdownLabel !== undefined || body.countdown_label !== undefined) patch.countdownLabel = body.countdownLabel ?? body.countdown_label;
         if (body.transform !== undefined) patch.transform = body.transform;
         const updated = updateImage(id, patch as never);
         if (!updated) return reply.code(404).send({ ok: false, error: "imagem não encontrada" });

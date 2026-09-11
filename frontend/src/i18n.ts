@@ -241,6 +241,11 @@ type Strings = {
   imageFitCover: string;
   imageFitContain: string;
   imageLabelPh: string;
+  imageCountdownAt: string;
+  imageCountdownLabel: string;
+  imageCountdownLabelPh: string;
+  imageCountdownHint: string;
+  imageCountdownDone: string;
   imageNeedSrc: string;
   imageAdd: string;
   save: string;
@@ -277,6 +282,11 @@ type Strings = {
   calendarNoEvents: string;
   // RSS
   rss: string;
+  apod: string;
+  apodEmpty: string;
+  apodVideoToday: string;
+  apodVideoBadge: string;
+  apodArchiveLink: string;
   rssEmpty: string;
   rssNoItems: string;
   rssLatest: string;
@@ -545,6 +555,11 @@ export const STR: Record<Lang, Strings> = {
     imageFitCover: "Preencher",
     imageFitContain: "Conter",
     imageLabelPh: "Legenda opcional",
+    imageCountdownAt: "Contagem regressiva",
+    imageCountdownLabel: "Rótulo do cronômetro",
+    imageCountdownLabelPh: "Ex.: GTA VI",
+    imageCountdownHint: "Opcional — mostra um cronômetro centralizado sobre a imagem até a data escolhida.",
+    imageCountdownDone: "Lançado!",
     imageNeedSrc: "Escolha uma imagem",
     imageAdd: "Adicionar",
     save: "Salvar",
@@ -577,6 +592,11 @@ export const STR: Record<Lang, Strings> = {
     calendarEmpty: "Nenhum calendário configurado.",
     calendarNoEvents: "Nenhum evento próximo.",
     rss: "RSS",
+    apod: "NASA APOD",
+    apodEmpty: "APOD indisponível",
+    apodVideoToday: "Hoje é um vídeo APOD.",
+    apodVideoBadge: "Vídeo",
+    apodArchiveLink: "Ver arquivo APOD na NASA",
     rssEmpty: "Nenhum feed configurado.",
     rssNoItems: "Nenhuma notícia no feed.",
     rssLatest: "Última notícia",
@@ -842,6 +862,11 @@ export const STR: Record<Lang, Strings> = {
     imageFitCover: "Cover",
     imageFitContain: "Contain",
     imageLabelPh: "Optional caption",
+    imageCountdownAt: "Countdown",
+    imageCountdownLabel: "Countdown label",
+    imageCountdownLabelPh: "e.g. GTA VI",
+    imageCountdownHint: "Optional — shows a centered countdown over the image until the chosen date.",
+    imageCountdownDone: "Released!",
     imageNeedSrc: "Pick an image",
     imageAdd: "Add",
     save: "Save",
@@ -874,6 +899,11 @@ export const STR: Record<Lang, Strings> = {
     calendarEmpty: "No calendar configured.",
     calendarNoEvents: "No upcoming events.",
     rss: "RSS",
+    apod: "NASA APOD",
+    apodEmpty: "APOD unavailable",
+    apodVideoToday: "Today's APOD is a video.",
+    apodVideoBadge: "Video",
+    apodArchiveLink: "Browse APOD archive on NASA",
     rssEmpty: "No feed configured.",
     rssNoItems: "No items in feed.",
     rssLatest: "Latest",
@@ -1139,6 +1169,11 @@ export const STR: Record<Lang, Strings> = {
     imageFitCover: "Cubrir",
     imageFitContain: "Contener",
     imageLabelPh: "Leyenda opcional",
+    imageCountdownAt: "Cuenta regresiva",
+    imageCountdownLabel: "Etiqueta del cronómetro",
+    imageCountdownLabelPh: "Ej.: GTA VI",
+    imageCountdownHint: "Opcional — muestra una cuenta regresiva centrada sobre la imagen hasta la fecha elegida.",
+    imageCountdownDone: "¡Lanzado!",
     imageNeedSrc: "Elige una imagen",
     imageAdd: "Agregar",
     save: "Guardar",
@@ -1171,6 +1206,11 @@ export const STR: Record<Lang, Strings> = {
     calendarEmpty: "Ningún calendario configurado.",
     calendarNoEvents: "Ningún evento próximo.",
     rss: "RSS",
+    apod: "NASA APOD",
+    apodEmpty: "APOD no disponible",
+    apodVideoToday: "El APOD de hoy es un video.",
+    apodVideoBadge: "Video",
+    apodArchiveLink: "Ver archivo APOD en la NASA",
     rssEmpty: "Ningún feed configurado.",
     rssNoItems: "Ningún artículo en el feed.",
     rssLatest: "Último",

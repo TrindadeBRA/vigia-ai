@@ -18,6 +18,7 @@ export const TTL_S: Record<string, number> = {
   calendar: 300,
   rss: 300,
   github: 300,
+  apod: 3600,
 };
 
 export const FORCEABLE: ReadonlySet<string> = new Set([

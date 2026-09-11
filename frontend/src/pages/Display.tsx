@@ -334,7 +334,7 @@ export default function Display() {
     // clones usam id "base::clone:N" — resolve para base para buscar ProviderMeta e conta
     const baseSelected = selectedId ? baseIdForProvider(selectedId) : null;
     meta = (baseSelected ? displayProviders.find((p) => p.id === selectedId) || providers.find((p) => p.id === baseSelected) : null) || null;
-    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss" && meta.provider !== "github" && meta.kind !== "github" && meta.provider !== "github-profile" && meta.kind !== "github-profile" && meta.provider !== "emulator" && meta.kind !== "emulator") {
+    if (meta && meta.provider !== "weather" && meta.kind !== "weather" && meta.provider !== "currencies" && meta.kind !== "currencies" && meta.provider !== "git" && meta.kind !== "git" && meta.provider !== "retroachievements" && meta.kind !== "retroachievements" && meta.provider !== "calendar" && meta.kind !== "calendar" && meta.provider !== "rss" && meta.kind !== "rss" && meta.provider !== "apod" && meta.kind !== "apod" && meta.provider !== "github" && meta.kind !== "github" && meta.provider !== "github-profile" && meta.kind !== "github-profile" && meta.provider !== "emulator" && meta.kind !== "emulator") {
       const baseId = baseIdForProvider(meta.id);
       const idx = baseId.indexOf(":");
       const accountId = baseId.slice(idx + 1);
@@ -974,8 +974,10 @@ export default function Display() {
         mode={editingImageId ? "edit" : "add"}
         editSrc={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.src ?? null : null}
         editLabel={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.label ?? null : null}
-        onAdd={(src, fit, label) => { void imageWidgets.add(src, fit, label); }}
-        onSaveEdit={(src, fit, label) => { if (editingImageId) void imageWidgets.update(editingImageId, { src, fit, label }); }}
+        editCountdownAt={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.countdownAt ?? null : null}
+        editCountdownLabel={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.countdownLabel ?? null : null}
+        onAdd={(src, fit, label, countdownAt, countdownLabel) => { void imageWidgets.add(src, fit, label, countdownAt, countdownLabel); }}
+        onSaveEdit={(src, fit, label, countdownAt, countdownLabel) => { if (editingImageId) void imageWidgets.update(editingImageId, { src, fit, label, countdownAt, countdownLabel }); }}
       />
       <PixDonateModal open={pixModalOpen} onClose={() => setPixModalOpen(false)} />
       <GamepadLegend key={gamepadTick} section={section} isNested={isNested} insideCard={gamepadInsideRef.current} />

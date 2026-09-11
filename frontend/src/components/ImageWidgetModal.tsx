@@ -34,6 +34,21 @@ function fileToDataUrl(file: File): Promise<string> {
     });
 }
 
+function toDatetimeLocal(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromDatetimeLocal(value: string): string | null {
+    const v = value.trim();
+    if (!v) return null;
+    const ms = Date.parse(v);
+    if (Number.isNaN(ms)) return null;
+    return new Date(ms).toISOString();
+}
 function isValidImageUrl(s: string): boolean {
     const v = s.trim();
     if (!v) return false;
@@ -54,17 +69,21 @@ export function ImageWidgetModal({
     t,
     editSrc,
     editLabel,
+    editCountdownAt,
+    editCountdownLabel,
     onSaveEdit,
     mode = "add",
 }: {
     open: boolean;
     onClose: () => void;
-    onAdd: (src: string, fit: "cover" | "contain", label?: string) => void;
+    onAdd: (src: string, fit: "cover" | "contain", label?: string, countdownAt?: string | null, countdownLabel?: string | null) => void;
     lang: Lang;
     t: T;
     editSrc?: string | null;
     editLabel?: string | null;
-    onSaveEdit?: (src: string, fit: "cover" | "contain", label?: string) => void;
+    editCountdownAt?: string | null;
+    editCountdownLabel?: string | null;
+    onSaveEdit?: (src: string, fit: "cover" | "contain", label?: string, countdownAt?: string | null, countdownLabel?: string | null) => void;
     mode?: "add" | "edit";
 }) {
     if (!open) return null;
@@ -77,6 +96,8 @@ export function ImageWidgetModal({
                 t={t}
                 editSrc={editSrc}
                 editLabel={editLabel}
+                editCountdownAt={editCountdownAt}
+                editCountdownLabel={editCountdownLabel}
                 onSaveEdit={onSaveEdit}
                 mode={mode}
             />
@@ -91,16 +112,20 @@ function ImageWidgetContent({
     t,
     editSrc,
     editLabel,
+    editCountdownAt,
+    editCountdownLabel,
     onSaveEdit,
     mode,
 }: {
     onClose: () => void;
-    onAdd: (src: string, fit: "cover" | "contain", label?: string) => void;
+    onAdd: (src: string, fit: "cover" | "contain", label?: string, countdownAt?: string | null, countdownLabel?: string | null) => void;
     lang: Lang;
     t: T;
     editSrc?: string | null;
     editLabel?: string | null;
-    onSaveEdit?: (src: string, fit: "cover" | "contain", label?: string) => void;
+    editCountdownAt?: string | null;
+    editCountdownLabel?: string | null;
+    onSaveEdit?: (src: string, fit: "cover" | "contain", label?: string, countdownAt?: string | null, countdownLabel?: string | null) => void;
     mode: "add" | "edit";
 }) {
     const c = THEME_STR[lang];
@@ -108,6 +133,8 @@ function ImageWidgetContent({
     const [urlValue, setUrlValue] = useState(editSrc && !editSrc.startsWith("data:") ? editSrc : "");
     const [fit, setFit] = useState<"cover" | "contain">("cover");
     const [label, setLabel] = useState(editLabel || "");
+    const [countdownAtLocal, setCountdownAtLocal] = useState(toDatetimeLocal(editCountdownAt));
+    const [countdownLabel, setCountdownLabel] = useState(editCountdownLabel || "");
     const [preview, setPreview] = useState<string | null>(editSrc || null);
     const [dragOver, setDragOver] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
@@ -133,6 +160,11 @@ function ImageWidgetContent({
     useEffect(() => {
         if (editSrc) setPreview(editSrc);
     }, [editSrc]);
+
+    useEffect(() => {
+        setCountdownAtLocal(toDatetimeLocal(editCountdownAt));
+        setCountdownLabel(editCountdownLabel || "");
+    }, [editCountdownAt, editCountdownLabel]);
 
     const canSearch =
         searchProvider === "wallhaven"
@@ -183,8 +215,10 @@ function ImageWidgetContent({
     function handleConfirm() {
         const src = (preview || "").trim();
         if (!src) throw new Error(t.imageNeedSrc ?? "Escolha uma imagem");
-        if (mode === "edit" && onSaveEdit) onSaveEdit(src, fit, label.trim() || undefined);
-        else onAdd(src, fit, label.trim() || undefined);
+        const countdownAt = fromDatetimeLocal(countdownAtLocal);
+        const countdownLabelValue = countdownLabel.trim() || undefined;
+        if (mode === "edit" && onSaveEdit) onSaveEdit(src, fit, label.trim() || undefined, countdownAt, countdownLabelValue);
+        else onAdd(src, fit, label.trim() || undefined, countdownAt, countdownLabelValue);
         onClose();
         return { ok: true };
     }
@@ -250,8 +284,29 @@ function ImageWidgetContent({
                             value={label}
                             onChange={(e) => setLabel(e.target.value)}
                             placeholder={t.imageLabelPh ?? "Legenda opcional"}
-                            className="w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink3"
+                            className="mb-2 w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink3"
                         />
+                        <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2">
+                            <label className="flex flex-col gap-1">
+                                <span className="text-[11px] font-semibold text-ink2">{t.imageCountdownAt ?? "Contagem regressiva"}</span>
+                                <input
+                                    type="datetime-local"
+                                    value={countdownAtLocal}
+                                    onChange={(e) => setCountdownAtLocal(e.target.value)}
+                                    className="w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink"
+                                />
+                            </label>
+                            <label className="flex flex-col gap-1">
+                                <span className="text-[11px] font-semibold text-ink2">{t.imageCountdownLabel ?? "Rótulo do cronômetro"}</span>
+                                <input
+                                    value={countdownLabel}
+                                    onChange={(e) => setCountdownLabel(e.target.value)}
+                                    placeholder={t.imageCountdownLabelPh ?? "Ex.: GTA VI"}
+                                    className="w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink3"
+                                />
+                            </label>
+                        </div>
+                        <p className="mt-2 text-[11px] leading-relaxed text-ink3">{t.imageCountdownHint ?? "Opcional — mostra um cronômetro centralizado sobre a imagem até a data escolhida."}</p>
                     </div>
                 </div>
             ) : null}

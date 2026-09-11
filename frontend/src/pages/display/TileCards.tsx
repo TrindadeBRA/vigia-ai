@@ -21,6 +21,7 @@ import { ImageBoardCard, imageAllowedSizes, imageSizeLabel } from "../../compone
 import { NoteBoardCard, noteAllowedSizes, noteSizeLabel } from "../../components/cards/NoteCard";
 import { RetroAchievementsBoardCard, retroAllowedSizes, retroSizeLabel } from "../../components/cards/RetroAchievementsCard";
 import { RssBoardCard, rssAllowedSizes, rssSizeLabel } from "../../components/cards/RssCard";
+import { ApodBoardCard, apodAllowedSizes, apodSizeLabel } from "../../components/cards/ApodCard";
 import { SpotifyBoardCard, spotifyAllowedSizes, spotifySizeLabel } from "../../components/cards/SpotifyCard";
 import { SystemBoardCard, systemAllowedSizes, systemSizeLabel } from "../../components/cards/SystemCard";
 import { WeatherBoardCard, weatherAllowedSizes, weatherSizeLabel } from "../../components/cards/WeatherCard";
@@ -346,6 +347,20 @@ export function RssTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, 
   );
 }
 
+export function ApodTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = apodAllowedSizes();
+  const isClone = isCloneId(p.id);
+  const style = useTileStyle(bg);
+  return (
+    <div className={cn(TILE_BASE, "p-2", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => apodSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <ApodBoardCard apod={p.apod} t={t} size={size} onOpen={onOpen} />
+    </div>
+  );
+}
+
 export function CalendarTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onOpen, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onOpen: () => void; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
   const allowed = calendarAllowedSizes(p.calendar);
   const isClone = isCloneId(p.id);
@@ -437,7 +452,7 @@ export function ImageTileCard({ p, size, dragging, lifted, t, grip, bg, readonly
           </div>
         </div>
       ) : null}
-      <ImageBoardCard src={p.imageSrc} fit={p.imageFit} transform={p.imageTransform} t={t} size={size} readonly={readonly} onConfigure={() => onEdit?.(p.id)} onTransformChange={!readonly && onTransformChange ? (next) => onTransformChange(p.id, next) : undefined} />
+      <ImageBoardCard src={p.imageSrc} fit={p.imageFit} transform={p.imageTransform} countdownAt={p.imageCountdownAt} countdownLabel={p.imageCountdownLabel} t={t} size={size} readonly={readonly} onConfigure={() => onEdit?.(p.id)} onTransformChange={!readonly && onTransformChange ? (next) => onTransformChange(p.id, next) : undefined} />
     </div>
   );
 }

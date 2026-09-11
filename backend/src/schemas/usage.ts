@@ -5,6 +5,7 @@ import { GitPayloadSchema } from "./git.js";
 import { GithubPayloadSchema } from "./github.js";
 import { RetroAchievementsAccountSchema } from "./retroachievements.js";
 import { RssPayloadSchema } from "./rss.js";
+import { ApodPayloadSchema } from "./apod.js";
 import { WeatherPayloadSchema } from "./weather.js";
 
 export const ProviderIdSchema = z.enum([
@@ -261,6 +262,7 @@ export const UsagePayloadSchema = z.object({
   calendar: CalendarPayloadSchema.nullable().default(null),
   rss: RssPayloadSchema.nullable().default(null),
   github: GithubPayloadSchema.nullable().optional(),
+  apod: ApodPayloadSchema.nullable().default(null),
 }).passthrough();
 export type UsagePayload = z.infer<typeof UsagePayloadSchema>;
 

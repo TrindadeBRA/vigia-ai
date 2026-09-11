@@ -35,10 +35,12 @@ export function IconChip({
     const hasTrack = !!track;
     const title = hasTrack ? track.name : !isConfigured ? "Conecte Spotify" : spotify?.error ? "Erro" : "Nada tocando";
     const subtitle = hasTrack ? track.artists : !isConfigured ? "em Configurações" : isPlaying ? "Tocando" : "Pausado";
+    const chipW = 140 * scale * zoom;
+    const innerTextW = chipW - iconPx - 12 * scale * zoom - 16 * scale * zoom;
     return (
       <div
         className={cn("flex items-center gap-1.5 rounded-md px-2 py-1", showBackground && !bgColor && "bg-black/35")}
-        style={{ background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
+        style={{ width: chipW, background: showBackground ? bgColor || undefined : "transparent", border: showBackground && color ? `1.5px solid ${color}` : undefined }}
       >
         <div className="relative shrink-0">
           <img
@@ -57,10 +59,10 @@ export function IconChip({
             </span>
           ) : null}
         </div>
-        <div className="flex min-w-0 max-w-[140px] flex-col leading-none">
+        <div className="flex min-w-0 flex-1 flex-col leading-none">
           <span
             className="truncate font-bold text-white"
-            style={{ color: color || undefined, fontSize: `${10 * scale * zoom}px`, maxWidth: 110 * scale * zoom }}
+            style={{ color: color || undefined, fontSize: `${10 * scale * zoom}px`, maxWidth: innerTextW }}
             title={hasTrack ? `${track.name} — ${track.artists}` : undefined}
           >
             {title.length > 24 ? `${title.slice(0, 24)}…` : title}
