@@ -109,6 +109,8 @@ struct UiStrings
   const char *cameraLoading;
   const char *cameraOffline;
   const char *cameraPtz;
+  const char *loadingTitle;
+  const char *loadingSub;
 };
 
 const UiStrings &uiTr();

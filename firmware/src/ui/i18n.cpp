@@ -67,7 +67,7 @@ static const UiStrings kPt = {
     "DADOS DE USO",
     "Atualizar consumo",
     "Calibrar touch",
-    "Consumo em tempo real das IAs",
+    "Suas cotas de IA, num unico mostrador",
     "sem dados",
     "Toque os cantos",
     "Nenhum provedor configurado. Preencha no painel do coletor.",
@@ -109,6 +109,8 @@ static const UiStrings kPt = {
     "Carregando...",
     "Camera offline",
     "PTZ",
+    "Aguardando conectores",
+    "Conectando ao coletor...",
 };
 
 static const UiStrings kEn = {
@@ -176,7 +178,7 @@ static const UiStrings kEn = {
     "USAGE DATA",
     "Fetch usage now",
     "Calibrate touch",
-    "Real-time AI usage",
+    "Your AI quotas, in a single display",
     "no data",
     "Tap the corners",
     "No provider configured. Fill one in on the collector panel.",
@@ -218,6 +220,8 @@ static const UiStrings kEn = {
     "Loading...",
     "Camera offline",
     "PTZ",
+    "Waiting for connectors",
+    "Connecting to collector...",
 };
 
 static const UiStrings kEs = {
@@ -285,7 +289,7 @@ static const UiStrings kEs = {
     "DATOS DE USO",
     "Buscar cuotas ahora",
     "Calibrar toque",
-    "Consumo de IAs en tiempo real",
+    "Tus cuotas de IA, en un solo visor",
     "sin datos",
     "Toca las esquinas",
     "Ningun proveedor configurado. Completalo en el panel del colector.",
@@ -327,6 +331,8 @@ static const UiStrings kEs = {
     "Cargando...",
     "Camara offline",
     "PTZ",
+    "Esperando conectores",
+    "Conectando al colector...",
 };
 
 const UiStrings &uiTr()

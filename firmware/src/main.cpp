@@ -56,6 +56,11 @@ void setup()
   g_lastFetchMs = 0;
   usageClientEnsureWifi();
   themeServerBegin();
+  // Estado de loading pos-splash — espelha o Skeleton da web
+  // (frontend/src/components/skeleton/bodies.tsx -> OverviewBody) enquanto
+  // o coletor ainda nao respondeu / os conectores nao voltaram.
+  // Wi-Fi ja foi disparado acima, entao a animacao cobre o tempo de conexao.
+  uiShowLoading();
   uiPaint();
 }
 

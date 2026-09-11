@@ -69,6 +69,7 @@ enum UiAccent : uint8_t
 
 void uiInit();
 void uiShowSplash();
+void uiShowLoading();
 void uiPaint();
 void uiRefreshData();
 void uiTickClock();
