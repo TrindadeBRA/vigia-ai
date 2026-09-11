@@ -1,5 +1,8 @@
 # Plano — Mineração de Bitcoin (MVP)
 
+Comportamento vigente (shares, pools, o que o painel mostra): [`MINERACAO.md`](MINERACAO.md).
+Este arquivo é o **plano histórico** da implementação.
+
 Decisões já tomadas com o usuário (2026-09-06):
 
 - **Branch**: implementação inteira em branch separada (ex.: `feature/mineracao-btc`), criada a partir de `develop`. Não commitar direto na `develop` — merge só quando validado em hardware real (ver "Como validar").
@@ -130,6 +133,7 @@ Quem decide **se pode** minerar é a config remota (`enabled` + `btcWallet`); qu
 - **Dois bugs do NerdMiner original corrigidos ao portar** (`checkValid`, nunca notados na prática por só rodarem quando uma hash já bate 32 bits de zero): `memcpy(diff_target, &target, 32)` copiava o endereço do ponteiro, não os bytes; e o loop de comparação usava `uint8_t i` decrescente com `i >= 0` (nunca falso — wraparound). Ver comentário em `firmware/src/mining/mining_math.cpp`.
 - **`board_build.partitions = huge_app.csv`**: a mineração empurrou o firmware pra 97% da partição padrão (~1,31MB de app). NerdMiner_v2 documenta a mesma exigência. Com `huge_app.csv` (~3MB de app, sem OTA) o uso caiu pra ~40%. **Atenção**: trocar o esquema de partição pede "Erase Flash" (apagar tudo) no próximo flash de uma placa que já tinha o firmware antigo — senão o offset da SPIFFS/LittleFS do tema muda e o papel de parede salvo fica ilegível. Nenhuma placa foi flashada ainda nesta sessão.
 - **Block height fora do MVP**: o NerdMiner busca isso numa API HTTP externa (block explorer), não vem do job do Stratum. Pra não adicionar mais uma dependência de rede externa no firmware sem o usuário pedir, o campo existe no contrato (`blockHeight`) mas a placa sempre manda `0` — o painel web já trata isso (mostra "—").
+- **Share baixo é válido**: igual ao NerdMiner — não é bloco; o pool aceita provas mais fáceis como recibo de hashing. A placa pede `0.00015`; se o pool impuser 1, ~40 kH/s rendem ~1 share / ~30 h. Ver [`MINERACAO.md`](MINERACAO.md).
 
 ## Como validar
 
@@ -143,7 +147,7 @@ Quem decide **se pode** minerar é a config remota (`enabled` + `btcWallet`); qu
 
 - ~~Endereço BTC de payout~~ — **definido**: o usuário já passou a wallet (endereço bech32, formato `bc1q...`, mainnet, P2WPKH) na conversa. Seguindo a própria regra deste plano ("não vai pro firmware nem pro git"), o endereço **não fica escrito neste arquivo versionado** — ele entra direto em `backend/data/mining.json` (gitignored) no passo 1/2 da implementação, informado pelo usuário no momento de configurar.
 - Nome do worker: opcional, sufixo `.nome` no wallet — decidir na hora de configurar.
-- Qual pool usar (sugestão: `public-pool.io`, é o recomendado pelo próprio NerdMiner pra low-difficulty shares).
+- Qual pool usar — **documentado**: share baixo só funciona em pools tipo NerdMiner (`public-pool.io:3333` e equivalentes). Ver [`MINERACAO.md`](MINERACAO.md).
 
 ---
 

@@ -11,8 +11,9 @@ function normalizeBtcWallet(v: string): string {
   return /^bc1/i.test(trimmed) ? trimmed.toLowerCase() : trimmed;
 }
 
-// Config remota da mineração (protótipo — ver .agents/PLANO_MINERACAO.md).
+// Config remota da mineração (protótipo — ver .agents/MINERACAO.md).
 // Guardada em backend/data/mining.json (gitignored), nunca no firmware nem no git.
+// Default public-pool.io:3333 porque aceita share baixo (0.00015), igual ao NerdMiner.
 export const MiningConfigSchema = z.object({
   enabled: z.boolean().default(false),
   poolUrl: z.string().default("public-pool.io"),

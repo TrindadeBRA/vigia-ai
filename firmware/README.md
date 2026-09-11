@@ -320,6 +320,7 @@ Portado de [NerdMiner_v2](https://github.com/BitMaker-hub/NerdMiner_v2) (MIT), s
 - `uiSetView()` liga/desliga ao entrar/sair de `VIEW_MINER` (`net/mining_client.cpp`).
 - Duas tasks no **core 0** (o `loopTask` roda no core 1): `MiningStratum` (12 KB stack, prio 2) + `MiningHash` (5 KB, prio 1). Cedem CPU (`vTaskDelay`) para não desabilitar o watchdog — diferente do NerdMiner original.
 - Config remota via `GET /api/mining/config` no coletor; status em `POST /api/mining/report`. UI em `ui/views/miner.cpp` (`uiTickMiner()` a 1 Hz).
+- Share de baixa dificuldade (`suggest_difficulty` 0.00015) é válido — recibo do pool, igual ao NerdMiner, não um bloco. Se o pool impuser dificuldade 1, shares quase não aparecem (~30 h a ~40 kH/s). Block height sempre `—`. Ver [`.agents/MINERACAO.md`](../.agents/MINERACAO.md).
 
 ### 8.7 Câmeras e Spotify
 

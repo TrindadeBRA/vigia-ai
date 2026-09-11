@@ -129,7 +129,7 @@ Usa `WebServer.h` + `LittleFS.h` (já no core ESP32, sem `lib_deps` novo). Arqui
 
 ## Mineração, câmeras e Spotify (protótipos)
 
-- **Mineração** (`mining/`): portado de [NerdMiner_v2](https://github.com/BitMaker-hub/NerdMiner_v2) (MIT). Só minera com `VIEW_MINER` ativa — `uiSetView()` liga/desliga. Duas tasks no **core 0** (UI no core 1), cedem CPU para não desabilitar o watchdog. Config em `GET /api/mining/config`, ver [`PLANO_MINERACAO.md`](PLANO_MINERACAO.md).
+- **Mineração** (`mining/`): portado de [NerdMiner_v2](https://github.com/BitMaker-hub/NerdMiner_v2) (MIT). Só minera com `VIEW_MINER` ativa — `uiSetView()` liga/desliga. Duas tasks no **core 0** (UI no core 1), cedem CPU para não desabilitar o watchdog. Config em `GET /api/mining/config`. Share de baixa dificuldade é o recibo do pool (igual ao NerdMiner), não um bloco; block height sempre `—`. Ver [`MINERACAO.md`](MINERACAO.md).
 - **Câmeras** (`net/camera_client.cpp`): fora do contrato `/usage` — `GET /api/camera/cameras` + MJPEG/PTZ. Pausa o SSE na live para não estourar heap.
 - **Spotify** (`net/spotify_client.cpp`): poll 5 s, fora do ciclo de cotas.
 

@@ -205,7 +205,7 @@ no componente ou hook — não passa por um client HTTP centralizado):
 | Widgets de imagem | 15 s | `/display` |
 | Dispositivos Android | 15 s | `/display` |
 | Câmeras (listagem) | 60 s | `/display` |
-| Mineração — status | 5 s | só em `/display/config` (aba de mineração aberta) |
+| Mineração — status | 5 s | só em `/display/mining` (ver [`.agents/MINERACAO.md`](.agents/MINERACAO.md)) |
 | Telegram | 3 s | só em `/display/config`, e só enquanto o bot está configurado mas ainda sem chat vinculado |
 
 ## Privacidade e segurança

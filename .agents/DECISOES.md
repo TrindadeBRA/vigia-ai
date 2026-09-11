@@ -94,6 +94,17 @@ coletor encerrar assim que subisse.
 
 Notas, imagens, board, preferências de exibição, rascunho do editor de tema e o easter egg retrô passaram a viver **só** em `backend/data/*.json` (`/api/notes`, `/api/images`, `/api/board`, `/api/prefs`, `/api/theme-draft`, `/api/retro`). Antes cada um tinha seu próprio armazenamento em `localStorage`, por navegador — resultado: conteúdo criado num navegador/app específico "sumia" ao abrir o painel em outra tela/dispositivo (o caso mais visível era o de notas e imagens, criadas só pela UI). Cada hook faz uma migração única do `localStorage` antigo pro backend na primeira carga (o que falhar por rede fica salvo pra tentar de novo na próxima). Efeito colateral bom: o rascunho do editor de tema agora é compartilhado, então `/display/canvas` passa a espelhar de verdade uma edição feita em outro dispositivo, não só na mesma aba.
 
+## Mineração: share baixo igual ao NerdMiner, não bloco
+
+A ESP32 hasheia o block header de verdade (Stratum + SHA256d), mas um **share**
+é só o recibo de dificuldade baixa que o pool aceita para saber que a placa
+está trabalhando — o mesmo mecanismo do NerdMiner, não um bloco da rede.
+A placa pede `0.00015`; o pool pode ignorar e impor 1, e aí ~40 kH/s rendem
+~1 share a cada ~30 h (zero shares numa noite, com hashrate subindo, é
+esperado). Por isso o default é `public-pool.io:3333` (e equivalentes da lista
+NerdMiner), não pool de ASIC. Block height fica de fora do MVP (sempre `—`).
+Detalhe: [`MINERACAO.md`](MINERACAO.md).
+
 ## Um build do frontend para web e desktop
 
 O painel não sabe se está num navegador ou no app: ele testa `window.vigia` em

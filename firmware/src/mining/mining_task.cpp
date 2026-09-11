@@ -31,7 +31,7 @@ namespace
 {
 
 constexpr uint32_t kNoncePerJob = 4096;
-constexpr double kDefaultDifficulty = 0.00015;
+constexpr double kDefaultDifficulty = 0.00015; // mesmo valor do NerdMiner; o pool pode ignorar e impor 1 — ver .agents/MINERACAO.md
 constexpr uint32_t kKeepAliveMs = 30000;
 constexpr uint32_t kPoolInactivityMs = 60000;
 constexpr uint32_t kJobQueueTarget = 4;

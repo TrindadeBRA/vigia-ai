@@ -33,7 +33,7 @@ Arquivos: `src/input/touch.cpp` (XPT2046/FT6206 + calibração), `src/input/gest
 | AdSense | `VIEW_ADSENSE` 12 | Ganhos de hoje (est.) + saldo não pago. | ↑↓ | `‹ i/N ›` |
 | Moedas | `VIEW_CURRENCIES` 13 | Lista de cotações (fiat+cripto) na moeda base. Toque abre detalhe. | ↑↓ | — (não é lista de contas) |
 | Clima | `VIEW_WEATHER` 14 | Open-Meteo: atual + máx/mín do dia. | ↑↓ | — |
-| Mineração | `VIEW_MINER` 15 | Motor Stratum+SHA256 (só minera com esta view ativa, ver [`PLANO_MINERACAO.md`](PLANO_MINERACAO.md)). | auto 1 Hz | swipe normal |
+| Mineração | `VIEW_MINER` 15 | Motor Stratum+SHA256 (só minera com esta view ativa, ver [`MINERACAO.md`](MINERACAO.md)). | auto 1 Hz | swipe normal |
 | Câmeras | `VIEW_CAMERAS` 16 | Lista de câmeras IP (card por câmera) — toque abre live. | — | — |
 | Câmera live | `VIEW_CAMERA` 17 | MJPEG em tela cheia + PTZ ONVIF. | — | — |
 

@@ -133,7 +133,7 @@ export default function MiningPage() {
         >
           <div className="flex flex-col gap-3">
             <ActionRow>
-              <TextField label={c.poolUrlLabel} value={config.poolUrl} onChange={(e) => setConfig({ ...config, poolUrl: e.target.value })} />
+              <TextField label={c.poolUrlLabel} hint={c.poolHint} value={config.poolUrl} onChange={(e) => setConfig({ ...config, poolUrl: e.target.value })} />
               <TextField
                 label={c.poolPortLabel}
                 type="number"
