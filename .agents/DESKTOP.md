@@ -69,7 +69,9 @@ Logs ficam em `.../vigia-ai-desktop/logs/`. Os dois têm atalho no card Aplicati
 
 O instalador **não** traz o sketch da ESP32. Em `/display/setup`, **Baixar firmware**
 puxa a pasta `firmware/` da tag GitHub desta versão e grava em `data/firmware/`.
-Gravar na placa ainda exige PlatformIO (`pio`) neste computador.
+Atualizar o app (Brew) **não** atualiza essa pasta — use **Atualizar firmware**
+no mesmo card (o `secrets.h` da Wi-Fi permanece). Gravar na placa ainda exige
+PlatformIO (`pio`) neste computador.
 
 ## Porta e a placa
 

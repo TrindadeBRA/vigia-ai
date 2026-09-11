@@ -144,17 +144,23 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
         <p
           className={cn(
             "m-0 rounded-[10px] border px-3 py-2 text-[12.5px] leading-[1.45]",
-            canFlash
-              ? "border-[color-mix(in_srgb,var(--good)_35%,var(--card-border))] bg-[color-mix(in_srgb,var(--good)_8%,transparent)] text-ink2"
-              : "border-edge bg-canvas text-ink2",
+            fw?.source_stale
+              ? "border-[color-mix(in_srgb,var(--warn)_40%,var(--card-border))] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] text-ink2"
+              : canFlash
+                ? "border-[color-mix(in_srgb,var(--good)_35%,var(--card-border))] bg-[color-mix(in_srgb,var(--good)_8%,transparent)] text-ink2"
+                : "border-edge bg-canvas text-ink2",
           )}
         >
-          {canFlash ? c.boardFlashReady : fw?.reason || c.boardFlashUsb}
+          {fw?.source_stale
+            ? c.boardFirmwareStale(fw.source_ref || "", fw.wanted_ref)
+            : canFlash
+              ? c.boardFlashReady
+              : fw?.reason || c.boardFlashUsb}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          {fw && !fw.can_write ? (
+          {fw && (fw.needs_source || fw.can_update_source) ? (
             <Button
-              variant="secondary"
+              variant={fw.source_stale || fw.needs_source ? "secondary" : "ghost"}
               loading={fetchSrc.busy}
               onClick={() =>
                 void fetchSrc.run(
@@ -168,7 +174,11 @@ export function BoardCard({ cfg, c }: { cfg: ConfigPublic; c: ConfigCopy }) {
                 )
               }
             >
-              {fetchSrc.busy ? c.boardFetchingFirmware : c.boardFetchFirmware}
+              {fetchSrc.busy
+                ? c.boardFetchingFirmware
+                : fw.needs_source
+                  ? c.boardFetchFirmware
+                  : c.boardUpdateFirmware}
             </Button>
           ) : null}
           <Button

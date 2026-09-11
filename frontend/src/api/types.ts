@@ -808,6 +808,10 @@ export type FirmwarePublic = {
   secrets_present: boolean;
   can_write: boolean;
   needs_source: boolean;
+  can_update_source: boolean;
+  source_ref: string | null;
+  wanted_ref: string;
+  source_stale: boolean;
   can_flash: boolean;
   pio: string | null;
   in_docker: boolean;

@@ -1,7 +1,7 @@
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { copyFileSync, cpSync, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
@@ -125,6 +125,31 @@ export function canWriteFirmware(): boolean {
   return existsSync(join(firmwareDir(), "platformio.ini"));
 }
 
+const SOURCE_MARKER = ".vigia-source.json";
+
+export function usingDownloadedFirmware(): boolean {
+  if (!canWriteFirmware()) return false;
+  return resolve(firmwareDir()) === resolve(downloadedFirmwareDir());
+}
+
+function wantedFirmwareRef(): string {
+  return `v${VERSION}`;
+}
+
+function writeSourceMarker(dest: string, ref: string): void {
+  writeFileSync(join(dest, SOURCE_MARKER), JSON.stringify({ ref, downloaded_at: new Date().toISOString() }) + "\n", "utf8");
+}
+
+function readSourceMarker(dir: string): string | null {
+  try {
+    const raw = JSON.parse(readFileSync(join(dir, SOURCE_MARKER), "utf8")) as Record<string, unknown>;
+    const ref = String(raw.ref ?? "").trim();
+    return ref || null;
+  } catch {
+    return null;
+  }
+}
+
 function storedFirmware(): { wifi_ssid: string; wifi_password: string } {
   const cfg = load();
   const fw = (typeof cfg.firmware === "object" && cfg.firmware !== null ? cfg.firmware : {}) as Record<string, unknown>;
@@ -182,6 +207,10 @@ export function firmwarePublic(usageUrl: string): Record<string, unknown> {
   const pio = findPio();
   const path = canWrite ? secretsPath() : null;
   const reason = flashReason({ pio, canWrite });
+  const downloaded = usingDownloadedFirmware();
+  const wantedRef = wantedFirmwareRef();
+  const sourceRef = downloaded ? readSourceMarker(firmwareDir()) : canWrite ? "checkout" : null;
+  const sourceStale = downloaded && sourceRef !== wantedRef;
   return {
     wifi_ssid: wifi.ssid,
     wifi_password: wifi.password,
@@ -192,6 +221,10 @@ export function firmwarePublic(usageUrl: string): Record<string, unknown> {
     secrets_present: Boolean(path && existsSync(path)),
     can_write: canWrite,
     needs_source: !canWrite,
+    can_update_source: !canWrite || downloaded,
+    source_ref: sourceRef,
+    wanted_ref: wantedRef,
+    source_stale: sourceStale,
     can_flash: reason === null,
     pio,
     in_docker: inDocker(),
@@ -321,7 +354,7 @@ function copyFirmwareTree(src: string, dest: string): void {
     recursive: true,
     filter: (from) => {
       const name = basename(from);
-      return name !== ".pio" && name !== ".git" && name !== "secrets.h";
+      return name !== ".pio" && name !== ".git" && name !== "secrets.h" && name !== SOURCE_MARKER;
     },
   });
   rmSync(dest, { recursive: true, force: true });
@@ -333,7 +366,7 @@ function copyFirmwareTree(src: string, dest: string): void {
   }
 }
 
-export function installFirmwareFromArchive(archivePath: string): { dest: string } {
+export function installFirmwareFromArchive(archivePath: string, ref = wantedFirmwareRef()): { dest: string; ref: string } {
   const extractDir = mkdtempSync(join(tmpdir(), "vigia-fw-extract-"));
   try {
     execFileSync("tar", ["-xzf", archivePath, "-C", extractDir], { timeout: 60_000, windowsHide: true });
@@ -344,7 +377,8 @@ export function installFirmwareFromArchive(archivePath: string): { dest: string 
     if (!existsSync(join(dest, "platformio.ini"))) {
       throw new Error("A cópia do firmware ficou incompleta.");
     }
-    return { dest };
+    writeSourceMarker(dest, ref);
+    return { dest, ref };
   } finally {
     rmSync(extractDir, { recursive: true, force: true });
   }
@@ -376,20 +410,21 @@ export async function downloadFirmwareSource(): Promise<{ ok: boolean; dest?: st
   try {
     if (override) {
       await saveUrlToFile(override, archive);
-      const { dest } = installFirmwareFromArchive(archive);
-      return { ok: true, dest, ref: "local" };
+      const { dest, ref } = installFirmwareFromArchive(archive, "local");
+      return { ok: true, dest, ref };
     }
     const urls = firmwareArchiveUrls();
     try {
       await saveUrlToFile(urls.tag, archive);
-      const { dest } = installFirmwareFromArchive(archive);
-      return { ok: true, dest, ref: `v${VERSION}` };
+      const tag = wantedFirmwareRef();
+      const { dest, ref } = installFirmwareFromArchive(archive, tag);
+      return { ok: true, dest, ref };
     } catch (err) {
       const status = err && typeof err === "object" && "httpStatus" in err ? Number((err as { httpStatus?: number }).httpStatus) : 0;
       if (status !== 404) throw err;
       await saveUrlToFile(urls.main, archive);
-      const { dest } = installFirmwareFromArchive(archive);
-      return { ok: true, dest, ref: "main" };
+      const { dest, ref } = installFirmwareFromArchive(archive, "main");
+      return { ok: true, dest, ref };
     }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };

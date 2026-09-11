@@ -33,9 +33,11 @@ export type ConfigCopy = {
   boardDetectOk: string;
   boardDetectFail: string;
   boardFetchFirmware: string;
+  boardUpdateFirmware: string;
   boardFetchingFirmware: string;
   boardFetchFirmwareOk: string;
   boardFetchFirmwareFail: string;
+  boardFirmwareStale: (local: string, wanted: string) => string;
   boardSaveSecrets: string;
   boardSavingSecrets: string;
   boardSecretsOk: string;
@@ -504,9 +506,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     boardDetectOk: "Wi-Fi detectada.",
     boardDetectFail: "Não achei o nome da Wi-Fi deste computador. Preencha na mão.",
     boardFetchFirmware: "Baixar firmware",
+    boardUpdateFirmware: "Atualizar firmware",
     boardFetchingFirmware: "Baixando…",
     boardFetchFirmwareOk: "Firmware baixado. Se o PlatformIO (pio) estiver instalado, já dá para gravar na ESP32.",
     boardFetchFirmwareFail: "Não deu para baixar o firmware do GitHub. Confira a rede e tente de novo.",
+    boardFirmwareStale: (local, wanted) =>
+      `A pasta baixada é ${local || "antiga"}. Este app é ${wanted} — atualize o firmware antes de gravar na placa.`,
     boardSaveSecrets: "Salvar secrets.h",
     boardSavingSecrets: "Salvando…",
     boardSecretsOk: "secrets.h gravado em firmware/src.",
@@ -963,9 +968,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     boardDetectOk: "Wi-Fi detected.",
     boardDetectFail: "Couldn't read this computer's Wi-Fi name. Type it in.",
     boardFetchFirmware: "Download firmware",
+    boardUpdateFirmware: "Update firmware",
     boardFetchingFirmware: "Downloading…",
     boardFetchFirmwareOk: "Firmware downloaded. If PlatformIO (pio) is installed, you can flash the ESP32.",
     boardFetchFirmwareFail: "Couldn't download firmware from GitHub. Check the network and try again.",
+    boardFirmwareStale: (local, wanted) =>
+      `The downloaded folder is ${local || "old"}. This app is ${wanted} — update the firmware before flashing the board.`,
     boardSaveSecrets: "Save secrets.h",
     boardSavingSecrets: "Saving…",
     boardSecretsOk: "secrets.h written under firmware/src.",
@@ -1422,9 +1430,12 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     boardDetectOk: "Wi-Fi detectada.",
     boardDetectFail: "No encontré el nombre del Wi-Fi de este computador. Escríbelo a mano.",
     boardFetchFirmware: "Descargar firmware",
+    boardUpdateFirmware: "Actualizar firmware",
     boardFetchingFirmware: "Descargando…",
     boardFetchFirmwareOk: "Firmware descargado. Si PlatformIO (pio) está instalado, ya puedes grabar en la ESP32.",
     boardFetchFirmwareFail: "No se pudo descargar el firmware de GitHub. Revisa la red e inténtalo de nuevo.",
+    boardFirmwareStale: (local, wanted) =>
+      `La carpeta descargada es ${local || "antigua"}. Esta app es ${wanted} — actualiza el firmware antes de grabar la placa.`,
     boardSaveSecrets: "Guardar secrets.h",
     boardSavingSecrets: "Guardando…",
     boardSecretsOk: "secrets.h escrito en firmware/src.",

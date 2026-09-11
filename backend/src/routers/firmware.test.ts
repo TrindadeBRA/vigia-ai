@@ -23,11 +23,14 @@ describe("secrets.h", () => {
 describe("firmware router", () => {
   let app: FastifyInstance;
   const prevDir = process.env.VIGIA_FIRMWARE_DIR;
+  const prevData = process.env.COLLECTOR_DATA;
 
   afterEach(async () => {
     await app?.close();
     if (prevDir === undefined) delete process.env.VIGIA_FIRMWARE_DIR;
     else process.env.VIGIA_FIRMWARE_DIR = prevDir;
+    if (prevData === undefined) delete process.env.COLLECTOR_DATA;
+    else process.env.COLLECTOR_DATA = prevData;
     delete process.env.VIGIA_FIRMWARE_ARCHIVE_URL;
   });
 
@@ -111,9 +114,11 @@ describe("firmware router", () => {
     execFileSync("tar", ["-czf", archive, "vigia-ai-test"], { cwd: staging });
 
     process.env.COLLECTOR_DATA = mkdtempSync(join(tmpdir(), "vigia-fw-data-"));
-    const { dest } = installFirmwareFromArchive(archive);
+    const { dest, ref } = installFirmwareFromArchive(archive, "v9.9.9");
     expect(dest).toBe(downloadedFirmwareDir());
+    expect(ref).toBe("v9.9.9");
     expect(readFileSync(join(dest, "platformio.ini"), "utf8")).toContain("[env]");
+    expect(readFileSync(join(dest, ".vigia-source.json"), "utf8")).toContain("v9.9.9");
   });
 
   it("POST /api/firmware/source instala a partir de VIGIA_FIRMWARE_ARCHIVE_URL", async () => {
@@ -130,6 +135,25 @@ describe("firmware router", () => {
     expect(r.json().ok).toBe(true);
     expect(r.json().ref).toBe("local");
     expect(String(r.json().dest)).toMatch(/firmware/);
+    expect(readFileSync(join(downloadedFirmwareDir(), ".vigia-source.json"), "utf8")).toContain("local");
     delete process.env.VIGIA_FIRMWARE_ARCHIVE_URL;
+  });
+
+  it("GET marca source_stale quando a pasta baixada não é a versão do app", async () => {
+    const staging = mkdtempSync(join(tmpdir(), "vigia-fw-stale-"));
+    mkdirSync(join(staging, "vigia-ai-test", "firmware", "src"), { recursive: true });
+    writeFileSync(join(staging, "vigia-ai-test", "firmware", "platformio.ini"), "[env]\n");
+    const archive = join(staging, "firmware.tar.gz");
+    execFileSync("tar", ["-czf", archive, "vigia-ai-test"], { cwd: staging });
+
+    app = await createTestApp();
+    installFirmwareFromArchive(archive, "v2.13.5");
+    process.env.VIGIA_FIRMWARE_DIR = downloadedFirmwareDir();
+    const r = await app.inject({ method: "GET", url: "/api/firmware" });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().can_update_source).toBe(true);
+    expect(r.json().source_ref).toBe("v2.13.5");
+    expect(r.json().source_stale).toBe(true);
+    expect(r.json().wanted_ref).toMatch(/^v/);
   });
 });
