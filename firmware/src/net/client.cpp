@@ -601,8 +601,9 @@ static bool themeClientFetchAnim(const String &base)
   http.setConnectTimeout(5000);
   const int w = customThemeCanvasAnimWidth();
   const int h = customThemeCanvasAnimHeight();
-  const int expected = (int)customThemeAnimExpectedBytes();
-  if (expected <= 0)
+  const int frameBytes = (int)customThemeAnimFrameBytes();
+  int expected = (int)customThemeAnimExpectedBytes();
+  if (expected <= 0 || frameBytes <= 0)
   {
     Serial.println("tema: theme.json GIF sem tamanho de animação esperado");
     return false;
@@ -620,6 +621,23 @@ static bool themeClientFetchAnim(const String &base)
     int len = http.getSize();
     WiFiClient *stream = http.getStreamPtr();
     Serial.printf("tema: baixando animação (%d bytes, esperado %d)\n", len, expected);
+    // theme.json pode ter frame_count 12 (default do editor) e o RAW ter
+    // menos frames — ou o Fastify mandar chunked (getSize() == -1). Sem isso
+    // a placa descarta o GIF e cai no 1º frame estático.
+    if (len > 0 && (len % frameBytes) == 0)
+    {
+      const int frames = len / frameBytes;
+      if (frames >= 2 && frames <= 12 && frames * frameBytes != expected)
+      {
+        Serial.printf("tema: frame_count json=%d arquivo=%d, usa o arquivo\n", expected / frameBytes, frames);
+        customThemeSetGifFrameCount(frames);
+        expected = (int)customThemeAnimExpectedBytes();
+      }
+    }
+    if (len < 0)
+    {
+      len = expected;
+    }
     if (len != expected)
     {
       Serial.printf("tema: tamanho da animação não bate (%dx%d, frames no json)\n", w, h);

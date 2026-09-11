@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { dataDir } from "../config.js";
 
@@ -20,16 +20,59 @@ function wallpaperAnimPath(wid: string, suffix = ""): string {
   return join(wallpapersDir(), `${wid}_anim.raw`);
 }
 
-function selectedWallpaperKind(wid: string): string {
+function wallpaperAnimMeta(wid: string): { kind: "gif" | "static"; frame_count?: number; frame_delay_ms?: number } {
   try {
     const metaFile = join(dataDir(), "wallpapers.json");
-    if (!existsSync(metaFile)) return "static";
-    const raw = JSON.parse(readFileSync(metaFile, "utf-8")) as Record<string, unknown>;
-    const list = (raw.wallpapers ?? []) as Array<Record<string, unknown>>;
-    const found = list.find((w) => String(w.id) === wid);
-    return String(found?.kind ?? "static") === "gif" ? "gif" : "static";
+    if (existsSync(metaFile)) {
+      const raw = JSON.parse(readFileSync(metaFile, "utf-8")) as Record<string, unknown>;
+      const list = (raw.wallpapers ?? []) as Array<Record<string, unknown>>;
+      const found = list.find((w) => String(w.id) === wid);
+      if (String(found?.kind ?? "static") === "gif") {
+        const fc = Number(found?.frame_count ?? 0);
+        return {
+          kind: "gif",
+          frame_count: Number.isFinite(fc) && fc >= 2 ? Math.min(12, fc) : undefined,
+          frame_delay_ms: Number(found?.frame_delay_ms ?? 0) || undefined,
+        };
+      }
+    }
+  } catch {}
+  if (existsSync(wallpaperAnimPath(wid)) || existsSync(wallpaperAnimPath(wid, "_wokwi"))) {
+    return { kind: "gif" };
+  }
+  return { kind: "static" };
+}
+
+function frameCountFromAnimFile(wid: string, suffix: string): number | undefined {
+  let p = wallpaperAnimPath(wid, suffix);
+  if (!existsSync(p) && suffix) p = wallpaperAnimPath(wid);
+  if (!existsSync(p)) return undefined;
+  const one = suffix === "_wokwi" ? 80 * 60 * 2 : 120 * 80 * 2;
+  const sz = statSync(p).size;
+  if (one <= 0 || sz % one !== 0) return undefined;
+  const n = sz / one;
+  if (n < 2 || n > 12) return undefined;
+  return n;
+}
+
+function ensureThemeGifJson(theme: string, wid: string | null, suffix = ""): string {
+  if (!wid) return theme;
+  const anim = wallpaperAnimMeta(wid);
+  if (anim.kind !== "gif") return theme;
+  try {
+    const parsed = JSON.parse(theme) as Record<string, unknown>;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return theme;
+    const bg = (parsed.background && typeof parsed.background === "object"
+      ? { ...(parsed.background as Record<string, unknown>) }
+      : {}) as Record<string, unknown>;
+    bg.type = "gif";
+    const fromFile = frameCountFromAnimFile(wid, suffix);
+    bg.frame_count = fromFile ?? anim.frame_count ?? 12;
+    if (anim.frame_delay_ms) bg.frame_delay_ms = anim.frame_delay_ms;
+    parsed.background = bg;
+    return JSON.stringify(parsed);
   } catch {
-    return "static";
+    return theme;
   }
 }
 
@@ -68,7 +111,7 @@ function partition(s: string, sep: string): [string, string, string] {
 }
 
 export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/api/theme", { schema: { tags: ["Tema"] } }, async () => {
+  app.get("/api/theme", { schema: { tags: ["Tema"] } }, async (request) => {
     let theme: string | null = null;
     const p = metaPath();
     if (existsSync(p)) {
@@ -108,7 +151,7 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     } catch {}
     return {
       active: theme !== null,
-      theme,
+      theme: theme ? ensureThemeGifJson(theme, selectedId, screenSuffix(request)) : theme,
       has_background: selectedId !== null,
       background_id: selectedId,
     };
@@ -143,12 +186,12 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
     let p = wallpaperRawPath(wid, suffix);
     if (existsSync(p)) {
       const data = readFileSync(p);
-      return reply.type("application/octet-stream").send(data);
+      return reply.header("Content-Length", String(data.length)).type("application/octet-stream").send(data);
     }
     p = wallpaperRawPath(wid);
     if (existsSync(p)) {
       const data = readFileSync(p);
-      return reply.type("application/octet-stream").send(data);
+      return reply.header("Content-Length", String(data.length)).type("application/octet-stream").send(data);
     }
     const orig = join(wallpapersDir(), `${wid}.orig`);
     if (existsSync(orig)) {
@@ -167,12 +210,15 @@ export async function createThemeRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/theme/background/anim", { schema: { tags: ["Tema"] } }, async (request, reply) => {
     const wid = await resolveSelectedId();
     if (!wid) return reply.code(404).send({ ok: false, error: "nenhum papel de parede selecionado" });
-    if (selectedWallpaperKind(wid) !== "gif") return reply.code(404).send({ ok: false, error: "papel selecionado não é GIF" });
     const suffix = screenSuffix(request);
     let p = wallpaperAnimPath(wid, suffix);
     if (!existsSync(p) && suffix) p = wallpaperAnimPath(wid);
+    // Não exige kind=gif no wallpapers.json: se o RAW existe, a placa pediu
+    // porque o theme.json está com type gif. Metadata desatualizada não pode
+    // 404ar a animação.
     if (!existsSync(p)) return reply.code(404).send({ ok: false, error: "animação não encontrada" });
-    return reply.type("application/octet-stream").send(readFileSync(p));
+    const data = readFileSync(p);
+    return reply.header("Content-Length", String(data.length)).type("application/octet-stream").send(data);
   });
 
   app.get("/api/theme/background/index", { schema: { tags: ["Tema"] } }, async () => {

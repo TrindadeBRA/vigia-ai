@@ -319,14 +319,19 @@ export async function createWallpapersRoutes(app: FastifyInstance): Promise<void
       }
     } catch { }
     if (previewBytes && previewBytes.length) writeFileSync(wallpaperPreviewPath(wid), previewBytes);
+    const origPath = wallpaperOrigPath(wid);
+    const origBytes = existsSync(origPath) ? readFileSync(origPath) : null;
+    const anim = origBytes ? await writeAnimVariants(wid, origBytes) : { kind: "static" as const };
     const effectiveScope = scopeParam && ["theme", "grid"].includes(scopeParam) ? scopeParam : "theme";
     const meta = loadMeta();
     (meta.wallpapers as Array<Record<string, unknown>>).push({
       id: wid, source: "upload", provider: null, external_id: null, preview_url: null, created_at: new Date().toISOString(), scope: effectiveScope,
+      kind: anim.kind,
+      ...(anim.kind === "gif" ? { frame_count: anim.frame_count, frame_delay_ms: anim.frame_delay_ms } : {}),
     });
     saveMeta(meta);
     if (effectiveScope === "grid") setGridSelectedId(wid); else setSelectedId(wid);
-    return { ok: true, id: wid, scope: effectiveScope };
+    return { ok: true, id: wid, scope: effectiveScope, kind: anim.kind, ...(anim.kind === "gif" ? { frame_count: anim.frame_count, frame_delay_ms: anim.frame_delay_ms } : {}) };
   });
 
   app.delete("/api/wallpapers/:wid", { schema: { tags: ["Papéis de parede"] } }, async (request, reply) => {

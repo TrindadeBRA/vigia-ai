@@ -25,6 +25,9 @@ int customThemeCanvasAnimWidth();
 int customThemeCanvasAnimHeight();
 bool customThemeBackgroundIsGif();
 size_t customThemeAnimExpectedBytes();
+size_t customThemeAnimFrameBytes();
+// Ajusta frame_count quando o RAW baixado tem outro N (theme.json vs arquivo).
+void customThemeSetGifFrameCount(int frames);
 
 // Valida e persiste em /theme.json; false se o JSON for inválido (mantém o
 // tema anterior intacto). Repinta na hora se a placa estiver na Início.

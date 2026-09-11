@@ -438,13 +438,35 @@ int customThemeCanvasHeight() { return tft.height() / 2; }
 int customThemeCanvasAnimWidth() { return tft.width() / 4; }
 int customThemeCanvasAnimHeight() { return tft.height() / 4; }
 bool customThemeBackgroundIsGif() { return g_active && g_theme.bgKind == TBG_GIF; }
+size_t customThemeAnimFrameBytes()
+{
+  const int w = customThemeCanvasAnimWidth();
+  const int h = customThemeCanvasAnimHeight();
+  if (w <= 0 || h <= 0)
+  {
+    return 0;
+  }
+  return (size_t)w * (size_t)h * 2;
+}
 size_t customThemeAnimExpectedBytes()
 {
   if (!customThemeBackgroundIsGif() || g_theme.frameCount < 2)
   {
     return 0;
   }
-  return (size_t)g_theme.frameCount * (size_t)customThemeCanvasAnimWidth() * (size_t)customThemeCanvasAnimHeight() * 2;
+  return (size_t)g_theme.frameCount * customThemeAnimFrameBytes();
+}
+void customThemeSetGifFrameCount(int frames)
+{
+  if (frames < 2)
+  {
+    frames = 2;
+  }
+  if (frames > 12)
+  {
+    frames = 12;
+  }
+  g_theme.frameCount = frames;
 }
 
 String customThemeLastError() { return g_lastParseError; }
@@ -725,10 +747,31 @@ static bool openBgSource(const CustomTheme &t, bool wantAnim, File &f, bool &use
   if (!useRam && g_fsOk)
   {
     f = LittleFS.open(wantAnim ? kBgAnimPath : kBgPath, "r");
-    useFile = (bool)f && (size_t)f.size() == expected;
-    if (f && !useFile)
+    if (f)
     {
-      f.close();
+      const size_t sz = (size_t)f.size();
+      if (sz == expected)
+      {
+        useFile = true;
+      }
+      else if (wantAnim)
+      {
+        const size_t one = (size_t)srcW * (size_t)srcH * 2;
+        if (one > 0 && (sz % one) == 0)
+        {
+          const int frames = (int)(sz / one);
+          if (frames >= 2 && frames <= 12)
+          {
+            g_theme.frameCount = frames;
+            expected = sz;
+            useFile = true;
+          }
+        }
+      }
+      if (!useFile)
+      {
+        f.close();
+      }
     }
   }
   return useRam || useFile;
@@ -2218,7 +2261,15 @@ void customThemeTickAnimation()
     return;
   }
   const uint32_t now = millis();
-  const uint32_t delayMs = 40;
+  uint32_t delayMs = (uint32_t)g_theme.frameDelayMs;
+  if (delayMs < 40)
+  {
+    delayMs = 40;
+  }
+  if (delayMs > 80)
+  {
+    delayMs = 80;
+  }
   if (g_animLastMs == 0)
   {
     g_animLastMs = now;

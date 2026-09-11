@@ -235,7 +235,7 @@ export default function ThemeEditorPage() {
   const currentWallpaper = wallpapers.find((w) => w.id === currentWallpaperId) ?? null;
   const gifMeta =
     currentWallpaper?.kind === "gif"
-      ? { frame_count: currentWallpaper.frame_count ?? 12, frame_delay_ms: currentWallpaper.frame_delay_ms ?? 50 }
+      ? { frame_count: currentWallpaper.frame_count ?? 2, frame_delay_ms: currentWallpaper.frame_delay_ms ?? 50 }
       : null;
 
   async function saveTheme() {

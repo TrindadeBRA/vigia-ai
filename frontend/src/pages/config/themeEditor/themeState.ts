@@ -170,9 +170,9 @@ export function useThemeDraft(): [ThemeState, (fn: (t: ThemeState) => ThemeState
 
 export function themeToJson(t: ThemeState, hasWallpaper: boolean, gif?: { frame_count: number; frame_delay_ms: number } | null) {
   const background: Record<string, unknown> = { type: hasWallpaper ? "image" : "color", color: t.background.color };
-  if (hasWallpaper && gif && gif.frame_count >= 2) {
+  if (hasWallpaper && gif) {
     background.type = "gif";
-    background.frame_count = Math.min(12, Math.max(2, Math.round(gif.frame_count)));
+    background.frame_count = Math.min(12, Math.max(2, Math.round(gif.frame_count || 2)));
     background.frame_delay_ms = Math.min(80, Math.max(40, Math.round(gif.frame_delay_ms || 50)));
   }
   return {
