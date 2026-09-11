@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "../../cn";
-import { BellIcon, ChipIcon, ClockIcon, GitHubIcon, GridIcon, HeartIcon, PaletteIcon, PickaxeIcon, SlidersIcon } from "../../components/icons";
+import { BellIcon, ChipIcon, GitHubIcon, GridIcon, HeartIcon, PaletteIcon, PickaxeIcon, SlidersIcon } from "../../components/icons";
 import type { T } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { accentLink, sideItem, sideItemActive } from "../../tw";
@@ -26,7 +26,6 @@ export function Sidebar(props: {
   const { providers, section, selectedId, open, onOverview, onSelect, onClose, nowActive, configActive, setupActive, themeActive, alarmsActive, miningActive, onOpenPix, t } = props;
   const onPage = configActive || setupActive || themeActive || alarmsActive || miningActive || nowActive;
   const heading = "mb-1.5 px-[9px] text-[10.5px] font-bold uppercase tracking-[.6px] text-ink3";
-  const dests = [{ to: "/display/now", Icon: ClockIcon, label: t.now, active: nowActive }] as const;
   const tools = [
     { to: "/display/config", Icon: SlidersIcon, label: t.config, active: configActive },
     { to: "/display/setup", Icon: ChipIcon, label: t.board, active: setupActive },
@@ -47,12 +46,6 @@ export function Sidebar(props: {
         <button className={cn(sideItem, section === "overview" && !onPage && sideItemActive)} onClick={() => { onOverview(); onClose(); }}>
           <GridIcon size={16} /> {t.overview}
         </button>
-        {dests.map(({ to, Icon, label, active }) => (
-          <NavLink key={to} to={to} className={cn(sideItem, active && sideItemActive)} onClick={onClose}>
-            <Icon size={16} /> {label}
-          </NavLink>
-        ))}
-        <div className="my-1.5 mx-[9px] h-px bg-edge" aria-hidden />
         {tools.map(({ to, Icon, label, active }) => (
           <NavLink key={to} to={to} className={cn(sideItem, active && sideItemActive)} onClick={onClose}>
             <Icon size={16} /> {label}
