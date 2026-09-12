@@ -419,10 +419,11 @@ int headerDisplayKey(int secs, bool showCheck)
 
 // Selo circular no canto do header: enquanto espera o proximo refresh mostra
 // a contagem regressiva em um circulo amarelo; nos ~1.5s apos um refresh
-// bem-sucedido, mostra um check verde no lugar do numero.
-void drawCountdownBadgeAt(int cx, int cy, int secs)
+// bem-sucedido, mostra um check verde no lugar do numero. `r` default (11)
+// preserva o tamanho de sempre no header; chamadores maiores (ex.: elemento
+// de tema, ver ui/customtheme.cpp) pedem fonte maior pra caber no circulo.
+void drawCountdownBadgeAt(int cx, int cy, int secs, int r)
 {
-  const int r = 11;
   bool showCheck = showFetchOkCheck();
 
   if (secs < 0 && !showCheck)
@@ -442,9 +443,10 @@ void drawCountdownBadgeAt(int cx, int cy, int secs)
   {
     char buf[4];
     snprintf(buf, sizeof(buf), "%d", secs > 99 ? 99 : secs);
+    const uint8_t font = r >= 28 ? 4 : 2;
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(COL_INVERSE, bg);
-    tft.drawString(buf, cx, cy + 1, 2);
+    tft.drawString(buf, cx, cy + 1, font);
   }
 }
 

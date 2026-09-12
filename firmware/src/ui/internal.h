@@ -168,7 +168,7 @@ int adsenseWorstIdx();
 int countdownSeconds();
 bool showFetchOkCheck();
 int headerDisplayKey(int secs, bool showCheck);
-void drawCountdownBadgeAt(int cx, int cy, int secs);
+void drawCountdownBadgeAt(int cx, int cy, int secs, int r = 11);
 
 void layoutContent();
 void drawHeader();

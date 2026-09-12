@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { openUsageEvents } from "../../api/client";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
-import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, TextIcon } from "../../components/icons";
+import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, TextIcon, TimerIcon } from "../../components/icons";
 import { wallpaperMediaSrc } from "../../components/ProviderSearchGrid";
 import { Logo } from "../../components/Logo";
 import { PageBreadcrumb } from "../../components/PageBreadcrumb";
@@ -313,6 +313,15 @@ export default function ThemeEditorPage() {
             }}
           />
           <ToolButton
+            icon={<TimerIcon size={19} />}
+            label={c.countdown}
+            active={selected === "countdown"}
+            onClick={() => {
+              if (!theme.countdown.enabled) setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: true } }));
+              setSelected("countdown");
+            }}
+          />
+          <ToolButton
             ref={addProviderBtnRef}
             icon={<PlusCircleIcon size={19} />}
             label={c.addProvider}
@@ -383,6 +392,29 @@ export default function ThemeEditorPage() {
                       </span>
                     );
                   })()}
+                </CanvasDot>
+              ) : null}
+              {theme.countdown.enabled ? (
+                <CanvasDot
+                  x={theme.countdown.x}
+                  y={theme.countdown.y}
+                  canvasRef={canvasRef}
+                  containerSize={containerSize}
+                  selected={selected === "countdown"}
+                  title={c.countdown}
+                  onSelect={() => setSelected("countdown")}
+                  onDrag={(x, y) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, x, y } }))}
+                >
+                  <div
+                    className="flex items-center justify-center rounded-full bg-[#f5c542] font-mono font-bold leading-none text-black"
+                    style={{
+                      width: `${22 * theme.countdown.scale * zoom}px`,
+                      height: `${22 * theme.countdown.scale * zoom}px`,
+                      fontSize: `${11 * theme.countdown.scale * zoom}px`,
+                    }}
+                  >
+                    {Math.max(1, 60 - now.getSeconds())}
+                  </div>
                 </CanvasDot>
               ) : null}
               {theme.icons.map((icon) => (
@@ -481,6 +513,30 @@ export default function ThemeEditorPage() {
                   </span>
                 </button>
               ) : null}
+              {theme.countdown.enabled ? (
+                <button
+                  type="button"
+                  onClick={() => setSelected("countdown")}
+                  className={cn(
+                    "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+                    selected === "countdown"
+                      ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
+                      : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-7 shrink-0 items-center justify-center rounded-md border",
+                      selected === "countdown" ? "border-accent/30 bg-accent/10 text-accent" : "border-edge bg-panel text-ink2 group-hover:border-ink3/20",
+                    )}
+                  >
+                    <TimerIcon size={14} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] font-bold leading-none">{c.countdown}</span>
+                  </span>
+                </button>
+              ) : null}
               {theme.icons.map((icon) => {
                 const value = formatThemeMetric(usage, icon.provider, icon.metric);
                 const label = providerLabel(icon.provider);
@@ -566,7 +622,7 @@ export default function ThemeEditorPage() {
                   </button>
                 );
               })}
-              {!theme.clock.enabled && theme.icons.length === 0 && theme.texts.length === 0 ? (
+              {!theme.clock.enabled && !theme.countdown.enabled && theme.icons.length === 0 && theme.texts.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-edge bg-canvas/60 px-2.5 py-3 text-center text-[12px] leading-relaxed text-ink3">{c.noIcons}</div>
               ) : null}
               <div className="my-1 h-px bg-edge" aria-hidden />
@@ -688,6 +744,12 @@ export default function ThemeEditorPage() {
               <div className={theme.clock.autoColor ? "pointer-events-none opacity-50" : ""}>
                 <ColorField label={c.color} value={theme.clock.color} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, color: v } }))} noneLabel={c.colorNone} lang={lang} />
               </div>
+            </Card>
+          ) : selected === "countdown" ? (
+            <Card title={c.countdown}>
+              <Checkbox label={c.countdownEnabled} checked={theme.countdown.enabled} onChange={(e) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: e.target.checked } }))} />
+              <ScaleField label={c.size} value={theme.countdown.scale} onChange={(v) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, scale: v } }))} />
+              <p className={cfgStatus}>{c.countdownHint}</p>
             </Card>
           ) : selectedText ? (
             <Card title={c.texts}>

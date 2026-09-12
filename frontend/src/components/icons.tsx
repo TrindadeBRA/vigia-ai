@@ -61,6 +61,15 @@ export function ClockIcon(props: { size?: number }) {
   );
 }
 
+export function TimerIcon(props: { size?: number }) {
+  return (
+    <Svg {...props}>
+      <circle cx={12} cy={12} r={8.5} stroke="currentColor" strokeWidth={2} />
+      <path d="M12 12L12 3.5A8.5 8.5 0 0 1 20.5 12Z" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
 export function ExternalLinkIcon(props: { size?: number }) {
   return (
     <Svg {...props}>

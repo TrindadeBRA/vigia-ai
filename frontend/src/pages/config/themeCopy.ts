@@ -18,6 +18,9 @@ export type ThemeCopy = {
   clockAutoColor: string;
   clockAutoColorHint: string;
   clockAutoColorActive: string;
+  countdown: string;
+  countdownEnabled: string;
+  countdownHint: string;
   icons: string;
   addIcon: string;
   addProvider: string;
@@ -150,6 +153,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     clockAutoColor: "Cor automática (a partir do fundo)",
     clockAutoColorHint: "Usa generateReadableColor do NameToColor para escolher uma cor legível sobre o fundo.",
     clockAutoColorActive: "Cor automática ativa — cor manual ignorada",
+    countdown: "Contador",
+    countdownEnabled: "Mostrar contador",
+    countdownHint: "Selo com a contagem regressiva até a próxima atualização de dados — o mesmo selo do cabeçalho do dispositivo, agora arrastável.",
     icons: "Ícones",
     addIcon: "Adicionar ícone",
     addProvider: "Adicionar no canvas",
@@ -281,6 +287,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     clockAutoColor: "Auto color (from background)",
     clockAutoColorHint: "Uses NameToColor generateReadableColor to pick a readable color over the background.",
     clockAutoColorActive: "Auto color active — manual color ignored",
+    countdown: "Countdown",
+    countdownEnabled: "Show countdown",
+    countdownHint: "Badge showing the countdown to the next data refresh — the same badge from the device header, now draggable.",
     icons: "Icons",
     addIcon: "Add icon",
     addProvider: "Add to canvas",
@@ -412,6 +421,9 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     clockAutoColor: "Color automático (desde el fondo)",
     clockAutoColorHint: "Usa generateReadableColor de NameToColor para elegir un color legible sobre el fondo.",
     clockAutoColorActive: "Color automático activo — color manual ignorado",
+    countdown: "Contador regresivo",
+    countdownEnabled: "Mostrar contador",
+    countdownHint: "Insignia con la cuenta regresiva hasta la próxima actualización de datos — la misma insignia del encabezado del dispositivo, ahora arrastrable.",
     icons: "Íconos",
     addIcon: "Agregar ícono",
     addProvider: "Agregar al lienzo",

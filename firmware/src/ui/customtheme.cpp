@@ -102,6 +102,17 @@ struct ThemeClock
   bool autoColor = false;
 };
 
+// Selo de contagem regressiva até o próximo refresh (ver drawCountdownBadgeAt
+// em ui/layout.cpp) — mesmas cores semânticas do selo do header (amarelo =
+// aguardando, verde = acabou de atualizar), por isso sem campo de cor aqui.
+struct ThemeCountdown
+{
+  bool enabled = false;
+  float x = 0.5f;
+  float y = 0.88f;
+  float scale = 1.0f;
+};
+
 enum ThemeBgKind : uint8_t
 {
   TBG_COLOR = 0,
@@ -119,6 +130,7 @@ struct CustomTheme
   int frameCount = 0;
   int frameDelayMs = 200;
   ThemeClock clock;
+  ThemeCountdown countdown;
   ThemeIcon icons[kMaxIcons];
   int iconCount = 0;
   ThemeText texts[kMaxTexts];
@@ -151,6 +163,7 @@ struct ThemeWidgetRect
 };
 static ThemeWidgetRect g_iconRects[kMaxIcons];
 static ThemeWidgetRect g_clockRect;
+static ThemeWidgetRect g_countdownRect;
 static ThemeWidgetRect g_textRects[kMaxTexts];
 static uint8_t g_gifRowMask[480];
 
@@ -163,6 +176,7 @@ void customThemeInvalidateBackground()
     g_iconRects[i].valid = false;
   }
   g_clockRect.valid = false;
+  g_countdownRect.valid = false;
   for (int i = 0; i < kMaxTexts; i++)
   {
     g_textRects[i].valid = false;
@@ -310,6 +324,15 @@ static bool parseTheme(const String &json, CustomTheme &out)
       t.clock.hasColor = true;
       t.clock.color = col;
     }
+  }
+
+  JsonVariantConst cd = doc["countdown"];
+  if (!cd.isNull())
+  {
+    t.countdown.enabled = cd["enabled"] | false;
+    t.countdown.x = clampf(cd["x"] | 0.5f, 0.0f, 1.0f);
+    t.countdown.y = clampf(cd["y"] | 0.88f, 0.0f, 1.0f);
+    t.countdown.scale = clampf(cd["scale"] | 1.0f, 0.5f, 4.0f);
   }
 
   for (JsonVariantConst it : doc["icons"].as<JsonArrayConst>())
@@ -839,6 +862,7 @@ static void markGifHoles(int y, int dw)
     }
   };
   punch(g_clockRect);
+  punch(g_countdownRect);
   for (int i = 0; i < kMaxIcons; i++)
   {
     punch(g_iconRects[i]);
@@ -2191,6 +2215,20 @@ static void drawThemeClock(const ThemeClock &c)
   tft.drawString(buf, cx, cy, font);
 }
 
+// Selo de contagem regressiva do tema — o mesmo selo do header (ver
+// drawCountdownBadgeAt em ui/layout.cpp), só arrastável e com tamanho
+// próprio. Cores fixas (amarelo/verde semânticos), sem campo de cor no tema.
+static void drawThemeCountdown(const ThemeCountdown &c)
+{
+  const int r = constrain((int)(11 * c.scale), 8, 40);
+  int cx = (int)(c.x * tft.width());
+  int cy = (int)(c.y * tft.height());
+  const int box = r * 2 + 4;
+  clampBoxCenter(cx, cy, box, box, tft.width(), tft.height());
+  eraseStaleRect(g_theme, g_countdownRect, cx - box / 2, cy - box / 2, box, box);
+  drawCountdownBadgeAt(cx, cy, countdownSeconds(), r);
+}
+
 void paintCustomHome()
 {
   if (!g_active)
@@ -2210,6 +2248,10 @@ void paintCustomHome()
   if (g_theme.clock.enabled)
   {
     drawThemeClock(g_theme.clock);
+  }
+  if (g_theme.countdown.enabled)
+  {
+    drawThemeCountdown(g_theme.countdown);
   }
   for (int i = 0; i < g_theme.iconCount; i++)
   {
@@ -2236,6 +2278,25 @@ void customThemeTickClock()
   }
   lastKey = key;
   paintCustomHome();
+}
+
+// Chamado 1x/loop via uiTickClock() — só redesenha o selo quando o valor
+// exibido muda (mesma chave do header, ver headerDisplayKey), pra não gastar
+// SPI redesenhando o mesmo número a cada iteração do loop.
+void customThemeTickCountdown()
+{
+  if (!g_active || !g_theme.countdown.enabled)
+  {
+    return;
+  }
+  static int lastKey = -1000000;
+  int key = headerDisplayKey(countdownSeconds(), showFetchOkCheck());
+  if (key == lastKey)
+  {
+    return;
+  }
+  lastKey = key;
+  drawThemeCountdown(g_theme.countdown);
 }
 
 void customThemeTickAnimation()

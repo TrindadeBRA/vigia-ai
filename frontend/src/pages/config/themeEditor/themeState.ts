@@ -17,8 +17,12 @@ export type ThemeIcon = {
 };
 export type ThemeText = { id: string; x: number; y: number; scale: number; color: string | null; text: string };
 export type ThemeClock = { enabled: boolean; x: number; y: number; scale: number; color: string | null; format24h: boolean; showBackground: boolean; autoColor: boolean };
+// Selo de contagem regressiva até o próximo refresh — mesmas cores fixas
+// (amarelo/verde) do selo do header do firmware (ver drawCountdownBadgeAt em
+// ui/layout.cpp), por isso sem campo de cor aqui, diferente do relógio/ícones.
+export type ThemeCountdown = { enabled: boolean; x: number; y: number; scale: number };
 export type ThemeBg = { color: string };
-export type ThemeState = { background: ThemeBg; clock: ThemeClock; icons: ThemeIcon[]; texts: ThemeText[] };
+export type ThemeState = { background: ThemeBg; clock: ThemeClock; countdown: ThemeCountdown; icons: ThemeIcon[]; texts: ThemeText[] };
 
 export type WallpaperItem = {
   id: string;
@@ -37,6 +41,7 @@ export type WallpaperItem = {
 export const DEFAULT_THEME: ThemeState = {
   background: { color: "#0f0f0f" },
   clock: { enabled: true, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
+  countdown: { enabled: false, x: 0.9, y: 0.88, scale: 1 },
   icons: [],
   texts: [],
 };
@@ -74,6 +79,12 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
     if (typeof merged.clock.showBackground !== "boolean") merged.clock.showBackground = DEFAULT_THEME.clock.showBackground;
     if (typeof merged.clock.autoColor !== "boolean") merged.clock.autoColor = DEFAULT_THEME.clock.autoColor;
   }
+  merged.countdown = {
+    enabled: merged.countdown?.enabled ?? DEFAULT_THEME.countdown.enabled,
+    x: merged.countdown?.x ?? DEFAULT_THEME.countdown.x,
+    y: merged.countdown?.y ?? DEFAULT_THEME.countdown.y,
+    scale: merged.countdown?.scale ?? DEFAULT_THEME.countdown.scale,
+  };
   merged.icons = (merged.icons || []).map((icon, idx) => ({
     id: icon.id || `i${idx}`,
     provider: (icon.provider as ThemeProvider) || "claude",
@@ -185,6 +196,12 @@ export function themeToJson(t: ThemeState, hasWallpaper: boolean, gif?: { frame_
       showBackground: t.clock.showBackground,
       autoColor: t.clock.autoColor,
       ...(t.clock.color ? { color: t.clock.color } : {}),
+    },
+    countdown: {
+      enabled: t.countdown.enabled,
+      x: t.countdown.x,
+      y: t.countdown.y,
+      scale: t.countdown.scale,
     },
     icons: t.icons.map((i) => ({
       provider: i.provider,

@@ -61,6 +61,9 @@ void customThemeInvalidateBackground();
 // Chamado por uiTickClock() — repinta a tela inteira só quando o minuto muda
 // (o relógio do tema só mostra HH:MM, sem segundos).
 void customThemeTickClock();
+// Chamado por uiTickClock() — redesenha só o selo de contagem regressiva
+// (ver drawCountdownBadgeAt) quando o segundo exibido muda.
+void customThemeTickCountdown();
 // Avança o frame do fundo GIF (rate-limited por frame_delay_ms). Chamado
 // no loop via uiTickClock() quando VIEW_THEME está ativa.
 void customThemeTickAnimation();
