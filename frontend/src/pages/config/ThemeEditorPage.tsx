@@ -20,6 +20,7 @@ import { ColorField, ColorSwatch, ScaleField } from "./themeEditor/fields";
 import { IconChip } from "./themeEditor/IconChip";
 import { ThemeIOButtons } from "./themeEditor/ThemeIOButtons";
 import {
+  clamp,
   formatClock,
   isBareLoopback,
   readableTextOn,
@@ -207,25 +208,109 @@ export default function ThemeEditorPage() {
     setSelected(null);
   }
 
-  // Delete/Backspace remove o elemento selecionado — como num editor de imagem —,
-  // exceto quando o foco está num campo de texto (ex: editando o texto do próprio
-  // elemento ou o IP da placa), onde a tecla deve só apagar caracteres.
+  // Delete/Backspace remove o elemento selecionado; setas andam 1 px da TFT
+  // (Shift = 10 px). Campos de texto/slider ficam com as teclas pra eles.
+  // Safari: escuta em captura no document (seta senão vira scroll) e aceita
+  // keyCode — o clique no canvas às vezes não muda o activeElement lá.
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Delete" && e.key !== "Backspace") return;
-      const active = document.activeElement as HTMLElement | null;
-      if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT" || active.isContentEditable)) return;
-      if (selected?.startsWith("icon:")) {
-        e.preventDefault();
-        removeIcon(selected.slice(5));
-      } else if (selected?.startsWith("text:")) {
-        e.preventDefault();
-        removeText(selected.slice(5));
+    function isTextEditing(el: EventTarget | null) {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el.isContentEditable) return true;
+      const tag = el.tagName;
+      if (tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (tag !== "INPUT") return false;
+      const type = (el as HTMLInputElement).type;
+      return type === "text" || type === "search" || type === "password" || type === "email" || type === "url" || type === "number" || type === "tel" || type === "";
+    }
+    function isFormControl(el: EventTarget | null) {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el.isContentEditable) return true;
+      return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
+    }
+    function arrowDir(e: KeyboardEvent): "left" | "right" | "up" | "down" | null {
+      const key = e.key;
+      if (key === "ArrowLeft" || key === "Left") return "left";
+      if (key === "ArrowRight" || key === "Right") return "right";
+      if (key === "ArrowUp" || key === "Up") return "up";
+      if (key === "ArrowDown" || key === "Down") return "down";
+      if (e.code === "ArrowLeft") return "left";
+      if (e.code === "ArrowRight") return "right";
+      if (e.code === "ArrowUp") return "up";
+      if (e.code === "ArrowDown") return "down";
+      switch (e.keyCode) {
+        case 37:
+          return "left";
+        case 39:
+          return "right";
+        case 38:
+          return "up";
+        case 40:
+          return "down";
+        default:
+          return null;
       }
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selected]);
+    function nudge(dxPx: number, dyPx: number) {
+      if (!selected || selected === "background") return;
+      const w = canvasSize.width || 480;
+      const h = canvasSize.height || 320;
+      const nx = dxPx / w;
+      const ny = dyPx / h;
+      if (selected === "clock") {
+        setTheme((t) => ({ ...t, clock: { ...t.clock, x: clamp(t.clock.x + nx, 0, 1), y: clamp(t.clock.y + ny, 0, 1) } }));
+        return;
+      }
+      if (selected === "countdown") {
+        setTheme((t) => ({
+          ...t,
+          countdown: { ...t.countdown, x: clamp(t.countdown.x + nx, 0, 1), y: clamp(t.countdown.y + ny, 0, 1) },
+        }));
+        return;
+      }
+      if (selected.startsWith("icon:")) {
+        const id = selected.slice(5);
+        setTheme((t) => ({
+          ...t,
+          icons: t.icons.map((i) => (i.id === id ? { ...i, x: clamp(i.x + nx, 0, 1), y: clamp(i.y + ny, 0, 1) } : i)),
+        }));
+        return;
+      }
+      if (selected.startsWith("text:")) {
+        const id = selected.slice(5);
+        setTheme((t) => ({
+          ...t,
+          texts: t.texts.map((x) => (x.id === id ? { ...x, x: clamp(x.x + nx, 0, 1), y: clamp(x.y + ny, 0, 1) } : x)),
+        }));
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (isFormControl(e.target) || isFormControl(document.activeElement)) return;
+        if (selected?.startsWith("icon:")) {
+          e.preventDefault();
+          removeIcon(selected.slice(5));
+        } else if (selected?.startsWith("text:")) {
+          e.preventDefault();
+          removeText(selected.slice(5));
+        }
+        return;
+      }
+      const dir = arrowDir(e);
+      if (!dir) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!selected || selected === "background") return;
+      // Safari deixa o slider/cor com o foco depois do clique no canvas; seta
+      // nesses controles não deve bloquear o deslocamento do widget selecionado.
+      if (isTextEditing(e.target) || isTextEditing(document.activeElement)) return;
+      const step = e.shiftKey ? 10 : 1;
+      const dx = dir === "left" ? -step : dir === "right" ? step : 0;
+      const dy = dir === "up" ? -step : dir === "down" ? step : 0;
+      e.preventDefault();
+      nudge(dx, dy);
+    }
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [selected, canvasSize.width, canvasSize.height]);
 
   const currentWallpaper = wallpapers.find((w) => w.id === currentWallpaperId) ?? null;
   const gifMeta =
@@ -455,6 +540,7 @@ export default function ThemeEditorPage() {
                       scale={icon.scale}
                       zoom={zoom}
                       usage={usage}
+                      tftWidth={canvasSize.width}
                     />
                   )}
                 </CanvasDot>

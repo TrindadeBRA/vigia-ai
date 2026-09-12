@@ -25,7 +25,10 @@ const isKiosk = process.argv.includes("--kiosk") || app.commandLine.hasSwitch("k
 
 let win: BrowserWindow | null = null;
 let sidecar: Sidecar | null = null;
+/** Pedido de saída em andamento — a janela no macOS pode fechar de verdade em vez de só esconder. */
 let quitting = false;
+/** Coletor já parou. Sem isso, `app.quit()` de dentro do `before-quit` é ignorado no macOS (precisa clicar Sair duas vezes). */
+let readyToExit = false;
 /** Porta de um coletor que já estava no ar (ex.: `./dev up` aberto em paralelo). */
 let attachedPort: number | null = null;
 
@@ -277,17 +280,34 @@ async function onFailure(failure: SidecarFailure): Promise<void> {
   });
   if (answer.response === 0) sidecar?.start();
   else if (answer.response === 1) void shell.openPath(logFile("main"));
-  else app.quit();
+  else requestQuit();
+}
+
+function requestQuit(): void {
+  if (quitting) return;
+  quitting = true;
+  destroyTray();
+  const proceed = () => {
+    readyToExit = true;
+    // Fora da stack do `before-quit` — senão o Electron no macOS engole o segundo quit.
+    setImmediate(() => app.quit());
+  };
+  if (!sidecar) {
+    proceed();
+    return;
+  }
+  log("encerrando o coletor");
+  void sidecar.stop().then(proceed, (err) => {
+    log(`falha ao encerrar o coletor: ${err}`);
+    proceed();
+  });
 }
 
 function trayDeps() {
   return {
     showWindow,
     urls,
-    quit: () => {
-      quitting = true;
-      app.quit();
-    },
+    quit: requestQuit,
   };
 }
 
@@ -368,19 +388,10 @@ if (!app.requestSingleInstanceLock()) {
   });
   app.on("activate", showWindow);
 
-  app.on("before-quit", async (event) => {
-    if (quitting) return;
-    // Marcar ANTES de qualquer saída: é esta flag que libera o handler de
-    // `close` da janela (que no macOS esconde em vez de fechar). Sair daqui
-    // sem marcar deixava o app impossível de encerrar quando não havia
-    // coletor nosso — o caso de se anexar a um `./dev up` já no ar.
-    quitting = true;
-    destroyTray();
-    if (!sidecar) return; // anexado a um coletor externo: não é nosso para parar
+  app.on("before-quit", (event) => {
+    if (readyToExit) return;
     event.preventDefault();
-    log("encerrando o coletor");
-    await sidecar.stop();
-    app.quit();
+    requestQuit();
   });
 
   app.whenReady().then(async () => {

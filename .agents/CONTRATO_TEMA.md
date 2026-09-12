@@ -26,8 +26,9 @@ Mudar este contrato = atualizar este doc, `firmware/src/ui/customtheme.cpp`,
 4. **Tela dedicada**: aplicar um tema (por esse pull ou pelo `POST /theme/meta`
    direto na placa, abaixo) sempre troca pra `VIEW_THEME`
    (`core/state.h`) — uma view **nova**, tela cheia, **sem** o header/menu da
-   firmware. Não substitui a Início. Qualquer toque ou swipe nela volta pra
-   Início (mesmo padrão da `VIEW_NOW`).
+   firmware. Não substitui a Início. Toque nos controles do widget Spotify
+   (voltar / pausar / avançar) fica na tela e manda o comando ao coletor;
+   qualquer outro toque ou swipe volta pra Início (mesmo padrão da `VIEW_NOW`).
 
 ## Servidor HTTP da placa (porta 80, opcional/debug)
 
@@ -123,7 +124,7 @@ sempre converte fração → pixel na hora de desenhar, contra
   | `bitcoin`    | `value_usd_cents`   | `balance_btc` |
   | `adsense`    | `unpaid_cents`      | `today_cents` |
   | `weather`    | (sempre temperatura; ignora `metric`) | — |
-  | `spotify`    | (faixa atual; ignora `metric`) | — |
+  | `spotify`    | (faixa atual + capa + controles; ignora `metric`) | — |
   | `brand`      | (sem métrica)       | — |
 
   Com várias contas do mesmo provedor, a placa usa a que mais precisa de
@@ -131,6 +132,11 @@ sempre converte fração → pixel na hora de desenhar, contra
   sendo um chip próprio (condição + temperatura).
 - Limites: até **8** ícones, até **4** textos (`texts[].text` até 23 chars) —
   o excesso é descartado silenciosamente.
+- Widget `spotify`: quando há faixa, a placa desenha a **capa** (RAW RGB565
+  48×48 via `GET /api/spotify/cover`, convertido no coletor — a ESP32 não
+  baixa JPEG da CDN) no lugar do logo, e três botões **anterior / pausar-tocar /
+  próxima** (`POST /api/spotify/{previous,pause,play,next}`). Sem faixa, fica
+  o logo + texto. Toque nos botões não sai da `VIEW_THEME`.
 - JSON inválido → erro, tema anterior **não** é alterado.
 
 ## Imagem de fundo

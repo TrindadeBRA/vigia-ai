@@ -228,7 +228,7 @@ src/
     theme_server.cpp/.h    HTTP :80 da placa (/theme, /theme/background, /theme/screenshot)
     mining_client.cpp/.h   busca config do coletor + report (só com VIEW_MINER)
     camera_client.cpp/.h   lista/câmera live MJPEG + PTZ ONVIF (fora do contrato /usage)
-    spotify_client.cpp/.h  estado do player Spotify (poll 5 s, fora do contrato)
+    spotify_client.cpp/.h  estado do player Spotify (poll 5 s + capa + controles, fora do contrato)
   input/
     input.cpp/.h           orquestra touch/serial/gestos
     touch.cpp              XPT2046 (hardware) / FT6206 (Wokwi) + calibração NVS
@@ -325,7 +325,7 @@ Portado de [NerdMiner_v2](https://github.com/BitMaker-hub/NerdMiner_v2) (MIT), s
 ### 8.7 Câmeras e Spotify
 
 - **Câmeras** (`net/camera_client.cpp`): fora do contrato `/usage` — `GET /api/camera/cameras` + MJPEG/PTZ. Pausa o SSE enquanto a live está ativa (`usageClientPauseSse()`) para não estourar heap.
-- **Spotify** (`net/spotify_client.cpp`): poll 5 s em `spotifyClientTick()`, também fora do ciclo de cotas.
+- **Spotify** (`net/spotify_client.cpp`): poll 5 s em `spotifyClientTick()`, capa `GET /api/spotify/cover` e `POST` dos controles no widget do tema; fora do ciclo de cotas.
 
 ---
 

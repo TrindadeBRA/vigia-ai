@@ -29,7 +29,7 @@ Arquivos: `src/input/touch.cpp` (XPT2046/FT6206 + calibração), `src/input/gest
 | OpenCode | `VIEW_OPENCODE` 8 | Assinatura mensal: 3 janelas (rolling/weekLimit/monthLimit), cada uma com usado/resta/reset. | ↑↓ | `‹ i/N ›` |
 | fal.ai | `VIEW_FAL` 9 | Saldo de créditos: barra, resta. | ↑↓ | `‹ i/N ›` |
 | Bitcoin | `VIEW_BITCOIN` 10 | Saldo on-chain + valor em USD/BRL. | ↑↓ | `‹ i/N ›` (cada carteira) |
-| Tema custom | `VIEW_THEME` 11 | Tela cheia sem header — fundo + relógio + ícones com cota (protótipo, ver [`CONTRATO_TEMA.md`](CONTRATO_TEMA.md)). Só entra por gatilho explícito (botão Recarregar ou evento SSE `theme`), nunca por swipe. | — | — |
+| Tema custom | `VIEW_THEME` 11 | Tela cheia sem header — fundo + relógio + ícones com cota (protótipo, ver [`CONTRATO_TEMA.md`](CONTRATO_TEMA.md)). Só entra por gatilho explícito (botão Recarregar ou evento SSE `theme`), nunca por swipe. Widget Spotify: capa da faixa + prev/pause/next (toque nos botões não sai da view). | — | — |
 | AdSense | `VIEW_ADSENSE` 12 | Ganhos de hoje (est.) + saldo não pago. | ↑↓ | `‹ i/N ›` |
 | Moedas | `VIEW_CURRENCIES` 13 | Lista de cotações (fiat+cripto) na moeda base. Toque abre detalhe. | ↑↓ | — (não é lista de contas) |
 | Clima | `VIEW_WEATHER` 14 | Open-Meteo: atual + máx/mín do dia. | ↑↓ | — |
@@ -46,6 +46,7 @@ Nas telas internas e na **Início** (lista ou grade) quando o conteúdo não cab
 ## Gestos
 
 - **Tap** num card da Início → detalhe da conta. Tap no paginador `‹ ›` troca de conta (`g_snap` tem até `MAX_ACCOUNTS=5` por provedor).
+- **VIEW_THEME**: toque em **anterior / pausar / avançar** do widget Spotify manda `POST /api/spotify/…` e **não** sai da tela; qualquer outro toque ou swipe volta à Início.
 - **Swipe horizontal** → Início ↔ Sistema. **Swipe vertical** → scroll (quando `uiCanScroll()`).
 - **Setas ↑↓** (hit-test em `ui/nav.cpp`) → `uiDetailScrollBy(dy)`.
 - **Hold** sobre o “olho” da marca → dilata a pupila (`uiHandlePointerHold`, só efeito visual, igual ao hover do logo web).

@@ -72,7 +72,7 @@ src/
     theme_server.cpp/.h    HTTP :80 (/theme, /theme/background, /theme/screenshot)
     mining_client.cpp/.h   config/report da mineração (só com VIEW_MINER)
     camera_client.cpp/.h   lista + live MJPEG + PTZ ONVIF (fora do contrato /usage)
-    spotify_client.cpp/.h  poll 5 s do player (fora do ciclo de cotas)
+    spotify_client.cpp/.h  poll 5 s do player + capa RGB565 + POST prev/pause/next
   input/
     input.cpp/.h           inputBegin(), inputPoll()
     touch.cpp              XPT2046 (hardware) / FT6206 (Wokwi) + calibração NVS
@@ -131,7 +131,7 @@ Usa `WebServer.h` + `LittleFS.h` (já no core ESP32, sem `lib_deps` novo). Arqui
 
 - **Mineração** (`mining/`): portado de [NerdMiner_v2](https://github.com/BitMaker-hub/NerdMiner_v2) (MIT). Só minera com `VIEW_MINER` ativa — `uiSetView()` liga/desliga. Duas tasks no **core 0** (UI no core 1), cedem CPU para não desabilitar o watchdog. Config em `GET /api/mining/config`. Share de baixa dificuldade é o recibo do pool (igual ao NerdMiner), não um bloco; block height sempre `—`. Ver [`MINERACAO.md`](MINERACAO.md).
 - **Câmeras** (`net/camera_client.cpp`): fora do contrato `/usage` — `GET /api/camera/cameras` + MJPEG/PTZ. Pausa o SSE na live para não estourar heap.
-- **Spotify** (`net/spotify_client.cpp`): poll 5 s, fora do ciclo de cotas.
+- **Spotify** (`net/spotify_client.cpp`): poll 5 s, capa `GET /api/spotify/cover` (RAW 48×48) e comandos `POST /api/spotify/{previous,pause,play,next}` no widget do tema. Fora do ciclo de cotas.
 
 ## Simulador Wokwi
 

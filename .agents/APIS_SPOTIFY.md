@@ -6,7 +6,7 @@ Igual ao AdSense: o coletor **é** um cliente OAuth (guarda `client_id`, `client
 
 Escopos: `user-read-playback-state user-modify-playback-state user-read-currently-playing`.
 
-Esse card **não** faz parte do contrato JSON (`/usage`/`/events`) nem aparece na placa ESP32 — é só um widget do painel web (`/display`), com o próprio polling (a cada 5s) direto do navegador, porque "o que está tocando agora" muda rápido demais para o ciclo de 60s do hub de cotas.
+Esse card **não** faz parte do contrato JSON (`/usage`/`/events`). No painel web (`/display`) é um widget com poll próprio. Na **placa**, o mesmo estado entra no widget `spotify` do tema custom (`VIEW_THEME`): capa RGB565 + controles. Fora do ciclo de 60s do hub de cotas.
 
 ## Setup no Spotify Developer Dashboard
 
@@ -56,10 +56,13 @@ State OAuth vive em memória (TTL 10 min). Reiniciar o coletor no meio do login 
 | Rota | Papel |
 | --- | --- |
 | `GET /api/spotify` | Estado atual: `is_playing`, `progress_ms`, `track` (nome, artistas, álbum, capa, duração), `configured`. |
-| `POST /api/spotify/play` \| `/pause` \| `/next` \| `/previous` | Comandos do player. `{ ok: false, error }` quando falta login ou não há dispositivo ativo. |
+| `GET /api/spotify/cover?size=` | Capa da faixa atual em RAW **RGB565 little-endian** (mesmo formato do wallpaper). `size` 24–64, padrão **48**. `404` sem login, `204` sem faixa, `200` + `X-Vigia-Track-Id` / `X-Vigia-Cover-Size` quando há capa. Usado pela ESP32 no widget do tema — o coletor baixa a JPEG da CDN (com o mesmo guard SSRF dos wallpapers) e converte com Jimp; a placa só faz `pushImage`. |
+| `POST /api/spotify/play` \| `/pause` \| `/next` \| `/previous` | Comandos do player. `{ ok: false, error }` quando falta login ou não há dispositivo ativo. A placa usa os mesmos POSTs nos botões do widget do tema. |
 
 O access token fica em cache em memória (renovado pouco antes de expirar) para não bater no endpoint de token do Spotify a cada poll de 5s do card.
 
 ## O que a tela mostra
 
 Capa do álbum, título, artista e (nos tamanhos maiores) barra de progresso + álbum, com botões **anterior / play-pause / próxima**. Sem login: mensagem para conectar em Configurações. Sem nada tocando: "Nada tocando". Adicione o card em `/display` pelo botão **Adicionar widget → Spotify** — ele só aparece depois de conectado.
+
+No **tema da placa** (`/display/theme`, widget `spotify`): a mesma capa (convertida pra RGB565 no coletor) e os mesmos três controles. A prévia do editor espelha isso.

@@ -91,9 +91,11 @@ backend/src/routers/images.ts      rotas /api/images — GET/POST + PATCH/DELETE
 frontend/src/hooks/useImageWidgets.ts  hook das imagens (só backend, migra localStorage antigo uma vez)
 backend/src/routers/firmware.ts      secrets.h da ESP32 + baixar firmware do GitHub + flash PlatformIO pelo painel (/display/setup)
 frontend/src/pages/display/usePrefs.ts  hook das preferências de exibição (tema/cor/idioma/foco/widgets) — só backend (/api/prefs)
-backend/src/providers/spotify.ts   OAuth Spotify + chamadas ao player (play/pause/next/previous) — ver APIS_SPOTIFY.md
-backend/src/routers/spotify.ts     rotas /api/oauth/spotify/* + /api/spotify* (estado + comandos do player) — protótipo, fora do contrato JSON
-frontend/src/components/cards/SpotifyCard.tsx  widget "Spotify" do board (/display) — poll próprio de 5s, não usa o hub de usage
+backend/src/providers/spotify.ts   OAuth Spotify + player + capa RGB565 pra placa — ver APIS_SPOTIFY.md
+backend/src/routers/spotify.ts     rotas /api/oauth/spotify/* + /api/spotify* (estado, capa, comandos) — protótipo, fora do contrato JSON
+frontend/src/components/cards/SpotifyCard.tsx  widget "Spotify" do board (/display) — poll próprio, não usa o hub de usage
+frontend/src/pages/config/SpotifyThemeWidget.tsx  chip do tema (capa + prev/pause/next) no editor e no canvas
+firmware/src/net/spotify_client.cpp  poll + capa + POST dos controles no VIEW_THEME
 frontend/src/pages/config/SpotifyConfigCard.tsx  credenciais + login/logout OAuth do Spotify (/display/config)
 firmware/platformio.ini            board_build.partitions = huge_app.csv (mineração empurrou o app pra perto do limite da partição padrão)
 backend/src/schemas/mining.ts      contrato de /api/mining/* (config remota + report/status) — protótipo, ver MINERACAO.md

@@ -52,6 +52,10 @@ function ensurePolling() {
   });
 }
 
+export function refreshSpotifyPreview(): void {
+  void fetchState();
+}
+
 export function useSpotifyPreview(): SpotifyState | null {
   const [state, setState] = useState<SpotifyState | null>(sharedState);
 

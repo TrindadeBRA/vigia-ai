@@ -393,7 +393,16 @@ void uiHandleTap(int16_t x, int16_t y)
   const int W = tft.width();
   x = constrain(x, 0, W - 1);
   y = constrain(y, 0, tft.height() - 1);
-  if (g_view == VIEW_NOW || g_view == VIEW_THEME)
+  if (g_view == VIEW_THEME)
+  {
+    if (customThemeHandleTap(x, y))
+    {
+      return;
+    }
+    uiSetView(VIEW_HOME);
+    return;
+  }
+  if (g_view == VIEW_NOW)
   {
     uiSetView(VIEW_HOME);
     return;

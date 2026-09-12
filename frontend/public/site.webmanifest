@@ -3,7 +3,7 @@
   "short_name": "Vigia AI",
   "description": "Painel de mesa para cotas de IA (Claude, GPT, Cursor, OpenRouter, DeepSeek e mais), sem nunca expor um token.",
   "lang": "pt-BR",
-  "start_url": "/display/config",
+  "start_url": "/display",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

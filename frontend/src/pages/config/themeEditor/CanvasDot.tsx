@@ -52,10 +52,31 @@ export function CanvasDot({
     return () => ro.disconnect();
   }, []);
 
+  // Safari não foca div[tabIndex] no clique (o slider/cor do painel fica com as
+  // setas). No WebKit o focus() no pointerdown às vezes só pega no frame seguinte.
+  useEffect(() => {
+    if (!selected) return;
+    const el = dotRef.current;
+    if (!el) return;
+    const id = window.requestAnimationFrame(() => el.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(id);
+  }, [selected]);
+
+  const focusDot = (el: HTMLElement) => {
+    const prev = document.activeElement;
+    if (prev instanceof HTMLElement && prev !== el) prev.blur();
+    el.focus({ preventScroll: true });
+  };
+
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     onSelect();
-    e.currentTarget.setPointerCapture(e.pointerId);
+    focusDot(e.currentTarget);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Safari antigo pode recusar capture em div
+    }
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.buttons !== 1 || !canvasRef.current) return;
@@ -68,11 +89,13 @@ export function CanvasDot({
   return (
     <div
       ref={dotRef}
+      data-canvas-dot=""
       role="button"
       tabIndex={0}
       title={title}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
+      onClick={(e) => focusDot(e.currentTarget)}
       style={cw > 0 && ch > 0 ? { left: `${left}px`, top: `${top}px` } : { left: `${left}%`, top: `${top}%` }}
       className={cn(
         "absolute flex -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none select-none items-center justify-center rounded-[10px] outline-none active:cursor-grabbing",

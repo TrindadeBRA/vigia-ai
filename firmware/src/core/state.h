@@ -198,6 +198,7 @@ struct SpotifyData
   bool isPlaying = false;
   int progressMs = -1;
   int durationMs = -1;
+  String trackId;
   String trackName;
   String artists;
   String album;

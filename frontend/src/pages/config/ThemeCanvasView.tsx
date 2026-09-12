@@ -116,6 +116,7 @@ export function ThemeCanvasView({
               scale={icon.scale}
               zoom={zoom}
               usage={usage}
+              tftWidth={canvasSize.width}
             />
           )}
         </ThemeLayer>

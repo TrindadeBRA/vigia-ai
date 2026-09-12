@@ -2,10 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { HttpError } from "../httpClient.js";
 import {
+  albumImages,
   authUrl,
   exchangeCode,
   getAccessToken,
   getPlaybackState,
+  pickCoverUrl,
   playbackNext,
   playbackPause,
   playbackPlay,
@@ -13,6 +15,8 @@ import {
   spotifyCreds,
   summarizePlayback,
 } from "../providers/spotify.js";
+import { imageToRaw } from "./wallpapers/rgb565.js";
+import { downloadImage } from "./wallpapers/ssrfGuard.js";
 import { load, updateSync as update } from "../store.js";
 
 const pending = new Map<string, { at: number; returnTo: string }>();
@@ -84,6 +88,30 @@ function friendlyError(e: unknown): string {
 }
 
 const NOT_CONFIGURED = "Conecte sua conta Spotify em Configurações primeiro.";
+const PLAYBACK_TTL_MS = 4000;
+const COVER_MIN = 24;
+const COVER_MAX = 64;
+const COVER_DEFAULT = 48;
+
+let playbackCache: { at: number; raw: Record<string, unknown> | null } | null = null;
+let coverCache: { trackId: string; size: number; raw: Buffer } | null = null;
+
+function invalidatePlayback(): void {
+  playbackCache = null;
+}
+
+async function loadPlayback(access: string): Promise<Record<string, unknown> | null> {
+  if (playbackCache && Date.now() - playbackCache.at < PLAYBACK_TTL_MS) return playbackCache.raw;
+  const raw = await getPlaybackState(access);
+  playbackCache = { at: Date.now(), raw };
+  return raw;
+}
+
+function coverSizeFromQuery(query: unknown): number {
+  const raw = Number((query as { size?: string | number } | undefined)?.size ?? COVER_DEFAULT);
+  if (!Number.isFinite(raw)) return COVER_DEFAULT;
+  return Math.min(COVER_MAX, Math.max(COVER_MIN, Math.round(raw)));
+}
 
 export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/oauth/spotify/start", { schema: { tags: ["Spotify"] } }, async (request, reply) => {
@@ -183,10 +211,48 @@ export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
     }
     try {
       const access = await getAccessToken(creds.clientId, creds.clientSecret, creds.refreshToken);
-      const raw = await getPlaybackState(access);
+      const raw = await loadPlayback(access);
       return { ok: true, configured: true, error: null, ...summarizePlayback(raw) };
     } catch (e) {
       return { ok: false, configured: true, error: friendlyError(e), is_playing: false, progress_ms: null, device: null, shuffle: false, repeat: "off", track: null };
+    }
+  });
+
+  // Capa do álbum em RAW RGB565 little-endian (mesmo formato do wallpaper).
+  // A ESP32 não baixa JPEG da CDN do Spotify — o coletor converte e a placa só faz pushImage.
+  app.get("/api/spotify/cover", { schema: { tags: ["Spotify"] } }, async (request, reply) => {
+    const size = coverSizeFromQuery(request.query);
+    const cfg = load() as Record<string, unknown>;
+    const creds = spotifyCreds(cfg);
+    if (!creds) {
+      return reply.code(404).send({ ok: false, error: NOT_CONFIGURED });
+    }
+    try {
+      const access = await getAccessToken(creds.clientId, creds.clientSecret, creds.refreshToken);
+      const raw = await loadPlayback(access);
+      const summary = summarizePlayback(raw);
+      const trackId = summary.track?.id?.trim() ?? "";
+      const url = pickCoverUrl(albumImages(raw), size);
+      if (!trackId || !url) return reply.code(204).send();
+      if (coverCache && coverCache.trackId === trackId && coverCache.size === size) {
+        return reply
+          .header("Content-Type", "application/octet-stream")
+          .header("X-Vigia-Track-Id", trackId)
+          .header("X-Vigia-Cover-Size", String(size))
+          .header("Cache-Control", "no-store")
+          .send(coverCache.raw);
+      }
+      const jpeg = await downloadImage(url);
+      const rgb = await imageToRaw(jpeg, size, size);
+      coverCache = { trackId, size, raw: rgb };
+      return reply
+        .header("Content-Type", "application/octet-stream")
+        .header("X-Vigia-Track-Id", trackId)
+        .header("X-Vigia-Cover-Size", String(size))
+        .header("Cache-Control", "no-store")
+        .send(rgb);
+    } catch (e) {
+      return reply.code(502).send({ ok: false, error: friendlyError(e) });
     }
   });
 
@@ -197,6 +263,7 @@ export async function createSpotifyRoutes(app: FastifyInstance): Promise<void> {
     try {
       const access = await getAccessToken(creds.clientId, creds.clientSecret, creds.refreshToken);
       await fn(access);
+      invalidatePlayback();
       return { ok: true };
     } catch (e) {
       return { ok: false, error: friendlyError(e) };

@@ -155,13 +155,43 @@ export type SpotifyNowPlaying = {
   } | null;
 };
 
+/** Escolhe a menor capa do Spotify que ainda cubra `minSize` px (a placa pede ~48). */
+export function pickCoverUrl(images: unknown, minSize: number): string | null {
+  if (!Array.isArray(images) || images.length === 0) return null;
+  const parsed = images
+    .map((img) => {
+      const rec = img && typeof img === "object" ? (img as Record<string, unknown>) : {};
+      const url = String(rec.url ?? "").trim();
+      const w = Number(rec.width ?? 0);
+      const h = Number(rec.height ?? 0);
+      const known = Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0;
+      const edge = known ? Math.min(w, h) : 9999;
+      return { url, edge };
+    })
+    .filter((img) => img.url.startsWith("http://") || img.url.startsWith("https://"));
+  if (!parsed.length) return null;
+  const want = Number.isFinite(minSize) && minSize > 0 ? minSize : 48;
+  const bigEnough = parsed.filter((img) => img.edge >= want);
+  const pool = bigEnough.length ? bigEnough : parsed;
+  pool.sort((a, b) => a.edge - b.edge);
+  return pool[0]?.url ?? null;
+}
+
+export function albumImages(raw: Record<string, unknown> | null): Array<Record<string, unknown>> {
+  if (!raw) return [];
+  const item = (raw.item ?? null) as Record<string, unknown> | null;
+  const album = item ? ((item.album ?? null) as Record<string, unknown> | null) : null;
+  const images = album?.images;
+  return Array.isArray(images) ? (images as Array<Record<string, unknown>>) : [];
+}
+
 export function summarizePlayback(raw: Record<string, unknown> | null): SpotifyNowPlaying {
   if (!raw) {
     return { is_playing: false, progress_ms: null, device: null, shuffle: false, repeat: "off", track: null };
   }
   const item = (raw.item ?? null) as Record<string, unknown> | null;
   const album = item ? ((item.album ?? null) as Record<string, unknown> | null) : null;
-  const images = (album?.images ?? []) as Array<Record<string, unknown>>;
+  const images = albumImages(raw);
   const artists = (item?.artists ?? []) as Array<Record<string, unknown>>;
   const device = (raw.device ?? null) as Record<string, unknown> | null;
   const externalUrls = (item?.external_urls ?? null) as Record<string, unknown> | null;
@@ -180,7 +210,7 @@ export function summarizePlayback(raw: Record<string, unknown> | null): SpotifyN
         artists: artists.map((a) => String(a.name ?? "")).filter(Boolean).join(", "),
         album: String(album?.name ?? ""),
         duration_ms: item.duration_ms != null ? Number(item.duration_ms) : null,
-        image_url: images[0] ? String(images[0].url ?? "") || null : null,
+        image_url: pickCoverUrl(images, 300) ?? (images[0] ? String(images[0].url ?? "") || null : null),
         external_url: externalUrls?.spotify ? String(externalUrls.spotify) : null,
       }
       : null,

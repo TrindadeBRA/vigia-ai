@@ -10,6 +10,7 @@ using fs::File;
 #include <math.h>
 
 #include "net/parse.h"
+#include "net/spotify_client.h"
 #include "ui/i18n.h"
 #include "ui/internal.h"
 #include "assets/icons/icon_adsense.h"
@@ -170,6 +171,34 @@ static ThemeWidgetRect g_clockRect;
 static ThemeWidgetRect g_countdownRect;
 static ThemeWidgetRect g_textRects[kMaxTexts];
 static uint8_t g_gifRowMask[480];
+
+struct SpotifyHitRect
+{
+  int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+  bool valid = false;
+};
+static SpotifyHitRect g_spPrev, g_spPlay, g_spNext;
+
+static void clearSpotifyHits()
+{
+  g_spPrev.valid = false;
+  g_spPlay.valid = false;
+  g_spNext.valid = false;
+}
+
+static void setSpotifyHit(SpotifyHitRect &r, int x0, int y0, int w, int h, int pad)
+{
+  r.x0 = x0 - pad;
+  r.y0 = y0 - pad;
+  r.x1 = x0 + w + pad;
+  r.y1 = y0 + h + pad;
+  r.valid = true;
+}
+
+static bool inSpotifyHit(const SpotifyHitRect &r, int16_t x, int16_t y)
+{
+  return r.valid && x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1;
+}
 
 void customThemeInvalidateBackground()
 {
@@ -1419,6 +1448,52 @@ static bool scaleThemeIcon(const ThemeIcon &icon, int &targetW, int &targetH)
   return true;
 }
 
+static bool scaleSpotifyCover(int target)
+{
+  if (!spotifyCoverReady()) return false;
+  const int src = spotifyCoverSize();
+  const uint16_t *px = spotifyCoverPixels();
+  if (src <= 0 || !px) return false;
+  target = constrain(target, 6, kIconScaledMax);
+  for (int ty = 0; ty < target; ty++)
+  {
+    int sy = ty * src / target;
+    for (int tx = 0; tx < target; tx++)
+    {
+      int sx = tx * src / target;
+      g_iconScaleBuf[ty * target + tx] = px[sy * src + sx];
+    }
+  }
+  return true;
+}
+
+static void drawSpotifyCtrl(int x0, int y0, int w, int h, uint16_t fg, bool box, char kind)
+{
+  if (box)
+  {
+    tft.drawRoundRect(x0, y0, w, h, 4, fg);
+  }
+  const int mx = x0 + w / 2;
+  const int my = y0 + h / 2;
+  if (kind == 'P')
+  {
+    tft.fillTriangle(mx + 4, my - 5, mx + 4, my + 5, mx - 6, my, fg);
+  }
+  else if (kind == 'N')
+  {
+    tft.fillTriangle(mx - 4, my - 5, mx - 4, my + 5, mx + 6, my, fg);
+  }
+  else if (kind == 'U')
+  {
+    tft.fillRect(mx - 5, my - 5, 3, 10, fg);
+    tft.fillRect(mx + 2, my - 5, 3, 10, fg);
+  }
+  else
+  {
+    tft.fillTriangle(mx - 4, my - 6, mx - 4, my + 6, mx + 6, my, fg);
+  }
+}
+
 // --- Estilo "card" ------------------------------------------------------
 //
 // Reaproveita o mesmo mini-cartão (nome + apelido + 1-2 barras) já usado na
@@ -1930,17 +2005,34 @@ static void drawThemeSpotify(const ThemeIcon &icon, int idx)
     title = s.trackName;
     subtitle = s.artists.length() ? s.artists : (s.isPlaying ? "tocando" : "pausado");
   }
-  // Trunca para caber no chip
-  const uint8_t fontTitle = icon.scale >= 1.8f ? 2 : 2;
+  const uint8_t fontTitle = 2;
   const uint8_t fontSub = 1;
   const float sc = icon.scale;
-  const int boxW = constrain((int)roundf(140 * sc), 90, tft.width() - 4);
+  // Caixa mais próxima dos outros chips (ícone 20px): a prévia web
+  // espelha estes mesmos clamps em SpotifyThemeWidget.tsx.
+  const int boxW = constrain((int)roundf(128 * sc), 96, tft.width() - 4);
   const int padX = 6;
   const int padY = 4;
+  const int coverPx = constrain((int)roundf(26 * sc), 20, 44);
   int iconW = 0, iconH = 0;
-  bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
-  int gap = hasIcon ? 6 : 0;
-  const int innerTextW = boxW - padX * 2 - (hasIcon ? iconW + gap : 0) - 12;
+  const bool hasCover = scaleSpotifyCover(coverPx);
+  bool hasLogo = false;
+  if (hasCover)
+  {
+    iconW = coverPx;
+    iconH = coverPx;
+  }
+  else
+  {
+    hasLogo = scaleThemeIcon(icon, iconW, iconH);
+  }
+  const bool hasArt = hasCover || hasLogo;
+  const int gap = hasArt ? 6 : 0;
+  const bool showCtrls = s.hasData && s.configured && s.ok && s.trackName.length();
+  const int btnW = constrain((int)roundf(26 * sc), 22, 36);
+  const int btnH = constrain((int)roundf(20 * sc), 18, 28);
+  const int btnGap = 6;
+  const int innerTextW = boxW - padX * 2 - (hasArt ? iconW + gap : 0);
   while (title.length() > 0 && tft.textWidth(title, fontTitle) > innerTextW) {
     title.remove(title.length() - 1);
   }
@@ -1951,8 +2043,9 @@ static void drawThemeSpotify(const ThemeIcon &icon, int idx)
   int titleH = tft.fontHeight(fontTitle);
   int subH = subtitle.length() ? tft.fontHeight(fontSub) : 0;
   int textH = titleH + (subtitle.length() ? 2 + subH : 0);
-  int innerH = max(hasIcon ? iconH : 0, textH);
-  int boxH = innerH + padY * 2;
+  int topH = max(hasArt ? iconH : 0, textH);
+  int boxH = padY + topH + padY;
+  if (showCtrls) boxH += 4 + btnH;
   if (boxH < 28) boxH = 28;
   clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
   int x0 = cx - boxW / 2;
@@ -1969,17 +2062,23 @@ static void drawThemeSpotify(const ThemeIcon &icon, int idx)
       tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
     }
   }
-  if (hasIcon) {
+  if (hasArt) {
     int iconX = x0 + padX;
-    int iconY = y0 + (boxH - iconH) / 2;
+    int iconY = y0 + padY + (topH - iconH) / 2;
     tft.setSwapBytes(true);
-    tft.pushImage(iconX, iconY, iconW, iconH, g_iconScaleBuf, kBakedCard);
+    if (hasCover)
+    {
+      tft.pushImage(iconX, iconY, iconW, iconH, g_iconScaleBuf);
+    }
+    else
+    {
+      tft.pushImage(iconX, iconY, iconW, iconH, g_iconScaleBuf, kBakedCard);
+    }
     tft.setSwapBytes(false);
   }
-  int textX = x0 + padX + (hasIcon ? iconW + gap : 0);
-  int textY = y0 + padY + (innerH - textH) / 2;
+  int textX = x0 + padX + (hasArt ? iconW + gap : 0);
+  int textY = y0 + padY + (topH - textH) / 2;
   tft.setTextDatum(TL_DATUM);
-  // Título
   box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
   tft.drawString(title, textX, textY, fontTitle);
   if (subtitle.length()) {
@@ -1987,18 +2086,19 @@ static void drawThemeSpotify(const ThemeIcon &icon, int idx)
     box ? tft.setTextColor(0xAD75, bgCol) : tft.setTextColor(0xAD75);
     tft.drawString(subtitle, textX, textY + titleH + 2, fontSub);
   }
-  // Indicador play/pause pequeno no canto superior direito interno (triângulo/barras)
-  if (s.hasData && s.configured && s.ok && s.trackName.length()) {
-    int indX = x0 + boxW - 8;
-    int indY = y0 + 6;
-    if (s.isPlaying) {
-      // triângulo play
-      tft.fillTriangle(indX, indY, indX, indY + 6, indX + 5, indY + 3, fg);
-    } else {
-      // duas barras pause
-      tft.fillRect(indX, indY, 2, 6, fg);
-      tft.fillRect(indX + 4, indY, 2, 6, fg);
-    }
+  if (showCtrls)
+  {
+    int totalBtns = btnW * 3 + btnGap * 2;
+    int bx = x0 + (boxW - totalBtns) / 2;
+    int by = y0 + boxH - padY - btnH;
+    drawSpotifyCtrl(bx, by, btnW, btnH, fg, box, 'P');
+    setSpotifyHit(g_spPrev, bx, by, btnW, btnH, 4);
+    bx += btnW + btnGap;
+    drawSpotifyCtrl(bx, by, btnW, btnH, fg, box, s.isPlaying ? 'U' : 'Y');
+    setSpotifyHit(g_spPlay, bx, by, btnW, btnH, 4);
+    bx += btnW + btnGap;
+    drawSpotifyCtrl(bx, by, btnW, btnH, fg, box, 'N');
+    setSpotifyHit(g_spNext, bx, by, btnW, btnH, 4);
   }
 }
 
@@ -2269,6 +2369,7 @@ void paintCustomHome()
   {
     return;
   }
+  clearSpotifyHits();
   if (g_theme.clock.enabled)
   {
     drawThemeClock(g_theme.clock);
@@ -2356,4 +2457,25 @@ void customThemeTickAnimation()
   g_animFrameIdx = (g_animFrameIdx + 1) % g_theme.frameCount;
   g_bgDirty = true;
   paintCustomHome();
+}
+
+bool customThemeHandleTap(int16_t x, int16_t y)
+{
+  if (!g_active || g_view != VIEW_THEME) return false;
+  if (inSpotifyHit(g_spPrev, x, y))
+  {
+    spotifyClientCommand("previous");
+    return true;
+  }
+  if (inSpotifyHit(g_spPlay, x, y))
+  {
+    spotifyClientCommand(g_snap.spotify.isPlaying ? "pause" : "play");
+    return true;
+  }
+  if (inSpotifyHit(g_spNext, x, y))
+  {
+    spotifyClientCommand("next");
+    return true;
+  }
+  return false;
 }

@@ -67,3 +67,7 @@ void customThemeTickCountdown();
 // Avança o frame do fundo GIF (rate-limited por frame_delay_ms). Chamado
 // no loop via uiTickClock() quando VIEW_THEME está ativa.
 void customThemeTickAnimation();
+// Toque nos controles do Spotify (prev/pause/next). true = consumiu o
+// toque (não volta pra Início). Qualquer outro toque na VIEW_THEME
+// continua saindo da tela, igual ao Relógio.
+bool customThemeHandleTap(int16_t x, int16_t y);
