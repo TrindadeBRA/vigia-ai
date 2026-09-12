@@ -41,6 +41,7 @@ import {
   metricLabel,
   providerHasData,
   weatherEmoji,
+  THEME_MAX_ICONS,
   type ThemeProvider,
 } from "./themeMetrics";
 import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, StatusPill, Switch, TextField, TomSelectField } from "./ui";
@@ -189,7 +190,9 @@ export default function ThemeEditorPage() {
   function updateText(id: string, patch: Partial<ThemeText>) {
     setTheme((t) => ({ ...t, texts: t.texts.map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
   }
+  const iconsFull = theme.icons.length >= THEME_MAX_ICONS;
   function addIcon(provider: ThemeProvider = "claude") {
+    if (iconsFull) return;
     const id = uid();
     const n = theme.icons.length;
     const x = 0.22 + (n % 4) * 0.2;
@@ -646,7 +649,7 @@ export default function ThemeEditorPage() {
                       )}
                     >
                       {icon.provider === "brand" ? (
-                        <Logo size={16} />
+                        <Logo size={16} showText={false} />
                       ) : icon.provider === "weather" ? (
                         <span className="text-[15px] leading-none">{weatherEmoji(usage)}</span>
                       ) : (
@@ -869,6 +872,7 @@ export default function ThemeEditorPage() {
 
       <ToolPopover anchorRef={addProviderBtnRef} open={addPopoverOpen} onClose={() => setAddPopoverOpen(false)} width={300}>
         <div className="mb-2 px-0.5 text-[11.5px] font-[650] uppercase tracking-[.4px] text-ink3">{c.addProvider}</div>
+        {iconsFull ? <div className="mb-2 px-0.5 text-[11.5px] text-amber-300">{c.iconLimit(THEME_MAX_ICONS)}</div> : null}
         <div className="grid grid-cols-2 gap-2">
           {ICON_PROVIDERS.map((p) => {
             const value = formatThemeMetric(usage, p.id, defaultMetric(p.id));
@@ -877,6 +881,7 @@ export default function ThemeEditorPage() {
               <button
                 type="button"
                 key={p.id}
+                disabled={iconsFull}
                 onClick={() => {
                   addIcon(p.id);
                   setAddPopoverOpen(false);
@@ -884,7 +889,7 @@ export default function ThemeEditorPage() {
                 className="flex items-center gap-2 rounded-[12px] border border-edge bg-canvas px-2.5 py-2 text-left hover:border-accent/50 hover:bg-chip disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {p.id === "brand" ? (
-                  <Logo size={20} />
+                  <Logo size={20} showText={false} />
                 ) : p.id === "weather" ? (
                   <span className="text-[16px]">{weatherEmoji(usage)}</span>
                 ) : (

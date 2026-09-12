@@ -11,8 +11,68 @@ import {
   searchCities,
 } from "../providers/weather.js";
 import { load, updateSync as update } from "../store.js";
+import { imageToRaw } from "./wallpapers/rgb565.js";
+import { downloadImage } from "./wallpapers/ssrfGuard.js";
+
+// Mesmo emoji de WMO_EMOJI (frontend/src/format.ts), só que pelo nome do
+// arquivo do Twemoji (codepoint sem o FE0F) — a ESP32 não desenha emoji.
+const WMO_TWEMOJI: Record<number, string> = {
+  0: "2600", 1: "1f324", 2: "26c5", 3: "2601",
+  45: "1f32b", 48: "1f32b",
+  51: "1f326", 53: "1f326", 55: "1f327", 56: "1f327", 57: "1f327",
+  61: "1f327", 63: "1f327", 65: "1f327", 66: "1f327", 67: "1f327",
+  71: "1f328", 73: "1f328", 75: "2744", 77: "2744",
+  80: "1f326", 81: "1f326", 82: "26c8", 85: "1f328", 86: "2744",
+  95: "26c8", 96: "26c8", 99: "26c8",
+};
+const TWEMOJI_FALLBACK = "1f321"; // 🌡️
+const TWEMOJI_BASE = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72/";
+const ICON_MIN = 16;
+const ICON_MAX = 72;
+const ICON_DEFAULT = 48;
+// Cor-chave de transparência: a mesma kBakedCard do firmware (ui/customtheme.cpp).
+const DEFAULT_KEY = 0x1904;
+
+export function twemojiForWmo(code: number | null): string {
+  if (code === null) return TWEMOJI_FALLBACK;
+  return WMO_TWEMOJI[code] ?? TWEMOJI_FALLBACK;
+}
+
+const iconCache = new Map<string, Buffer>();
 
 export async function createWeatherRoutes(app: FastifyInstance): Promise<void> {
+  // Ícone da condição atual em RAW RGB565 little-endian — mesma estratégia da
+  // capa do Spotify (/api/spotify/cover): o coletor baixa e converte, a placa
+  // só faz pushImage. A placa manda o `code` que já recebeu no /usage, então a
+  // rota não depende do ciclo do hub e o cache fica por código.
+  app.get("/api/weather/icon", { schema: { tags: ["Clima"] } }, async (request, reply) => {
+    const q = (request.query ?? {}) as Record<string, string | undefined>;
+    const rawCode = q.code === undefined || q.code === "" ? NaN : Number(q.code);
+    const code = Number.isInteger(rawCode) ? rawCode : null;
+    const rawSize = Number(q.size ?? ICON_DEFAULT);
+    const size = Number.isFinite(rawSize) ? Math.min(ICON_MAX, Math.max(ICON_MIN, Math.round(rawSize))) : ICON_DEFAULT;
+    const rawKey = q.key !== undefined ? parseInt(q.key, 16) : DEFAULT_KEY;
+    const key = Number.isInteger(rawKey) && rawKey >= 0 && rawKey <= 0xffff ? rawKey : DEFAULT_KEY;
+    const file = twemojiForWmo(code);
+    const cacheKey = `${file}:${size}:${key}`;
+    try {
+      let raw = iconCache.get(cacheKey);
+      if (!raw) {
+        const png = await downloadImage(`${TWEMOJI_BASE}${file}.png`);
+        raw = await imageToRaw(png, size, size, { transparentKey: key });
+        iconCache.set(cacheKey, raw);
+      }
+      return reply
+        .header("Content-Type", "application/octet-stream")
+        .header("X-Vigia-Weather-Code", code === null ? "" : String(code))
+        .header("X-Vigia-Icon-Size", String(size))
+        .header("Cache-Control", "no-store")
+        .send(raw);
+    } catch (e) {
+      return reply.code(502).send({ ok: false, error: String((e as Error).message ?? e) });
+    }
+  });
+
   app.get("/api/weather/config", { schema: { tags: ["Clima"] } }, async () => {
     const cfg = load() as Record<string, unknown>;
     const raw = (cfg.weather ?? {}) as Record<string, unknown>;

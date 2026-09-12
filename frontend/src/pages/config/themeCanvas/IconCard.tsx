@@ -49,7 +49,7 @@ export function IconCard({
     >
       <div className="flex items-center gap-1.5" style={{ marginBottom: 6 * s }}>
         {provider === "brand" ? (
-          <Logo size={iconPx} />
+          <Logo size={iconPx} showText={false} />
         ) : (
           <img src={PROVIDER_ICON[provider]} alt="" draggable={false} style={{ width: iconPx, height: iconPx, objectFit: "contain" }} />
         )}

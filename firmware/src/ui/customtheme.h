@@ -67,6 +67,11 @@ void customThemeTickCountdown();
 // Avança o frame do fundo GIF (rate-limited por frame_delay_ms). Chamado
 // no loop via uiTickClock() quando VIEW_THEME está ativa.
 void customThemeTickAnimation();
+// Olho animado do ícone `brand`: raio do primeiro olho desenhado no último
+// paint (0 = nenhum / fora da VIEW_THEME) e redesenho só dos olhos com o
+// estado calculado por uiTickEye() (ui/nav.cpp) — mesmo saccade/blink do header.
+int customThemeBrandEyeRadius();
+void customThemeDrawBrandEyes(int refR, int gazeX, int gazeY, float lid, float dilate, bool hurt);
 // Toque nos controles do Spotify (prev/pause/next). true = consumiu o
 // toque (não volta pra Início). Qualquer outro toque na VIEW_THEME
 // continua saindo da tela, igual ao Relógio.

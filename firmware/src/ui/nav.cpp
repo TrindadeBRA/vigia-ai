@@ -677,10 +677,14 @@ void uiTickClock()
 // header pra dar movimento continuo. VIEW_NOW e tela cheia sem header.
 void uiTickEye()
 {
-  if (g_view == VIEW_NOW || g_view == VIEW_THEME || g_view == VIEW_CAMERA || g_eyeR <= 0)
+  // Na VIEW_THEME o olho animado é o ícone `brand` do tema (se houver), não o
+  // do header — mesmo estado de animação, desenhado por customtheme.
+  const int themeEyeR = (g_view == VIEW_THEME) ? customThemeBrandEyeRadius() : 0;
+  if (g_view == VIEW_THEME ? themeEyeR <= 0 : (g_view == VIEW_NOW || g_view == VIEW_CAMERA || g_eyeR <= 0))
   {
     return;
   }
+  const int eyeR = themeEyeR > 0 ? themeEyeR : g_eyeR;
   static uint32_t lastDrawMs = 0;
   static bool gazeInited = false;
   static float gazeX = 0, gazeY = 0;
@@ -708,7 +712,7 @@ void uiTickEye()
     holdUntilMs = now + 700;
   }
 
-  int maxGaze = g_eyeR * 3 / 5 - 2;
+  int maxGaze = eyeR * 3 / 5 - 2;
   if (maxGaze < 1)
   {
     maxGaze = 1;
@@ -816,5 +820,10 @@ void uiTickEye()
   }
   g_eyeDilate = dilate;
 
+  if (themeEyeR > 0)
+  {
+    customThemeDrawBrandEyes(themeEyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid, g_eyeDilate, hurt);
+    return;
+  }
   drawEyeIcon(g_eyeCx, g_eyeCy, g_eyeR, g_eyeGazeX, g_eyeGazeY, g_eyeLid, g_eyeDilate, hurt);
 }

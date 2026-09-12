@@ -199,6 +199,21 @@ export function weatherEmoji(usage: UsagePayload | null): string {
   return wmoEmoji(usage?.weather?.current?.weather_code);
 }
 
+/** Espelha kMaxIcons do firmware (ui/customtheme.cpp) — acima disso a placa descarta. */
+export const THEME_MAX_ICONS = 12;
+
+/**
+ * Mesma arte que a placa desenha no widget de clima: o coletor converte esse PNG
+ * do Twemoji em RGB565 (`GET /api/weather/icon`, ver backend/src/routers/weather.ts).
+ */
+export function weatherIconUrl(usage: UsagePayload | null): string {
+  const file = Array.from(weatherEmoji(usage))
+    .map((ch) => ch.codePointAt(0)!.toString(16))
+    .filter((cp) => cp !== "fe0f")
+    .join("-");
+  return `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72/${file}.png`;
+}
+
 export function providerHasData(provider: ThemeProvider): boolean {
   return PROVIDER_METRICS[provider].length > 0;
 }

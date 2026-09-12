@@ -24,6 +24,7 @@ export type ThemeCopy = {
   icons: string;
   addIcon: string;
   addProvider: string;
+  iconLimit: (max: number) => string;
   removeIcon: string;
   metric: string;
   metricNone: string;
@@ -159,6 +160,7 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     icons: "Ícones",
     addIcon: "Adicionar ícone",
     addProvider: "Adicionar no canvas",
+    iconLimit: (max) => `Limite de ${max} ícones da placa atingido — remova um pra adicionar outro.`,
     removeIcon: "Remover ícone",
     metric: "Dado no ícone",
     metricNone: "Só o ícone",
@@ -293,6 +295,7 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     icons: "Icons",
     addIcon: "Add icon",
     addProvider: "Add to canvas",
+    iconLimit: (max) => `Board limit of ${max} icons reached — remove one to add another.`,
     removeIcon: "Remove icon",
     metric: "Data on the icon",
     metricNone: "Icon only",
@@ -427,6 +430,7 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     icons: "Íconos",
     addIcon: "Agregar ícono",
     addProvider: "Agregar al lienzo",
+    iconLimit: (max) => `Límite de ${max} íconos de la placa alcanzado — quita uno para agregar otro.`,
     removeIcon: "Quitar ícono",
     metric: "Dato en el ícono",
     metricNone: "Solo el ícono",

@@ -532,6 +532,6 @@ void drawBrand(int x, int y, uint8_t font) {
   tft.drawString(" AI", x + tft.textWidth("VIGIA", font), y, font);
 }
 
-void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid, float dilate, bool hurt) {
-  drawEyeIconOn(tft, cx, cy, r, gazeX, gazeY, lid, dilate, hurt);
+void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid, float dilate, bool hurt, bool clipLid) {
+  drawEyeIconOn(tft, cx, cy, r, gazeX, gazeY, lid, dilate, hurt, clipLid);
 }

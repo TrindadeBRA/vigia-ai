@@ -7,7 +7,18 @@ export function packRgba565(r: number, g: number, b: number): number {
   return ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
 }
 
-export async function imageToRaw(imageBytes: Buffer, targetW: number, targetH: number): Promise<Buffer> {
+/**
+ * `transparentKey`: pixels com alpha < 128 viram essa cor RGB565 (a placa passa
+ * a mesma chave pro `pushImage(..., transparent)`), e pixels opacos que por
+ * acaso caiam nela têm o bit baixo invertido pra não sumirem junto.
+ */
+export async function imageToRaw(
+  imageBytes: Buffer,
+  targetW: number,
+  targetH: number,
+  opts: { transparentKey?: number } = {},
+): Promise<Buffer> {
+  const key = opts.transparentKey;
   let Jimp: unknown;
   try {
     const mod = await import("jimp");
@@ -44,7 +55,11 @@ export async function imageToRaw(imageBytes: Buffer, targetW: number, targetH: n
         const r = (color >>> 24) & 0xff;
         const g = (color >>> 16) & 0xff;
         const b = (color >>> 8) & 0xff;
-        const v = packRgba565(r, g, b);
+        let v = packRgba565(r, g, b);
+        if (key !== undefined) {
+          if ((color & 0xff) < 128) v = key;
+          else if (v === key) v ^= 0x0001;
+        }
         out[idx] = v & 0xff;
         out[idx + 1] = (v >> 8) & 0xff;
         idx += 2;

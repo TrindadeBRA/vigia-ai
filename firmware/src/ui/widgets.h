@@ -54,8 +54,10 @@ void drawBrand(int x, int y, uint8_t font);
 // disparado por segurar o dedo no olho (ver uiHandlePointerHold). `hurt`
 // tinge a esclera de rosa e força um leve semicerrar — easter egg de toques
 // rapidos no olho (ver registerEyeTap em nav.cpp).
+// `clipLid`: pálpebra recortada no círculo em vez do retângulo COL_BG — pra
+// olhos desenhados sobre fundo que não é COL_BG (ícone `brand` do tema).
 void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f,
-                  float dilate = 0.0f, bool hurt = false);
+                  float dilate = 0.0f, bool hurt = false, bool clipLid = false);
 
 // Mesmo desenho, mas parametrizado no alvo grafico (TFT_eSPI ou TFT_eSprite,
 // que herda de TFT_eSPI) — usado pelo splash pra montar o frame inteiro num
@@ -64,7 +66,7 @@ void drawEyeIcon(int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f,
 // primitiva (ver ui/splash.cpp).
 template <typename T>
 void drawEyeIconOn(T &gfx, int cx, int cy, int r, int gazeX, int gazeY, float lid = 0.0f,
-                    float dilate = 0.0f, bool hurt = false) {
+                    float dilate = 0.0f, bool hurt = false, bool clipLid = false) {
   const uint16_t sclera = hurt ? gfx.alphaBlend(110, COL_BAD, TFT_WHITE) : TFT_WHITE;
   gfx.fillCircle(cx, cy, r, sclera);
   gfx.drawCircle(cx, cy, r, COL_TEXT_DIM);
@@ -91,6 +93,18 @@ void drawEyeIconOn(T &gfx, int cx, int cy, int r, int gazeX, int gazeY, float li
     if (coverage > r * 2) coverage = r * 2;
     const int topH = coverage / 2;
     const int botH = coverage - topH;
+    if (clipLid) {
+      // Uma corda por linha: topo [cy-r, cy-r+topH) e base (cy+r-botH, cy+r].
+      for (int dy = -r; dy <= r; dy++) {
+        const bool top = dy < -r + topH;
+        const bool bot = dy > r - botH;
+        if (!top && !bot) continue;
+        const int half = (int)sqrtf((float)(r * r - dy * dy));
+        gfx.drawFastHLine(cx - half, cy + dy, half * 2 + 1, COL_BG);
+      }
+      gfx.drawCircle(cx, cy, r, COL_TEXT_DIM);
+      return;
+    }
     if (topH > 0) {
       gfx.fillRect(cx - r - 1, cy - r, r * 2 + 2, topH, COL_BG);
     }

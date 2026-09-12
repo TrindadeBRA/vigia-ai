@@ -190,6 +190,16 @@ warn_secrets() {
 }
 
 listen_pids() {
+  # No macOS usa netstat -anv (já traz o pid): o lsof varre os descritores de
+  # todos os processos e trava em estado U quando há um volume pendurado
+  # (pendrive/rede), congelando ./dev up|down sem imprimir nada.
+  if [ "$(uname -s)" = "Darwin" ]; then
+    netstat -anv -p tcp 2>/dev/null \
+      | awk -v p="$1" '$6=="LISTEN" && $4 ~ ("[.:]" p "$")' \
+      | sed -E 's/.*:([0-9]+) +[0-9a-f]{5} +[0-9a-f]{8} .*/\1/' \
+      | sort -u || true
+    return 0
+  fi
   lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null || true
 }
 
@@ -237,8 +247,10 @@ run_backend() {
   local backend_pid=$!
   PIDS+=("$backend_pid")
   local i
-  for i in $(seq 1 20); do
-    if curl -sf -o /dev/null "http://127.0.0.1:${BACKEND_PORT}/health"; then
+  # Até 30s: o boot faz o primeiro refresh dos provedores antes de escutar
+  # (~5-6s), e os 5s de antes estouravam.
+  for i in $(seq 1 120); do
+    if curl -sf -m 2 -o /dev/null "http://127.0.0.1:${BACKEND_PORT}/health"; then
       return 0
     fi
     if ! kill -0 "$backend_pid" 2>/dev/null; then

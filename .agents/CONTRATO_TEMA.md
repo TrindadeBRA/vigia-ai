@@ -130,13 +130,27 @@ sempre converte fração → pixel na hora de desenhar, contra
   Com várias contas do mesmo provedor, a placa usa a que mais precisa de
   atenção (mesmo critério da Início: `*WorstIdx()`). `weather` continua
   sendo um chip próprio (condição + temperatura).
-- Limites: até **8** ícones, até **4** textos (`texts[].text` até 23 chars) —
-  o excesso é descartado silenciosamente.
+- Limites: até **12** ícones (`kMaxIcons` no firmware = `THEME_MAX_ICONS` no
+  editor, que bloqueia adicionar além disso), até **4** textos
+  (`texts[].text` até 23 chars) — o excesso de um JSON importado é descartado
+  silenciosamente pela placa, sempre os últimos da lista.
 - Widget `spotify`: quando há faixa, a placa desenha a **capa** (RAW RGB565
   48×48 via `GET /api/spotify/cover`, convertido no coletor — a ESP32 não
   baixa JPEG da CDN) no lugar do logo, e três botões **anterior / pausar-tocar /
   próxima** (`POST /api/spotify/{previous,pause,play,next}`). Sem faixa, fica
   o logo + texto. Toque nos botões não sai da `VIEW_THEME`.
+- Widget `weather`: ícone da **condição atual** + temperatura + rótulo curto
+  (`weatherWmoText`). Mesma estratégia da capa do Spotify: a placa pede
+  `GET /api/weather/icon?code=<weather_code>&size=48&key=1904` e recebe RAW
+  RGB565 48×48 (emoji do Twemoji convertido no coletor; pixels com alpha < 128
+  vêm na cor-chave `key`, a mesma `kBakedCard` usada como transparente no
+  `pushImage`). Só baixa de novo quando o `weather_code` do `/usage` muda
+  (`net/weather_icon_client.cpp`); sem ícone (coletor offline, CDN fora) cai no
+  ícone assado do clima. A prévia do editor usa o mesmo PNG.
+- Ícone `brand`: só o **olho animado** (saccade, drift e piscada do header —
+  `uiTickEye()` redesenha só o círculo do olho, com a pálpebra recortada no
+  círculo pra não pintar quadrado em cima do wallpaper). Sem caixa, sem texto;
+  `style`/`showBackground`/`color` são ignorados.
 - JSON inválido → erro, tema anterior **não** é alterado.
 
 ## Imagem de fundo

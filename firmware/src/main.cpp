@@ -10,6 +10,7 @@
 #include "net/spotify_client.h"
 #include "net/theme_server.h"
 #include "net/usage_client.h"
+#include "net/weather_icon_client.h"
 #include "ui/ui.h"
 
 #ifndef USAGE_POLL_MS
@@ -97,6 +98,7 @@ void loop()
   miningClientPoll();
   cameraClientPoll();
   spotifyClientTick();
+  weatherIconTick();
 
   usageClientEnsureWifi();
   uint32_t now = millis();

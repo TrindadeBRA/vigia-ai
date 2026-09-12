@@ -11,6 +11,7 @@ using fs::File;
 
 #include "net/parse.h"
 #include "net/spotify_client.h"
+#include "net/weather_icon_client.h"
 #include "ui/i18n.h"
 #include "ui/internal.h"
 #include "assets/icons/icon_adsense.h"
@@ -125,7 +126,10 @@ enum ThemeBgKind : uint8_t
   TBG_GIF = 2
 };
 
-constexpr int kMaxIcons = 8;
+// Espelha THEME_MAX_ICONS do editor (frontend/.../themeMetrics.ts). Com 8 o
+// que passasse do limite sumia calado da placa — clima e olho, os últimos
+// adicionados, eram sempre os primeiros a cair.
+constexpr int kMaxIcons = 12;
 constexpr int kMaxTexts = 4;
 
 struct CustomTheme
@@ -167,6 +171,15 @@ struct ThemeWidgetRect
   bool valid = false;
 };
 static ThemeWidgetRect g_iconRects[kMaxIcons];
+// Onde cada ícone `brand` foi desenhado no último paint (já com clamp) — o
+// tick do olho (customThemeDrawBrandEyes) redesenha só ali, sem repintar o tema.
+struct BrandEyeSpot
+{
+  int cx = 0;
+  int cy = 0;
+  int r = 0;
+};
+static BrandEyeSpot g_brandEyes[kMaxIcons];
 static ThemeWidgetRect g_clockRect;
 static ThemeWidgetRect g_countdownRect;
 static ThemeWidgetRect g_textRects[kMaxTexts];
@@ -1919,13 +1932,38 @@ static void drawThemeCard(const ThemeIcon &icon, int idx)
   }
 }
 
+// Ícone da condição (net/weather_icon_client.h) escalado pro tamanho do ícone
+// assado do clima — mantém a cor-chave kBakedCard nos pixels transparentes
+// (nearest-neighbor não mistura cores, então a chave sobrevive).
+static bool scaleWeatherIcon(int target)
+{
+  if (!weatherIconReady()) return false;
+  const int src = weatherIconSize();
+  const uint16_t *px = weatherIconPixels();
+  if (src <= 0 || !px) return false;
+  target = constrain(target, 6, kIconScaledMax);
+  for (int ty = 0; ty < target; ty++)
+  {
+    int sy = ty * src / target;
+    for (int tx = 0; tx < target; tx++)
+    {
+      int sx = tx * src / target;
+      g_iconScaleBuf[ty * target + tx] = px[sy * src + sx];
+    }
+  }
+  return true;
+}
+
+// Espelha o chip de clima do editor (themeEditor/IconChip.tsx): ícone da
+// condição + temperatura + rótulo curto da condição embaixo.
 static void drawThemeWeather(const ThemeIcon &icon, int idx)
 {
   int cx = (int)(icon.x * tft.width());
   int cy = (int)(icon.y * tft.height());
   const WeatherData &w = g_snap.weather;
   char tempBuf[16];
-  if (w.hasData && w.ok && w.temperature > -900)
+  const bool hasTemp = w.hasData && w.ok && w.temperature > -900;
+  if (hasTemp)
   {
     int t = (int)roundf(w.temperature);
     // TFT_eSPI usa font sem glifo de grau; C/F ASCII
@@ -1936,16 +1974,32 @@ static void drawThemeWeather(const ThemeIcon &icon, int idx)
   {
     snprintf(tempBuf, sizeof(tempBuf), "--");
   }
+  const char *label = (hasTemp && w.weatherCode >= 0) ? weatherWmoText(w.weatherCode) : "";
   const uint8_t font = icon.scale >= 2.0f ? 4 : 2;
+  const uint8_t labelFont = icon.scale >= 2.0f ? 2 : 1;
   int tempW = tft.textWidth(tempBuf, font);
   int tempH = tft.fontHeight(font);
+  int labelW = label[0] ? tft.textWidth(label, labelFont) : 0;
+  int labelH = label[0] ? tft.fontHeight(labelFont) : 0;
+  const int labelGap = label[0] ? 1 : 0;
+  int textW = max(tempW, labelW);
+  int textH = tempH + labelGap + labelH;
+
   int iconW = 0, iconH = 0;
-  bool hasIcon = scaleThemeIcon(icon, iconW, iconH);
+  bool hasCond = false;
+  const int condPx = constrain((int)(ICON_WEATHER_W * icon.scale), 6, kIconScaledMax);
+  if (scaleWeatherIcon(condPx))
+  {
+    hasCond = true;
+    iconW = condPx;
+    iconH = condPx;
+  }
+  bool hasIcon = hasCond || scaleThemeIcon(icon, iconW, iconH);
   int gap = hasIcon ? 4 : 0;
   int padX = 6;
   int padY = 4;
-  int innerH = hasIcon ? max(iconH, tempH) : tempH;
-  int boxW = padX * 2 + (hasIcon ? iconW + gap : 0) + tempW;
+  int innerH = hasIcon ? max(iconH, textH) : textH;
+  int boxW = padX * 2 + (hasIcon ? iconW + gap : 0) + textW;
   int boxH = innerH + padY * 2;
   if (boxW < 40)
     boxW = 40;
@@ -1979,11 +2033,15 @@ static void drawThemeWeather(const ThemeIcon &icon, int idx)
     tft.setSwapBytes(false);
   }
   int textX = x0 + padX + (hasIcon ? iconW + gap : 0);
-  // Centraliza verticalmente o texto no box (MC seria centralizado no cx,
-  // mas aqui o texto fica à direita do ícone, então usamos ML/C para alinhar em cy)
-  tft.setTextDatum(ML_DATUM);
+  int textY = cy - textH / 2;
+  tft.setTextDatum(TL_DATUM);
   box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
-  tft.drawString(tempBuf, textX, cy, font);
+  tft.drawString(tempBuf, textX, textY, font);
+  if (label[0])
+  {
+    box ? tft.setTextColor(0xAD75, bgCol) : tft.setTextColor(0xAD75);
+    tft.drawString(label, textX, textY + tempH + labelGap, labelFont);
+  }
 }
 
 static void drawThemeSpotify(const ThemeIcon &icon, int idx)
@@ -2121,7 +2179,10 @@ static void drawThemeIcon(const ThemeIcon &icon, int idx)
     const int r = (int)(10 * icon.scale);
     clampBoxCenter(cx, cy, r * 2, r * 2, tft.width(), tft.height());
     eraseStaleRect(g_theme, g_iconRects[idx], cx - r, cy - r, r * 2, r * 2);
-    drawEyeIcon(cx, cy, r, 0, 0, 0.0f);
+    g_brandEyes[idx].cx = cx;
+    g_brandEyes[idx].cy = cy;
+    g_brandEyes[idx].r = r;
+    drawEyeIcon(cx, cy, r, 0, 0, 0.0f, 0.0f, false, true);
     return;
   }
   if (icon.style == TSTYLE_CARD)
@@ -2422,6 +2483,44 @@ void customThemeTickCountdown()
   }
   lastKey = key;
   drawThemeCountdown(g_theme.countdown);
+}
+
+int customThemeBrandEyeRadius()
+{
+  if (!g_active || g_view != VIEW_THEME)
+  {
+    return 0;
+  }
+  for (int i = 0; i < g_theme.iconCount; i++)
+  {
+    if (g_theme.icons[i].kind == TICON_BRAND && g_brandEyes[i].r > 0)
+    {
+      return g_brandEyes[i].r;
+    }
+  }
+  return 0;
+}
+
+void customThemeDrawBrandEyes(int refR, int gazeX, int gazeY, float lid, float dilate, bool hurt)
+{
+  if (!g_active || g_view != VIEW_THEME || refR <= 0)
+  {
+    return;
+  }
+  for (int i = 0; i < g_theme.iconCount; i++)
+  {
+    const BrandEyeSpot &e = g_brandEyes[i];
+    if (g_theme.icons[i].kind != TICON_BRAND || e.r <= 0)
+    {
+      continue;
+    }
+    // Olhos de tamanhos diferentes olham pro mesmo lado, na proporção do raio.
+    const int gx = gazeX * e.r / refR;
+    const int gy = gazeY * e.r / refR;
+    // clipLid: a pálpebra fica dentro do círculo — o retângulo COL_BG do
+    // header apareceria como quadrado em cima do wallpaper.
+    drawEyeIcon(e.cx, e.cy, e.r, gx, gy, lid, dilate, hurt, true);
+  }
 }
 
 void customThemeTickAnimation()
