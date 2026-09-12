@@ -399,7 +399,12 @@ cmd_test() {
   if [ -f "$ROOT_DIR/backend/package.json" ]; then
     (cd "$ROOT_DIR/backend" && npm run typecheck)
     if grep -q '"test"' "$ROOT_DIR/backend/package.json"; then
-      (cd "$ROOT_DIR/backend" && npm test 2>&1 | head -n 100) || echo "(backend tests falharam ou vitest não configurado — verifique)"
+      # Sem pipe pra head aqui: com 9 workers do Vitest repetindo o aviso de
+      # depreciação do Fastify, a saída passa fácil de 100 linhas — o head
+      # fechava o pipe, o npm test morria de SIGPIPE (não de teste falho) e
+      # o "||" engolia isso como se fosse falha real, sem nunca terminar a
+      # suíte de verdade. Deixa o vitest imprimir tudo e falhar por si.
+      (cd "$ROOT_DIR/backend" && npm test)
     fi
   fi
   ensure_node
