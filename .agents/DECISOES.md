@@ -114,3 +114,18 @@ O texto da NASA vem só em inglês. No detalhe da foto do dia (não no card do b
 O painel não sabe se está num navegador ou no app: ele testa `window.vigia` em
 runtime. Assim o `/display` servido na LAN e o app são literalmente o mesmo
 bundle, e nada de desktop pode quebrar a versão web.
+
+## Cursor: sem bonus no JSON
+
+O Connect RPC `GetCurrentPeriodUsage` manda `planUsage.bonusSpend` (centavos já
+gastos como “bônus”) e `remainingBonus` (boolean). O card do IDE às vezes mostra
+um valor em USD (“bônus $209,85”) que **não aparece** em [cursor.com/dashboard](https://cursor.com/dashboard)
+nem na fatura. A documentação oficial não publica teto em dólar do pool de
+Cursor Models — só percentuais — e o time do Cursor diz que não há medidor de
+bônus restante.
+
+Esse número não é crédito na conta, não é o teto on-demand e não dá para
+planejar gasto. O Vigia **não** inclui `bonus_cents` em `/usage`, não pinta no
+mostrador/web/Telegram/firmware e **não** deve reintroduzir o campo. Vale
+`percent` / `other_percent` e o on-demand (`used_cents` / `limit_cents` /
+`remaining_cents`). Detalhe da API: [`APIS_CURSOR.md`](APIS_CURSOR.md).

@@ -218,12 +218,11 @@ void uiInit()
   customThemeInit();
   // NÃO force g_view = VIEW_THEME aqui mesmo com customThemeActive() true:
   // uiShowLoading() (chamado logo depois em main.cpp) é um loop bloqueante
-  // que bombeia usageClientPoll() manualmente e nunca dá fillScreen de novo
-  // após o primeiro frame — só limpa a faixa do título a cada volta. Se um
-  // evento de /usage chega durante esse loop com g_view já em VIEW_THEME,
-  // uiRefreshData() dispara paintCustomHome() no meio dele, e a próxima
-  // volta do skeleton desenha por cima do tema sem limpar a tela. Boot
-  // sempre entra pela Home; a VIEW_THEME só é ativada por
+  // que bombeia usageClientPoll() manualmente enquanto g_bootLoading fica
+  // true — uiPaint()/uiRefreshData() ficam no-op nesse intervalo (ver
+  // core/state.h), então nada pinta VIEW_THEME por cima do loading mesmo
+  // que um evento de /usage chegue no meio dele. Ainda assim, boot sempre
+  // entra pela Home por simplicidade; a VIEW_THEME só é ativada por
   // customThemeApplyMeta (reload via SSE/botão), como já era antes.
 }
 

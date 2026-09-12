@@ -83,7 +83,6 @@ struct CursorAccount
   int usedCents = -1;
   int limitCents = -1;
   int remainingCents = -1;
-  int bonusCents = -1;
   int requestsUsed = -1;
   int requestsLimit = -1;
   String cycleEnd;
@@ -275,3 +274,10 @@ extern bool g_hasNextCycle;
 extern uint32_t g_nextCycleAtMs;
 extern bool g_hasFetchedOk;
 extern uint32_t g_lastFetchOkMs;
+// True enquanto uiShowLoading() está em pé (boot, antes do handshake com o
+// coletor). Faz uiPaint()/uiRefreshData() virarem no-op nesse intervalo —
+// sem isso, o primeiro fetch bem-sucedido (dentro do próprio bombeio de
+// usageClientPoll() do loading) disparava uiRefreshData() por baixo dos
+// panos e pintava a Início por cima do frame atual do loading sem um
+// fillScreen antes, deixando a Início "vazar" atrás da tela de loading.
+extern bool g_bootLoading;

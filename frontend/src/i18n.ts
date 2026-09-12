@@ -22,7 +22,6 @@ type Strings = {
   accountCredits: string;
   remainingPrefix: string;
   resetPrefix: string;
-  bonusPrefix: string;
   remainMoney: string;
   noCredits: string;
   ofSep: string;
@@ -37,7 +36,6 @@ type Strings = {
   cycle: string;
   ondemand: string;
   cap: string;
-  bonus: string;
   requestsLegacy: string;
   usedCount: string;
   limit: string;
@@ -347,7 +345,6 @@ export const STR: Record<Lang, Strings> = {
     accountCredits: "Créditos da conta",
     remainingPrefix: "resta ",
     resetPrefix: "reset ",
-    bonusPrefix: "bônus ",
     remainMoney: "restam ",
     noCredits: "sem créditos comprados",
     ofSep: " de ",
@@ -362,7 +359,6 @@ export const STR: Record<Lang, Strings> = {
     cycle: "ciclo",
     ondemand: "On-demand (USD)",
     cap: "teto",
-    bonus: "bônus",
     requestsLegacy: "Pedidos (legado)",
     usedCount: "usados",
     limit: "limite",
@@ -661,7 +657,6 @@ export const STR: Record<Lang, Strings> = {
     accountCredits: "Account credits",
     remainingPrefix: "left ",
     resetPrefix: "reset ",
-    bonusPrefix: "bonus ",
     remainMoney: "left ",
     noCredits: "no purchased credits",
     ofSep: " of ",
@@ -676,7 +671,6 @@ export const STR: Record<Lang, Strings> = {
     cycle: "cycle",
     ondemand: "On-demand (USD)",
     cap: "cap",
-    bonus: "bonus",
     requestsLegacy: "Requests (legacy)",
     usedCount: "used",
     limit: "limit",
@@ -975,7 +969,6 @@ export const STR: Record<Lang, Strings> = {
     accountCredits: "Créditos de la cuenta",
     remainingPrefix: "queda ",
     resetPrefix: "reset ",
-    bonusPrefix: "bono ",
     remainMoney: "quedan ",
     noCredits: "sin créditos comprados",
     ofSep: " de ",
@@ -990,7 +983,6 @@ export const STR: Record<Lang, Strings> = {
     cycle: "ciclo",
     ondemand: "On-demand (USD)",
     cap: "tope",
-    bonus: "bono",
     requestsLegacy: "Pedidos (legado)",
     usedCount: "usados",
     limit: "límite",

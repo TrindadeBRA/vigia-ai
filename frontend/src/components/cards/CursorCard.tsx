@@ -16,7 +16,6 @@ export function getCursorMetrics(c: CursorAccount, t: T): Metric[] {
   else if (c.used_cents != null) ondemandBits.push(`${t.used} ${fmtUsd(c.used_cents)}`);
   else if (c.limit_cents != null) ondemandBits.push(`${t.cap} ${fmtUsd(c.limit_cents)}`);
   if (c.remaining_cents != null) ondemandBits.push(`${t.left} ${fmtUsd(c.remaining_cents)}`);
-  if ((c.bonus_cents || 0) > 0) ondemandBits.push(`${t.bonusPrefix}${fmtUsd(c.bonus_cents)}`);
   const ondemand = ondemandBits.join(" · ") || null;
 
   const out: Metric[] = [];
@@ -315,7 +314,6 @@ export function CursorDetail({
   else if (account.used_cents != null) ondemandBits.push(`${t.used} ${fmtUsd(account.used_cents)}`);
   else if (account.limit_cents != null) ondemandBits.push(`${t.cap} ${fmtUsd(account.limit_cents)}`);
   if (account.remaining_cents != null) ondemandBits.push(`${t.left} ${fmtUsd(account.remaining_cents)}`);
-  if ((account.bonus_cents || 0) > 0) ondemandBits.push(`${t.bonusPrefix}${fmtUsd(account.bonus_cents)}`);
   const cycleClock = fmtCountdown(account.cycle_end, nowMs);
 
   return (
@@ -380,7 +378,7 @@ export function CursorDetail({
                 <div className={barFill} style={{ width: `${clamp((account.used_cents / account.limit_cents) * 100, 0, 100)}%`, background: barColor((account.used_cents / account.limit_cents) * 100, pal) } as any} />
               </div>
             ) : null}
-            <div className="mt-2.5 text-[12.5px] text-ink3">{joinParts(account.limit_cents != null ? `${t.cap} ${fmtUsd(account.limit_cents)}` : null, account.remaining_cents != null ? `${t.left} ${fmtUsd(account.remaining_cents)}` : null, (account.bonus_cents || 0) > 0 ? `${t.bonus} ${fmtUsd(account.bonus_cents)}` : null)}</div>
+            <div className="mt-2.5 text-[12.5px] text-ink3">{joinParts(account.limit_cents != null ? `${t.cap} ${fmtUsd(account.limit_cents)}` : null, account.remaining_cents != null ? `${t.left} ${fmtUsd(account.remaining_cents)}` : null)}</div>
           </div>
         ) : null}
       </div>

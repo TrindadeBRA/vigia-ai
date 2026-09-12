@@ -137,7 +137,7 @@ Código: `backend/src/local/gptOauth.ts`, `providers/gpt.ts`. Doc: [`APIS_GPT.md
 | Credencial | Cópia do SQLite `state.vscdb` (evita lock) → `SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken'`. Plano em `cursorAuth/stripeMembershipType`. `exp` do JWT só para mensagem de erro (sem verificar assinatura). |
 | HTTP principal | `POST https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage` body `{}`, `Connect-Protocol-Version: 1` |
 | Fallback | `GET https://api2.cursor.sh/auth/usage` (Enterprise: `numRequests` / `maxRequestUsage`) |
-| Mapeamento | `planUsage.autoPercentUsed` → `percent` (já 0–100); `apiPercentUsed` → `other_percent`; `spendLimitUsage` em centavos; `bonusSpend` → `bonus_cents`; `billingCycleEnd` (ms string) → `cycle_end` ISO com ano |
+| Mapeamento | `planUsage.autoPercentUsed` → `percent` (já 0–100); `apiPercentUsed` → `other_percent`; `spendLimitUsage` em centavos; **não** mapear `bonusSpend`; `billingCycleEnd` (ms string) → `cycle_end` ISO com ano |
 
 Contas SSO/Team às vezes **não gravam** `cursorAuth/accessToken` — o coletor não inventa o JWT. Código: `backend/src/local/cursorState.ts`, `providers/cursor.ts`. Doc: [`APIS_CURSOR.md`](APIS_CURSOR.md).
 

@@ -45,7 +45,7 @@ Campos úteis (nomes podem mudar; ver `parse_cursor_dashboard` em `collector/pro
 - `planUsage.apiPercentUsed` → "Other Models" no dashboard, vira `other_percent` no `/usage`
 - Connect/proto3 **omite campos em 0** — ausência de `autoPercentUsed` no ciclo novo é 0%, não um fallback para `totalPercentUsed`
 - `spendLimitUsage.individualLimit` / `individualRemaining` (centavos, USD) → `limit_cents` / `remaining_cents` (`used_cents` = limite − restante)
-- `planUsage.bonusSpend` → `bonus_cents`
+- **Não mapear** `planUsage.bonusSpend`, `remainingBonus` nem `bonusTooltip`. O IDE do Cursor mostra um “bônus” em dólares que **não existe no dashboard web** nem na fatura. `bonusSpend` é gasto interno já consumido (centavos); `remainingBonus` é **boolean**, não saldo. O número parece o resto em USD do pool de Cursor Models, sem teto publicado. Ver [DECISOES.md](DECISOES.md#cursor-sem-bonus-no-json).
 - `billingCycleEnd` (ou `planUsage.endDate`) → `cycle_end`. O Connect RPC manda isso como **string de milissegundos** (`"1790816941000"`), não ISO. O coletor converte para ISO **com ano**. Sem o ano, `31/08 22h09` (início do ciclo, já passou) vira "Reset: 362d" no mostrador.
 - `displayMessage` ("You've used 67%…") **não** é a barra — pode divergir de `autoPercentUsed` / `apiPercentUsed`. Vale o percentual numérico, igual ao dashboard.
 
@@ -64,4 +64,4 @@ Dashboard web: cookie `WorkosCursorSessionToken` + `Origin: https://cursor.com`.
 
 ## O que a tela mostra
 
-Na home: barras de Cursor Models e Other Models. Na tela **interna**: plano, ciclo, as duas barras (usado/resta), on-demand (usado / teto / resta / bônus) e, no fallback legado, pedidos. Scroll com setas se não couber.
+Na home: barras de Cursor Models e Other Models. Na tela **interna**: plano, ciclo, as duas barras (usado/resta), on-demand (usado / teto / resta) e, no fallback legado, pedidos. Scroll com setas se não couber. Sem linha de bônus.

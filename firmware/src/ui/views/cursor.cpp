@@ -32,7 +32,6 @@ void paintCursor() {
   dKv(t.used, c.usedCents >= 0 ? fmtUsdSite(c.usedCents) : "");
   dKv(t.cap, c.limitCents >= 0 ? fmtUsdSite(c.limitCents) : "");
   dKv(t.left, c.remainingCents >= 0 ? fmtUsdSite(c.remainingCents) : "");
-  dKv(t.bonus, c.bonusCents > 0 ? fmtUsdSite(c.bonusCents) : "");
   if (c.requestsUsed >= 0 && c.requestsLimit > 0) {
     dGap();
     dNote(t.requestsLegacy);

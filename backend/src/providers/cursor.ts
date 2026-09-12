@@ -19,7 +19,6 @@ export function cursorFail(msg: string): Record<string, unknown> {
     used_cents: null,
     limit_cents: null,
     remaining_cents: null,
-    bonus_cents: null,
     cycle_end: null,
     plan: null,
     requests_used: null,
@@ -55,8 +54,6 @@ export function parseCursorDashboard(data: Record<string, unknown>, plan: string
     ondemandUsed = 0;
   }
 
-  const bonus = moneyCents(pick(usage.bonusSpend, usage.bonus_spend));
-
   const cycleEnd = isoOrNone(
     pick(data.billingCycleEnd, data.billing_cycle_end, usage.endDate, usage.end_date),
   );
@@ -76,7 +73,6 @@ export function parseCursorDashboard(data: Record<string, unknown>, plan: string
     used_cents: ondemandUsed,
     limit_cents: ondemandLimit,
     remaining_cents: ondemandRemain,
-    bonus_cents: bonus !== null ? bonus : 0,
     cycle_end: cycleEnd,
     plan: normalizeCursorPlan((plan ?? String(data.membershipType ?? "").trim()) || null),
     requests_used: null,
@@ -120,7 +116,6 @@ export function parseCursorAuthUsage(data: Record<string, unknown>, plan: string
     used_cents: null,
     limit_cents: null,
     remaining_cents: null,
-    bonus_cents: null,
     cycle_end: null,
     plan: normalizeCursorPlan(plan),
     requests_used: used,

@@ -35,7 +35,6 @@ export type CursorAccount = {
   used_cents: number | null;
   limit_cents: number | null;
   remaining_cents: number | null;
-  bonus_cents: number | null;
   cycle_end: string | null;
   plan: string | null;
   requests_used: number | null;

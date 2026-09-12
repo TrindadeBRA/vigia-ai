@@ -68,7 +68,6 @@ export function mockPayload(): Record<string, unknown> {
         used_cents: 0,
         limit_cents: 1000,
         remaining_cents: 1000,
-        bonus_cents: 0,
         cycle_end: cycleEnd,
         plan: "PRO",
         requests_used: null,

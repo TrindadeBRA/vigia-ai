@@ -148,7 +148,7 @@ describe("parsers — cursor", () => {
     expect(parsed).not.toBeNull();
     expect(parsed!.percent).toBe(26.3);
     expect(parsed!.other_percent).toBe(23.2);
-    expect(parsed!.bonus_cents).toBe(10868);
+    expect(parsed!.bonus_cents).toBeUndefined();
     expect(parsed!.cycle_end).not.toBeNull();
     expect(String(parsed!.cycle_end)).toContain("2026");
     expect(String(parsed!.cycle_end).startsWith("2026-09-30")).toBe(true);

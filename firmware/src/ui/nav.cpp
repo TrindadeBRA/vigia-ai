@@ -251,6 +251,11 @@ void uiPrev()
 // "pisca" de um fillScreen a cada poucos segundos.
 void uiRefreshData()
 {
+  // Enquanto a tela de loading do boot está em pé, o fetch bem-sucedido
+  // dentro dela (usageClientPoll -> net/client.cpp) chama isto internamente
+  // — pintar a Início aqui no meio do loop vazava atrás do loading, que não
+  // faz fillScreen a cada frame (ver g_bootLoading em core/state.h).
+  if (g_bootLoading) return;
   if (!viewProviderVisible(g_view))
   {
     g_view = VIEW_HOME;
@@ -333,6 +338,7 @@ void uiRefreshData()
 // residuo da tela anterior poderia ficar visivel sem o fillScreen.
 void uiPaint()
 {
+  if (g_bootLoading) return;
   if (g_view == VIEW_CAMERA)
   {
     paintCameraLive();

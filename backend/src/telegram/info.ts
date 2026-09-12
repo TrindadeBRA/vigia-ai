@@ -473,7 +473,6 @@ function formatCursor(acc: Record<string, unknown>): string {
         ondemandBits.push(`teto ${fmtUsd(acc.limit_cents)}`);
     }
     if (acc.remaining_cents !== null && acc.remaining_cents !== undefined) ondemandBits.push(`resta ${fmtUsd(acc.remaining_cents)}`);
-    if (acc.bonus_cents !== null && acc.bonus_cents !== undefined && Number(acc.bonus_cents) > 0) ondemandBits.push(`bônus ${fmtUsd(acc.bonus_cents)}`);
     if (ondemandBits.length > 0) lines.push(`├ On-demand: ${escapeHtml(ondemandBits.join(" · "))}`);
     if (acc.requests_used !== null && acc.requests_used !== undefined) {
         lines.push(`├ Pedidos: ${escapeHtml(String(acc.requests_used))}${acc.requests_limit ? ` / ${escapeHtml(String(acc.requests_limit))}` : ""}`);

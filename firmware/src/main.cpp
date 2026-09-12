@@ -34,6 +34,7 @@ bool g_hasNextCycle = false;
 uint32_t g_nextCycleAtMs = 0;
 bool g_hasFetchedOk = false;
 uint32_t g_lastFetchOkMs = 0;
+bool g_bootLoading = true;
 
 void setup()
 {
@@ -65,6 +66,9 @@ void setup()
   // (bombeando Wi-Fi + /events por dentro) ate g_hasFetchedOk virar true —
   // so entao a Inicio aparece, nunca antes de uma conexao bem-sucedida.
   uiShowLoading();
+  // Só agora (handshake ok) a Início pode ser pintada de verdade — antes
+  // disso uiPaint()/uiRefreshData() ficam bloqueados (ver g_bootLoading).
+  g_bootLoading = false;
   uiPaint();
 }
 

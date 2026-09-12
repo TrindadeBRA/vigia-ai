@@ -118,7 +118,6 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
     else if (c.used_cents != null) ondemandBits.push(`${t.used} ${fmtUsd(c.used_cents)}`);
     else if (c.limit_cents != null) ondemandBits.push(`${t.cap} ${fmtUsd(c.limit_cents)}`);
     if (c.remaining_cents != null) ondemandBits.push(`${t.left} ${fmtUsd(c.remaining_cents)}`);
-    if ((c.bonus_cents || 0) > 0) ondemandBits.push(`${t.bonusPrefix}${fmtUsd(c.bonus_cents)}`);
     const ondemand = ondemandBits.join(" · ") || null;
     const cursorMetrics: Metric[] = [];
     if (c.percent != null || c.cycle_end) {

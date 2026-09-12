@@ -480,7 +480,6 @@ bool parseUsageJson(const String &body)
     c.usedCents = acc["used_cents"].isNull() ? -1 : acc["used_cents"].as<int>();
     c.limitCents = acc["limit_cents"].isNull() ? -1 : acc["limit_cents"].as<int>();
     c.remainingCents = acc["remaining_cents"].isNull() ? -1 : acc["remaining_cents"].as<int>();
-    c.bonusCents = acc["bonus_cents"].isNull() ? -1 : acc["bonus_cents"].as<int>();
     c.requestsUsed = acc["requests_used"].isNull() ? -1 : acc["requests_used"].as<int>();
     c.requestsLimit = acc["requests_limit"].isNull() ? -1 : acc["requests_limit"].as<int>();
     c.cycleEnd = jsonText(acc["cycle_end"]);

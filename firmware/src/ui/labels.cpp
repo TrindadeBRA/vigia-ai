@@ -131,14 +131,6 @@ String cursorOndemand(const CursorAccount &c)
   {
     s = fmtUsdSite(c.usedCents) + " / " + fmtUsdSite(c.limitCents);
   }
-  if (c.bonusCents > 0)
-  {
-    if (s.length())
-    {
-      s += "  ";
-    }
-    s += String(uiTr().bonusPrefix) + fmtUsdSite(c.bonusCents);
-  }
   return s;
 }
 

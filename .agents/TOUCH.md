@@ -20,7 +20,7 @@ Arquivos: `src/input/touch.cpp` (XPT2046/FT6206 + calibração), `src/input/gest
 |---|---|---|---|---|
 | Início | `VIEW_HOME` 0 | Lista ou grade (até 5 cards); escolhe em **Sistema → Início** (padrão **grade**). Um card por *tipo* de provedor (não por conta) — com N contas do mesmo provedor, mostra a que mais precisa de atenção + “+N” no título. Toque no card abre o detalhe. Na **lista**, altura natural; se não couber, **setas** ↑↓. Na **grade**, 2 colunas (1/2 da largura; o ímpar não estica) e 3 linhas visíveis (6 células) sem corte | ↑↓ se não couber | — |
 | Claude | `VIEW_CLAUDE` 1 | Janelas 5 h, semana, Sonnet/Opus se existirem; usado/resta/reset. | ↑↓ | `‹ i/N ›` |
-| Cursor | `VIEW_CURSOR` 2 | Plano, ciclo, duas barras, on-demand (usado/teto/resta/bônus). | ↑↓ | `‹ i/N ›` |
+| Cursor | `VIEW_CURSOR` 2 | Plano, ciclo, duas barras, on-demand (usado/teto/resta). | ↑↓ | `‹ i/N ›` |
 | OpenRouter | `VIEW_OPENROUTER` 3 | Créditos: barra, usado, resta, teto. | ↑↓ | `‹ i/N ›` |
 | DeepSeek | `VIEW_DEEPSEEK` 4 | Saldo: barra, resta. | ↑↓ | `‹ i/N ›` |
 | GPT | `VIEW_GPT` 5 | Janelas sessão e semana (ChatGPT/Codex); usado/resta/reset. | ↑↓ | `‹ i/N ›` |

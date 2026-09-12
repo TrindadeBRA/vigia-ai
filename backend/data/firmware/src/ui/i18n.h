@@ -17,7 +17,6 @@ struct UiStrings
   const char *accountCredits;
   const char *remainingPrefix;
   const char *resetPrefix;
-  const char *bonusPrefix;
   const char *remainMoney;
   const char *noCredits;
   const char *ofSep;
@@ -37,7 +36,6 @@ struct UiStrings
   const char *cycle;
   const char *ondemand;
   const char *cap;
-  const char *bonus;
   const char *requestsLegacy;
   const char *usedCount;
   const char *limit;
