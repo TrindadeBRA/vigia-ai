@@ -216,15 +216,15 @@ void uiInit()
   g_view = VIEW_HOME;
   loadUiPrefs();
   customThemeInit();
-  // customThemeInit() só carrega g_active do LittleFS, sem tocar em g_view —
-  // sem isso o boot sempre cai na Home mesmo com um tema personalizado
-  // salvo, e como não há navegação manual pra VIEW_THEME (ela só é ativada
-  // por customThemeApplyMeta, ver ui/customtheme.cpp), o dispositivo ficava
-  // preso fora da tela do tema até o próximo reload disparado por SSE/botão.
-  if (customThemeActive())
-  {
-    g_view = VIEW_THEME;
-  }
+  // NÃO force g_view = VIEW_THEME aqui mesmo com customThemeActive() true:
+  // uiShowLoading() (chamado logo depois em main.cpp) é um loop bloqueante
+  // que bombeia usageClientPoll() manualmente e nunca dá fillScreen de novo
+  // após o primeiro frame — só limpa a faixa do título a cada volta. Se um
+  // evento de /usage chega durante esse loop com g_view já em VIEW_THEME,
+  // uiRefreshData() dispara paintCustomHome() no meio dele, e a próxima
+  // volta do skeleton desenha por cima do tema sem limpar a tela. Boot
+  // sempre entra pela Home; a VIEW_THEME só é ativada por
+  // customThemeApplyMeta (reload via SSE/botão), como já era antes.
 }
 
 void uiSetHomeLayout(HomeLayout layout)
