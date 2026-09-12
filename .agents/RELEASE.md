@@ -16,6 +16,7 @@ em qual GitHub Release publicar (ver "Por que a versão do desktop manda").
 | `frontend/package-lock.json` | idem — `npm version` atualiza sozinho |
 | `desktop/package.json` | campo `version` — é o que o `electron-builder` usa pro nome dos instaladores **e** pra decidir a release do GitHub |
 | `desktop/package-lock.json` | roda `npm install --package-lock-only` dentro de `desktop/` depois de editar o `package.json`, senão o lockfile fica com a versão velha |
+| `firmware/src/version.h` | `FIRMWARE_VERSION` — **versionamento próprio, não segue o x.y.z do app e o `./dev release` não toca nele.** Só muda quando a release mexe no firmware; ver [Versionamento](#versionamento) |
 
 > [!NOTE]
 > Feature nova de peso (novo provedor/integração, novo modo de instalação, mudança grande de UI)? Cheque se vale um bullet em [`README.md`](../README.md) (`## Recursos`) e/ou um card em [`docs/index.html`](../docs/index.html) (seção NOVIDADES). Esses dois arquivos não são bumpados automaticamente e já ficaram vários minors atrasados — ver [`PLANO_LANDING_README.md`](PLANO_LANDING_README.md).
@@ -25,6 +26,57 @@ em qual GitHub Release publicar (ver "Por que a versão do desktop manda").
 **não** atualiza a `main`: a tag vai no HEAD da branch atual (`develop`).
 O que segue é o passo a passo manual, pra quando precisar bumpar sem o
 script ou entender o que ele faz por baixo.
+
+## Versionamento
+
+### O app (`x.y.z`) — backend, frontend e desktop, sempre juntos
+
+Semver, decidido pelo que entrou no `CHANGELOG.md` desde a última tag. O
+atalho honesto é olhar as seções de `[Unreleased]`:
+
+| O que tem em `[Unreleased]` | Sobe |
+| --- | --- |
+| Só `Fixed`, `Changed` e/ou `Security` | **patch** (`x.y.Z`) |
+| Qualquer coisa em `Added` | **minor** (`x.Y.0`) |
+| Quebra de contrato JSON, de config salva ou de instalação — algo que exige o usuário mexer à mão pra continuar funcionando | **major** (`X.0.0`) |
+
+`Added` aqui é feature de verdade: novo provedor, nova integração, novo
+modo de instalação, tela nova. Correção que por acaso acrescenta um log,
+um watchdog ou um campo interno continua sendo patch — o critério é o que
+muda pra quem usa, não o tamanho do diff.
+
+Na dúvida entre patch e minor, **patch**: um minor promete feature e
+aparece na landing e no README (ver o NOTE acima); um patch que deveria
+ter sido minor só some no meio da lista, um minor vazio frustra quem
+atualizou esperando novidade.
+
+### O firmware (`FIRMWARE_VERSION`) — versionamento próprio
+
+`firmware/src/version.h` **não** acompanha o `x.y.z` do app e o
+`./dev release` **não** bumpa ele. Bumpe à mão, no mesmo semver e pelo
+mesmo critério da tabela acima, sempre que a release levar mudança dentro
+de `firmware/` — e só nesse caso. Uma release que não toca no firmware
+deixa o `FIRMWARE_VERSION` parado de propósito.
+
+Por que importa: a placa manda esse número no header `X-Vigia-Firmware`
+de todo `GET /usage` e `GET /events`, o coletor guarda em
+`hub.deviceFirmwareVersion` e devolve em `/health` → `firmware_version`,
+e o painel mostra isso. É por aí que se distingue **uma placa já
+regravada de uma que ainda está com o bug** — sem o bump, uma placa
+desatualizada se anuncia como atual e o único sinal de que ela precisa
+de flash desaparece.
+
+Fica no commit de release (ou num `chore(firmware): versão a.b.c` logo
+antes), nunca depois da tag: a tag tem que apontar pro estado que foi
+compilado e gravado.
+
+### A tag é definitiva na prática
+
+`git push` da tag dispara a matriz na hora, e apagar a tag **não cancela**
+o run (ver [Se precisar apagar e refazer uma tag](#se-precisar-apagar-e-refazer-uma-tag)).
+Com `releaseType: release` o GitHub Release nasce público. Escolher o
+número errado custa uma versão queimada — decida antes de rodar
+`./dev release`.
 
 ## Caminho recomendado
 
