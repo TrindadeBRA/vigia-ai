@@ -165,6 +165,7 @@ type Strings = {
   cameraPtzRight: string;
   cameraPtzZoomIn: string;
   cameraPtzZoomOut: string;
+  cameraFullscreen: string;
   widgetAndroid: string;
   androidNeedsConfigHint: string;
   androidOfflineHint: string;
@@ -247,6 +248,8 @@ type Strings = {
   imageCountdownHint: string;
   imageCountdownDone: string;
   imageNeedSrc: string;
+  imageLoadError: string;
+  imageUrlInvalid: string;
   imageAdd: string;
   save: string;
   // Git
@@ -483,6 +486,7 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzRight: "Mover para a direita",
     cameraPtzZoomIn: "Aproximar zoom",
     cameraPtzZoomOut: "Afastar zoom",
+    cameraFullscreen: "Ver em tela cheia",
     widgetAndroid: "Android",
     androidNeedsConfigHint: "Configure um dispositivo Android em Configurações.",
     androidOfflineHint: "Dispositivo offline — verifique cabo USB ou adb connect.",
@@ -565,6 +569,8 @@ export const STR: Record<Lang, Strings> = {
     imageCountdownHint: "Opcional — mostra um cronômetro centralizado sobre a imagem até a data escolhida.",
     imageCountdownDone: "Lançado!",
     imageNeedSrc: "Escolha uma imagem",
+    imageLoadError: "Falha ao carregar imagem",
+    imageUrlInvalid: "URL inválida",
     imageAdd: "Adicionar",
     save: "Salvar",
     git: "Git",
@@ -794,6 +800,7 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzRight: "Move right",
     cameraPtzZoomIn: "Zoom in",
     cameraPtzZoomOut: "Zoom out",
+    cameraFullscreen: "View fullscreen",
     widgetAndroid: "Android",
     androidNeedsConfigHint: "Set up an Android device in Settings.",
     androidOfflineHint: "Device offline — check USB cable or adb connect.",
@@ -876,6 +883,8 @@ export const STR: Record<Lang, Strings> = {
     imageCountdownHint: "Optional — shows a centered countdown over the image until the chosen date.",
     imageCountdownDone: "Released!",
     imageNeedSrc: "Pick an image",
+    imageLoadError: "Failed to load image",
+    imageUrlInvalid: "Invalid URL",
     imageAdd: "Add",
     save: "Save",
     git: "Git",
@@ -1105,6 +1114,7 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzRight: "Mover a la derecha",
     cameraPtzZoomIn: "Acercar zoom",
     cameraPtzZoomOut: "Alejar zoom",
+    cameraFullscreen: "Ver en pantalla completa",
     widgetAndroid: "Android",
     androidNeedsConfigHint: "Configura un dispositivo Android en Configuración.",
     androidOfflineHint: "Dispositivo sin conexión — revisa el cable USB o adb connect.",
@@ -1187,6 +1197,8 @@ export const STR: Record<Lang, Strings> = {
     imageCountdownHint: "Opcional — muestra una cuenta regresiva centrada sobre la imagen hasta la fecha elegida.",
     imageCountdownDone: "¡Lanzado!",
     imageNeedSrc: "Elige una imagen",
+    imageLoadError: "Error al cargar la imagen",
+    imageUrlInvalid: "URL inválida",
     imageAdd: "Agregar",
     save: "Guardar",
     git: "Git",

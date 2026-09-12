@@ -39,6 +39,7 @@ export function WallpaperLibrary() {
         handleImport,
         reorder,
         reorderReq,
+        deleteReq,
     } = useWp();
     const fileRef = useRef<HTMLInputElement>(null);
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -79,6 +80,7 @@ export function WallpaperLibrary() {
                 <FieldStatus status={uploadReq.status} message={uploadReq.message} />
                 <FieldStatus status={selectReq.status} message={selectReq.message} />
                 <FieldStatus status={listReq.status} message={listReq.message} />
+                <FieldStatus status={deleteReq.status} message={deleteReq.message} />
 
                 {wallpapers.length === 0 ? (
                     <p className={cfgStatus}>{c.wallpapersEmpty}</p>
@@ -96,7 +98,7 @@ export function WallpaperLibrary() {
                                 const newIndex = wallpapers.findIndex((w) => w.id === String(over.id));
                                 if (oldIndex === -1 || newIndex === -1) return;
                                 const nextIds = arrayMove(wallpapers.map((w) => w.id), oldIndex, newIndex);
-                                void reorderReq.run(() => reorder(nextIds).then(() => ({ ok: true })), { error: "falha ao reordenar" });
+                                void reorderReq.run(() => reorder(nextIds).then(() => ({ ok: true })), { error: c.reorderError });
                             }}
                         >
                             <SortableContext items={wallpapers.map((w) => w.id)} strategy={rectSortingStrategy}>
@@ -195,7 +197,7 @@ export function WallpaperLibrary() {
                 onConfirm={() => {
                     const id = confirmingDeleteId;
                     setConfirmingDeleteId(null);
-                    if (id) void uploadReq.run(() => handleDelete(id), { success: c.imported, error: c.importError });
+                    if (id) void deleteReq.run(() => handleDelete(id), { success: c.wallpaperRemovedOk, error: c.wallpaperRemoveError });
                 }}
             />
         </div>

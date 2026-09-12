@@ -44,8 +44,6 @@ export const DEFAULT_THEME: ThemeState = {
 const LEGACY_STORAGE_KEY = "vigia_theme_draft_v2";
 const LEGACY_STORAGE_KEY_V1 = "vigia_theme_draft_v1";
 const SAVE_DEBOUNCE_MS = 500;
-export const MAX_ICONS = 8;
-export const MAX_TEXTS = 4;
 
 export function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;

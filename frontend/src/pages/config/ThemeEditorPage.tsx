@@ -20,8 +20,6 @@ import { ColorField, ColorSwatch, ScaleField } from "./themeEditor/fields";
 import { IconChip } from "./themeEditor/IconChip";
 import { ThemeIOButtons } from "./themeEditor/ThemeIOButtons";
 import {
-  MAX_ICONS,
-  MAX_TEXTS,
   formatClock,
   isBareLoopback,
   themeToJson,
@@ -191,11 +189,7 @@ export default function ThemeEditorPage() {
     const n = theme.icons.length;
     const x = 0.22 + (n % 4) * 0.2;
     const y = 0.48 + Math.floor(n / 4) * 0.22;
-    setTheme((t) =>
-      t.icons.length >= MAX_ICONS
-        ? t
-        : { ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, showBackground: true, bgColor: null, metric: defaultMetric(provider) }] },
-    );
+    setTheme((t) => ({ ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, showBackground: true, bgColor: null, metric: defaultMetric(provider) }] }));
     setSelected(`icon:${id}`);
   }
   function removeIcon(id: string) {
@@ -204,7 +198,7 @@ export default function ThemeEditorPage() {
   }
   function addText() {
     const id = uid();
-    setTheme((t) => (t.texts.length >= MAX_TEXTS ? t : { ...t, texts: [...t.texts, { id, text: "VIGIA AI", x: 0.5, y: 0.82, scale: 1, color: null }] }));
+    setTheme((t) => ({ ...t, texts: [...t.texts, { id, text: "VIGIA AI", x: 0.5, y: 0.82, scale: 1, color: null }] }));
     setSelected(`text:${id}`);
   }
   function removeText(id: string) {
@@ -308,7 +302,7 @@ export default function ThemeEditorPage() {
       <div className="grid w-full items-start gap-[14px] lg:grid-cols-[max-content_minmax(0,1fr)_336px]">
         {/* Barra de ferramentas — cada ícone é uma ação, como numa paleta de ferramentas de editor de imagem. */}
         <div className="flex w-full flex-row flex-wrap items-center justify-center gap-1 self-start rounded-2xl border border-edge bg-panel p-1.5 shadow-card [.flat_&]:shadow-none lg:w-max lg:flex-col lg:flex-nowrap">
-          <ToolButton icon={<TextIcon size={19} />} label={c.addText} disabled={theme.texts.length >= MAX_TEXTS} onClick={addText} />
+          <ToolButton icon={<TextIcon size={19} />} label={c.addText} onClick={addText} />
           <ToolButton
             icon={<ClockIcon size={19} />}
             label={c.clock}
@@ -323,7 +317,6 @@ export default function ThemeEditorPage() {
             icon={<PlusCircleIcon size={19} />}
             label={c.addProvider}
             active={addPopoverOpen}
-            disabled={theme.icons.length >= MAX_ICONS}
             onClick={() => setAddPopoverOpen((v) => !v)}
           />
           <ToolbarDivider />
@@ -733,12 +726,10 @@ export default function ThemeEditorPage() {
           {ICON_PROVIDERS.map((p) => {
             const value = formatThemeMetric(usage, p.id, defaultMetric(p.id));
             const onTheme = theme.icons.some((i) => i.provider === p.id);
-            const disabled = theme.icons.length >= MAX_ICONS;
             return (
               <button
                 type="button"
                 key={p.id}
-                disabled={disabled}
                 onClick={() => {
                   addIcon(p.id);
                   setAddPopoverOpen(false);

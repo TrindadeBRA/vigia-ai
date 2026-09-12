@@ -216,6 +216,15 @@ void uiInit()
   g_view = VIEW_HOME;
   loadUiPrefs();
   customThemeInit();
+  // customThemeInit() só carrega g_active do LittleFS, sem tocar em g_view —
+  // sem isso o boot sempre cai na Home mesmo com um tema personalizado
+  // salvo, e como não há navegação manual pra VIEW_THEME (ela só é ativada
+  // por customThemeApplyMeta, ver ui/customtheme.cpp), o dispositivo ficava
+  // preso fora da tela do tema até o próximo reload disparado por SSE/botão.
+  if (customThemeActive())
+  {
+    g_view = VIEW_THEME;
+  }
 }
 
 void uiSetHomeLayout(HomeLayout layout)

@@ -162,7 +162,6 @@ static String g_sseData;
 static String g_sseEvent;
 static bool g_pendingThemeReload = false;
 static uint32_t g_lastThemeReloadMs = 0;
-static uint32_t g_themeAutoPollMs = 0;
 static uint32_t g_sseLastByteMs = 0;
 static uint32_t g_sseRetryAt = 0;
 static uint32_t g_sseRetryWait = 2000;
@@ -700,9 +699,11 @@ void themeClientTick()
   {
     if (g_view != VIEW_THEME)
     {
-      // Se não está na VIEW_THEME, só limpa o flag — o tema ficará
-      // desatualizado até entrar na view, onde o fallback faz o poll
-      // em poucos segundos. Evita trocar de tela sozinho (disruptivo).
+      // Se não está na VIEW_THEME, só limpa o flag — sem poll de
+      // fallback pra recuperar esse update perdido (decisão consciente:
+      // evita trocar de tela sozinho, o que seria disruptivo). O tema só
+      // sincroniza de novo no próximo `event: theme` recebido com a
+      // VIEW_THEME já aberta.
       g_pendingThemeReload = false;
       return;
     }
@@ -722,17 +723,12 @@ void themeClientTick()
     }
     Serial.println("tema: auto-reload via SSE");
     themeClientReload();
-    g_themeAutoPollMs = now;
     return;
   }
   // Sem fallback periódico: só recarrega quando o backend envia
   // `event: theme` (após POST /api/theme/meta no clique em Salvar).
   // Isso evita que ajustes de background no editor disparem reload
   // antes do usuário confirmar.
-  if (g_view != VIEW_THEME)
-  {
-    g_themeAutoPollMs = millis();
-  }
 }
 
 // Botão de recarregar no header (ui/nav.cpp) — puxa o tema que o painel

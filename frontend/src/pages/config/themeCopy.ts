@@ -107,6 +107,11 @@ export type ThemeCopy = {
   wallpaperSelected: string;
   wallpaperSelectHint: string;
   wallpaperSelectError: string;
+  wallpaperRemovedOk: string;
+  wallpaperRemoveError: string;
+  gridBackgroundRemoved: string;
+  gridBackgroundSelected: string;
+  reorderError: string;
   providerPexels: string;
   providerUnsplash: string;
   providerGiphy: string;
@@ -235,6 +240,11 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     wallpaperSelected: "Em uso",
     wallpaperSelectHint: "Clique num papel de parede para usá-lo no tema e na placa.",
     wallpaperSelectError: "Falha ao selecionar papel de parede",
+    wallpaperRemovedOk: "Papel de parede removido",
+    wallpaperRemoveError: "Falha ao remover papel de parede",
+    gridBackgroundRemoved: "Background do grid removido",
+    gridBackgroundSelected: "Wallpaper do grid atualizado",
+    reorderError: "Falha ao reordenar",
     providerPexels: "Pexels",
     providerUnsplash: "Unsplash",
     providerGiphy: "Giphy",
@@ -361,6 +371,11 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     wallpaperSelected: "In use",
     wallpaperSelectHint: "Click a wallpaper to use it on the theme and on the board.",
     wallpaperSelectError: "Failed to select wallpaper",
+    wallpaperRemovedOk: "Wallpaper removed",
+    wallpaperRemoveError: "Failed to remove wallpaper",
+    gridBackgroundRemoved: "Grid background removed",
+    gridBackgroundSelected: "Grid wallpaper updated",
+    reorderError: "Failed to reorder",
     providerPexels: "Pexels",
     providerUnsplash: "Unsplash",
     providerGiphy: "Giphy",
@@ -487,6 +502,11 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     wallpaperSelected: "En uso",
     wallpaperSelectHint: "Hacé clic en un fondo para usarlo en el tema y en la placa.",
     wallpaperSelectError: "Error al seleccionar el fondo",
+    wallpaperRemovedOk: "Fondo de pantalla eliminado",
+    wallpaperRemoveError: "Error al eliminar el fondo de pantalla",
+    gridBackgroundRemoved: "Fondo del grid eliminado",
+    gridBackgroundSelected: "Fondo del grid actualizado",
+    reorderError: "Error al reordenar",
     providerPexels: "Pexels",
     providerUnsplash: "Unsplash",
     providerGiphy: "Giphy",

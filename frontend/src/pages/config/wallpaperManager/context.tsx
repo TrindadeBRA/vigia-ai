@@ -70,6 +70,7 @@ export type WallpaperApi = {
     searchReq: ReturnType<typeof useRequest>;
     importReq: ReturnType<typeof useRequest>;
     reorderReq: ReturnType<typeof useRequest>;
+    deleteReq: ReturnType<typeof useRequest>;
     canSearch: boolean;
     fetchAll: () => Promise<void>;
     handleUpload: (file: File) => Promise<{ ok: boolean }>;
@@ -117,6 +118,7 @@ export function WallpaperManager({
     const searchReq = useRequest();
     const importReq = useRequest();
     const reorderReq = useRequest();
+    const deleteReq = useRequest();
 
     const fetchAll = useCallback(async () => {
         try {
@@ -254,7 +256,7 @@ export function WallpaperManager({
                 body: JSON.stringify({ ids: orderedIds, scope: "theme" }),
             });
             const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; wallpapers?: WallpaperItem[] };
-            if (!r.ok || j.ok === false) throw new Error(apiFail(j, "falha ao reordenar"));
+            if (!r.ok || j.ok === false) throw new Error(apiFail(j, c.reorderError));
             if (Array.isArray(j.wallpapers)) setWallpapers(j.wallpapers);
             else await fetchAll();
             window.dispatchEvent(new CustomEvent("vigia:wallpapers-updated"));
@@ -262,7 +264,7 @@ export function WallpaperManager({
             setWallpapers(prev);
             throw e;
         }
-    }, [wallpapers, fetchAll]);
+    }, [wallpapers, fetchAll, c]);
 
     const api: WallpaperApi = {
         c,
@@ -284,6 +286,7 @@ export function WallpaperManager({
         searchReq,
         importReq,
         reorderReq,
+        deleteReq,
         canSearch: Boolean(canSearch),
         fetchAll,
         handleUpload,

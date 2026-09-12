@@ -139,7 +139,7 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
   async function handleDelete(id: string) {
     const r = await fetch(`/api/wallpapers/${id}`, { method: "DELETE" });
     const j = await r.json().catch(() => ({})) as { ok?: boolean; error?: string };
-    if (!r.ok || j.ok === false) throw new Error(j.error || "falha ao remover");
+    if (!r.ok || j.ok === false) throw new Error(j.error || c.wallpaperRemoveError);
     await fetchAll();
     return { ok: true };
   }
@@ -185,7 +185,7 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
         <Button
           variant={gridId ? "secondary" : "ghost"}
           disabled={!gridId}
-          onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Removido do grid", error: "falha ao remover" })}
+          onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: c.gridBackgroundRemoved, error: c.wallpaperSelectError })}
         >
           Remover background
         </Button>
@@ -211,7 +211,7 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
               const newIndex = wallpapers.findIndex((w) => w.id === String(over.id));
               if (oldIndex === -1 || newIndex === -1) return;
               const nextIds = arrayMove(wallpapers.map((w) => w.id), oldIndex, newIndex);
-              void reorderReq.run(() => reorder(nextIds).then(() => ({ ok: true })), { error: "falha ao reordenar" });
+              void reorderReq.run(() => reorder(nextIds).then(() => ({ ok: true })), { error: c.reorderError });
             }}
           >
             <SortableContext items={wallpapers.map((w) => w.id)} strategy={rectSortingStrategy}>
@@ -220,8 +220,8 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" })}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: "Background removido", error: "falha ao remover" }); } }}
+                  onClick={() => void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: c.gridBackgroundRemoved, error: c.wallpaperSelectError })}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); void selectReq.run(async () => { await setGridWallpaper(null); await fetchAll(); return { ok: true }; }, { success: c.gridBackgroundRemoved, error: c.wallpaperSelectError }); } }}
                   className={cn("group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border bg-canvas p-4 text-center aspect-[16/10]", !gridId ? "border-accent ring-2 ring-accent/40 bg-chip" : "border-dashed border-edge hover:border-accent/50 hover:bg-chip/50")}
                 >
                   <div className={cn("flex size-10 items-center justify-center rounded-full border", !gridId ? "bg-accent text-accent-ink border-accent" : "bg-chip text-ink3 border-edge")}>
@@ -235,7 +235,7 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
                     key={w.id}
                     w={w}
                     active={w.id === gridId}
-                    onSelect={() => void selectReq.run(() => setGridWallpaper(w.id).then(() => ({ ok: true })), { success: "Wallpaper do grid atualizado", error: "falha" })}
+                    onSelect={() => void selectReq.run(() => setGridWallpaper(w.id).then(() => ({ ok: true })), { success: c.gridBackgroundSelected, error: c.wallpaperSelectError })}
                     onDelete={() => setConfirmingDeleteId(w.id)}
                   />
                 ))}
@@ -315,7 +315,7 @@ function GridWallpaperContent({ lang, parallax, onToggleParallax, autoRotate, on
         onConfirm={() => {
           const id = confirmingDeleteId;
           setConfirmingDeleteId(null);
-          if (id) void deleteReq.run(() => handleDelete(id), { success: "Removido", error: "falha ao remover" });
+          if (id) void deleteReq.run(() => handleDelete(id), { success: c.wallpaperRemovedOk, error: c.wallpaperRemoveError });
         }}
       />
     </div>

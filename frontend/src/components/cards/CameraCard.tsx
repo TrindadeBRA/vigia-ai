@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { sendCameraPtz } from "../../api/client";
 import type { CameraItem, PtzAction } from "../../api/types";
 import type { CardSize } from "../../board";
 import { normalizeSize } from "../../board";
 import { cn } from "../../cn";
+import { MaximizeIcon } from "../icons";
 import type { T } from "../../i18n";
 import { emptyNote } from "../../tw";
 
@@ -96,11 +98,40 @@ function PtzPad({ cameraId, t }: { cameraId: string; t: T }) {
   );
 }
 
+function CameraFullscreenOverlay({ camera, t, onClose }: { camera: CameraItem; t: T; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex cursor-zoom-out items-center justify-center bg-black/90 p-4"
+      onClick={onClose}
+    >
+      <img
+        src={`/api/camera/cameras/${camera.id}/stream`}
+        alt=""
+        className="max-h-full max-w-full cursor-default rounded-lg object-contain"
+        onClick={(e) => e.stopPropagation()}
+      />
+      {camera.ptzEnabled ? (
+        <div onClick={(e) => e.stopPropagation()}>
+          <PtzPad cameraId={camera.id} t={t} />
+        </div>
+      ) : null}
+    </div>,
+    document.body,
+  );
+}
+
 export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null; t: T; size: CardSize }) {
   void size;
   const [tick, setTick] = useState(0);
   const [loading, setLoading] = useState(true);
   const [broken, setBroken] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const reconnect = () => {
     setLoading(true);
@@ -116,6 +147,7 @@ export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null
   useEffect(() => {
     setLoading(true);
     setBroken(false);
+    setFullscreen(false);
     setTick((n) => n + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camera?.id]);
@@ -167,7 +199,19 @@ export function CameraBoardCard({ camera, t, size }: { camera: CameraItem | null
           </button>
         </div>
       ) : null}
+      {!broken && !loading ? (
+        <button
+          type="button"
+          aria-label={t.cameraFullscreen}
+          title={t.cameraFullscreen}
+          className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/60 active:bg-black/75"
+          onClick={() => setFullscreen(true)}
+        >
+          <MaximizeIcon size={14} />
+        </button>
+      ) : null}
       {!broken && !loading && camera.ptzEnabled ? <PtzPad cameraId={camera.id} t={t} /> : null}
+      {fullscreen ? <CameraFullscreenOverlay camera={camera} t={t} onClose={() => setFullscreen(false)} /> : null}
     </div>
   );
 }

@@ -454,7 +454,7 @@ void layoutContent()
   const int H = tft.height();
   const HeaderEdge edge = uiHeaderEdge();
   const bool vert = (edge == HEADER_LEFT || edge == HEADER_RIGHT);
-  g_headerH = vert ? 40 : 32;
+  g_headerH = vert ? 52 : 42;
   if (edge == HEADER_LEFT)
   {
     g_hdrX0 = 0;

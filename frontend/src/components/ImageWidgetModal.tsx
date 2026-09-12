@@ -321,7 +321,7 @@ function ImageWidgetContent({
                         className="hidden"
                         onChange={(e) => {
                             const f = e.target.files?.[0];
-                            if (f) void uploadReq.run(() => handleFile(f), { error: "Falha ao carregar imagem" });
+                            if (f) void uploadReq.run(() => handleFile(f), { error: t.imageLoadError ?? "Falha ao carregar imagem" });
                             e.target.value = "";
                         }}
                     />
@@ -336,7 +336,7 @@ function ImageWidgetContent({
                             e.preventDefault();
                             setDragOver(false);
                             const f = e.dataTransfer.files?.[0];
-                            if (f) void uploadReq.run(() => handleFile(f), { error: "Falha ao carregar imagem" });
+                            if (f) void uploadReq.run(() => handleFile(f), { error: t.imageLoadError ?? "Falha ao carregar imagem" });
                         }}
                         className={cn(
                             "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed bg-canvas px-6 py-10 text-center transition-colors",
@@ -364,11 +364,11 @@ function ImageWidgetContent({
                         <input
                             value={urlValue}
                             onChange={(e) => setUrlValue(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") void urlReq.run(async () => handleUrlConfirm(), { error: "URL inválida" }); }}
+                            onKeyDown={(e) => { if (e.key === "Enter") void urlReq.run(async () => handleUrlConfirm(), { error: t.imageUrlInvalid ?? "URL inválida" }); }}
                             placeholder="https://... ou data:image/png;base64,..."
                             className="flex-1 rounded-[10px] border border-edge bg-canvas px-3 py-2.5 text-sm text-ink placeholder:text-ink3"
                         />
-                        <Button disabled={!urlValue.trim()} loading={urlReq.busy} onClick={() => void urlReq.run(async () => handleUrlConfirm(), { error: "URL inválida" })}>
+                        <Button disabled={!urlValue.trim()} loading={urlReq.busy} onClick={() => void urlReq.run(async () => handleUrlConfirm(), { error: t.imageUrlInvalid ?? "URL inválida" })}>
                             {t.imageUseUrl ?? "Usar"}
                         </Button>
                     </div>

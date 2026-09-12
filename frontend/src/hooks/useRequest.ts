@@ -47,10 +47,11 @@ export function useRequest() {
         setMessage("");
       }, 2800);
       return result;
-    } catch {
+    } catch (e) {
+      const msg = (e instanceof Error && e.message) || opts.error || "";
       setStatus("error");
-      setMessage(opts.error || "");
-      if (opts.error) toast.error(opts.error);
+      setMessage(msg);
+      if (msg) toast.error(msg);
       return undefined;
     }
   }, []);
