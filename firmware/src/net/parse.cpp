@@ -349,10 +349,38 @@ String asciiFold(const String &in)
   return out;
 }
 
+// O /usage ja passa de 20 KB, mas quase tudo ali e so pro painel web (rss,
+// apod, storage, github e as series horarias do clima). Sem filtro o
+// JsonDocument materializava o payload inteiro e o pico de heap do parse
+// sozinho passava de 40 KB — em cima do buffer do proprio evento SSE.
+static void buildUsageFilter(JsonDocument &filter)
+{
+  static const char *kPassthrough[] = {"updated_at", "claude",  "gpt",     "cursor",
+                                       "openrouter", "deepseek", "opencode", "fal",
+                                       "bitcoin",    "adsense",  "currencies"};
+  for (const char *k : kPassthrough)
+  {
+    filter[k] = true;
+  }
+  JsonObject w = filter["weather"].to<JsonObject>();
+  w["ok"] = true;
+  w["error"] = true;
+  w["current"] = true;
+  w["current_units"] = true;
+  w["units"] = true;
+  w["location"] = true;
+  JsonObject d = w["daily"].to<JsonObject>();
+  d["temperature_2m_max"] = true;
+  d["temperature_2m_min"] = true;
+}
+
 bool parseUsageJson(const String &body)
 {
+  JsonDocument filter;
+  buildUsageFilter(filter);
   JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, body);
+  DeserializationError err =
+      deserializeJson(doc, body, DeserializationOption::Filter(filter));
   if (err)
   {
     Serial.printf("JSON parse falhou: %s (%d bytes)\n", err.c_str(), body.length());

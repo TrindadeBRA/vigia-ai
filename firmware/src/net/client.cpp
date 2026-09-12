@@ -130,6 +130,19 @@ static void refreshPanelUrl()
     return;
   }
   applyPanelUrl(jsonText(doc["panel_lan"]));
+  // Quem manda no contador e o intervalo do coletor (USAGE_POLL_MS e so o
+  // default de compilacao): com um coletor configurado em USAGE_INTERVAL_S
+  // maior, o selo zerava e ficava parado esperando o evento seguinte.
+  int interval = doc["interval_s"] | 0;
+  if (interval > 0 && interval <= 3600)
+  {
+    uint32_t ms = (uint32_t)interval * 1000UL;
+    if (ms != g_pollMs)
+    {
+      Serial.printf("coletor: intervalo do contador %ds\n", interval);
+      g_pollMs = ms;
+    }
+  }
 }
 
 static String usageEventsUrl()
@@ -160,9 +173,18 @@ static bool g_ssePaused = false;
 static String g_sseLine;
 static String g_sseData;
 static String g_sseEvent;
+// A linha corrente e um "data:" e esta sendo escrita direto em g_sseData, sem
+// passar por g_sseLine (ver sseAbsorb) — o payload de /usage ja passa de
+// 20 KB e uma copia extra dele nao cabe no heap.
+static bool g_sseInData = false;
+static bool g_sseDataSkipSpace = false;
+// Faltou heap no meio do evento: g_sseData esta truncado e o evento inteiro
+// precisa ser descartado (nunca parsear pela metade).
+static bool g_sseOom = false;
 static bool g_pendingThemeReload = false;
 static uint32_t g_lastThemeReloadMs = 0;
 static uint32_t g_sseLastByteMs = 0;
+static uint32_t g_sseLastEventMs = 0;
 static uint32_t g_sseRetryAt = 0;
 static uint32_t g_sseRetryWait = 2000;
 
@@ -172,6 +194,82 @@ static uint32_t g_sseRetryWait = 2000;
 #ifndef SSE_IDLE_MS
 #define SSE_IDLE_MS (USAGE_POLL_MS + 30000)
 #endif
+// Watchdog do *evento*, nao do byte: o keep-alive do coletor (": ping" a cada
+// 15 s) mantem g_sseLastByteMs sempre fresco, entao um socket vivo que parou
+// de render evento completo nunca caia no SSE_IDLE_MS acima — era assim que a
+// placa ficava com o contador travado em zero ate um refresh manual.
+#ifndef SSE_EVENT_IDLE_MS
+#define SSE_EVENT_IDLE_MS (USAGE_POLL_MS * 2 + 30000)
+#endif
+// Teto do payload de um evento. A String do Arduino nao guarda mais que
+// 65535 bytes sem PSRAM (CAPACITY_MAX), entao o limite util fica bem abaixo.
+#ifndef SSE_DATA_MAX
+#define SSE_DATA_MAX 48000
+#endif
+// Cresce os buffers em blocos: a String realoca de 16 em 16 bytes, entao
+// montar 22 KB byte-a-byte custava ~1400 reallocs (memcpy O(n^2)) e picotava
+// o heap ate uma delas falhar em silencio.
+#define SSE_GROW 2048
+// Reserva do buffer do evento, feita na abertura do stream (heap menos
+// fragmentado) — evita crescer/devolver 20+ KB a cada evento.
+#ifndef SSE_DATA_RESERVE
+#define SSE_DATA_RESERVE 24576
+#endif
+// Bytes drenados do socket por volta do loop(). Com 512 (valor antigo) um
+// evento de 22 KB precisava de ~45 voltas so pra entrar.
+#ifndef SSE_READ_BUDGET
+#define SSE_READ_BUDGET 4096
+#endif
+// +1 porque String::concat(ptr, n) copia n+1 bytes (leva o terminador junto).
+#define SSE_CHUNK 256
+
+// Devolve o buffer ao heap de verdade — `s = ""` so zera o tamanho, a
+// capacidade continua alocada.
+static void sseFreeString(String &s)
+{
+  s = String();
+}
+
+// reserve() ja e no-op quando a capacidade atual da conta, entao pedir
+// sempre o proximo multiplo de SSE_GROW da o crescimento amortizado sem
+// precisar consultar capacity() (protegido na String do Arduino).
+static bool sseGrow(String &s, size_t extra)
+{
+  const size_t need = s.length() + extra;
+  const size_t want = ((need / SSE_GROW) + 1) * SSE_GROW;
+  if (s.reserve(want))
+  {
+    return true;
+  }
+  return s.reserve(need);
+}
+
+// Concat que NAO falha em silencio: a String do Arduino devolve a string
+// vazia/inalterada quando o realloc nao cabe, e era isso que fazia o evento
+// sumir sem nenhum log.
+static bool sseAppend(String &s, const char *p, size_t n)
+{
+  if (!n)
+  {
+    return true;
+  }
+  const size_t before = s.length();
+  if (!sseGrow(s, n) || !s.concat(p, (unsigned int)n) || s.length() != before + n)
+  {
+    return false;
+  }
+  return true;
+}
+
+static void sseMarkOom(const char *what, size_t want)
+{
+  if (!g_sseOom)
+  {
+    Serial.printf("coletor SSE: sem heap pro %s (+%u bytes) — livre=%u maior_bloco=%u\n", what,
+                  (unsigned)want, (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
+  }
+  g_sseOom = true;
+}
 
 static void sseClose()
 {
@@ -181,9 +279,12 @@ static void sseClose()
     g_http.end();
     g_sseOpen = false;
   }
-  g_sseLine = "";
-  g_sseData = "";
+  sseFreeString(g_sseLine);
+  sseFreeString(g_sseData);
   g_sseEvent = "";
+  g_sseInData = false;
+  g_sseDataSkipSpace = false;
+  g_sseOom = false;
 }
 
 void usageClientPauseSse()
@@ -210,15 +311,29 @@ void usageClientResumeSse()
   Serial.println("coletor SSE: retomado");
 }
 
-static void sseHandleLine(const String &raw)
+// Fim de linha: so as linhas curtas (":comentario", "event:") chegam aqui com
+// conteudo — o corpo de um "data:" ja foi direto pro g_sseData.
+static void sseHandleLine(String &line)
 {
-  String line = raw;
   if (line.endsWith("\r"))
   {
     line.remove(line.length() - 1);
   }
   if (line.length() == 0)
   {
+    if (g_sseOom)
+    {
+      Serial.printf("coletor SSE: evento descartado por falta de heap (%d bytes lidos)\n",
+                    g_sseData.length());
+      sseFreeString(g_sseData);
+      g_sseEvent = "";
+      g_sseOom = false;
+      // Fecha pra soltar tudo e voltar limpo em vez de arrastar um heap
+      // picotado por horas.
+      sseClose();
+      g_sseRetryAt = millis() + 2000;
+      return;
+    }
     if (g_sseData.length())
     {
       if (g_sseEvent == "theme")
@@ -228,7 +343,8 @@ static void sseHandleLine(const String &raw)
       }
       else
       {
-        Serial.printf("coletor SSE: %d bytes\n", g_sseData.length());
+        Serial.printf("coletor SSE: %d bytes (heap livre=%u)\n", g_sseData.length(),
+                      (unsigned)ESP.getFreeHeap());
         g_snap.httpOk = parseUsageJson(g_sseData);
         if (g_snap.httpOk)
         {
@@ -239,6 +355,9 @@ static void sseHandleLine(const String &raw)
         g_lastFetchMs = millis();
         uiRefreshData();
       }
+      g_sseLastEventMs = millis();
+      // Mantem a capacidade reservada (bloco estavel, sem realocar a cada
+      // evento) e so zera o conteudo.
       g_sseData = "";
       g_sseEvent = "";
     }
@@ -250,6 +369,7 @@ static void sseHandleLine(const String &raw)
         Serial.println("coletor SSE: evento theme (sem data)");
         g_pendingThemeReload = true;
       }
+      g_sseLastEventMs = millis();
       g_sseEvent = "";
     }
     return;
@@ -265,18 +385,122 @@ static void sseHandleLine(const String &raw)
     g_sseEvent = ev;
     return;
   }
-  if (line.startsWith("data:"))
+  // "data:" nao passa por aqui (ver sseAbsorb); qualquer outro campo do
+  // protocolo (id:, retry:) o firmware ignora.
+}
+
+// Acumula um pedaco da linha corrente. Enquanto nao da pra saber se a linha e
+// um "data:", vai pro g_sseLine (curto); assim que o prefixo fecha, o resto
+// dela e tudo o que vier depois cai direto no g_sseData e o g_sseLine e
+// devolvido ao heap na hora.
+static bool sseAbsorb(const char *p, size_t n)
+{
+  if (g_sseInData)
   {
-    String chunk = line.substring(5);
-    if (chunk.startsWith(" "))
+    if (g_sseDataSkipSpace && n && p[0] == ' ')
     {
-      chunk.remove(0, 1);
+      p++;
+      n--;
+      g_sseDataSkipSpace = false;
     }
-    if (g_sseData.length())
+    if (!n)
     {
-      g_sseData += "\n";
+      return true;
     }
-    g_sseData += chunk;
+    g_sseDataSkipSpace = false;
+    if (g_sseOom)
+    {
+      return true; // ja perdido: consome sem alocar ate o fim do evento
+    }
+    if (g_sseData.length() + n > SSE_DATA_MAX)
+    {
+      Serial.printf("coletor SSE: payload passou de %d bytes, descarta\n", (int)SSE_DATA_MAX);
+      sseMarkOom("payload", n);
+      return true;
+    }
+    if (!sseAppend(g_sseData, p, n))
+    {
+      sseMarkOom("payload", n);
+    }
+    return true;
+  }
+  if (!sseAppend(g_sseLine, p, n))
+  {
+    sseMarkOom("cabecalho", n);
+    return true;
+  }
+  if (g_sseLine.length() >= 5 && g_sseLine.startsWith("data:"))
+  {
+    const char *rest = g_sseLine.c_str() + 5;
+    size_t restLen = g_sseLine.length() - 5;
+    g_sseInData = true;
+    g_sseDataSkipSpace = true;
+    // Cada linha "data:" vira uma linha do payload (contrato do SSE).
+    bool ok = g_sseData.length() ? sseAppend(g_sseData, "\n", 1) : true;
+    if (ok && restLen)
+    {
+      if (rest[0] == ' ')
+      {
+        rest++;
+        restLen--;
+      }
+      g_sseDataSkipSpace = false;
+      ok = restLen ? sseAppend(g_sseData, rest, restLen) : true;
+    }
+    // Solta o buffer curto ANTES do payload crescer: era ele (uma copia
+    // inteira do JSON) que estourava o heap junto com g_sseData e o
+    // JsonDocument do parse.
+    sseFreeString(g_sseLine);
+    if (!ok)
+    {
+      sseMarkOom("payload", restLen);
+    }
+    return true;
+  }
+  if (g_sseLine.length() > SSE_GROW)
+  {
+    Serial.println("coletor SSE: linha de cabecalho enorme, descarta");
+    sseFreeString(g_sseLine);
+    sseMarkOom("cabecalho", 0);
+  }
+  return true;
+}
+
+static void sseFeed(const char *buf, size_t n)
+{
+  size_t i = 0;
+  while (i < n)
+  {
+    const char *nl = (const char *)memchr(buf + i, '\n', n - i);
+    const size_t chunk = nl ? (size_t)(nl - (buf + i)) : (n - i);
+    if (chunk)
+    {
+      sseAbsorb(buf + i, chunk);
+      i += chunk;
+    }
+    if (!nl)
+    {
+      return;
+    }
+    i++; // pula o \n
+    if (g_sseInData)
+    {
+      // O corpo do "data:" ja esta em g_sseData; so fecha o modo e tira o \r
+      // do CRLF, se veio.
+      g_sseInData = false;
+      g_sseDataSkipSpace = false;
+      if (g_sseData.length() && g_sseData.charAt(g_sseData.length() - 1) == '\r')
+      {
+        g_sseData.remove(g_sseData.length() - 1);
+      }
+      continue;
+    }
+    sseHandleLine(g_sseLine);
+    if (!g_sseOpen)
+    {
+      return; // sseHandleLine fechou (descarte por heap)
+    }
+    g_sseLine = "";
   }
 }
 
@@ -330,7 +554,15 @@ static void sseOpen()
   g_stream = g_http.getStreamPtr();
   g_sseOpen = true;
   g_sseLastByteMs = millis();
+  g_sseLastEventMs = millis();
   g_sseRetryWait = 2000;
+  // Pega o bloco do payload agora, com o heap ainda inteiro.
+  if (!g_sseData.reserve(SSE_DATA_RESERVE))
+  {
+    Serial.printf("coletor SSE: reserva de %d bytes falhou — livre=%u maior_bloco=%u\n",
+                  (int)SSE_DATA_RESERVE, (unsigned)ESP.getFreeHeap(),
+                  (unsigned)ESP.getMaxAllocHeap());
+  }
 }
 
 void usageClientPoll()
@@ -375,27 +607,40 @@ void usageClientPoll()
     g_sseRetryAt = now + 1000;
     return;
   }
-  int n = 0;
-  while (g_stream->available() && n < 512)
+  if (now - g_sseLastEventMs > SSE_EVENT_IDLE_MS)
   {
-    char c = (char)g_stream->read();
-    g_sseLastByteMs = now;
-    n++;
-    if (c == '\n')
+    Serial.printf("coletor SSE: %lus sem evento completo (socket vivo), reconecta\n",
+                  (unsigned long)((now - g_sseLastEventMs) / 1000));
+    sseClose();
+    g_sseRetryAt = now + 1000;
+    return;
+  }
+  char buf[SSE_CHUNK + 1];
+  int budget = SSE_READ_BUDGET;
+  while (budget > 0)
+  {
+    int avail = g_stream->available();
+    if (avail <= 0)
     {
-      sseHandleLine(g_sseLine);
-      g_sseLine = "";
+      break;
     }
-    else
+    int want = avail < SSE_CHUNK ? avail : SSE_CHUNK;
+    if (want > budget)
     {
-      g_sseLine += c;
-      if (g_sseLine.length() > 32000)
-      {
-        Serial.println("coletor SSE: linha enorme, descarta");
-        sseClose();
-        g_sseRetryAt = now + 2000;
-        return;
-      }
+      want = budget;
+    }
+    int n = g_stream->read((uint8_t *)buf, (size_t)want);
+    if (n <= 0)
+    {
+      break;
+    }
+    buf[n] = 0; // String::concat(ptr, n) le n+1 bytes
+    budget -= n;
+    g_sseLastByteMs = millis();
+    sseFeed(buf, (size_t)n);
+    if (!g_sseOpen)
+    {
+      return;
     }
   }
 }
