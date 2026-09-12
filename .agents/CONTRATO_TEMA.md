@@ -270,9 +270,9 @@ disparam preflight).
 
 - Só `VIEW_THEME` (a tela nova) usa o tema — as demais views (Início,
   Claude, GPT, Status etc.) continuam com o layout de sempre.
-- O botão de recarregar no header só existe no header **vertical**
-  (esquerda/direita) — no horizontal a barra já é apertada demais pra mais
-  um ícone.
+- Relógio, mineração e recarregar de tema aparecem nas 4 posições de header
+  (topo/baixo/esquerda/direita) — cada botão some sozinho (`g_*IconR == 0`)
+  se o vão livre da barra for curto demais pra caber, sem quebrar layout.
 - Só os ícones de provedor + a marca — sem upload de ícone/PNG arbitrário.
   Cada ícone de IA/saldo mostra a cota ao vivo (métrica escolhida no painel).
 - Relógio mostra só `HH:MM` (sem segundos) e, no fundo estático, repinta a

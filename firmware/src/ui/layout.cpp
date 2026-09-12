@@ -530,9 +530,11 @@ static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint
 }
 
 // Protótipo (docs/CONTRATO_TEMA.md): botão de recarregar o tema salvo no
-// coletor. Só no header vertical (esquerda/direita) — no horizontal a barra
-// já é apertada demais pra mais um ícone.
-static void drawHeaderReloadButton(int gap0, int gap1, int along, uint16_t color)
+// coletor. `vert` decide o eixo do vão livre, igual drawHeaderClockButton —
+// vertical (esquerda/direita) empilha no meio de [gap0,gap1] com X fixo em
+// `along`; horizontal (topo/baixo) centraliza no meio de [gap0,gap1] com Y
+// fixo em `along`. Sem espaço, some (g_reloadIconR fica 0).
+static void drawHeaderReloadButton(int gap0, int gap1, int along, bool vert, uint16_t color)
 {
   const int iconR = 8;
   const int pad = 6;
@@ -543,8 +545,16 @@ static void drawHeaderReloadButton(int gap0, int gap1, int along, uint16_t color
     return;
   }
   const int mid = (gap0 + gap1) / 2;
-  g_reloadIconCx = along;
-  g_reloadIconCy = mid;
+  if (vert)
+  {
+    g_reloadIconCx = along;
+    g_reloadIconCy = mid;
+  }
+  else
+  {
+    g_reloadIconCx = mid;
+    g_reloadIconCy = along;
+  }
   g_reloadIconR = iconR;
   drawReloadIcon(g_reloadIconCx, g_reloadIconCy, iconR, color);
 }
@@ -552,9 +562,9 @@ static void drawHeaderReloadButton(int gap0, int gap1, int along, uint16_t color
 // Atalho pra VIEW_MINER (protótipo, ver .agents/PLANO_MINERACAO.md), entre
 // o relógio e o recarregar de tema. Reusa o ícone bitmap do card Bitcoin
 // (ICON_BITCOIN) em vez de um glyph vetorial — ele já é pequeno o
-// suficiente (20x20) pra caber no header. Só no header vertical, mesma
-// razão de espaço do botão de recarregar.
-static void drawHeaderMiningButton(int gap0, int gap1, int along, uint16_t bg)
+// suficiente (20x20) pra caber no header. Mesmo esquema de `vert` do
+// drawHeaderReloadButton acima.
+static void drawHeaderMiningButton(int gap0, int gap1, int along, bool vert, uint16_t bg)
 {
   const int halfW = ICON_BITCOIN_W / 2;
   const int halfH = ICON_BITCOIN_H / 2;
@@ -565,10 +575,18 @@ static void drawHeaderMiningButton(int gap0, int gap1, int along, uint16_t bg)
     return;
   }
   const int mid = (gap0 + gap1) / 2;
-  g_miningIconCx = along;
-  g_miningIconCy = mid;
+  if (vert)
+  {
+    g_miningIconCx = along;
+    g_miningIconCy = mid;
+  }
+  else
+  {
+    g_miningIconCx = mid;
+    g_miningIconCy = along;
+  }
   g_miningIconR = max(halfW, halfH) + 4;
-  drawIcon(along - halfW, mid - halfH, ICON_BITCOIN_W, ICON_BITCOIN_H, ICON_BITCOIN, bg);
+  drawIcon(g_miningIconCx - halfW, g_miningIconCy - halfH, ICON_BITCOIN_W, ICON_BITCOIN_H, ICON_BITCOIN, bg);
 }
 
 void drawHeader()
@@ -645,7 +663,17 @@ void drawHeader()
     tft.setTextDatum(TR_DATUM);
     tft.setTextColor(COL_TEXT, COL_BG);
     tft.drawString(right, g_headerInfoX0 - 4, barY + 8, 2);
-    drawHeaderClockButton(g_headerHomeX1, g_headerClockX0, midY, false, clockCol);
+    // Vão entre a marca/olho e o horário dividido em 3: relógio (VIEW_NOW),
+    // mineração (VIEW_MINER) e recarregar tema — mesma ordem e mesmos 3
+    // atalhos do header vertical, só que lado a lado em vez de empilhados.
+    {
+      const int span3 = g_headerClockX0 - g_headerHomeX1;
+      const int third1 = g_headerHomeX1 + span3 / 3;
+      const int third2 = g_headerHomeX1 + (span3 * 2) / 3;
+      drawHeaderClockButton(g_headerHomeX1, third1, midY, false, clockCol);
+      drawHeaderMiningButton(third1, third2, midY, false, COL_BG);
+      drawHeaderReloadButton(third2, g_headerClockX0, midY, false, clockCol);
+    }
     if (showBadge)
     {
       drawCountdownBadgeAt(badgeCx, midY, secs);
@@ -695,8 +723,8 @@ void drawHeader()
   const int third1 = g_headerClockY1 + span3 / 3;
   const int third2 = g_headerClockY1 + (span3 * 2) / 3;
   drawHeaderClockButton(g_headerClockY1, third1, cx, true, clockCol);
-  drawHeaderMiningButton(third1, third2, cx, COL_BG);
-  drawHeaderReloadButton(third2, g_headerInfoY0, cx, clockCol);
+  drawHeaderMiningButton(third1, third2, cx, true, COL_BG);
+  drawHeaderReloadButton(third2, g_headerInfoY0, cx, true, clockCol);
   if (showBadge)
   {
     drawCountdownBadgeAt(cx, badgeCy, secs);
