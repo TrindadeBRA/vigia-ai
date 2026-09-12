@@ -426,7 +426,7 @@ void uiHandleTap(int16_t x, int16_t y)
     }
     if (g_clockIconR > 0)
     {
-      const int hit = g_clockIconR + 8;
+      const int hit = g_clockIconR + 10;
       if (x >= g_clockIconCx - hit && x < g_clockIconCx + hit && y >= g_clockIconCy - hit &&
           y < g_clockIconCy + hit)
       {
@@ -442,7 +442,7 @@ void uiHandleTap(int16_t x, int16_t y)
     }
     if (g_miningIconR > 0)
     {
-      const int hit = g_miningIconR + 8;
+      const int hit = g_miningIconR + 10;
       if (x >= g_miningIconCx - hit && x < g_miningIconCx + hit && y >= g_miningIconCy - hit &&
           y < g_miningIconCy + hit)
       {
@@ -452,7 +452,7 @@ void uiHandleTap(int16_t x, int16_t y)
     }
     if (g_reloadIconR > 0)
     {
-      const int hit = g_reloadIconR + 8;
+      const int hit = g_reloadIconR + 10;
       if (x >= g_reloadIconCx - hit && x < g_reloadIconCx + hit && y >= g_reloadIconCy - hit &&
           y < g_reloadIconCy + hit)
       {

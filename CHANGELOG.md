@@ -16,6 +16,7 @@ All notable changes to this project are documented here.
 
 ### Changed
 
+- Firmware: ícones clicáveis do menu (header) maiores nas quatro bordas — relógio 9→12 px de raio, recarregar tema 8→11, "i" 9→12, e o alvo de toque de cada um subiu junto (relógio 34→44 px, mineração 44→54, recarregar 32→42, "i" 34→40). O ícone de mineração é bitmap fixo 20×20 e não escala: só o alvo cresceu. Os respiros internos foram reduzidos na mesma medida em que os raios subiram, então o espaço que cada atalho exige no vão continua igual ao de antes e nenhum deles passa a sumir nas telas estreitas.
 - `Dockerfile` single-stage `node:20-alpine` (build frontend + runtime backend) — remove `python:3.12-slim`.
 - `./dev` — `ensure_python()` → `ensure_backend_node()`, `run_backend()` `node dist/main.js`, `cmd_test` `vitest` + `tsc` (backend/frontend/desktop), `cmd_lint` `tsc --noEmit`.
 - `desktop/src/sidecar.ts` / `paths.ts` — `ELECTRON_RUN_AS_NODE=1` e `collectorBundle()` (`backend/dist/desktop.js`) em vez do binário PyInstaller; `devCollector()` fallback `backend/src/desktop.ts` via `tsx`.

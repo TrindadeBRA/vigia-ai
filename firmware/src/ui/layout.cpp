@@ -515,8 +515,11 @@ void layoutContent()
 // Relógio no vão livre da barra (entre marca/horário e o "i"). Sem espaço, some.
 static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint16_t color)
 {
-  const int clockR = 9;
-  const int pad = 8;
+  // Alvo de toque: raio + o padding do hit-test em ui/nav.cpp. O `pad` aqui e
+  // so o respiro exigido pra caber no vao — cresceu o icone, encolheu o pad,
+  // pra nao passar a sumir nas telas estreitas (Wokwi 320x240).
+  const int clockR = 12;
+  const int pad = 5;
   const int need = (clockR + pad) * 2;
   g_clockIconR = 0;
   if (gap1 - gap0 < need)
@@ -545,8 +548,8 @@ static void drawHeaderClockButton(int gap0, int gap1, int along, bool vert, uint
 // fixo em `along`. Sem espaço, some (g_reloadIconR fica 0).
 static void drawHeaderReloadButton(int gap0, int gap1, int along, bool vert, uint16_t color)
 {
-  const int iconR = 8;
-  const int pad = 6;
+  const int iconR = 11;
+  const int pad = 3;
   const int need = (iconR + pad) * 2;
   g_reloadIconR = 0;
   if (gap1 - gap0 < need)
@@ -577,7 +580,7 @@ static void drawHeaderMiningButton(int gap0, int gap1, int along, bool vert, uin
 {
   const int halfW = ICON_BITCOIN_W / 2;
   const int halfH = ICON_BITCOIN_H / 2;
-  const int need = (max(halfW, halfH) + 6) * 2;
+  const int need = (max(halfW, halfH) + 4) * 2;
   g_miningIconR = 0;
   if (gap1 - gap0 < need)
   {
@@ -594,7 +597,9 @@ static void drawHeaderMiningButton(int gap0, int gap1, int along, bool vert, uin
     g_miningIconCx = mid;
     g_miningIconCy = along;
   }
-  g_miningIconR = max(halfW, halfH) + 4;
+  // O bitmap do Bitcoin e fixo em 20x20 (nao escala), entao o que cresce
+  // aqui e so o alvo de toque, pra acompanhar os vizinhos vetoriais.
+  g_miningIconR = max(halfW, halfH) + 7;
   drawIcon(g_miningIconCx - halfW, g_miningIconCy - halfH, ICON_BITCOIN_W, ICON_BITCOIN_H, ICON_BITCOIN, bg);
 }
 
@@ -626,7 +631,12 @@ void drawHeader()
   g_lastHeaderKey = headerDisplayKey(secs, showCheck);
   const bool showBadge = secs >= 0 || showCheck;
   const int r = 11;
-  const int infoR = 9;
+  const int infoR = 12;
+  // Respiro em volta do "i" no retangulo de toque (ui/nav.cpp testa esse
+  // retangulo direto, sem raio). Fica em 8: no header vertical esse limite
+  // tambem fecha o vao dos tres atalhos abaixo, e um respiro maior os
+  // espremeria a ponto de sumirem nas telas estreitas.
+  const int infoPad = 8;
   uint16_t infoCol = (g_view == VIEW_STATUS) ? COL_ACCENT : COL_TEXT_MUTED;
   uint16_t clockCol = COL_TEXT_MUTED;
 
@@ -654,9 +664,9 @@ void drawHeader()
     const int badgeCx = g_hdrX1 - 8 - r;
     const int infoCx = showBadge ? badgeCx - r - 10 - infoR : g_hdrX1 - 8 - infoR;
     drawInfoIcon(infoCx, midY, infoR, infoCol);
-    g_headerInfoX0 = infoCx - infoR - 8;
+    g_headerInfoX0 = infoCx - infoR - infoPad;
     g_headerInfoY0 = g_hdrY0;
-    g_headerInfoX1 = infoCx + infoR + 8;
+    g_headerInfoX1 = infoCx + infoR + infoPad;
     g_headerInfoY1 = g_hdrY1;
 
     String right = g_snap.statusLine.length() ? g_snap.statusLine.substring(0, 10) : "--:--";
@@ -722,9 +732,9 @@ void drawHeader()
   const int infoCy = showBadge ? badgeCy - r - 12 - infoR : H - 8 - infoR;
   drawInfoIcon(cx, infoCy, infoR, infoCol);
   g_headerInfoX0 = g_hdrX0;
-  g_headerInfoY0 = infoCy - infoR - 8;
+  g_headerInfoY0 = infoCy - infoR - infoPad;
   g_headerInfoX1 = g_hdrX1;
-  g_headerInfoY1 = infoCy + infoR + 8;
+  g_headerInfoY1 = infoCy + infoR + infoPad;
   // Vão entre o horário e o "i" dividido em 3: relógio (VIEW_NOW),
   // mineração (VIEW_MINER) e recarregar tema — nessa ordem, de cima pra
   // baixo, igual o usuário pediu ("entre o relógio e a seta baixada").
