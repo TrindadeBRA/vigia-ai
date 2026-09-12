@@ -16,6 +16,7 @@ import { NameToColorPicker } from "./NameToColorPicker";
 import { IconCard, providerSupportsCard } from "./ThemeCanvasView";
 import { THEME_STR } from "./themeCopy";
 import { CanvasDot } from "./themeEditor/CanvasDot";
+import { CanvasNudgeTrap, arrowDir, focusCanvasNudgeTrap, isCanvasNudgeTrap } from "./themeEditor/CanvasNudgeTrap";
 import { ColorField, ColorSwatch, ScaleField } from "./themeEditor/fields";
 import { IconChip } from "./themeEditor/IconChip";
 import { ThemeIOButtons } from "./themeEditor/ThemeIOButtons";
@@ -87,6 +88,8 @@ export default function ThemeEditorPage() {
     setCurrentWallpaperId(id);
   }, []);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const nudgeTrapRef = useRef<HTMLTextAreaElement>(null);
+  const lastNudgeAt = useRef(0);
   const addProviderBtnRef = useRef<HTMLButtonElement>(null);
   const send = useRequest();
   const remove = useRequest();
@@ -192,7 +195,7 @@ export default function ThemeEditorPage() {
     const x = 0.22 + (n % 4) * 0.2;
     const y = 0.48 + Math.floor(n / 4) * 0.22;
     setTheme((t) => ({ ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, showBackground: true, bgColor: null, metric: defaultMetric(provider) }] }));
-    setSelected(`icon:${id}`);
+    selectItem(`icon:${id}`);
   }
   function removeIcon(id: string) {
     setTheme((t) => ({ ...t, icons: t.icons.filter((i) => i.id !== id) }));
@@ -201,19 +204,61 @@ export default function ThemeEditorPage() {
   function addText() {
     const id = uid();
     setTheme((t) => ({ ...t, texts: [...t.texts, { id, text: "VIGIA AI", x: 0.5, y: 0.82, scale: 1, color: null }] }));
-    setSelected(`text:${id}`);
+    selectItem(`text:${id}`);
   }
   function removeText(id: string) {
     setTheme((t) => ({ ...t, texts: t.texts.filter((x) => x.id !== id) }));
     setSelected(null);
   }
 
+  function selectItem(id: string) {
+    setSelected(id);
+    focusCanvasNudgeTrap(nudgeTrapRef);
+  }
+
+  function nudgeBy(dxPx: number, dyPx: number) {
+    if (!selected || selected === "background") return;
+    const now = performance.now();
+    if (now - lastNudgeAt.current < 12) return;
+    lastNudgeAt.current = now;
+    const w = canvasSize.width || 480;
+    const h = canvasSize.height || 320;
+    const nx = dxPx / w;
+    const ny = dyPx / h;
+    if (selected === "clock") {
+      setTheme((t) => ({ ...t, clock: { ...t.clock, x: clamp(t.clock.x + nx, 0, 1), y: clamp(t.clock.y + ny, 0, 1) } }));
+      return;
+    }
+    if (selected === "countdown") {
+      setTheme((t) => ({
+        ...t,
+        countdown: { ...t.countdown, x: clamp(t.countdown.x + nx, 0, 1), y: clamp(t.countdown.y + ny, 0, 1) },
+      }));
+      return;
+    }
+    if (selected.startsWith("icon:")) {
+      const id = selected.slice(5);
+      setTheme((t) => ({
+        ...t,
+        icons: t.icons.map((i) => (i.id === id ? { ...i, x: clamp(i.x + nx, 0, 1), y: clamp(i.y + ny, 0, 1) } : i)),
+      }));
+      return;
+    }
+    if (selected.startsWith("text:")) {
+      const id = selected.slice(5);
+      setTheme((t) => ({
+        ...t,
+        texts: t.texts.map((x) => (x.id === id ? { ...x, x: clamp(x.x + nx, 0, 1), y: clamp(x.y + ny, 0, 1) } : x)),
+      }));
+    }
+  }
+
   // Delete/Backspace remove o elemento selecionado; setas andam 1 px da TFT
-  // (Shift = 10 px). Campos de texto/slider ficam com as teclas pra eles.
-  // Safari: escuta em captura no document (seta senão vira scroll) e aceita
-  // keyCode — o clique no canvas às vezes não muda o activeElement lá.
+  // (Shift = 10 px). Safari só dispara setas em campo editável — o textarea
+  // invisível (CanvasNudgeTrap) segura o foco; o listener do document cobre o Chrome.
   useEffect(() => {
     function isTextEditing(el: EventTarget | null) {
+      if (isCanvasNudgeTrap(el)) return false;
       if (!(el instanceof HTMLElement)) return false;
       if (el.isContentEditable) return true;
       const tag = el.tagName;
@@ -223,65 +268,10 @@ export default function ThemeEditorPage() {
       return type === "text" || type === "search" || type === "password" || type === "email" || type === "url" || type === "number" || type === "tel" || type === "";
     }
     function isFormControl(el: EventTarget | null) {
+      if (isCanvasNudgeTrap(el)) return false;
       if (!(el instanceof HTMLElement)) return false;
       if (el.isContentEditable) return true;
       return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT";
-    }
-    function arrowDir(e: KeyboardEvent): "left" | "right" | "up" | "down" | null {
-      const key = e.key;
-      if (key === "ArrowLeft" || key === "Left") return "left";
-      if (key === "ArrowRight" || key === "Right") return "right";
-      if (key === "ArrowUp" || key === "Up") return "up";
-      if (key === "ArrowDown" || key === "Down") return "down";
-      if (e.code === "ArrowLeft") return "left";
-      if (e.code === "ArrowRight") return "right";
-      if (e.code === "ArrowUp") return "up";
-      if (e.code === "ArrowDown") return "down";
-      switch (e.keyCode) {
-        case 37:
-          return "left";
-        case 39:
-          return "right";
-        case 38:
-          return "up";
-        case 40:
-          return "down";
-        default:
-          return null;
-      }
-    }
-    function nudge(dxPx: number, dyPx: number) {
-      if (!selected || selected === "background") return;
-      const w = canvasSize.width || 480;
-      const h = canvasSize.height || 320;
-      const nx = dxPx / w;
-      const ny = dyPx / h;
-      if (selected === "clock") {
-        setTheme((t) => ({ ...t, clock: { ...t.clock, x: clamp(t.clock.x + nx, 0, 1), y: clamp(t.clock.y + ny, 0, 1) } }));
-        return;
-      }
-      if (selected === "countdown") {
-        setTheme((t) => ({
-          ...t,
-          countdown: { ...t.countdown, x: clamp(t.countdown.x + nx, 0, 1), y: clamp(t.countdown.y + ny, 0, 1) },
-        }));
-        return;
-      }
-      if (selected.startsWith("icon:")) {
-        const id = selected.slice(5);
-        setTheme((t) => ({
-          ...t,
-          icons: t.icons.map((i) => (i.id === id ? { ...i, x: clamp(i.x + nx, 0, 1), y: clamp(i.y + ny, 0, 1) } : i)),
-        }));
-        return;
-      }
-      if (selected.startsWith("text:")) {
-        const id = selected.slice(5);
-        setTheme((t) => ({
-          ...t,
-          texts: t.texts.map((x) => (x.id === id ? { ...x, x: clamp(x.x + nx, 0, 1), y: clamp(x.y + ny, 0, 1) } : x)),
-        }));
-      }
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Delete" || e.key === "Backspace") {
@@ -299,16 +289,12 @@ export default function ThemeEditorPage() {
       if (!dir) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (!selected || selected === "background") return;
-      // Safari deixa o slider/cor com o foco depois do clique no canvas; seta
-      // nesses controles não deve bloquear o deslocamento do widget selecionado.
       if (isTextEditing(e.target) || isTextEditing(document.activeElement)) return;
       const step = e.shiftKey ? 10 : 1;
-      const dx = dir === "left" ? -step : dir === "right" ? step : 0;
-      const dy = dir === "up" ? -step : dir === "down" ? step : 0;
       e.preventDefault();
-      nudge(dx, dy);
+      nudgeBy(dir === "left" ? -step : dir === "right" ? step : 0, dir === "up" ? -step : dir === "down" ? step : 0);
     }
-    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener("keydown", onKeyDown, { capture: true, passive: false });
     return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [selected, canvasSize.width, canvasSize.height]);
 
@@ -395,7 +381,7 @@ export default function ThemeEditorPage() {
             active={selected === "clock"}
             onClick={() => {
               if (!theme.clock.enabled) setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: true } }));
-              setSelected("clock");
+              selectItem("clock");
             }}
           />
           <ToolButton
@@ -404,7 +390,7 @@ export default function ThemeEditorPage() {
             active={selected === "countdown"}
             onClick={() => {
               if (!theme.countdown.enabled) setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: true } }));
-              setSelected("countdown");
+              selectItem("countdown");
             }}
           />
           <ToolButton
@@ -429,7 +415,12 @@ export default function ThemeEditorPage() {
               <span className="text-warn">{c.wallpaperNoneSelected}</span>
             ) : null}
           </div>
-          <div className="flex flex-1 items-center justify-center">
+          <div className="relative flex flex-1 items-center justify-center">
+            <CanvasNudgeTrap
+              active={Boolean(selected && selected !== "background")}
+              trapRef={nudgeTrapRef}
+              onNudge={nudgeBy}
+            />
             <div
               ref={canvasRef}
               className="relative mx-auto w-full max-w-[720px] touch-none select-none overflow-hidden rounded-[14px] border border-edge shadow-card-hover"
@@ -461,7 +452,8 @@ export default function ThemeEditorPage() {
                   containerSize={containerSize}
                   selected={selected === "clock"}
                   title={c.clock}
-                  onSelect={() => setSelected("clock")}
+                  onSelect={() => selectItem("clock")}
+                  onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
                   onDrag={(x, y) => setTheme((t) => ({ ...t, clock: { ...t.clock, x, y } }))}
                 >
                   {(() => {
@@ -488,7 +480,8 @@ export default function ThemeEditorPage() {
                   containerSize={containerSize}
                   selected={selected === "countdown"}
                   title={c.countdown}
-                  onSelect={() => setSelected("countdown")}
+                  onSelect={() => selectItem("countdown")}
+                  onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
                   onDrag={(x, y) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, x, y } }))}
                 >
                   <div
@@ -514,7 +507,8 @@ export default function ThemeEditorPage() {
                   containerSize={containerSize}
                   selected={selected === `icon:${icon.id}`}
                   title={`${providerLabel(icon.provider)} ${formatThemeMetric(usage, icon.provider, icon.metric)}`}
-                  onSelect={() => setSelected(`icon:${icon.id}`)}
+                  onSelect={() => selectItem(`icon:${icon.id}`)}
+                  onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
                   onDrag={(x, y) => updateIcon(icon.id, { x, y })}
                   onRemove={() => removeIcon(icon.id)}
                   removeLabel={c.removeIcon}
@@ -554,7 +548,8 @@ export default function ThemeEditorPage() {
                   containerSize={containerSize}
                   selected={selected === `text:${txt.id}`}
                   title={txt.text}
-                  onSelect={() => setSelected(`text:${txt.id}`)}
+                  onSelect={() => selectItem(`text:${txt.id}`)}
+                  onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
                   onDrag={(x, y) => updateText(txt.id, { x, y })}
                   onRemove={() => removeText(txt.id)}
                   removeLabel={c.removeText}
@@ -575,7 +570,7 @@ export default function ThemeEditorPage() {
               {theme.clock.enabled ? (
                 <button
                   type="button"
-                  onClick={() => setSelected("clock")}
+                  onClick={() => selectItem("clock")}
                   className={cn(
                     "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
                     selected === "clock"
@@ -605,7 +600,7 @@ export default function ThemeEditorPage() {
               {theme.countdown.enabled ? (
                 <button
                   type="button"
-                  onClick={() => setSelected("countdown")}
+                  onClick={() => selectItem("countdown")}
                   className={cn(
                     "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
                     selected === "countdown"
@@ -636,7 +631,7 @@ export default function ThemeEditorPage() {
                   <button
                     type="button"
                     key={icon.id}
-                    onClick={() => setSelected(`icon:${icon.id}`)}
+                    onClick={() => selectItem(`icon:${icon.id}`)}
                     className={cn(
                       "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
                       isSelected
@@ -680,7 +675,7 @@ export default function ThemeEditorPage() {
                   <button
                     type="button"
                     key={txt.id}
-                    onClick={() => setSelected(`text:${txt.id}`)}
+                    onClick={() => selectItem(`text:${txt.id}`)}
                     className={cn(
                       "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
                       isSelected

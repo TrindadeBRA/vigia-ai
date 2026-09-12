@@ -100,16 +100,32 @@ int g_acctPagerRightX1 = 0;
 int g_acctPagerY = 0;
 int g_acctPagerH = 0;
 
-// Segundos ate o proximo ciclo do coletor (USAGE_INTERVAL), a partir do
-// ultimo evento SSE / GET /usage. -1 quando g_pollMs == 0.
+// Segundos ate o proximo ciclo do coletor. Com next_at/server_now no payload
+// conta ate o prazo real do coletor; sem eles, g_pollMs a partir do ultimo
+// evento SSE / GET /usage. -1 quando g_pollMs == 0; COUNTDOWN_UPDATING quando
+// o prazo ja passou e o evento ainda nao chegou (o coletor so envia depois do
+// provedor mais lento responder).
 int countdownSeconds()
 {
   if (g_pollMs == 0)
   {
     return -1;
   }
-  uint32_t elapsed = millis() - g_lastFetchMs;
-  uint32_t remainMs = (elapsed < g_pollMs) ? (g_pollMs - elapsed) : 0;
+  uint32_t remainMs;
+  if (g_hasNextCycle)
+  {
+    int32_t left = (int32_t)(g_nextCycleAtMs - millis());
+    remainMs = left > 0 ? (uint32_t)left : 0;
+  }
+  else
+  {
+    uint32_t elapsed = millis() - g_lastFetchMs;
+    remainMs = (elapsed < g_pollMs) ? (g_pollMs - elapsed) : 0;
+  }
+  if (remainMs == 0)
+  {
+    return COUNTDOWN_UPDATING;
+  }
   return (int)((remainMs + 999) / 1000);
 }
 
@@ -426,7 +442,7 @@ void drawCountdownBadgeAt(int cx, int cy, int secs, int r, bool hasColor, uint16
 {
   bool showCheck = showFetchOkCheck();
 
-  if (secs < 0 && !showCheck)
+  if (secs < 0 && secs != COUNTDOWN_UPDATING && !showCheck)
   {
     return;
   }
@@ -447,6 +463,17 @@ void drawCountdownBadgeAt(int cx, int cy, int secs, int r, bool hasColor, uint16
   if (showCheck)
   {
     drawCheckIcon(cx, cy, r, COL_INVERSE);
+  }
+  else if (secs == COUNTDOWN_UPDATING)
+  {
+    // "Atualizando": reticencias no lugar do numero — nao cabe texto num
+    // circulo de raio 11, e o 0 parado parecia travamento.
+    const int dotR = (r + 4) / 7;
+    const int gap = dotR * 3;
+    for (int i = -1; i <= 1; i++)
+    {
+      tft.fillCircle(cx + i * gap, cy, dotR, fg);
+    }
   }
   else
   {
@@ -629,7 +656,7 @@ void drawHeader()
   int secs = countdownSeconds();
   bool showCheck = showFetchOkCheck();
   g_lastHeaderKey = headerDisplayKey(secs, showCheck);
-  const bool showBadge = secs >= 0 || showCheck;
+  const bool showBadge = secs >= 0 || secs == COUNTDOWN_UPDATING || showCheck;
   const int r = 11;
   const int infoR = 12;
   // Respiro em volta do "i" no retangulo de toque (ui/nav.cpp testa esse

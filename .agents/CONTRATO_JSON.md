@@ -229,6 +229,10 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
 | `adsense`      | array de contas | sim (pode ser `[]`) |
 | `weather`      | objeto ou `null` | não — ausente/`null` = desligado ou oculto; ver `weather` abaixo |
 | `currencies`   | objeto ou `null` | não — ausente/`null` = desligado ou oculto; ver `currencies` abaixo |
+| `server_now`   | número (epoch ms) | não — carimbado no envio (`/events` e `/usage`); ausente antes do ciclo automático iniciar |
+| `next_at`      | número (epoch ms) | não — quando começa o próximo ciclo automático; junto com `server_now` |
+
+`next_at - server_now` é o tempo até o próximo ciclo no momento do envio. A placa soma isso ao `millis()` da chegada (não precisa de hora própria) e o selo do contador conta até lá; se o prazo passar sem evento novo (o coletor só envia depois do provedor mais lento responder), o selo mostra reticências ("atualizando") em vez de ficar parado no 0. Sem os dois campos, o firmware volta a contar `interval_s` do `/health` a partir do último evento.
 
 ### Campos comuns a toda conta, nos 10 provedores
 

@@ -355,9 +355,10 @@ String asciiFold(const String &in)
 // sozinho passava de 40 KB — em cima do buffer do proprio evento SSE.
 static void buildUsageFilter(JsonDocument &filter)
 {
-  static const char *kPassthrough[] = {"updated_at", "claude",  "gpt",     "cursor",
-                                       "openrouter", "deepseek", "opencode", "fal",
-                                       "bitcoin",    "adsense",  "currencies"};
+  static const char *kPassthrough[] = {"updated_at", "server_now", "next_at", "claude",
+                                       "gpt",        "cursor",     "openrouter", "deepseek",
+                                       "opencode",   "fal",        "bitcoin",    "adsense",
+                                       "currencies"};
   for (const char *k : kPassthrough)
   {
     filter[k] = true;
@@ -390,6 +391,30 @@ bool parseUsageJson(const String &body)
   }
 
   g_snap.updatedAt = doc["updated_at"] | "";
+
+  // Epoch ms passa de 32 bits; double (64 bits no ESP32) guarda exato e nao
+  // depende do ARDUINOJSON_USE_LONG_LONG. So a diferenca importa — os dois
+  // carimbos saem do mesmo relogio do coletor, entao nao precisa de NTP.
+  const double serverNow = doc["server_now"] | 0.0;
+  const double nextAt = doc["next_at"] | 0.0;
+  if (serverNow > 0 && nextAt > 0)
+  {
+    double remain = nextAt - serverNow;
+    if (remain < 0)
+    {
+      remain = 0;
+    }
+    if (remain > 3600000.0)
+    {
+      remain = 3600000.0;
+    }
+    g_nextCycleAtMs = millis() + (uint32_t)remain;
+    g_hasNextCycle = true;
+  }
+  else
+  {
+    g_hasNextCycle = false;
+  }
 
   g_snap.claudeCount = 0;
   for (JsonVariantConst v : doc["claude"].as<JsonArrayConst>())

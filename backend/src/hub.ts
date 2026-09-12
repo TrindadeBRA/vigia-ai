@@ -127,6 +127,8 @@ export class UsageHub {
   lastCycleMs: number | null = null;
   lastCycleOk: boolean | null = null;
   lastCycleError: string | null = null;
+  /** Epoch ms do próximo tick do setInterval (null antes do start()). */
+  nextTickAt: number | null = null;
   private _lock: Promise<void> = Promise.resolve();
   private _lockRelease: (() => void) | null = null;
 
@@ -157,9 +159,12 @@ export class UsageHub {
     if (this._task !== null) return;
     // background initial refresh (not blocking startup)
     void this.refresh().catch(() => { });
+    const periodMs = this.seconds * 1000;
+    this.nextTickAt = Date.now() + periodMs;
     this._task = setInterval(() => {
+      this.nextTickAt = Date.now() + periodMs;
       void this.refresh().catch(() => { });
-    }, this.seconds * 1000);
+    }, periodMs);
     // allow Node to not keep process alive only for this timer? not needed
     if (this._task && typeof (this._task as unknown as { unref?: () => void }).unref === "function") {
       (this._task as unknown as { unref: () => void }).unref();
@@ -171,6 +176,7 @@ export class UsageHub {
       clearInterval(this._task);
       this._task = null;
     }
+    this.nextTickAt = null;
     for (const q of [...this._queues]) {
       try {
         q.put(null);
@@ -229,6 +235,17 @@ export class UsageHub {
     return this._latest;
   }
 
+  /**
+   * Relógio do ciclo, carimbado no momento do envio: a placa não tem hora
+   * própria, então conta `next_at - server_now` a partir da chegada do evento
+   * em vez de chutar `interval_s` (o evento sai só depois do provedor mais
+   * lento, e o selo ficava parado no zero esperando). Vazio antes do start().
+   */
+  cycleTiming(): CycleTiming | null {
+    if (this.nextTickAt === null) return null;
+    return { server_now: Date.now(), next_at: this.nextTickAt };
+  }
+
   private broadcast(payload: Record<string, unknown>): void {
     const dead: HubQueue[] = [];
     for (const q of this._queues) {
@@ -279,14 +296,16 @@ function partition(s: string, sep: string): [string, string, string] {
   return [s.slice(0, idx), sep, s.slice(idx + sep.length)];
 }
 
-export function formatSse(payload: Record<string, unknown>): string {
-  let data: string;
+export type CycleTiming = { server_now: number; next_at: number };
+
+export function formatSse(payload: Record<string, unknown>, timing: CycleTiming | null = null): string {
+  let body: Record<string, unknown>;
   try {
-    const validated = UsagePayloadSchema.parse(payload);
-    data = JSON.stringify(validated);
+    body = UsagePayloadSchema.parse(payload) as Record<string, unknown>;
   } catch {
-    data = JSON.stringify(payload);
+    body = payload;
   }
+  const data = JSON.stringify(timing ? { ...body, ...timing } : body);
   return `event: usage\ndata: ${data}\n\n`;
 }
 
@@ -301,7 +320,7 @@ export async function* sseBytes(hub: UsageHub): AsyncGenerator<string | Uint8Arr
     yield ": connected\n\n";
     const latest = hub.snapshot();
     if (latest !== null) {
-      yield formatSse(latest);
+      yield formatSse(latest, hub.cycleTiming());
     }
     while (true) {
       const item = await queue.next(HEARTBEAT_S * 1000);
@@ -316,7 +335,7 @@ export async function* sseBytes(hub: UsageHub): AsyncGenerator<string | Uint8Arr
         yield item;
         continue;
       }
-      yield formatSse(item as Record<string, unknown>);
+      yield formatSse(item as Record<string, unknown>, hub.cycleTiming());
     }
   } finally {
     hub.unsubscribe(queue);

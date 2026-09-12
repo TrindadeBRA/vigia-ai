@@ -89,6 +89,26 @@ describe("SSE framing (§6.1)", () => {
     await hub2.stop();
   });
 
+  it("carimba server_now/next_at no evento depois do start()", async () => {
+    const { UsageHub, sseBytes } = await import("./hub.js");
+    const hub = new UsageHub(60);
+    expect(hub.cycleTiming()).toBeNull();
+    (hub as any).refresh = async () => ({});
+    const before = Date.now();
+    await hub.start();
+    (hub as any)._latest = { updated_at: "2026-09-12T10:00:00-03:00", claude: [] };
+    const gen = sseBytes(hub);
+    await gen.next(); // : connected
+    const frame = (await gen.next()).value as string;
+    const data = JSON.parse(frame.split("\n").find((l) => l.startsWith("data: "))!.slice(6));
+    expect(data.server_now).toBeGreaterThanOrEqual(before);
+    expect(data.next_at - data.server_now).toBeGreaterThan(59_000);
+    expect(data.next_at - data.server_now).toBeLessThanOrEqual(60_000);
+    await gen.return(undefined);
+    await hub.stop();
+    expect(hub.cycleTiming()).toBeNull();
+  });
+
   it("não descarta github (repos e perfis) no SSE", async () => {
     const { formatSse } = await import("./hub.js");
     const payload = {

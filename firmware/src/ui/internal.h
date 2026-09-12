@@ -163,8 +163,11 @@ int falWorstIdx();
 int bitcoinWorstIdx();
 int adsenseWorstIdx();
 
-// Segundos até o próximo refresh automático (-1 = sem polling ativo) e se o
-// selo do header deve mostrar o check verde de sucesso em vez do contador.
+// Segundos até o próximo refresh automático (-1 = sem polling ativo,
+// COUNTDOWN_UPDATING = prazo passou e o evento não chegou) e se o selo do
+// header deve mostrar o check verde de sucesso em vez do contador.
+// -3 porque headerDisplayKey() já usa -2 pro check.
+#define COUNTDOWN_UPDATING -3
 int countdownSeconds();
 bool showFetchOkCheck();
 int headerDisplayKey(int secs, bool showCheck);

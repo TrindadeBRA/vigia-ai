@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { VERSION } from "../version.js";
 import { panelLanUrl } from "../netutil.js";
-import { formatSse, sseBytes } from "../hub.js";
+import { sseBytes, type CycleTiming } from "../hub.js";
 
 const SSE_HEADERS = {
   "Content-Type": "text/event-stream",
@@ -32,7 +32,7 @@ export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/usage", { schema: { tags: ["Sistema"] } }, async (request, reply) => {
-    const hub = (app as unknown as { hub?: { refresh: (opts: unknown) => Promise<unknown>; noteDevice: (ip: string | null, screen: string | null, firmware?: string | null) => void } }).hub;
+    const hub = (app as unknown as { hub?: { refresh: (opts: unknown) => Promise<Record<string, unknown>>; cycleTiming: () => CycleTiming | null; noteDevice: (ip: string | null, screen: string | null, firmware?: string | null) => void } }).hub;
     // note device via headers
     const device = (request.headers["x-vigia-device"] as string | undefined) ?? (request.headers["X-Vigia-Device"] as string | undefined);
     if (device === "esp32" && hub) {
@@ -44,7 +44,8 @@ export async function createUsageRoutes(app: FastifyInstance): Promise<void> {
     }
     if (!hub) return reply.code(503).send({ ok: false, error: "hub not ready" });
     const payload = await hub.refresh({ forceQuota: true });
-    return payload;
+    const timing = hub.cycleTiming();
+    return timing ? { ...payload, ...timing } : payload;
   });
 
   app.get("/events", { schema: { tags: ["Sistema"] } }, async (request, reply) => {

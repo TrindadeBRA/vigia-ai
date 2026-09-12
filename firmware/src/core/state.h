@@ -268,5 +268,10 @@ extern String g_netLine;
 extern String g_panelUrl;
 extern uint32_t g_lastFetchMs;
 extern uint32_t g_pollMs;
+// Prazo (em millis()) do proximo ciclo do coletor, vindo de next_at -
+// server_now no payload. Sem esses campos (coletor antigo) fica false e o
+// contador volta a contar g_pollMs a partir do ultimo evento.
+extern bool g_hasNextCycle;
+extern uint32_t g_nextCycleAtMs;
 extern bool g_hasFetchedOk;
 extern uint32_t g_lastFetchOkMs;

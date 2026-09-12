@@ -29,6 +29,8 @@ String g_panelUrl = "";
 
 uint32_t g_lastFetchMs = 0;
 uint32_t g_pollMs = USAGE_POLL_MS;
+bool g_hasNextCycle = false;
+uint32_t g_nextCycleAtMs = 0;
 bool g_hasFetchedOk = false;
 uint32_t g_lastFetchOkMs = 0;
 
