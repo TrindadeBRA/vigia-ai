@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **App desktop não encerrava (ou demorava ~13s) ao clicar em Sair**: o coletor Node tinha dois caminhos de shutdown — o acionado por `SIGTERM`/`SIGINT` derrubava sockets SSE abertos (ex.: `/events` da ESP32/painel) depois de um prazo curto, mas o acionado pelo fechamento do `stdin` (o caminho usado pelo Electron ao "Sair") chamava `app.close()` sem essa rede de segurança — com qualquer conexão SSE de longa duração ainda aberta, o processo nunca encerrava por conta própria, e o app só saía depois do timeout de 10s do lado do Electron forçar um `SIGTERM`. Os dois caminhos agora compartilham a mesma rotina de shutdown (`backend/src/desktop.ts`); o timeout de fallback no Electron caiu de 10s para 5s (`desktop/src/sidecar.ts`).
+
 ### Added
 
 - **Baixar firmware no app instalado**: em `/display/setup`, se a pasta `firmware/` não existir (Brew/cask), **Baixar firmware** puxa o tarball da tag GitHub desta versão (`POST /api/firmware/source`) e habilita o flash USB — ainda é preciso `pio` no host.

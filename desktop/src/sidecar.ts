@@ -17,7 +17,8 @@ const EXIT_PORT_IN_USE = 3;
 const BACKOFF_MS = [1000, 2000, 5000, 15000, 30000];
 const MAX_RESTARTS = BACKOFF_MS.length;
 const READY_TIMEOUT_MS = 30_000;
-const GRACEFUL_STOP_MS = 10_000;
+/** Backend força o fechamento de sockets SSE após 3s (ver backend/src/desktop.ts) — 5s dá margem sem prender o quit. */
+const GRACEFUL_STOP_MS = 5_000;
 
 export type ReadyInfo = {
   version: string;

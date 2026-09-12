@@ -87,17 +87,10 @@ async function main() {
     pid: process.pid,
   });
 
-  if (isParentPipe()) {
-    process.stdin.resume();
-    process.stdin.on("end", async () => {
-      try { await app.close(); } finally { process.exit(0); }
-    });
-    process.stdin.on("close", async () => {
-      try { await app.close(); } finally { process.exit(0); }
-    });
-  }
-
-  // Track open SSE sockets for graceful shutdown (PLANO_NODE.md §6.1)
+  // Track open SSE sockets for graceful shutdown (PLANO_NODE.md §6.1).
+  // Sem isso, `app.close()` fica pendurado esperando conexões long-lived
+  // (ex.: ESP32/câmera no /events) encerrarem por conta própria — o que
+  // nunca acontece, e o processo nunca sai.
   const sockets = new Set<any>();
   if (httpServer) {
     httpServer.on("connection", (s: any) => {
@@ -105,7 +98,10 @@ async function main() {
       s.on("close", () => sockets.delete(s));
     });
   }
+  let shuttingDown = false;
   const shutdown = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     const t = setTimeout(() => {
       for (const s of sockets) try { s.destroy(); } catch {}
     }, 3000);
@@ -113,6 +109,12 @@ async function main() {
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+
+  if (isParentPipe()) {
+    process.stdin.resume();
+    process.stdin.on("end", shutdown);
+    process.stdin.on("close", shutdown);
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("desktop.js") || process.argv[1]?.endsWith("desktop.ts")) {
