@@ -58,8 +58,9 @@ void setup()
   themeServerBegin();
   // Estado de loading pos-splash — espelha o Skeleton da web
   // (frontend/src/components/skeleton/bodies.tsx -> OverviewBody) enquanto
-  // o coletor ainda nao respondeu / os conectores nao voltaram.
-  // Wi-Fi ja foi disparado acima, entao a animacao cobre o tempo de conexao.
+  // o coletor ainda nao respondeu / os conectores nao voltaram. Bloqueia
+  // (bombeando Wi-Fi + /events por dentro) ate g_hasFetchedOk virar true —
+  // so entao a Inicio aparece, nunca antes de uma conexao bem-sucedida.
   uiShowLoading();
   uiPaint();
 }

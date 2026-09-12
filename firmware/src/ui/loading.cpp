@@ -1,7 +1,9 @@
 #include "ui/internal.h"
 
 #include "ui/i18n.h"
+#include "net/usage_client.h"
 
+#include <WiFi.h>
 #include <math.h>
 
 static void loadingDelay(uint32_t ms) {
@@ -28,6 +30,13 @@ static uint16_t lerp565Loading(uint16_t a, uint16_t b, uint8_t t) {
 // placeholder com shimmer e barra de progresso — fica visivel enquanto o
 // coletor ainda nao respondeu (espelha o `if (!data) return <Skeleton />` do
 // Display.tsx). Chamada uma vez em main.cpp apos uiShowSplash().
+//
+// Só sai quando g_hasFetchedOk vira true (primeira leitura bem-sucedida do
+// /events do coletor) — sem isso a Início aparecia vazia/com placeholder de
+// "aguardando" antes mesmo da Wi-Fi terminar de conectar. Bombeia
+// usageClientEnsureWifi()/usageClientPoll() a cada frame porque, sem o
+// loop() principal rodando ainda, ninguém mais chamaria essas funções
+// enquanto essa tela está em pé.
 void uiShowLoading() {
   const int W = tft.width();
   const int H = tft.height();
@@ -91,8 +100,11 @@ void uiShowLoading() {
     gridTop += extra;
   }
 
+  // Duração de uma volta da barra de progresso (não é mais "0..100% e sai" —
+  // já que a espera pode levar mais ou menos que isso, a barra fica dando
+  // voltas em loop até a conexão realmente completar (ver g_hasFetchedOk).
   const int frames = 44;
-  for (int f = 0; f < frames; f++) {
+  for (int f = 0; !g_hasFetchedOk; f++) {
     // Titulo com dots animados (0..3) — igual ao "Carregando..." da web.
     int dots = f % 4;
     String title = String(uiTr().loadingTitle);
@@ -148,8 +160,9 @@ void uiShowLoading() {
       }
     }
 
-    // Barra de progresso inferior — cresce linear de 0..100%.
-    float prog = (float)(f + 1) / (float)frames;
+    // Barra de progresso inferior — cresce 0..100% e reinicia a cada volta
+    // (indeterminado: não sabemos quanto falta pra Wi-Fi/coletor responder).
+    float prog = (float)((f % frames) + 1) / (float)frames;
     int pw = (int)(barW * prog);
     tft.fillRoundRect(barX, barY, barW, barH, 1, COL_TRACK);
     if (pw > 0) {
@@ -159,6 +172,15 @@ void uiShowLoading() {
     }
 
     loadingDelay(34);
+
+    // Bombeia a conexão — sem o loop() principal rodando ainda, ninguém mais
+    // chamaria isso enquanto essa tela está em pé (ver comentário no topo).
+    usageClientEnsureWifi();
+    if (WiFi.status() == WL_CONNECTED) {
+      usageClientPoll();
+    }
   }
+  // Barra completa como beat final de "conectado", antes de sair pra Início.
+  tft.fillRoundRect(barX, barY, barW, barH, 1, COL_ACCENT);
   loadingDelay(100);
 }
