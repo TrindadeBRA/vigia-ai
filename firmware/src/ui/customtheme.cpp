@@ -111,6 +111,10 @@ struct ThemeCountdown
   float x = 0.5f;
   float y = 0.88f;
   float scale = 1.0f;
+  // Cor do círculo (substitui o amarelo padrão); o check verde de sucesso
+  // continua fixo — ver drawCountdownBadgeAt em ui/layout.cpp.
+  bool hasColor = false;
+  uint16_t color = 0;
 };
 
 enum ThemeBgKind : uint8_t
@@ -333,6 +337,11 @@ static bool parseTheme(const String &json, CustomTheme &out)
     t.countdown.x = clampf(cd["x"] | 0.5f, 0.0f, 1.0f);
     t.countdown.y = clampf(cd["y"] | 0.88f, 0.0f, 1.0f);
     t.countdown.scale = clampf(cd["scale"] | 1.0f, 0.5f, 4.0f);
+    if (hexColorToRgb565(jsonText(cd["color"]), col))
+    {
+      t.countdown.hasColor = true;
+      t.countdown.color = col;
+    }
   }
 
   for (JsonVariantConst it : doc["icons"].as<JsonArrayConst>())
@@ -2225,8 +2234,23 @@ static void drawThemeCountdown(const ThemeCountdown &c)
   int cy = (int)(c.y * tft.height());
   const int box = r * 2 + 4;
   clampBoxCenter(cx, cy, box, box, tft.width(), tft.height());
-  eraseStaleRect(g_theme, g_countdownRect, cx - box / 2, cy - box / 2, box, box);
-  drawCountdownBadgeAt(cx, cy, countdownSeconds(), r);
+  const int nx0 = cx - box / 2;
+  const int ny0 = cy - box / 2;
+  // drawCountdownBadgeAt() sempre pinta um círculo OPACO do mesmo tamanho —
+  // só precisa restaurar o fundo (leitura de LittleFS) quando a caixa muda
+  // de posição/tamanho (arrastou/mudou escala) ou no primeiro desenho. Sem
+  // esse atalho, o tick de 1x/s deste selo — bem mais frequente que
+  // qualquer outro widget do tema, que só redesenha a cada refresh de dado
+  // (~60s) — fazia leitura de flash a cada segundo e competia com o
+  // usageClientPoll() pelo loop(), instabilizando o SSE especificamente
+  // com o contador ligado.
+  const bool sameBox = g_countdownRect.valid && g_countdownRect.x0 == nx0 && g_countdownRect.y0 == ny0 &&
+                        g_countdownRect.w == box && g_countdownRect.h == box;
+  if (!sameBox)
+  {
+    eraseStaleRect(g_theme, g_countdownRect, nx0, ny0, box, box);
+  }
+  drawCountdownBadgeAt(cx, cy, countdownSeconds(), r, c.hasColor, c.color);
 }
 
 void paintCustomHome()

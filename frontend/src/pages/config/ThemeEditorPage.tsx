@@ -22,6 +22,7 @@ import { ThemeIOButtons } from "./themeEditor/ThemeIOButtons";
 import {
   formatClock,
   isBareLoopback,
+  readableTextOn,
   themeToJson,
   uid,
   useThemeDraft,
@@ -406,11 +407,13 @@ export default function ThemeEditorPage() {
                   onDrag={(x, y) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, x, y } }))}
                 >
                   <div
-                    className="flex items-center justify-center rounded-full bg-[#f5c542] font-mono font-bold leading-none text-black"
+                    className="flex items-center justify-center rounded-full font-mono font-bold leading-none"
                     style={{
                       width: `${22 * theme.countdown.scale * zoom}px`,
                       height: `${22 * theme.countdown.scale * zoom}px`,
                       fontSize: `${11 * theme.countdown.scale * zoom}px`,
+                      background: theme.countdown.color || "#f5c542",
+                      color: readableTextOn(theme.countdown.color || "#f5c542"),
                     }}
                   >
                     {Math.max(1, 60 - now.getSeconds())}
@@ -749,6 +752,7 @@ export default function ThemeEditorPage() {
             <Card title={c.countdown}>
               <Checkbox label={c.countdownEnabled} checked={theme.countdown.enabled} onChange={(e) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: e.target.checked } }))} />
               <ScaleField label={c.size} value={theme.countdown.scale} onChange={(v) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, scale: v } }))} />
+              <ColorField label={c.color} value={theme.countdown.color} onChange={(v) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, color: v } }))} noneLabel={c.colorNone} lang={lang} />
               <p className={cfgStatus}>{c.countdownHint}</p>
             </Card>
           ) : selectedText ? (

@@ -422,7 +422,7 @@ int headerDisplayKey(int secs, bool showCheck)
 // bem-sucedido, mostra um check verde no lugar do numero. `r` default (11)
 // preserva o tamanho de sempre no header; chamadores maiores (ex.: elemento
 // de tema, ver ui/customtheme.cpp) pedem fonte maior pra caber no circulo.
-void drawCountdownBadgeAt(int cx, int cy, int secs, int r)
+void drawCountdownBadgeAt(int cx, int cy, int secs, int r, bool hasColor, uint16_t color)
 {
   bool showCheck = showFetchOkCheck();
 
@@ -431,7 +431,16 @@ void drawCountdownBadgeAt(int cx, int cy, int secs, int r)
     return;
   }
 
-  uint16_t bg = showCheck ? COL_GOOD : COL_BADGE_YELLOW;
+  uint16_t bg = showCheck ? COL_GOOD : (hasColor ? color : COL_BADGE_YELLOW);
+  // Contraste automático (mesmo peso de luma usado em scaleThemeIcon, ui/customtheme.cpp)
+  // — só entra em jogo com cor customizada; o header padrão continua com COL_INVERSE fixo.
+  uint16_t fg = COL_INVERSE;
+  if (hasColor && !showCheck)
+  {
+    int r5 = (bg >> 11) & 0x1F, g6 = (bg >> 5) & 0x3F, b5 = bg & 0x1F;
+    int luma = (r5 * 8 * 30 + g6 * 4 * 59 + b5 * 8 * 11) / 100;
+    fg = luma > 140 ? 0x0000 : 0xFFFF;
+  }
   tft.fillCircle(cx, cy, r, bg);
   tft.drawCircle(cx, cy, r, COL_BG);
 
@@ -445,7 +454,7 @@ void drawCountdownBadgeAt(int cx, int cy, int secs, int r)
     snprintf(buf, sizeof(buf), "%d", secs > 99 ? 99 : secs);
     const uint8_t font = r >= 28 ? 4 : 2;
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(COL_INVERSE, bg);
+    tft.setTextColor(fg, bg);
     tft.drawString(buf, cx, cy + 1, font);
   }
 }

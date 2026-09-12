@@ -168,7 +168,9 @@ int adsenseWorstIdx();
 int countdownSeconds();
 bool showFetchOkCheck();
 int headerDisplayKey(int secs, bool showCheck);
-void drawCountdownBadgeAt(int cx, int cy, int secs, int r = 11);
+// hasColor/color: cor customizada do círculo (tema); sem isso usa o amarelo
+// padrão do header. O check verde de sucesso continua fixo (semântico).
+void drawCountdownBadgeAt(int cx, int cy, int secs, int r = 11, bool hasColor = false, uint16_t color = 0);
 
 void layoutContent();
 void drawHeader();

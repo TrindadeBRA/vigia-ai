@@ -20,7 +20,7 @@ export type ThemeClock = { enabled: boolean; x: number; y: number; scale: number
 // Selo de contagem regressiva até o próximo refresh — mesmas cores fixas
 // (amarelo/verde) do selo do header do firmware (ver drawCountdownBadgeAt em
 // ui/layout.cpp), por isso sem campo de cor aqui, diferente do relógio/ícones.
-export type ThemeCountdown = { enabled: boolean; x: number; y: number; scale: number };
+export type ThemeCountdown = { enabled: boolean; x: number; y: number; scale: number; color: string | null };
 export type ThemeBg = { color: string };
 export type ThemeState = { background: ThemeBg; clock: ThemeClock; countdown: ThemeCountdown; icons: ThemeIcon[]; texts: ThemeText[] };
 
@@ -41,7 +41,7 @@ export type WallpaperItem = {
 export const DEFAULT_THEME: ThemeState = {
   background: { color: "#0f0f0f" },
   clock: { enabled: true, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
-  countdown: { enabled: false, x: 0.9, y: 0.88, scale: 1 },
+  countdown: { enabled: false, x: 0.9, y: 0.88, scale: 1, color: null },
   icons: [],
   texts: [],
 };
@@ -52,6 +52,18 @@ const SAVE_DEBOUNCE_MS = 500;
 
 export function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
+}
+
+// Contraste simples (mesmo peso de luma da placa, ver drawCountdownBadgeAt
+// em firmware/src/ui/layout.cpp) — só pro preview do selo do contador
+// acompanhar visualmente o que o dispositivo vai desenhar.
+export function readableTextOn(hex: string): "#000000" | "#ffffff" {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  const luma = (r * 30 + g * 59 + b * 11) / 100;
+  return luma > 140 ? "#000000" : "#ffffff";
 }
 
 export function isBareLoopback(ip: string): boolean {
@@ -84,6 +96,7 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
     x: merged.countdown?.x ?? DEFAULT_THEME.countdown.x,
     y: merged.countdown?.y ?? DEFAULT_THEME.countdown.y,
     scale: merged.countdown?.scale ?? DEFAULT_THEME.countdown.scale,
+    color: merged.countdown?.color ?? null,
   };
   merged.icons = (merged.icons || []).map((icon, idx) => ({
     id: icon.id || `i${idx}`,
@@ -202,6 +215,7 @@ export function themeToJson(t: ThemeState, hasWallpaper: boolean, gif?: { frame_
       x: t.countdown.x,
       y: t.countdown.y,
       scale: t.countdown.scale,
+      ...(t.countdown.color ? { color: t.countdown.color } : {}),
     },
     icons: t.icons.map((i) => ({
       provider: i.provider,
