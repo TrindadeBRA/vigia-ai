@@ -8,15 +8,32 @@ export const METRICS: Record<string, Array<[string, string, string]>> = {
     ["weekly_percent", "Semana", "percent"],
     ["sonnet_percent", "Sonnet (semana)", "percent"],
     ["opus_percent", "Opus (semana)", "percent"],
+    ["session_resets_at", "Sessão 5h", "reset"],
+    ["weekly_resets_at", "Semana", "reset"],
+    ["sonnet_resets_at", "Sonnet (semana)", "reset"],
+    ["opus_resets_at", "Opus (semana)", "reset"],
   ],
   gpt: [
     ["session_percent", "Sessão", "percent"],
     ["weekly_percent", "Semana", "percent"],
+    ["session_resets_at", "Sessão", "reset"],
+    ["weekly_resets_at", "Semana", "reset"],
   ],
   cursor: [
     ["percent", "Uso do plano", "percent"],
     ["other_percent", "Outros modelos", "percent"],
     ["remaining_cents", "Saldo restante", "cents"],
+    ["cycle_end", "Ciclo do plano", "reset"],
+  ],
+  opencode: [
+    ["rolling_percent", "Rolling", "percent"],
+    ["weekly_percent", "Semana", "percent"],
+    ["monthly_percent", "Mês", "percent"],
+    ["percent", "Uso", "percent"],
+    ["remaining_cents", "Saldo Zen", "cents"],
+    ["rolling_resets_at", "Rolling", "reset"],
+    ["weekly_resets_at", "Semana", "reset"],
+    ["monthly_resets_at", "Mês", "reset"],
   ],
   openrouter: [
     ["percent", "Uso", "percent"],
@@ -25,13 +42,6 @@ export const METRICS: Record<string, Array<[string, string, string]>> = {
   deepseek: [
     ["percent", "Uso", "percent"],
     ["remaining_cents", "Saldo restante", "cents"],
-  ],
-  opencode: [
-    ["rolling_percent", "Rolling", "percent"],
-    ["weekly_percent", "Semana", "percent"],
-    ["monthly_percent", "Mês", "percent"],
-    ["percent", "Uso", "percent"],
-    ["remaining_cents", "Saldo Zen", "cents"],
   ],
   fal: [
     ["remaining_cents", "Saldo restante", "cents"],
@@ -158,7 +168,7 @@ function calendarEventTime(ev: Record<string, unknown>): number | null {
 function evaluateCalendarRule(
   rule: Record<string, unknown>,
   payload: Record<string, unknown>,
-  armed: Record<string, boolean>,
+  armed: Record<string, boolean | string>,
   events: Array<Record<string, unknown>>,
 ): void {
   const metric = String(rule.metric);
@@ -235,7 +245,7 @@ function evaluateCalendarRule(
 export function evaluate(
   payload: Record<string, unknown>,
   rules: Array<Record<string, unknown>>,
-  armed: Record<string, boolean>,
+  armed: Record<string, boolean | string>,
 ): Array<Record<string, unknown>> {
   const events: Array<Record<string, unknown>> = [];
   for (const rule of rules) {
@@ -265,8 +275,29 @@ export function evaluate(
       const value = acc[String(rule.metric)];
       if (value === null || value === undefined) continue;
       const stateKey = `${rule.id}:${accountId}`;
+
+      if (kind === "reset") {
+        // não é limiar: dispara quando o campo de reset muda de valor
+        // (a cota realmente zerou/renovou), não na primeira leitura.
+        const current = String(value);
+        const prev = armed[stateKey];
+        const hadPrev = typeof prev === "string";
+        armed[stateKey] = current;
+        if (hadPrev && prev !== current) {
+          events.push({
+            rule,
+            provider,
+            account_id: accountId,
+            account_label: (acc.label as string) ?? "",
+            value: current,
+            resets_at: current,
+          });
+        }
+        continue;
+      }
+
       const firedNow = fired(kind, Number(value), Number(rule.threshold));
-      const wasArmed = armed[stateKey] ?? false;
+      const wasArmed = armed[stateKey] === true;
       if (firedNow && !wasArmed) {
         const resetField = metricResetField(provider, String(rule.metric));
         const resetsAt = resetField ? acc[resetField] : null;
@@ -313,6 +344,14 @@ export function formatAlarmNotification(event: Record<string, unknown>): string 
   const kind = metricKind(provider, String(rule.metric)) ?? "percent";
   const providerName = escapeHtml(PROVIDER_NAMES[provider] ?? provider);
   const metricName = escapeHtml(metricLabel(provider, String(rule.metric)) ?? String(rule.metric));
+
+  if (kind === "reset") {
+    const lines = [`🔄 <b>${providerName}</b>`, "", `🔁 Renovou: <b>${metricName}</b>`];
+    const when = fmtResetWhen(event.resets_at);
+    if (when) lines.push(`🕐 Próximo reset em <b>${escapeHtml(when)}</b>`);
+    return lines.join("\n");
+  }
+
   const threshold = Number(rule.threshold);
 
   let detail: string;
@@ -340,7 +379,7 @@ export function formatAlarmNotification(event: Record<string, unknown>): string 
 }
 
 export class AlarmEngine {
-  private _armed: Record<string, boolean> = {};
+  private _armed: Record<string, boolean | string> = {};
 
   handlePayload(payload: Record<string, unknown>): void {
     const cfg = load() as Record<string, unknown>;

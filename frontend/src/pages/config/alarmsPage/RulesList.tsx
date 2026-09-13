@@ -137,7 +137,7 @@ function RuleRow({
   const suggested = suggestLabel(c, rule.provider, metric, rule.threshold, ruleUnit);
   const customName = rule.label.trim() && rule.label.trim() !== suggested.trim() ? rule.label.trim() : "";
   const metricLabel = metric?.label || rule.metric;
-  const thresholdLabel = formatThreshold(metric, rule.threshold, ruleUnit);
+  const thresholdLabel = formatThreshold(metric, rule.threshold, ruleUnit, c);
 
   if (editing) {
     return (
@@ -151,12 +151,14 @@ function RuleRow({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <TextField label={c.label} placeholder={c.labelPh} value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
-            <TextField
-              label={rule.provider === "calendar" ? c.calendarThreshold : c.threshold}
-              type="number"
-              value={editThreshold}
-              onChange={(e) => setEditThreshold(Number(e.target.value))}
-            />
+            {metric?.kind !== "reset" ? (
+              <TextField
+                label={rule.provider === "calendar" ? c.calendarThreshold : c.threshold}
+                type="number"
+                value={editThreshold}
+                onChange={(e) => setEditThreshold(Number(e.target.value))}
+              />
+            ) : null}
           </div>
           {rule.provider === "calendar" ? (
             <SelectField

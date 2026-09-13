@@ -84,6 +84,27 @@ describe("alarms evaluate", () => {
     expect(events.length).toBe(1);
     expect(events[0].resets_at).toBe("04/09 03h45");
   });
+
+  it("reset metric does not fire on first reading", () => {
+    const armed: Record<string, boolean | string> = {};
+    const pl = { claude: [{ id: "local", label: "", ok: true, error: null, session_resets_at: "31/08 18h00" }] };
+    const rules = [rule({ metric: "session_resets_at", threshold: 0 })];
+    const events = evaluate(pl as Record<string, unknown>, rules, armed);
+    expect(events).toEqual([]);
+  });
+
+  it("reset metric fires when the reset field changes", () => {
+    const armed: Record<string, boolean | string> = {};
+    const rules = [rule({ metric: "session_resets_at", threshold: 0 })];
+    evaluate({ claude: [{ id: "local", label: "", ok: true, error: null, session_resets_at: "31/08 18h00" }] }, rules, armed);
+    let events = evaluate({ claude: [{ id: "local", label: "", ok: true, error: null, session_resets_at: "31/08 18h00" }] }, rules, armed);
+    expect(events).toEqual([]);
+    events = evaluate({ claude: [{ id: "local", label: "", ok: true, error: null, session_resets_at: "31/08 23h00" }] }, rules, armed);
+    expect(events.length).toBe(1);
+    expect(events[0].resets_at).toBe("31/08 23h00");
+    events = evaluate({ claude: [{ id: "local", label: "", ok: true, error: null, session_resets_at: "31/08 23h00" }] }, rules, armed);
+    expect(events).toEqual([]);
+  });
 });
 
 describe("formatAlarmNotification", () => {
@@ -124,6 +145,20 @@ describe("formatAlarmNotification", () => {
     };
     expect(formatAlarmNotification(event as Record<string, unknown>)).toBe(
       "⚠️ <b>fal.ai</b>\n\n💰 Saldo de <b>$10.00 da cota Saldo restante</b>",
+    );
+  });
+
+  it("reset", () => {
+    const event = {
+      rule: rule({ metric: "session_resets_at", threshold: 0, label: "" }),
+      provider: "claude",
+      account_id: "local",
+      account_label: "",
+      value: "31/08 21h00",
+      resets_at: "31/08 21h00",
+    };
+    expect(formatAlarmNotification(event as Record<string, unknown>)).toBe(
+      "🔄 <b>Claude</b>\n\n🔁 Renovou: <b>Sessão 5h</b>\n🕐 Próximo reset em <b>31/08 21h00</b>",
     );
   });
 

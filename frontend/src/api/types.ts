@@ -625,7 +625,7 @@ export type DevicePublic = {
   height: number | null;
 };
 
-export type AlarmMetricKind = "percent" | "cents" | "calendar" | "gb" | "percent_free";
+export type AlarmMetricKind = "percent" | "cents" | "calendar" | "gb" | "percent_free" | "reset";
 
 export type AlarmMetric = { key: string; label: string; kind: AlarmMetricKind };
 

@@ -52,11 +52,15 @@ export type AlarmsCopy = {
   triggerHintCalendar: (n: number, unit: string) => string;
   triggerHintGb: (n: number) => string;
   triggerHintPercentFree: (n: number) => string;
+  triggerHintReset: (metricLabel: string) => string;
   suggestUsage: (provider: string, pct: number, metricLabel: string) => string;
   suggestBalance: (provider: string, amount: string, metricLabel: string) => string;
   suggestCalendar: (n: number, unit: string, metricLabel: string) => string;
   suggestStorageGb: (provider: string, gb: number, metricLabel: string) => string;
   suggestStorageFree: (provider: string, pct: number, metricLabel: string) => string;
+  suggestReset: (provider: string, metricLabel: string) => string;
+  resetBadge: string;
+  metricOptionReset: (metricLabel: string) => string;
   edit: string;
   save: string;
   saving: string;
@@ -146,6 +150,7 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     },
     triggerHintGb: (n) => `dispara quando o espaço livre cair a ${n} GB`,
     triggerHintPercentFree: (n) => `dispara quando o espaço livre cair a ${n}%`,
+    triggerHintReset: (metricLabel) => `avisa assim que "${metricLabel}" for renovado(a) — ex. zerou a janela de 5h ou a semana`,
     suggestUsage: (provider, pct, metricLabel) => `${provider} - Uso de ${pct}% da cota ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - Saldo de ${amount} da cota ${metricLabel}`,
     suggestCalendar: (n, unit, metricLabel) => {
@@ -154,6 +159,9 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     },
     suggestStorageGb: (provider, gb, metricLabel) => `${provider} - ${metricLabel} abaixo de ${gb} GB`,
     suggestStorageFree: (provider, pct, metricLabel) => `${provider} - ${metricLabel} abaixo de ${pct}% livre`,
+    suggestReset: (provider, metricLabel) => `${provider} - ${metricLabel} resetou`,
+    resetBadge: "🔄 reset",
+    metricOptionReset: (metricLabel) => `${metricLabel} (aviso de reset)`,
     edit: "Editar",
     save: "Salvar",
     saving: "Salvando…",
@@ -241,6 +249,7 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     },
     triggerHintGb: (n) => `fires when free space drops to ${n} GB`,
     triggerHintPercentFree: (n) => `fires when free space drops to ${n}%`,
+    triggerHintReset: (metricLabel) => `notifies as soon as "${metricLabel}" resets — e.g. the 5h window or the weekly cap zeroed out`,
     suggestUsage: (provider, pct, metricLabel) => `${provider} - ${pct}% usage of ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - ${metricLabel} balance at ${amount}`,
     suggestCalendar: (n, unit, metricLabel) => {
@@ -249,6 +258,9 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     },
     suggestStorageGb: (provider, gb, metricLabel) => `${provider} - ${metricLabel} below ${gb} GB`,
     suggestStorageFree: (provider, pct, metricLabel) => `${provider} - ${metricLabel} below ${pct}% free`,
+    suggestReset: (provider, metricLabel) => `${provider} - ${metricLabel} reset`,
+    resetBadge: "🔄 reset",
+    metricOptionReset: (metricLabel) => `${metricLabel} (reset alert)`,
     edit: "Edit",
     save: "Save",
     saving: "Saving…",
@@ -336,6 +348,7 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     },
     triggerHintGb: (n) => `dispara cuando el espacio libre baje a ${n} GB`,
     triggerHintPercentFree: (n) => `dispara cuando el espacio libre baje a ${n}%`,
+    triggerHintReset: (metricLabel) => `avisa en cuanto "${metricLabel}" se renueve — ej. se reinició la ventana de 5h o la semana`,
     suggestUsage: (provider, pct, metricLabel) => `${provider} - Uso de ${pct}% de la cuota ${metricLabel}`,
     suggestBalance: (provider, amount, metricLabel) => `${provider} - Saldo de ${amount} de la cuota ${metricLabel}`,
     suggestCalendar: (n, unit, metricLabel) => {
@@ -344,6 +357,9 @@ export const ALARMS_STR: Record<Lang, AlarmsCopy> = {
     },
     suggestStorageGb: (provider, gb, metricLabel) => `${provider} - ${metricLabel} por debajo de ${gb} GB`,
     suggestStorageFree: (provider, pct, metricLabel) => `${provider} - ${metricLabel} por debajo de ${pct}% libre`,
+    suggestReset: (provider, metricLabel) => `${provider} - ${metricLabel} se reinició`,
+    resetBadge: "🔄 reinicio",
+    metricOptionReset: (metricLabel) => `${metricLabel} (aviso de reinicio)`,
     edit: "Editar",
     save: "Guardar",
     saving: "Guardando…",

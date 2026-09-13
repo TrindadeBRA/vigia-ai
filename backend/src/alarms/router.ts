@@ -21,16 +21,21 @@ export async function createAlarmsRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/api/alarms", { schema: { tags: ["Alarmes"] } }, async (request, reply) => {
     const body = request.body as Record<string, unknown> | null;
-    if (!body || typeof body.provider !== "string" || typeof body.metric !== "string" || body.threshold === undefined) {
-      return reply.code(400).send({ ok: false, error: "provider, metric, threshold obrigatórios" });
+    if (!body || typeof body.provider !== "string" || typeof body.metric !== "string") {
+      return reply.code(400).send({ ok: false, error: "provider, metric obrigatórios" });
     }
     const provider = String(body.provider);
     const metric = String(body.metric);
-    const threshold = Number(body.threshold);
-    if (Number.isNaN(threshold)) return reply.code(400).send({ ok: false, error: "threshold inválido" });
-    if (metricKind(provider, metric) === null) {
+    const kind = metricKind(provider, metric);
+    if (kind === null) {
       return reply.code(400).send({ ok: false, error: `métrica '${metric}' inválida para o provedor '${provider}'` });
     }
+    // alarmes de "reset" não têm limiar: disparam quando o campo de reset muda de valor
+    const threshold = kind === "reset" ? 0 : Number(body.threshold);
+    if (kind !== "reset" && body.threshold === undefined) {
+      return reply.code(400).send({ ok: false, error: "threshold obrigatório" });
+    }
+    if (Number.isNaN(threshold)) return reply.code(400).send({ ok: false, error: "threshold inválido" });
     if (provider === "calendar") {
       if (!Number.isFinite(threshold) || threshold <= 0) return reply.code(400).send({ ok: false, error: "limiar deve ser > 0" });
       const unit = normalizeCalendarUnit((body as Record<string, unknown>).threshold_unit ?? (body as Record<string, unknown>).unit ?? "minutes");

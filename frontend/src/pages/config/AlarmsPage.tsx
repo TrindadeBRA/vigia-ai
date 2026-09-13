@@ -86,6 +86,7 @@ export default function AlarmsPage() {
   const addAction = useRequest();
 
   const currentMetric = data?.metrics[provider]?.find((m) => m.key === metric);
+  const isResetKind = currentMetric?.kind === "reset";
   const tg = telegram.status;
   const tgBadge = tg?.chats.length
     ? { state: "ok" as const, label: c.telegramConnected }
@@ -215,15 +216,17 @@ export default function AlarmsPage() {
                 label={c.metric}
                 value={metric}
                 onChange={(e) => setMetric(e.target.value)}
-                options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.label }))}
+                options={(data.metrics[provider] || []).map((m) => ({ value: m.key, label: m.kind === "reset" ? c.metricOptionReset(m.label) : m.label }))}
                 placeholder="Buscar métrica..."
               />
-              <TextField
-                label={c.threshold}
-                type="number"
-                value={threshold}
-                onChange={(e) => setThreshold(Number(e.target.value))}
-              />
+              {!isResetKind ? (
+                <TextField
+                  label={c.threshold}
+                  type="number"
+                  value={threshold}
+                  onChange={(e) => setThreshold(Number(e.target.value))}
+                />
+              ) : null}
             </ActionRow>
             <ActionRow>
               <TextField
@@ -241,7 +244,7 @@ export default function AlarmsPage() {
                 onClick={() =>
                   addAction.run(
                     async () => {
-                      const res = await createAlarm({ provider, metric, threshold, label });
+                      const res = await createAlarm({ provider, metric, threshold: isResetKind ? 0 : threshold, label });
                       if (res.ok) {
                         setLabel("");
                         setLabelDirty(false);

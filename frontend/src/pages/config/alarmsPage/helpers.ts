@@ -28,10 +28,11 @@ export function ruleHint(c: typeof ALARMS_STR.pt, metric: AlarmMetric | undefine
   if (metric.kind === "calendar") return c.triggerHintCalendar(threshold, unit ?? "minutes");
   if (metric.kind === "gb") return c.triggerHintGb(threshold);
   if (metric.kind === "percent_free") return c.triggerHintPercentFree(threshold);
+  if (metric.kind === "reset") return c.triggerHintReset(metric.label);
   return metric.kind === "percent" ? c.triggerHintPercent(threshold) : c.triggerHintCents(threshold);
 }
 
-export function formatThreshold(metric: AlarmMetric | undefined, threshold: number, unit?: string): string {
+export function formatThreshold(metric: AlarmMetric | undefined, threshold: number, unit?: string, c?: typeof ALARMS_STR.pt): string {
   if (metric?.kind === "calendar") {
     const u = unit === "days" ? (threshold === 1 ? "1 dia" : `${threshold}d`) : unit === "hours" ? (threshold === 1 ? "1h" : `${threshold}h`) : threshold === 1 ? "1min" : `${threshold}min`;
     return `${u} antes`;
@@ -39,6 +40,7 @@ export function formatThreshold(metric: AlarmMetric | undefined, threshold: numb
   if (metric?.kind === "cents") return `$${(threshold / 100).toFixed(2)}`;
   if (metric?.kind === "gb") return `${threshold} GB`;
   if (metric?.kind === "percent_free") return `${threshold}% livre`;
+  if (metric?.kind === "reset") return c?.resetBadge ?? "🔄";
   return `${threshold}%`;
 }
 
@@ -50,7 +52,7 @@ export function ruleSearchText(
   const providerName = PROVIDER_LABEL[rule.provider] || rule.provider;
   const metricName = metric?.label || rule.metric;
   const title = rule.label || suggestLabel(c, rule.provider, metric, rule.threshold, (rule as unknown as { threshold_unit?: string }).threshold_unit);
-  return `${providerName} ${metricName} ${title} ${formatThreshold(metric, rule.threshold, (rule as unknown as { threshold_unit?: string }).threshold_unit)}`.toLowerCase();
+  return `${providerName} ${metricName} ${title} ${formatThreshold(metric, rule.threshold, (rule as unknown as { threshold_unit?: string }).threshold_unit, c)}`.toLowerCase();
 }
 
 export function suggestLabel(c: typeof ALARMS_STR.pt, provider: string, metric: AlarmMetric | undefined, threshold: number, unit?: string): string {
@@ -59,6 +61,7 @@ export function suggestLabel(c: typeof ALARMS_STR.pt, provider: string, metric: 
   if (!metric) return "";
   if (metric.kind === "calendar") return c.suggestCalendar(threshold, unit ?? "minutes", metric.label);
   const providerName = PROVIDER_LABEL[provider] || provider;
+  if (metric.kind === "reset") return c.suggestReset(providerName, metric.label);
   return metric.kind === "percent"
     ? c.suggestUsage(providerName, threshold, metric.label)
     : c.suggestBalance(providerName, `$${(threshold / 100).toFixed(2)}`, metric.label);
