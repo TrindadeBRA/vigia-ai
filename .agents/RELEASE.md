@@ -223,12 +223,21 @@ Homebrew (seção abaixo) evita o problema por completo**, sem custo.
 
 ## Distribuição via Homebrew Cask (evita o Gatekeeper de vez, de graça)
 
-Tap própria: [`TrindadeBRA/homebrew-vigia-ai`](https://github.com/TrindadeBRA/homebrew-vigia-ai)
-(repo separado — padrão do Homebrew, precisa do prefixo `homebrew-`).
-Instalação do usuário final:
+O cask (`Casks/vigia-ai.rb`) mora **neste mesmo repo**, na raiz — não numa
+tap separada. Já existiu uma tap própria (`TrindadeBRA/homebrew-vigia-ai`,
+repo separado, padrão do Homebrew de precisar do prefixo `homebrew-`), mas
+foi apagada: dava problema de credencial/permissão cruzada toda vez que o
+`./dev cask` precisava rodar de um ambiente diferente de onde a tap tinha
+sido autorizada (SSH/PAT com acesso a um repo mas não ao outro). Hospedando
+o cask no repo principal, `./dev cask` só precisa das credenciais que já
+dão push aqui — sem repo extra, sem autorização cruzada pra manter em dia.
+
+Como o repo não segue o prefixo `homebrew-`, o `brew tap` não pode usar o
+atalho curto (`usuário/repo` expande sozinho pra `homebrew-repo`) — a
+instalação passa a URL completa:
 
 ```bash
-brew tap TrindadeBRA/vigia-ai
+brew tap TrindadeBRA/vigia-ai https://github.com/TrindadeBRA/vigia-ai
 brew install --cask vigia-ai
 ```
 
@@ -259,8 +268,10 @@ na própria string (mecanismo genérico do Homebrew, funciona em qualquer
 campo `args`/`command`/etc., não só nos dedicados a path).
 
 **Testar a atualização localmente logo depois do `./dev cask`**: o `brew`
-deste Mac tem o clone da tap em cache — `./dev cask` empurra o commit novo
-pro `origin` da tap, mas isso não invalida esse cache local. Rodar
+deste Mac tem o clone da tap em cache (mesmo hospedada aqui, o `brew tap`
+faz seu próprio clone à parte do checkout de trabalho) — `./dev cask`
+empurra o commit novo pro `origin` deste repo, mas isso não invalida esse
+cache local do brew. Rodar
 `brew upgrade --cask vigia-ai` direto depois do `./dev cask` dá
 `Warning: Not upgrading vigia-ai, the latest version is already installed`
 mesmo com a tap já atualizada no GitHub. **Rode `brew update` antes** (ele
@@ -286,11 +297,14 @@ ou dentro do próprio app em Configurações → Aparência → Versões
 
 **Atualizar a fórmula a cada release**: `./dev cask` (depois que a matriz
 de 4 runners do `./dev release` terminar) — baixa os `.dmg` arm64/intel do
-release, recalcula os `sha256`, e dá push na tap usando o `gh`/git já
-autenticados nesta máquina. Não depende de secret novo no CI porque roda
-localmente, não dentro do GitHub Actions (empurrar pra um repo diferente
-de dentro de uma Action exigiria um PAT com permissão cross-repo — o
-`GITHUB_TOKEN` automático só enxerga o repo onde a Action roda).
+release, recalcula os `sha256`, edita `Casks/vigia-ai.rb` e comita/dá push
+(em `develop`, com fast-forward pra `main` na sequência — é de lá que o
+`brew tap` lê). Roda localmente (não dentro do `release-desktop.yml`) de
+propósito: a matriz de 4 runners termina minutos depois da tag, e o cask
+só faz sentido depois que os `.dmg` já estão no release — rodar isso do
+mesmo workflow exigiria esperar/sondar os outros jobs terminarem, bem mais
+complicado que só rodar `./dev cask` uma vez, manualmente, quando a matriz
+já acabou.
 
 **Homebrew recente exige "trust" pra taps de terceiros** — na primeira vez
 (e depois de mudanças na fórmula), pode aparecer:

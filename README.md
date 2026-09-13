@@ -225,7 +225,7 @@ no componente ou hook — não passa por um client HTTP centralizado):
 **macOS, via Homebrew (recomendado)** — instala sem o aviso de "app danificado" do Gatekeeper (veja o porquê logo abaixo):
 
 ```bash
-brew tap TrindadeBRA/vigia-ai
+brew tap TrindadeBRA/vigia-ai https://github.com/TrindadeBRA/vigia-ai
 brew install --cask vigia-ai
 ```
 

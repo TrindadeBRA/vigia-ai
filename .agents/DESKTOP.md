@@ -8,10 +8,10 @@ Decisões: [`DECISOES.md`](DECISOES.md).
 
 ## Instalar
 
-**macOS**: `brew tap TrindadeBRA/vigia-ai && brew install --cask vigia-ai`
+**macOS**: `brew tap TrindadeBRA/vigia-ai https://github.com/TrindadeBRA/vigia-ai && brew install --cask vigia-ai`
 (recomendado — evita o aviso de Gatekeeper, ver seção "Assinatura de
-código"). Fórmula em [`TrindadeBRA/homebrew-vigia-ai`](https://github.com/TrindadeBRA/homebrew-vigia-ai),
-atualizada por `./dev cask` a cada release ([RELEASE.md](RELEASE.md)).
+código"). Fórmula em `Casks/vigia-ai.rb`, neste mesmo repo, atualizada por
+`./dev cask` a cada release ([RELEASE.md](RELEASE.md)).
 
 **Linux — um comando (recomendado):**
 

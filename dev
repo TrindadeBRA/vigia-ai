@@ -67,7 +67,7 @@ uso: ./dev <comando>
   ./dev release 1.0.2   sobe a versão antes de taguear
   ./dev release --dry   roda a matriz sem tocar em Releases (artifacts, 14 dias)
   ./dev release --status  acompanha a última execução
-  ./dev cask             atualiza a Homebrew tap (depois que a matriz terminar)
+  ./dev cask             atualiza Casks/vigia-ai.rb (depois que a matriz terminar)
 
 Ctrl+C encerra os processos que este script subiu.
 EOF
@@ -504,7 +504,6 @@ cmd_app_build() {
 }
 
 RELEASE_WORKFLOW="release-desktop.yml"
-HOMEBREW_TAP_REPO="git@github.com:TrindadeBRA/homebrew-vigia-ai.git"
 
 # A versão que o electron-builder usa para nomear o release. NÃO é a tag: ele
 # lê o package.json. Se os dois divergirem, os artefatos vão parar num release
@@ -658,12 +657,19 @@ ver .agents/RELEASE.md):
 MSG
 }
 
-# Atualiza a fórmula na tap TrindadeBRA/homebrew-vigia-ai: baixa os .dmg do
-# release, recalcula sha256 e dá push. Roda DEPOIS que a matriz do
-# ./dev release terminar (precisa dos assets já publicados). Usa as
-# credenciais git/gh já autenticadas nesta máquina — sem secret novo no CI.
+# Atualiza Casks/vigia-ai.rb NESTE MESMO repo: baixa os .dmg do release,
+# recalcula sha256 e dá push. Roda DEPOIS que a matriz do ./dev release
+# terminar (precisa dos assets já publicados). Usa as credenciais git/gh já
+# autenticadas nesta máquina — sem secret novo no CI.
+#
+# O cask não vive numa tap separada (era TrindadeBRA/homebrew-vigia-ai —
+# repo deletado): sem repo próprio não tem problema de permissão/credencial
+# cruzada pra atualizar, e o "brew tap" aponta pra cá direto (ver
+# .agents/RELEASE.md e o README, seção Homebrew — o comando de instalação
+# passa a URL completa do repo em vez do atalho `usuário/repo`, já que este
+# repo não segue o prefixo `homebrew-` que o atalho exige).
 cmd_cask() {
-  local version="${1:-$(desktop_version)}" tag work
+  local version="${1:-$(desktop_version)}" tag work branch
   tag="v$version"
   ensure_gh
 
@@ -671,6 +677,8 @@ cmd_cask() {
     echo "erro: release $tag não encontrado (ainda rodando? veja: ./dev release --status)" >&2
     exit 1
   fi
+
+  branch="$(git -C "$ROOT_DIR" branch --show-current)"
 
   work="$(mktemp -d)"
   # `trap ... EXIT` setado numa função é global ao processo, não escopado a
@@ -687,10 +695,7 @@ cmd_cask() {
   sha_arm="$(shasum -a 256 "$work/Vigia-AI-${version}-arm64.dmg" | cut -d' ' -f1)"
   sha_intel="$(shasum -a 256 "$work/Vigia-AI-${version}.dmg" | cut -d' ' -f1)"
 
-  echo "== clonando a tap =="
-  git clone -q "$HOMEBREW_TAP_REPO" "$work/tap"
-
-  local cask="$work/tap/Casks/vigia-ai.rb"
+  local cask="$ROOT_DIR/Casks/vigia-ai.rb"
   sed -i.bak \
     -e "s/version \".*\"/version \"$version\"/" \
     -e "s/arm:   \"[a-f0-9]*\"/arm:   \"$sha_arm\"/" \
@@ -698,15 +703,26 @@ cmd_cask() {
     "$cask"
   rm -f "$cask.bak"
 
-  if git -C "$work/tap" diff --quiet; then
-    echo "tap já está em $version — nada a fazer."
+  if git -C "$ROOT_DIR" diff --quiet -- Casks/vigia-ai.rb; then
+    echo "cask já está em $version — nada a fazer."
     return 0
   fi
 
-  git -C "$work/tap" add Casks/vigia-ai.rb
-  git -C "$work/tap" commit -q -m "cask: vigia-ai $version"
-  git -C "$work/tap" push -q origin main
-  echo "== tap atualizada para $version =="
+  git -C "$ROOT_DIR" add Casks/vigia-ai.rb
+  git -C "$ROOT_DIR" commit -q -m "cask: vigia-ai $version"
+  git -C "$ROOT_DIR" push -q origin "$branch"
+
+  # O brew tap segue a branch padrão do repo (main) — sem isso o cask fica
+  # atualizado só em develop e brew update não vê a versão nova.
+  if [ "$branch" != "main" ]; then
+    echo "== atualizando main (o brew tap lê de lá) =="
+    git -C "$ROOT_DIR" checkout -q main
+    git -C "$ROOT_DIR" merge --ff-only "$branch"
+    git -C "$ROOT_DIR" push -q origin main
+    git -C "$ROOT_DIR" checkout -q "$branch"
+  fi
+
+  echo "== cask atualizado para $version =="
 }
 
 if [ $# -lt 1 ]; then
