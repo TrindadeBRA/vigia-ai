@@ -180,6 +180,20 @@ struct BrandEyeSpot
   int r = 0;
 };
 static BrandEyeSpot g_brandEyes[kMaxIcons];
+// Retângulo só da linha de "sub" (cronômetro/legenda) de cada métrica de um
+// card de provedor, guardado pelo último drawThemeCard() completo — usado
+// por customThemeTickResetCountdown() pra trocar só esse texto a cada
+// segundo sem repintar o card inteiro (ver eraseStaleRect: repintar o card
+// todo restaura o papel de parede por baixo primeiro, o que pisca).
+struct ThemeCardSubSlot
+{
+  bool valid = false;
+  int x = 0, y = 0, w = 0, h = 0;
+  uint16_t bgCol = 0;
+  bool transparent = false;
+};
+static ThemeCardSubSlot g_cardSub1[kMaxIcons];
+static ThemeCardSubSlot g_cardSub2[kMaxIcons];
 static ThemeWidgetRect g_clockRect;
 static ThemeWidgetRect g_countdownRect;
 static ThemeWidgetRect g_textRects[kMaxTexts];
@@ -220,6 +234,8 @@ void customThemeInvalidateBackground()
   for (int i = 0; i < kMaxIcons; i++)
   {
     g_iconRects[i].valid = false;
+    g_cardSub1[i].valid = false;
+    g_cardSub2[i].valid = false;
   }
   g_clockRect.valid = false;
   g_countdownRect.valid = false;
@@ -1747,8 +1763,11 @@ static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
 // mostra só o valor) — mesma forma de paintHomeMetric/paintNowMetric
 // (home.cpp/now.cpp), redesenhada aqui pro card solto do tema (largura e
 // posição livres, não presas a uma grade).
+// `outSubY`, se não-nulo, recebe o y onde a linha de sub-texto foi desenhada
+// (ou -1 se não houve linha separada, ex.: pct<0) — usado por drawThemeCard()
+// pra guardar o retângulo em g_cardSub1/g_cardSub2 (ver customThemeTickResetCountdown).
 static int drawThemeCardMetric(int x, int y, int w, const char *label, float pct, const String &sub,
-                                uint16_t bgCol, int barH, bool transparent = false)
+                                uint16_t bgCol, int barH, bool transparent = false, int *outSubY = nullptr)
 {
   const uint8_t font = 1;
   const int labelH = tft.fontHeight(font);
@@ -1760,6 +1779,10 @@ static int drawThemeCardMetric(int x, int y, int w, const char *label, float pct
   if (pct < 0)
   {
     tft.drawString(sub, x + w, y, font);
+    if (outSubY)
+    {
+      *outSubY = -1;
+    }
     return labelH;
   }
   tft.drawString(fmtPct(pct), x + w, y, font);
@@ -1767,11 +1790,19 @@ static int drawThemeCardMetric(int x, int y, int w, const char *label, float pct
   int h = labelH + 2 + barH;
   if (!sub.length())
   {
+    if (outSubY)
+    {
+      *outSubY = -1;
+    }
     return h;
   }
   tft.setTextDatum(TL_DATUM);
   transparent ? tft.setTextColor(0x8410) : tft.setTextColor(0x8410, bgCol);
   tft.drawString(sub, x, y + h + 1, font);
+  if (outSubY)
+  {
+    *outSubY = y + h + 1;
+  }
   return h + 1 + tft.fontHeight(font);
 }
 
@@ -1861,6 +1892,8 @@ static void drawThemeCard(const ThemeIcon &icon, int idx)
     }
     drawErrorWrapped(x0 + textX, y0 + pad, cardW - textX - pad, c.error.length() ? c.error : c.title, bgCol, 1,
                       cardH - pad * 2, !box);
+    g_cardSub1[idx].valid = false;
+    g_cardSub2[idx].valid = false;
     return;
   }
 
@@ -1923,16 +1956,43 @@ static void drawThemeCard(const ThemeIcon &icon, int idx)
   int y = y0 + pad + topRowH;
   const int mx = x0 + pad;
   const int mw = innerW;
+  auto saveSub = [&](ThemeCardSubSlot &slot, int subY)
+  {
+    if (subY < 0)
+    {
+      slot.valid = false;
+      return;
+    }
+    slot.valid = true;
+    slot.x = mx;
+    slot.y = subY;
+    slot.w = mw;
+    slot.h = tft.fontHeight(1);
+    slot.bgCol = bgCol;
+    slot.transparent = !box;
+  };
   if (hasRow1)
   {
     y += titleToMetric;
-    drawThemeCardMetric(mx, y, mw, c.l1, c.p1, c.s1, bgCol, barH, !box);
+    int subY = -1;
+    drawThemeCardMetric(mx, y, mw, c.l1, c.p1, c.s1, bgCol, barH, !box, &subY);
+    saveSub(g_cardSub1[idx], subY);
     y += row1H;
+  }
+  else
+  {
+    g_cardSub1[idx].valid = false;
   }
   if (hasRow2)
   {
     y += rowGap;
-    drawThemeCardMetric(mx, y, mw, c.l2, c.p2, c.s2, bgCol, barH, !box);
+    int subY = -1;
+    drawThemeCardMetric(mx, y, mw, c.l2, c.p2, c.s2, bgCol, barH, !box, &subY);
+    saveSub(g_cardSub2[idx], subY);
+  }
+  else
+  {
+    g_cardSub2[idx].valid = false;
   }
 }
 
@@ -2489,11 +2549,37 @@ void customThemeTickCountdown()
   drawThemeCountdown(g_theme.countdown);
 }
 
-// Chamado 1x/loop via uiTickClock() — redesenha só os cards de provedor
-// (estilo "card": Claude/GPT/Cursor/OpenCode) quando o segundo exibido muda,
-// pra o cronômetro regressivo de withRestaCountdown() correr ao vivo sem
-// repintar o canvas inteiro (cada card já apaga seu próprio retângulo
-// anterior via eraseStaleRect em drawThemeCard).
+// Troca só o texto de uma linha de cronômetro (g_cardSub1/g_cardSub2), sem
+// tocar no resto do card — apaga apenas o próprio retângulo da linha (cor
+// sólida do card, ou o papel de parede por baixo dele quando o card é
+// "transparente") e escreve o texto novo em cima. Ao contrário de
+// drawThemeCard()/eraseStaleRect() (que restauram a caixa inteira antes de
+// redesenhar), isso não pisca.
+static void redrawCardSub(const ThemeCardSubSlot &slot, const String &text)
+{
+  if (!slot.valid)
+  {
+    return;
+  }
+  if (slot.transparent)
+  {
+    restoreBackgroundRect(g_theme, slot.x, slot.y, slot.w, slot.h);
+  }
+  else
+  {
+    tft.fillRect(slot.x, slot.y, slot.w, slot.h, slot.bgCol);
+  }
+  tft.setTextDatum(TL_DATUM);
+  slot.transparent ? tft.setTextColor(0x8410) : tft.setTextColor(0x8410, slot.bgCol);
+  tft.drawString(text, slot.x, slot.y, 1);
+}
+
+// Chamado 1x/loop via uiTickClock() — quando o segundo exibido muda, troca só
+// o texto da linha de cronômetro dos cards de provedor (estilo "card":
+// Claude/GPT/Cursor/OpenCode), sem repintar ícone/título/barra/moldura (ver
+// redrawCardSub). g_cardSub1/g_cardSub2 só ficam válidos depois do primeiro
+// drawThemeCard() completo (paintCustomHome/customThemeTickClock) — até lá
+// esta função não tem o que redesenhar.
 void customThemeTickResetCountdown()
 {
   if (!g_active || g_view != VIEW_THEME)
@@ -2515,10 +2601,21 @@ void customThemeTickResetCountdown()
     {
       continue;
     }
-    if (icon.kind == TICON_CLAUDE || icon.kind == TICON_GPT || icon.kind == TICON_CURSOR || icon.kind == TICON_OPENCODE)
+    if (icon.kind != TICON_CLAUDE && icon.kind != TICON_GPT && icon.kind != TICON_CURSOR && icon.kind != TICON_OPENCODE)
     {
-      drawThemeCard(icon, i);
+      continue;
     }
+    if (!g_cardSub1[i].valid && !g_cardSub2[i].valid)
+    {
+      continue;
+    }
+    ThemeCardContent c = themeCardContentFor(icon.kind);
+    if (!c.ok)
+    {
+      continue;
+    }
+    redrawCardSub(g_cardSub1[i], c.s1);
+    redrawCardSub(g_cardSub2[i], c.s2);
   }
 }
 
