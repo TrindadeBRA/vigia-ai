@@ -6,6 +6,7 @@ All notable changes to this project are documented here.
 
 ### Fixed
 
+- **Alarme de "reset" podia nunca notificar**: o estado que detecta a virada da cota (`*_resets_at` mudando de valor) vivia só em memória (`AlarmEngine._armed`, `backend/src/alarms/engine.ts`) — se o coletor reiniciasse entre a leitura "antes" e a leitura "depois" do reset (restart manual, toggle de LAN, crash-recovery do sidecar, update do app), a transição era perdida e o alarme simplesmente não disparava, sem erro no log. Agora esse estado é persistido em `backend/data/alarm_state.json` e recarregado no boot do `AlarmEngine`.
 - **App desktop não encerrava (ou demorava ~13s) ao clicar em Sair**: o coletor Node tinha dois caminhos de shutdown — o acionado por `SIGTERM`/`SIGINT` derrubava sockets SSE abertos (ex.: `/events` da ESP32/painel) depois de um prazo curto, mas o acionado pelo fechamento do `stdin` (o caminho usado pelo Electron ao "Sair") chamava `app.close()` sem essa rede de segurança — com qualquer conexão SSE de longa duração ainda aberta, o processo nunca encerrava por conta própria, e o app só saía depois do timeout de 10s do lado do Electron forçar um `SIGTERM`. Os dois caminhos agora compartilham a mesma rotina de shutdown (`backend/src/desktop.ts`); o timeout de fallback no Electron caiu de 10s para 5s (`desktop/src/sidecar.ts`).
 
 ### Added
