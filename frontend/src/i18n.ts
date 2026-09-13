@@ -203,6 +203,24 @@ type Strings = {
   systemCpuModel: string;
   systemOs: string;
   systemRam: string;
+  systemNetwork: string;
+  systemNetworkWired: string;
+  systemNetworkWifi: string;
+  systemNetworkSpeed: string;
+  systemNetworkRx: string;
+  systemNetworkTx: string;
+  systemThermal: string;
+  systemThermalCpu: string;
+  systemThermalGpu: string;
+  systemFans: string;
+  systemFanRpm: string;
+  systemBattery: string;
+  systemBatteryCharging: string;
+  systemBatteryDischarging: string;
+  systemBatteryFull: string;
+  systemBatteryHealth: string;
+  systemBatteryRemaining: string;
+  systemNoBattery: string;
   widgetNote: string;
   widgetNoteDesc: string;
   widgetImage: string;
@@ -522,6 +540,24 @@ export const STR: Record<Lang, Strings> = {
     systemCpuModel: "CPU",
     systemOs: "SO",
     systemRam: "RAM",
+    systemNetwork: "Rede",
+    systemNetworkWired: "Cabo",
+    systemNetworkWifi: "Wi-Fi",
+    systemNetworkSpeed: "velocidade",
+    systemNetworkRx: "↓",
+    systemNetworkTx: "↑",
+    systemThermal: "Temperatura",
+    systemThermalCpu: "CPU",
+    systemThermalGpu: "GPU",
+    systemFans: "Ventoinhas",
+    systemFanRpm: "RPM",
+    systemBattery: "Bateria",
+    systemBatteryCharging: "carregando",
+    systemBatteryDischarging: "descarregando",
+    systemBatteryFull: "carregada",
+    systemBatteryHealth: "saúde",
+    systemBatteryRemaining: "restante",
+    systemNoBattery: "sem bateria",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it com Markdown e cor personalizável.",
     widgetImage: "Imagem",
@@ -834,6 +870,24 @@ export const STR: Record<Lang, Strings> = {
     systemCpuModel: "CPU",
     systemOs: "OS",
     systemRam: "RAM",
+    systemNetwork: "Network",
+    systemNetworkWired: "Ethernet",
+    systemNetworkWifi: "Wi-Fi",
+    systemNetworkSpeed: "speed",
+    systemNetworkRx: "↓",
+    systemNetworkTx: "↑",
+    systemThermal: "Temperature",
+    systemThermalCpu: "CPU",
+    systemThermalGpu: "GPU",
+    systemFans: "Fans",
+    systemFanRpm: "RPM",
+    systemBattery: "Battery",
+    systemBatteryCharging: "charging",
+    systemBatteryDischarging: "discharging",
+    systemBatteryFull: "charged",
+    systemBatteryHealth: "health",
+    systemBatteryRemaining: "remaining",
+    systemNoBattery: "no battery",
     widgetNote: "Note",
     widgetNoteDesc: "Post-it with Markdown and custom color.",
     widgetImage: "Image",
@@ -1146,6 +1200,24 @@ export const STR: Record<Lang, Strings> = {
     systemCpuModel: "CPU",
     systemOs: "SO",
     systemRam: "RAM",
+    systemNetwork: "Red",
+    systemNetworkWired: "Cable",
+    systemNetworkWifi: "Wi-Fi",
+    systemNetworkSpeed: "velocidad",
+    systemNetworkRx: "↓",
+    systemNetworkTx: "↑",
+    systemThermal: "Temperatura",
+    systemThermalCpu: "CPU",
+    systemThermalGpu: "GPU",
+    systemFans: "Ventiladores",
+    systemFanRpm: "RPM",
+    systemBattery: "Batería",
+    systemBatteryCharging: "cargando",
+    systemBatteryDischarging: "descargando",
+    systemBatteryFull: "cargada",
+    systemBatteryHealth: "salud",
+    systemBatteryRemaining: "restante",
+    systemNoBattery: "sin batería",
     widgetNote: "Nota",
     widgetNoteDesc: "Post-it con Markdown y color personalizable.",
     widgetImage: "Imagen",
