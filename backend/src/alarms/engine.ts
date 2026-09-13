@@ -1,6 +1,36 @@
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { dataDir } from "../config.js";
 import { fmtResetWhen } from "../formatting.js";
 import { displayLanUrl } from "../netutil.js";
 import { load } from "../store.js";
+
+function armedStatePath(): string {
+  return join(dataDir(), "alarm_state.json");
+}
+
+// persiste o estado "armed" (inclui o último *_resets_at visto por alarme de tipo "reset")
+// para sobreviver a restarts do processo — sem isso, um restart bem na hora da virada
+// da cota faz o alarme de reset perder a leitura "antes" e nunca disparar.
+function loadArmedState(): Record<string, boolean | string> {
+  try {
+    const raw = JSON.parse(readFileSync(armedStatePath(), "utf-8"));
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      return raw as Record<string, boolean | string>;
+    }
+  } catch { }
+  return {};
+}
+
+function saveArmedState(state: Record<string, boolean | string>): void {
+  try {
+    mkdirSync(dataDir(), { recursive: true });
+    const path = armedStatePath();
+    const tmp = `${path}.tmp`;
+    writeFileSync(tmp, JSON.stringify(state), { encoding: "utf-8" });
+    renameSync(tmp, path);
+  } catch { }
+}
 
 export const METRICS: Record<string, Array<[string, string, string]>> = {
   claude: [
@@ -379,13 +409,18 @@ export function formatAlarmNotification(event: Record<string, unknown>): string 
 }
 
 export class AlarmEngine {
-  private _armed: Record<string, boolean | string> = {};
+  private _armed: Record<string, boolean | string>;
+
+  constructor() {
+    this._armed = loadArmedState();
+  }
 
   handlePayload(payload: Record<string, unknown>): void {
     const cfg = load() as Record<string, unknown>;
     const rules = (cfg.alarms ?? []) as Array<Record<string, unknown>>;
     if (!rules || rules.length === 0) return;
     const events = evaluate(payload, rules, this._armed);
+    saveArmedState(this._armed);
     if (events.length === 0) return;
     void (async () => {
       const { broadcast } = await import("../telegram/bot.js");
