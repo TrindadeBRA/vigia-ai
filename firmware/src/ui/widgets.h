@@ -9,6 +9,17 @@ uint16_t barColor(float pct);
 String fmtWhen(const String& raw);
 bool wallClockNow(int& year, int& mo, int& dd, int& hh, int& mi, int& ss);
 int weekdaySun0(int year, int mo, int dd);
+
+// Segundos entre agora (wallClockNow) e o instante em `raw` (mesmos formatos
+// aceitos por fmtWhen: ISO 8601 ou época unix). Retorna
+// RESET_COUNTDOWN_UNKNOWN quando não dá pra calcular (string vazia, já
+// formatada sem ano tipo "dd/mm HHhmm", ou relógio de parede indisponível).
+// Pode retornar negativo se o instante já passou.
+#define RESET_COUNTDOWN_UNKNOWN (-2147483647L)
+long secondsUntilWhen(const String &raw);
+// "HH:MM:SS" se faltar menos de 1 dia, senão "Xd HH:MM:SS". secs negativo
+// vira 0 (mostra o cronômetro zerado em vez de números negativos).
+String fmtCountdownDuration(long secs);
 String fmtPct(float pct);
 String fmtRemain(float used);
 String fmtUsdSite(int cents);

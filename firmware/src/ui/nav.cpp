@@ -663,6 +663,7 @@ void uiTickClock()
     customThemeTickAnimation();
     customThemeTickClock();
     customThemeTickCountdown();
+    customThemeTickResetCountdown();
     return;
   }
   int key = headerDisplayKey(countdownSeconds(), showFetchOkCheck());

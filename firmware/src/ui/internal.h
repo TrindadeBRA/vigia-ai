@@ -208,6 +208,11 @@ void uiAccountStep(int dir);
 
 // Rótulos e títulos compartilhados entre Início, Agora e telas de detalhe.
 String withResta(float pct, const String &whenRaw);
+// Mesma ideia de withResta, mas com cronômetro regressivo (Xd HH:MM:SS ou
+// HH:MM:SS) no lugar da data de reset — usado só no Tema personalizado
+// (ver customtheme.cpp:themeCardContentFor/customThemeTickResetCountdown),
+// que já tem um laço de repintura por segundo pra dar vida ao número.
+String withRestaCountdown(float pct, const String &whenRaw);
 String gptPlanTitle(const GptAccount &g);
 String cursorPlanTitle(const CursorAccount &c);
 String accountSuffixText(const String &label, int count);

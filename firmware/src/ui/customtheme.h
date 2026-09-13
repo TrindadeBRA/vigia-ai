@@ -64,6 +64,13 @@ void customThemeTickClock();
 // Chamado por uiTickClock() — redesenha só o selo de contagem regressiva
 // (ver drawCountdownBadgeAt) quando o segundo exibido muda.
 void customThemeTickCountdown();
+// Chamado por uiTickClock() — redesenha só os cards de provedor (Claude,
+// GPT, Cursor, OpenCode) a cada segundo, pra dar vida ao cronômetro regressivo
+// até o reset (ver withRestaCountdown em ui/labels.cpp). Não repinta a tela
+// inteira: cada card já sabe apagar seu próprio retângulo anterior
+// (eraseStaleRect em drawThemeCard), então o custo por segundo é só o(s)
+// card(s) de provedor, não o canvas todo.
+void customThemeTickResetCountdown();
 // Avança o frame do fundo GIF (rate-limited por frame_delay_ms). Chamado
 // no loop via uiTickClock() quando VIEW_THEME está ativa.
 void customThemeTickAnimation();

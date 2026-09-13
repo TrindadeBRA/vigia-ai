@@ -1551,10 +1551,10 @@ static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
     c.error = a.error;
     c.l1 = t.session5hShort;
     c.p1 = a.sessionPercent;
-    c.s1 = withResta(a.sessionPercent, a.sessionResets);
+    c.s1 = withRestaCountdown(a.sessionPercent, a.sessionResets);
     c.l2 = t.week;
     c.p2 = a.weeklyPercent;
-    c.s2 = withResta(a.weeklyPercent, a.weeklyResets);
+    c.s2 = withRestaCountdown(a.weeklyPercent, a.weeklyResets);
     return c;
   }
   case TICON_GPT:
@@ -1576,22 +1576,22 @@ static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
     {
       c.l1 = t.session5hShort;
       c.p1 = a.sessionPercent;
-      c.s1 = withResta(a.sessionPercent, a.sessionResets);
+      c.s1 = withRestaCountdown(a.sessionPercent, a.sessionResets);
       c.l2 = t.week;
       c.p2 = a.weeklyPercent;
-      c.s2 = withResta(a.weeklyPercent, a.weeklyResets);
+      c.s2 = withRestaCountdown(a.weeklyPercent, a.weeklyResets);
     }
     else if (a.weeklyPercent >= 0)
     {
       c.l1 = t.week;
       c.p1 = a.weeklyPercent;
-      c.s1 = withResta(a.weeklyPercent, a.weeklyResets);
+      c.s1 = withRestaCountdown(a.weeklyPercent, a.weeklyResets);
     }
     else
     {
       c.l1 = t.session5hShort;
       c.p1 = a.sessionPercent;
-      c.s1 = withResta(a.sessionPercent, a.sessionResets);
+      c.s1 = withRestaCountdown(a.sessionPercent, a.sessionResets);
     }
     return c;
   }
@@ -1611,7 +1611,11 @@ static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
     c.error = a.error;
     c.l1 = t.cursorModelsShort;
     c.p1 = a.percent;
-    c.s1 = a.cycleEnd.length() ? (String(t.resetPrefix) + fmtWhen(a.cycleEnd)) : String();
+    if (a.cycleEnd.length())
+    {
+      long secs = secondsUntilWhen(a.cycleEnd);
+      c.s1 = String(t.resetPrefix) + (secs != RESET_COUNTDOWN_UNKNOWN ? fmtCountdownDuration(secs) : fmtWhen(a.cycleEnd));
+    }
     c.l2 = t.otherShort;
     c.p2 = a.otherPercent;
     c.s2 = cursorOndemand(a);
@@ -1668,10 +1672,10 @@ static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
     c.error = a.error;
     c.l1 = t.rolling;
     c.p1 = a.rollingPercent;
-    c.s1 = opencodeRemain(a);
+    c.s1 = a.rollingPercent >= 0 ? withRestaCountdown(a.rollingPercent, a.rollingResets) : opencodeRemain(a);
     c.l2 = t.week;
     c.p2 = a.weeklyPercent;
-    c.s2 = withResta(a.weeklyPercent, a.weeklyResets);
+    c.s2 = withRestaCountdown(a.weeklyPercent, a.weeklyResets);
     return c;
   }
   case TICON_FAL:
@@ -2483,6 +2487,39 @@ void customThemeTickCountdown()
   }
   lastKey = key;
   drawThemeCountdown(g_theme.countdown);
+}
+
+// Chamado 1x/loop via uiTickClock() — redesenha só os cards de provedor
+// (estilo "card": Claude/GPT/Cursor/OpenCode) quando o segundo exibido muda,
+// pra o cronômetro regressivo de withRestaCountdown() correr ao vivo sem
+// repintar o canvas inteiro (cada card já apaga seu próprio retângulo
+// anterior via eraseStaleRect em drawThemeCard).
+void customThemeTickResetCountdown()
+{
+  if (!g_active || g_view != VIEW_THEME)
+  {
+    return;
+  }
+  static int lastKey = -1;
+  int year, mo, dd, hh, mi, ss;
+  int key = wallClockNow(year, mo, dd, hh, mi, ss) ? (hh * 3600 + mi * 60 + ss) : -1;
+  if (key == lastKey)
+  {
+    return;
+  }
+  lastKey = key;
+  for (int i = 0; i < g_theme.iconCount; i++)
+  {
+    const ThemeIcon &icon = g_theme.icons[i];
+    if (icon.style != TSTYLE_CARD)
+    {
+      continue;
+    }
+    if (icon.kind == TICON_CLAUDE || icon.kind == TICON_GPT || icon.kind == TICON_CURSOR || icon.kind == TICON_OPENCODE)
+    {
+      drawThemeCard(icon, i);
+    }
+  }
 }
 
 int customThemeBrandEyeRadius()

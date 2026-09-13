@@ -14,6 +14,19 @@ String withResta(float pct, const String &whenRaw)
   return s;
 }
 
+String withRestaCountdown(float pct, const String &whenRaw)
+{
+  String s = String(uiTr().remainingPrefix) + fmtRemain(pct);
+  if (whenRaw.length())
+  {
+    long secs = secondsUntilWhen(whenRaw);
+    // Sem como calcular (ex.: já veio formatado sem ano) -- cai pra data
+    // mesmo, igual withResta().
+    s += "  |  " + (secs != RESET_COUNTDOWN_UNKNOWN ? fmtCountdownDuration(secs) : fmtWhen(whenRaw));
+  }
+  return s;
+}
+
 String gptPlanTitle(const GptAccount &g)
 {
   if (!g.ok || !g.plan.length())

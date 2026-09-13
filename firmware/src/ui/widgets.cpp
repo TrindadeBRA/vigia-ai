@@ -71,6 +71,107 @@ String fmtWhen(const String& raw) {
   return String(buf);
 }
 
+// Howard Hinnant's days_from_civil — inverso da conta de calendário já usada
+// em fmtWhen() (que decodifica época -> data). Serve pra recompor uma "época"
+// a partir de campos de data, na mesma convenção (hora de parede, sem fuso)
+// usada nos dois lados de secondsUntilWhen().
+static long daysFromCivil(int y, int mo, int dd) {
+  y -= mo <= 2 ? 1 : 0;
+  long era = (y >= 0 ? y : y - 399) / 400;
+  unsigned yoe = (unsigned)(y - era * 400);
+  unsigned mp = (unsigned)(mo + (mo > 2 ? -3 : 9));
+  unsigned doy = (153U * mp + 2U) / 5U + (unsigned)dd - 1U;
+  unsigned doe = yoe * 365U + yoe / 4U - yoe / 100U + doy;
+  return era * 146097L + (long)doe - 719468L;
+}
+
+static long epochSecFromParts(int y, int mo, int dd, int hh, int mi, int ss) {
+  return daysFromCivil(y, mo, dd) * 86400L + hh * 3600L + mi * 60L + ss;
+}
+
+long secondsUntilWhen(const String &raw) {
+  String s = raw;
+  s.trim();
+  if (!s.length()) {
+    return RESET_COUNTDOWN_UNKNOWN;
+  }
+  // "dd/mm HHhmm" já formatado (sem ano) — não dá pra saber a época.
+  if (s.indexOf('/') >= 0 && s.indexOf('h') > 0) {
+    return RESET_COUNTDOWN_UNKNOWN;
+  }
+  int y, mo, dd, hh, mi, ss = 0;
+  const int tPos = s.indexOf('T');
+  if (tPos >= 10 && s.indexOf('-') == 4) {
+    y = s.substring(0, 4).toInt();
+    mo = s.substring(5, 7).toInt();
+    dd = s.substring(8, 10).toInt();
+    hh = s.substring(11, 13).toInt();
+    mi = s.substring(14, 16).toInt();
+    ss = (s.length() >= 19) ? s.substring(17, 19).toInt() : 0;
+  } else {
+    bool digits = s.length() >= 9;
+    for (unsigned i = 0; i < s.length() && digits; i++) {
+      if (s[i] < '0' || s[i] > '9') {
+        digits = false;
+      }
+    }
+    if (!digits) {
+      return RESET_COUNTDOWN_UNKNOWN;
+    }
+    unsigned long long n = strtoull(s.c_str(), nullptr, 10);
+    unsigned long unixSec = (n > 100000000000ULL) ? (unsigned long)(n / 1000ULL) : (unsigned long)n;
+    if (unixSec > 3UL * 3600UL) {
+      unixSec -= 3UL * 3600UL;
+    }
+    unsigned long z = unixSec / 86400UL;
+    unsigned long rem = unixSec % 86400UL;
+    hh = (int)(rem / 3600UL);
+    mi = (int)((rem % 3600UL) / 60UL);
+    ss = (int)(rem % 60UL);
+    z += 719468UL;
+    long era = (long)(z / 146097UL);
+    unsigned doe = (unsigned)(z - (unsigned long)era * 146097UL);
+    unsigned yoe = (doe - doe / 1460U + doe / 36524U - doe / 146096U) / 365U;
+    y = (int)yoe + era * 400;
+    unsigned doy = doe - (365U * yoe + yoe / 4U - yoe / 100U);
+    unsigned mp = (5U * doy + 2U) / 153U;
+    dd = (int)(doy - (153U * mp + 2U) / 5U + 1U);
+    mo = (int)(mp < 10 ? mp + 3 : mp - 9);
+    y += (mo <= 2) ? 1 : 0;
+  }
+  if (y < 2020 || mo < 1 || mo > 12 || dd < 1) {
+    return RESET_COUNTDOWN_UNKNOWN;
+  }
+  int ny, nmo, ndd, nhh, nmi, nss;
+  if (!wallClockNow(ny, nmo, ndd, nhh, nmi, nss)) {
+    return RESET_COUNTDOWN_UNKNOWN;
+  }
+  const long target = epochSecFromParts(y, mo, dd, hh, mi, ss);
+  const long now = epochSecFromParts(ny, nmo, ndd, nhh, nmi, nss);
+  return target - now;
+}
+
+String fmtCountdownDuration(long secs) {
+  if (secs == RESET_COUNTDOWN_UNKNOWN) {
+    return "";
+  }
+  if (secs < 0) {
+    secs = 0;
+  }
+  const long days = secs / 86400L;
+  const long rem = secs % 86400L;
+  const int hh = (int)(rem / 3600L);
+  const int mi = (int)((rem % 3600L) / 60L);
+  const int ss = (int)(rem % 60L);
+  char buf[24];
+  if (days > 0) {
+    snprintf(buf, sizeof(buf), "%ldd %02d:%02d:%02d", days, hh, mi, ss);
+  } else {
+    snprintf(buf, sizeof(buf), "%02d:%02d:%02d", hh, mi, ss);
+  }
+  return String(buf);
+}
+
 int weekdaySun0(int year, int mo, int dd) {
   static const int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
   if (mo < 3) {
