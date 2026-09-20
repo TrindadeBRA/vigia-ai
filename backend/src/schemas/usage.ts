@@ -51,6 +51,7 @@ export const USAGE_EXAMPLE = {
       weekly_percent: 8.0,
       weekly_resets_at: "04/09 03h00",
       plan: "plus",
+      resets_available: 1,
     },
   ],
   cursor: [
@@ -185,6 +186,7 @@ export const GptAccountSchema = AccountBaseSchema.extend({
   weekly_percent: z.number().nullable().default(null),
   weekly_resets_at: z.string().nullable().default(null),
   plan: z.string().nullable().default(null),
+  resets_available: z.number().nullable().default(null),
 });
 export type GptAccount = z.infer<typeof GptAccountSchema>;
 
