@@ -184,8 +184,8 @@ export default function Display() {
   const secsLeft = countdownSecs(nextFetchAt, now, pollS);
 
   useEffect(() => {
-    applyThemeVars(pal, accent, flat);
-  }, [pal, accent, flat]);
+    applyThemeVars(pal, accent, flat, effectiveTheme);
+  }, [pal, accent, flat, effectiveTheme]);
 
   useEffect(() => {
     // Estimativa pela largura da janela — usada fora do grid (ex.: página de

@@ -135,8 +135,11 @@ export function applyThemeVars(
   pal: (typeof PALETTES)[ResolvedThemeName],
   accent: string,
   flat: boolean,
+  themeName?: ResolvedThemeName,
 ): void {
   const root = document.documentElement.style;
+  // Contrato com index.css / RetroarchIcon.tsx: nada aqui consome este atributo.
+  if (themeName) document.documentElement.dataset.vigiaTheme = themeName;
   root.setProperty("--bg", pal.bg);
   root.setProperty("--card", pal.card);
   root.setProperty("--card-border", pal.cardBorder);

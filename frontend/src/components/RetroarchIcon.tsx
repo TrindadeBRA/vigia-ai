@@ -31,6 +31,7 @@ export function RetroarchIcon({
 }: Props) {
     const [failed, setFailed] = useState(false);
     const url = getRetroarchIconUrl(platform, theme);
+    const isMonochrome = theme === "monochrome";
 
     // se não há mapeamento ou falhou, mostra emoji
     if (!url || failed) {
@@ -55,7 +56,7 @@ export function RetroarchIcon({
             height={size}
             loading="lazy"
             decoding="async"
-            className={className}
+            className={["ra-icon", isMonochrome ? "ra-mono" : "", className ?? ""].filter(Boolean).join(" ")}
             style={{ width: size, height: size, objectFit: "contain", imageRendering: "auto", ...style }}
             onError={() => setFailed(true)}
             referrerPolicy="no-referrer"
@@ -85,18 +86,16 @@ export function RetroarchIconBadge({
     const [failed, setFailed] = useState(false);
     const url = getRetroarchIconUrl(platform, theme);
 
-    // monochrome é branco — precisa de fundo escuro ou filtro
+    // Cores do badge vivem em index.css (.ra-badge-mono / .ra-badge-color) para
+    // reagirem ao modo claro via [data-vigia-theme]; `bg` continua vencendo como override.
     const isMonochrome = theme === "monochrome";
-    const badgeStyle: React.CSSProperties = bg
-        ? { background: bg }
-        : isMonochrome
-            ? { background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)" }
-            : { background: "rgba(255,255,255,0.92)", border: "1px solid var(--card-border)" };
+    const badgeTone = isMonochrome ? "ra-badge-mono" : "ra-badge-color";
+    const badgeStyle: React.CSSProperties | undefined = bg ? { background: bg } : undefined;
 
     if (!url || failed) {
         return (
             <span
-                className="flex items-center justify-center rounded-xl text-[18px] leading-none shrink-0"
+                className={`flex items-center justify-center rounded-xl text-[18px] leading-none shrink-0 ${badgeTone}`}
                 style={{ width: size, height: size, ...badgeStyle }}
                 aria-label={alt}
                 title={alt}
@@ -108,7 +107,7 @@ export function RetroarchIconBadge({
 
     return (
         <span
-            className="flex items-center justify-center rounded-xl shrink-0 overflow-hidden p-1"
+            className={`flex items-center justify-center rounded-xl shrink-0 overflow-hidden p-1 ${badgeTone}`}
             style={{ width: size, height: size, ...badgeStyle }}
             title={alt}
             aria-label={alt}
@@ -120,12 +119,11 @@ export function RetroarchIconBadge({
                 height={size - 8}
                 loading="lazy"
                 decoding="async"
+                className={isMonochrome ? "ra-icon ra-mono" : "ra-icon"}
                 style={{
                     width: size - 8,
                     height: size - 8,
                     objectFit: "contain",
-                    // monochrome já é branco, não precisa inverter; flatux/daite são coloridos
-                    filter: isMonochrome ? "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" : undefined,
                 }}
                 onError={() => setFailed(true)}
                 referrerPolicy="no-referrer"

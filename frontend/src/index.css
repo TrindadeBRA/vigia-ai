@@ -37,6 +37,28 @@
   --bg-translucent: rgba(15, 15, 15, .82);
 }
 
+/* Icones RetroArch monochrome (PNG branco): no modo claro o glifo e tingido
+   de preto via brightness(0) e o badge troca o fundo escuro por claro.
+   Reage a data-vigia-theme (theme.ts). */
+.ra-icon.ra-mono {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .4));
+}
+.ra-badge-mono {
+  background: rgba(0, 0, 0, .55);
+  border: 1px solid rgba(255, 255, 255, .12);
+}
+.ra-badge-color {
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid var(--card-border);
+}
+:root[data-vigia-theme="light"] .ra-icon.ra-mono {
+  filter: brightness(0) drop-shadow(0 1px 2px rgba(0, 0, 0, .25));
+}
+:root[data-vigia-theme="light"] .ra-badge-mono {
+  background: rgba(255, 255, 255, .92);
+  border-color: var(--card-border);
+}
+
 /* ── Dentro do app Electron ────────────────────────────────────────────────
    O preload (desktop/src/preload.ts) escreve `data-vigia-*` no <html>. No
    navegador esses atributos não existem, nenhum seletor daqui casa e o CSS
