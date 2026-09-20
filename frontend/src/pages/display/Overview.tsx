@@ -2,6 +2,7 @@ import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type Dra
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import {
+  BOARD_INNER_DROP_ID,
   cardBg,
   cardRect,
   CELL_GAP,
@@ -9,6 +10,7 @@ import {
   displayBoard,
   dropTarget,
   duplicateBoard,
+  emptyBoard,
   emptyCells,
   isCloneId,
   normalizeSize,
@@ -110,6 +112,7 @@ export function Overview({
   onUpdateNote,
   onRemoveCamera,
   onRemoveAndroid,
+  boardInner,
   wallpaperParallax = true,
 }: {
   providers: ProviderMeta[];
@@ -136,6 +139,18 @@ export function Overview({
   onUpdateNote?: (id: string, patch: { text?: string; color?: string }) => void;
   onRemoveCamera?: (id: string) => void;
   onRemoveAndroid?: (id: string) => void;
+  /** Conteúdo do widget "board" (título, cards internos na grade 1:1) + callbacks de edição — injetados nos extras `_on*` do provider. */
+  boardInner?: {
+    items: ProviderMeta[];
+    layout?: BoardLayout;
+    title?: string | null;
+    onRename: (title: string) => void;
+    onRemove: (id: string) => void;
+    onMoveIntoBoard: (id: string) => void;
+    onInnerGrid: (g: { cols: number; rows: number }) => void;
+    onInnerSetSize: (id: string, size: CardSize) => void;
+    onInnerSetBg: (id: string, next: string | null) => void;
+  } | null;
   /** Wallpaper fixo (parallax): ancorado na área visível do `<main>`, não estica com o conteúdo e não rola com o grid. Default true. */
   wallpaperParallax?: boolean;
 }) {
@@ -282,6 +297,10 @@ export function Overview({
       setDropPreview(null);
       return;
     }
+    if (over === BOARD_INNER_DROP_ID) {
+      setDropPreview(null);
+      return;
+    }
     const dest = dropTarget(over, layout);
     if (!dest) {
       setDropPreview(null);
@@ -302,6 +321,11 @@ export function Overview({
     setLiftSize(null);
     setDropPreview(null);
     if (!over || over === from) return;
+    if (over === BOARD_INNER_DROP_ID) {
+      const fromP = byId.get(from);
+      if (fromP && fromP.provider !== "board") boardInner?.onMoveIntoBoard(from);
+      return;
+    }
     const dest = dropTarget(over, layout);
     if (!dest) return;
     onBoard((b) => {
@@ -394,6 +418,41 @@ export function Overview({
       return;
     }
     handleDuplicate(id);
+  }
+
+  const boardExtras = boardInner
+    ? {
+      _innerProviders: boardInner.items,
+      _innerBoard: boardInner.layout ?? emptyBoard(),
+      _boardTitle: boardInner.title ?? null,
+    }
+    : null;
+
+  const renderInnerTile = (innerP: ProviderMeta, innerSize: CardSize) =>
+    <ProviderCard p={innerP} pal={pal} size={innerSize} t={t} nowMs={now} readonly bg={cardBg(boardInner?.layout, innerP.id)} onOpen={() => onOpen(innerP.id)} onSetSize={() => { }} />;
+
+  function injectBoardExtras(p: ProviderMeta): ProviderMeta {
+    if (readonly || !boardExtras || !!boardInner === false || p.provider !== "board") return p;
+    const src = p as unknown as Record<string, unknown>;
+    const e: Record<string, unknown> = {
+      ...boardExtras,
+      _renderInner: renderInnerTile,
+      _boardEditable: true,
+      _onRenameTitle: boardInner?.onRename,
+      _onInnerRemove: boardInner?.onRemove,
+      _onInnerSetSize: boardInner?.onInnerSetSize,
+      _onInnerSetBg: boardInner?.onInnerSetBg,
+      _onInnerGrid: boardInner?.onInnerGrid,
+      _boardRect: cardRect(layout, p.id, cols),
+    };
+    let changed = false;
+    for (const key of Object.keys(e)) {
+      if (src[key] !== e[key]) { changed = true; break; }
+    }
+    if (!changed) return p;
+    const next = Object.assign({}, p);
+    for (const [key, value] of Object.entries(e)) (next as unknown as Record<string, unknown>)[key] = value;
+    return next;
   }
 
   const gridBgUrl = gridWallpaperUrl(gridWallpaperId);
@@ -515,9 +574,10 @@ export function Overview({
             }}
           >
             {ids.map((id) => {
-              const p = byId.get(id);
+              const p0 = byId.get(id);
               const pos = layout.pos[id];
-              if (!p || !pos) return null;
+              if (!p0 || !pos) return null;
+              const p = injectBoardExtras(p0);
               const size = normalizeSize(layout.size[id]);
               const bg = cardBg(layout, id);
               const isNote = id.startsWith("note:");
@@ -578,9 +638,10 @@ export function Overview({
                 </div>
               ))}
               {ids.map((id) => {
-                const p = byId.get(id);
+                const p0 = byId.get(id);
                 const pos = layout.pos[id];
-                if (!p || !pos) return null;
+                if (!p0 || !pos) return null;
+                const p = injectBoardExtras(p0);
                 const size = normalizeSize(layout.size[id]);
                 const bg = cardBg(layout, id);
                 const isImage = id.startsWith("img:");

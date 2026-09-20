@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchConfig, fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, ProviderCardPublic, UsagePayload } from "../api/types";
-import { colsForWidth, sameBoard } from "../board";
+import { cardRect, colsForWidth, displayBoard, emptyBoard, firstFreeCell, fitInnerBoard, innerGridFor, placeCard, pruneBoard, sameBoard, setCardBg, setCardSize, SLOT_MIN, type CardSize } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
 import { GamepadLegend } from "../components/GamepadLegend";
@@ -328,6 +328,106 @@ export default function Display() {
       const next = cur.includes(kind) ? cur.filter((k) => k !== kind) : [...cur, kind];
       return { ...p, widgets: next };
     });
+
+  const boardItemIds = new Set((prefs.board?.items ?? []).filter((id) => displayProviders.some((p) => p.id === id)));
+  const boardInnerProviders = boardItemIds.size ? displayProviders.filter((p) => boardItemIds.has(p.id) && p.id !== "widget:board") : [];
+  const gridProviders = displayProviders.filter((p) => !boardItemIds.has(p.id) || p.id === "widget:board");
+
+  const handleInnerGrid = (g: { cols: number; rows: number }) => {
+    setPrefs((p) => {
+      const inner = fitInnerBoard(p.board?.items ?? [], p.board?.inner ?? emptyBoard(), g.cols, g.rows);
+      if (inner === p.board?.inner) return p;
+      return { ...p, board: { ...p.board, inner } };
+    });
+  };
+
+  const handleInnerSetSize = (id: string, size: CardSize) => {
+    setPrefs((p) => {
+      const items = p.board?.items ?? [];
+      if (!items.includes(id)) return p;
+      const outer = boardForCols(boards, currentCols);
+      const outerRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
+      if (!outerRendered.pos["widget:board"]) return p;
+      const g = innerGridFor(cardRect(outerRendered, "widget:board", currentCols), SLOT_MIN);
+      const base = p.board?.inner ?? emptyBoard();
+      const fitted = fitInnerBoard(items, setCardSize(items, base, id, size, g.cols), g.cols, g.rows);
+      if (sameBoard(base, fitted, items)) return p;
+      return { ...p, board: { ...p.board, inner: fitted } };
+    });
+  };
+
+  const handleInnerSetBg = (id: string, next: string | null) => {
+    setPrefs((p) => {
+      const items = p.board?.items ?? [];
+      if (!items.includes(id)) return p;
+      const base = p.board?.inner ?? emptyBoard();
+      const updated = setCardBg(items, base, id, next);
+      if (updated === base) return p;
+      return { ...p, board: { ...p.board, inner: updated } };
+    });
+  };
+
+  const handleBoardRename = (title: string) => {
+    setPrefs((p) => ({ ...p, board: { ...p.board, title: title.trim() || undefined } }));
+  };
+
+  const handleBoardInnerRemove = (id: string) => {
+    const items = (prefs.board?.items ?? []).filter((x) => x !== id);
+    setPrefs((p) => {
+      const inner = pruneBoard(p.board?.inner, items);
+      return { ...p, board: { ...p.board, items, inner } };
+    });
+    setBoards((b) => {
+      const cur = boardForCols(b, currentCols);
+      const curRendered = displayBoard(Object.keys(cur.pos), cur, currentCols);
+      const size = { ...curRendered.size, [id]: curRendered.size[id] ?? "md" };
+      const nextBoard = placeCard(Object.keys(curRendered.pos).concat(id), { ...curRendered, size }, id, firstFreeCell(Object.keys(curRendered.pos).concat(id), { ...curRendered, size }, id, currentCols), currentCols);
+      const next = { ...b, [currentCols]: sameBoard(cur, nextBoard, ids) ? cur : nextBoard };
+      return next === b ? b : next;
+    });
+  };
+
+  const handleMoveIntoBoard = (id: string) => {
+    const items = prefs.board?.items ?? [];
+    if (items.includes(id)) return;
+    const outer = boardForCols(boards, currentCols);
+    const outerRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
+    if (!outerRendered.pos["widget:board"] || !outerRendered.pos[id]) return;
+    const rect = cardRect(outerRendered, "widget:board", currentCols);
+    const g = innerGridFor(rect, SLOT_MIN);
+    const innerBase = prefs.board?.inner ?? emptyBoard();
+    const innerLayout = {
+      ...innerBase,
+      layoutCols: innerBase.layoutCols ?? g.cols,
+      size: { ...innerBase.size, [id]: outerRendered.size[id] ?? "sm" },
+    };
+    const cell = firstFreeCell(items.concat(id), innerLayout, id, g.cols);
+    const placed = placeCard(items.concat(id), innerLayout, id, cell, g.cols);
+    setPrefs((p) => ({ ...p, board: { ...p.board, items: items.concat(id), inner: placed } }));
+    setBoards((b) => {
+      const next = { ...b, [currentCols]: { ...b[currentCols], pos: Object.fromEntries(Object.entries(b[currentCols]?.pos ?? {}).filter(([k]) => k !== id)) } };
+      return next === b ? b : next;
+    });
+  };
+
+  const ids = displayProviders.map((x) => x.id);
+
+  // Varre só widgets ligados/desligados por toggle; providers async (câmera,
+  // android, imagens, notas) ficam de fora — podem não ter carregado ainda.
+  const SWEEPABLE_WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "system", "board"];
+  useEffect(() => {
+    const enabled = prefs.widgets ?? [];
+    const removed = (prefs.board?.items ?? []).filter(
+      (id) => SWEEPABLE_WIDGET_KINDS.some((k) => id === `widget:${k}`) && !enabled.includes(id as WidgetKind),
+    );
+    if (!removed.length) return;
+    const items = (prefs.board?.items ?? []).filter((id) => !removed.includes(id));
+    setPrefs((p) => {
+      const inner = pruneBoard(p.board?.inner, items);
+      return { ...p, board: { ...p.board, items, inner } };
+    });
+  }, [prefs.widgets, prefs.board?.items, setPrefs]);
+
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null = null;
   if (data && section === "account") {
@@ -900,7 +1000,7 @@ export default function Display() {
             <>
               {section === "overview" ? (
                 <Overview
-                  providers={displayProviders}
+                  providers={gridProviders}
                   updatedAt={data.updated_at}
                   now={now}
                   t={t}
@@ -916,6 +1016,17 @@ export default function Display() {
                     })
                   }
                   boards={boards}
+                  boardInner={{
+                    items: boardInnerProviders,
+                    layout: prefs.board?.inner,
+                    title: prefs.board?.title ?? null,
+                    onRename: handleBoardRename,
+                    onRemove: handleBoardInnerRemove,
+                    onMoveIntoBoard: handleMoveIntoBoard,
+                    onInnerGrid: handleInnerGrid,
+                    onInnerSetSize: handleInnerSetSize,
+                    onInnerSetBg: handleInnerSetBg,
+                  }}
                   onImportBoards={(imported) => setBoards((b) => ({ ...b, ...imported }))}
                   onColsChange={setCurrentCols}
                   onOpen={(id) => {

@@ -598,3 +598,90 @@ export function removeCloneBoard(board: BoardLayout, id: string): BoardLayout {
   delete custom[id];
   return { ...board, size, pos, bg, custom: Object.keys(custom).length ? custom : undefined };
 }
+
+// ── Quadro interno (widget "board"): grade aninhada 1:1 ──────────────────
+
+/** Id do droppable da área de conteúdo do quadro — usado para migrar cards para dentro. */
+export const BOARD_INNER_DROP_ID = "board-inner";
+
+/** Padding horizontal do conteúdo interno do quadro (px). */
+export const INNER_PAD = 10;
+export const INNER_GAP = 6;
+export const INNER_MIN_COLS = 2;
+export const INNER_MAX_COLS = 8;
+export const INNER_MAX_ROWS = 40;
+
+/**
+ * Grade interna estimada a partir do retângulo externo do quadro — exatamente
+ * o tamanho configurado do widget (1:1 com o grid pai). Usada no persist do
+ * move-in (antes da medição real no card).
+ * Células sempre quadradas: slotPx = largura da célula = altura da célula.
+ */
+export function innerGridFor(rect: Rect, cellPx: number): { cols: number; rows: number; slotPx: number } {
+  const cols = Math.max(1, Math.min(INNER_MAX_COLS, Math.floor(rect.w)));
+  const rows = Math.max(1, Math.min(INNER_MAX_ROWS, Math.floor(rect.h)));
+  const contentW = Math.max(24, rect.w * (cellPx + CELL_GAP) - INNER_PAD * 2);
+  const slotPx = Math.max(20, Math.floor((contentW - INNER_GAP * (cols - 1)) / cols));
+  return { cols, rows, slotPx };
+}
+
+/** Primeira célula livre no quadro interno para um card (ignorando o próprio id). */
+export function firstFreeCell(ids: string[], board: BoardLayout, id: string, cols: number): Cell {
+  const rect = cardRect(board, id, cols);
+  const occ = occupancy(ids.filter((x) => x !== id), board, cols);
+  return firstFree(occ, rect, cols, 64);
+}
+
+/** Remove pos/size/bg/custom de ids que não estão mais na lista (cleanup órfãos). */
+export function pruneBoard(board: BoardLayout | undefined, ids: string[]): BoardLayout | undefined {
+  if (!board) return undefined;
+  const alive = new Set(ids);
+  const size = { ...board.size };
+  const pos = { ...board.pos };
+  const bg = { ...(board.bg || {}) };
+  const custom = { ...(board.custom || {}) } as Record<string, Rect>;
+  for (const key of Object.keys(size)) if (!alive.has(key)) delete size[key];
+  for (const key of Object.keys(pos)) if (!alive.has(key)) delete pos[key];
+  for (const key of Object.keys(bg)) if (!alive.has(key)) delete bg[key];
+  for (const key of Object.keys(custom)) if (!alive.has(key)) delete custom[key];
+  return { ...board, size, pos, bg, custom: Object.keys(custom).length ? custom : undefined };
+}
+
+/** Tamanhos que cabem em `rows` linhas, maior área primeiro (ordem do fit interno). */
+const INNER_FIT_ORDER: CardSize[] = ["wxl", "wl", "xl", "wm", "lg", "md", "sm", "xs"];
+
+/**
+ * Ajusta os cards internos para caberem em cols×rows: encolhe tamanhos que
+ * estouram as linhas disponíveis, clampa retângulos "free" e reempacota.
+ * Redimensionar o quadro (menos células internas) redimensiona os cards
+ * internos junto até caberem. Retorna o mesmo objeto se nada mudou.
+ */
+export function fitInnerBoard(ids: string[], board: BoardLayout, cols: number, rows: number): BoardLayout {
+  if (!ids.length) return board;
+  const size: Record<string, CardSize> = {};
+  const custom = { ...(board.custom || {}) } as Record<string, Rect>;
+  for (const id of ids) {
+    const cur = normalizeSize(board.size[id]);
+    const rect = cardRect(board, id, cols);
+    if (cur === "free") {
+      const w = Math.max(1, Math.min(rect.w, cols));
+      const h = Math.max(1, Math.min(rect.h, rows));
+      custom[id] = clampFreeRect({ w, h }, cols);
+      size[id] = "free";
+      continue;
+    }
+    if (rect.w <= cols && rect.h <= rows) {
+      size[id] = cur;
+      continue;
+    }
+    const fallback = INNER_FIT_ORDER.find((s) => {
+      if (s === cur) return false;
+      const r = rectFor(s, cols);
+      return r.w <= cols && r.h <= rows;
+    });
+    size[id] = fallback ?? "xs";
+  }
+  const next: BoardLayout = { ...board, size, custom: Object.keys(custom).length ? custom : undefined };
+  const packed = packBoard(ids, next, cols);
+  return sameBoard(board, packed, ids) ? board : packed;
+}

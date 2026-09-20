@@ -6,9 +6,9 @@ import { EyeMark } from "./Logo";
 // Spotify/YouTube Music não entram mais aqui: viram card sozinhos quando a
 // conta é conectada em Configurações (ver buildMusicProviders em
 // pages/display/buildProviders.ts), igual GitHub/AdSense/etc.
-export type WidgetKind = "clock" | "eye" | "system";
+export type WidgetKind = "clock" | "eye" | "system" | "board";
 
-export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "system"];
+export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "system", "board"];
 
 function ClockIcon() {
   return (
@@ -32,6 +32,7 @@ function ImageIcon() {
 function widgetLabel(kind: WidgetKind, t: T): string {
   if (kind === "clock") return t.widgetClock;
   if (kind === "system") return t.widgetSystem;
+  if (kind === "board") return t.widgetBoard;
   return t.widgetEye;
 }
 
@@ -45,9 +46,19 @@ function SystemIcon() {
   );
 }
 
+function BoardIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2.5" />
+      <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+    </svg>
+  );
+}
+
 function widgetIcon(kind: WidgetKind) {
   if (kind === "clock") return <ClockIcon />;
   if (kind === "system") return <SystemIcon />;
+  if (kind === "board") return <BoardIcon />;
   return <EyeMark size={20} follow={false} />;
 }
 

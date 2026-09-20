@@ -11,6 +11,7 @@ import {
   AdsenseTileCard,
   AndroidTileCard,
   BitcoinTileCard,
+  BoardTileCard,
   CalendarTileCard,
   CameraTileCard,
   ClaudeTileCard,
@@ -126,6 +127,14 @@ export function ProviderCard({
   }
   if (p.provider === "eye") {
     return <EyeTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  // BoardBoardCard usa useDroppable, que exige DndContext; o loop readonly do
+  // Overview não embrulha em DndContext, então no kiosk o board cai no genérico.
+  // Sem "Duplicar": o board é um único estado compartilhado (prefs.board = itens,
+  // título e grade internos) — um clone renderizaria dois quadros brigando pela
+  // mesma grade interna.
+  if (p.provider === "board" && !readonly) {
+    return <BoardTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "camera") {
     return <CameraTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;

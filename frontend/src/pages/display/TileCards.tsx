@@ -5,6 +5,7 @@ import { cn } from "../../cn";
 import { AdsenseBoardCard, adsenseAllowedSizes, adsenseSizeLabel } from "../../components/cards/AdsenseCard";
 import { AndroidBoardCard, androidAllowedSizes, androidSizeLabel } from "../../components/cards/AndroidCard";
 import { BitcoinBoardCard, bitcoinAllowedSizes, bitcoinSizeLabel } from "../../components/cards/BitcoinCard";
+import { BoardBoardCard, boardAllowedSizes, boardSizeLabel } from "../../components/cards/BoardCard";
 import { CalendarBoardCard, calendarAllowedSizes, calendarSizeLabel } from "../../components/cards/CalendarCard";
 import { CameraBoardCard, cameraAllowedSizes, cameraSizeLabel } from "../../components/cards/CameraCard";
 import { ClaudeBoardCard, claudeAllowedSizes, claudeSizeLabel } from "../../components/cards/ClaudeCard";
@@ -124,6 +125,20 @@ export function ClockTileCard({ p, size, dragging, lifted, t, nowMs, grip, bg, r
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => clockSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <ClockBoardCard nowMs={nowMs} size={size} />
+    </div>
+  );
+}
+
+export function BoardTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = boardAllowedSizes();
+  const isClone = isCloneId(p.id);
+  const style = useTileStyle(bg);
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => boardSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <BoardBoardCard p={p} size={size} t={t} />
     </div>
   );
 }

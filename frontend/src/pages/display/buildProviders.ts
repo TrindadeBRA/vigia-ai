@@ -450,7 +450,7 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
   return list;
 }
 
-/** Widgets extras (relógio, olho/logo) — não vêm do backend, só do que o usuário habilitou. */
+/** Widgets extras (relógio, olho/logo, board) — não vêm do backend, só do que o usuário habilitou. */
 export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): ProviderMeta[] {
   const list: ProviderMeta[] = [];
   if (enabled?.includes("clock")) {
@@ -461,6 +461,9 @@ export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): P
   }
   if (enabled?.includes("system")) {
     list.push({ id: "widget:system", provider: "system", ok: true, error: null, title: t.widgetSystem, label: "", metrics: [] });
+  }
+  if (enabled?.includes("board")) {
+    list.push({ id: "widget:board", provider: "board", ok: true, error: null, title: t.widgetBoard, label: "", metrics: [] });
   }
   return list;
 }

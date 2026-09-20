@@ -12,7 +12,20 @@ export const boardCollision: CollisionDetection = (args: Parameters<CollisionDet
   const droppableContainers = args.droppableContainers.filter((c) => c.id !== args.active.id);
   const filteredArgs = { ...args, droppableContainers };
   const hits = pointerWithin(filteredArgs);
-  return hits.length ? hits : closestCorners(filteredArgs);
+  const list = hits.length ? hits : closestCorners(filteredArgs);
+  // Alvos aninhados vencem pelo retângulo de menor área: a área de conteúdo do
+  // quadro ("board-inner") fica dentro do tile do quadro, então quando o ponteiro
+  // está sobre os slots internos ambos são hits — priorizar o menor faz o drop
+  // cair no droppable interno (move-in) em vez de reposicionar o quadro.
+  if (list.length <= 1) return list;
+  const rectOf = (id: string | number) => droppableContainers.find((c) => String(c.id) === String(id))?.rect.current;
+  return [...list].sort((a, b) => {
+    const ra = rectOf(a.id);
+    const rb = rectOf(b.id);
+    const wa = ra ? ra.width * ra.height : 0;
+    const wb = rb ? rb.width * rb.height : 0;
+    return wa - wb;
+  });
 };
 
 /** Layout salvo para a quantidade exata de colunas visíveis (o "breakpoint" é o número de colunas, não um bucket fixo). */

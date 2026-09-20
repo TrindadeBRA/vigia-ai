@@ -63,3 +63,6 @@ desktop/resources/
 .DS_Store
 .env
 !.env.example
+
+# --- Oh My OpenCode ---
+.omo/

@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { BoardLayout } from "../../board";
 import type { WidgetKind } from "../../components/AddWidgetModal";
 import type { Lang } from "../../i18n";
 import type { ThemeName } from "../../theme";
 
-export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; wallpaperParallax?: boolean; wallpaperAutoRotate?: boolean };
+/** Conteúdo do widget "board": título custom, ids dos widgets/cards dentro e layout interno (grade 1:1). */
+export type BoardPrefs = { title?: string; items?: string[]; inner?: BoardLayout };
+
+export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; wallpaperParallax?: boolean; wallpaperAutoRotate?: boolean; board?: BoardPrefs };
 
 const DEFAULT_PREFS: Prefs = { theme: "dark", accent: 0, lang: "pt" };
 const LEGACY_LS_KEY = "vigia_display_prefs";

@@ -6,7 +6,7 @@ import { CheckIcon, CopyIcon, GripIcon, TrashIcon } from "../../components/icons
 import type { T } from "../../i18n";
 import { TileColorPicker } from "./TileColorPicker";
 
-const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl", "wm", "wl", "wxl", "free"];
+export const CARD_ORDER: CardSize[] = ["sm", "sw", "sx", "sc", "scw", "md", "lg", "xl", "wm", "wl", "wxl", "free"];
 
 export function sizeLabel(size: CardSize, t: T): string {
   const s = normalizeSize(size);

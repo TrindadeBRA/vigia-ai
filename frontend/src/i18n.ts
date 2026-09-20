@@ -185,6 +185,10 @@ type Strings = {
   ytmusicNext: string;
   ytmusicPrevious: string;
   widgetSystem: string;
+  widgetBoard: string;
+  boardRename: string;
+  boardItemRemove: string;
+  boardDropHint: string;
   systemUptime: string;
   systemMemory: string;
   systemCpuLoad: string;
@@ -522,6 +526,10 @@ export const STR: Record<Lang, Strings> = {
     ytmusicNext: "Próxima faixa",
     ytmusicPrevious: "Faixa anterior",
     widgetSystem: "Sistema",
+    widgetBoard: "Quadro",
+    boardRename: "Renomear quadro",
+    boardItemRemove: "Tirar do quadro",
+    boardDropHint: "Arraste widgets para dentro do quadro",
     systemUptime: "Uptime",
     systemMemory: "Memória",
     systemCpuLoad: "Carga CPU",
@@ -852,6 +860,10 @@ export const STR: Record<Lang, Strings> = {
     ytmusicNext: "Next track",
     ytmusicPrevious: "Previous track",
     widgetSystem: "System",
+    widgetBoard: "Board",
+    boardRename: "Rename board",
+    boardItemRemove: "Move out of board",
+    boardDropHint: "Drag widgets into the board",
     systemUptime: "Uptime",
     systemMemory: "Memory",
     systemCpuLoad: "CPU load",
@@ -1182,6 +1194,10 @@ export const STR: Record<Lang, Strings> = {
     ytmusicNext: "Pista siguiente",
     ytmusicPrevious: "Pista anterior",
     widgetSystem: "Sistema",
+    widgetBoard: "Tablero",
+    boardRename: "Renombrar tablero",
+    boardItemRemove: "Sacar del tablero",
+    boardDropHint: "Arrastra widgets al tablero",
     systemUptime: "Uptime",
     systemMemory: "Memoria",
     systemCpuLoad: "Carga CPU",
