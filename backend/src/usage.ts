@@ -55,6 +55,7 @@ export function mockPayload(): Record<string, unknown> {
         weekly_percent: 8.0,
         weekly_resets_at: now,
         plan: "plus",
+        resets_available: 1,
       },
     ],
     cursor: [

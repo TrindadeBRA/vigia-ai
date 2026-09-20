@@ -53,6 +53,18 @@ O Codex mostra duas barras (5 h e semana) a partir de `rate_limit`:
 
 `used_percent` vem **0–100** (não 0–1). `reset_at` é epoch Unix em segundos.
 
+Top-level também pode vir `rate_limit_reset_credits`: resets de limite **on-demand** disponíveis (quantas vezes dá para zerar as janelas sem esperar — mesmo recurso que o Codex CLI mostra como "usage limit resets available"):
+
+```json
+{
+  "plan_type": "plus",
+  "rate_limit": { "primary_window": { ... }, "secondary_window": { ... } },
+  "rate_limit_reset_credits": { "available_count": 1 }
+}
+```
+
+O coletor expõe `available_count` como `gpt[i].resets_available` (inteiro ≥ 0, ou `null` quando o campo não vem). Endpoints relacionados (só se um dia quiser detalhes/consumo): `GET /wham/rate-limit-reset-credits` (lista créditos com expiração) e `POST /wham/rate-limit-reset-credits/consume`.
+
 O coletor classifica pela duração da janela: ≤ 8 h → **sessão**; maior → **semana** (no plano free às vezes só existe uma janela de ~30 dias — ela cai em `weekly_percent`).
 
 Aliases (`five_hour`, `weekly`, …) também são lidos se a API mudar o envelope.

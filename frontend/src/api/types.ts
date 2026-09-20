@@ -23,6 +23,7 @@ export type GptAccount = {
   weekly_percent: number | null;
   weekly_resets_at: string | null;
   plan: string | null;
+  resets_available: number | null;
 };
 
 export type CursorAccount = {

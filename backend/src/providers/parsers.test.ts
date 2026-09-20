@@ -81,6 +81,29 @@ describe("parsers — gpt", () => {
     expect(parsed.session_percent).toBe(0.5);
   });
 
+  it("rate_limit_reset_credits available_count → resets_available", () => {
+    const parsed = parseGptPayload({
+      plan_type: "plus",
+      rate_limit: {
+        primary_window: { used_percent: 42.0, limit_window_seconds: 18000, reset_at: 1780000000 },
+      },
+      rate_limit_reset_credits: { available_count: 2 },
+    } as Record<string, unknown>);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.resets_available).toBe(2);
+  });
+
+  it("sem rate_limit_reset_credits → resets_available null", () => {
+    const parsed = parseGptPayload({
+      plan_type: "plus",
+      rate_limit: {
+        primary_window: { used_percent: 42.0, limit_window_seconds: 18000, reset_at: 1780000000 },
+      },
+    } as Record<string, unknown>);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.resets_available).toBeNull();
+  });
+
   it("parse codex auth blob", () => {
     const [token, accountId] = parseAuthBlob({ tokens: { access_token: "tok-abc", account_id: "acct-1", refresh_token: "nope" } });
     expect(token).toBe("tok-abc");

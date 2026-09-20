@@ -33,6 +33,7 @@ type Strings = {
   sonnetWeek: string;
   opusWeek: string;
   plan: string;
+  resetsAvailable: string;
   cycle: string;
   ondemand: string;
   cap: string;
@@ -378,6 +379,7 @@ export const STR: Record<Lang, Strings> = {
     sonnetWeek: "Sonnet (semana)",
     opusWeek: "Opus (semana)",
     plan: "plano",
+    resetsAvailable: "redefinições disponíveis",
     cycle: "ciclo",
     ondemand: "On-demand (USD)",
     cap: "teto",
@@ -712,6 +714,7 @@ export const STR: Record<Lang, Strings> = {
     sonnetWeek: "Sonnet (week)",
     opusWeek: "Opus (week)",
     plan: "plan",
+    resetsAvailable: "resets available",
     cycle: "cycle",
     ondemand: "On-demand (USD)",
     cap: "cap",
@@ -1046,6 +1049,7 @@ export const STR: Record<Lang, Strings> = {
     sonnetWeek: "Sonnet (semana)",
     opusWeek: "Opus (semana)",
     plan: "plan",
+    resetsAvailable: "redefiniciones disponibles",
     cycle: "ciclo",
     ondemand: "On-demand (USD)",
     cap: "tope",

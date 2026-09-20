@@ -302,6 +302,12 @@ export function GptDetail({
             <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-[650]">{account.plan}</span>
           </div>
         ) : null}
+        {account.resets_available != null ? (
+          <div className="flex min-w-0 flex-col gap-1 bg-panel px-4 py-3">
+            <span className="text-[11px] font-[650] uppercase tracking-[.45px] text-ink3">{t.resetsAvailable}</span>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-[650]">{account.resets_available}</span>
+          </div>
+        ) : null}
       </div>
       <div className={metricsGrid}>
         {account.session_percent != null ? (

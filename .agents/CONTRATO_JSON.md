@@ -63,7 +63,8 @@ Datas: string ISO-8601 (com offset, ex. `-03:00`) ou `null`.
       "session_resets_at": "2026-08-31T21:00:00-03:00",
       "weekly_percent": 8.0,
       "weekly_resets_at": "2026-09-04T03:00:00-03:00",
-      "plan": "plus"
+      "plan": "plus",
+      "resets_available": 1
     }
   ],
   "cursor": [
@@ -268,6 +269,7 @@ Cota da assinatura ChatGPT / Codex CLI — ver `APIS_GPT.md`.
 | `weekly_percent`    | number ou `null` | Janela longa (semana, ou ~30 d no plano free) |
 | `weekly_resets_at`  | string ou `null` |                                               |
 | `plan`              | string ou `null` | Ex.: `plus`, `pro`, `free`                    |
+| `resets_available`  | number ou `null` | Resets de limite on-demand disponíveis (`rate_limit_reset_credits.available_count`); `null` = API não expõe |
 
 ### `cursor[i]`
 

@@ -20,6 +20,7 @@ export function gptFail(msg: string): Record<string, unknown> {
     weekly_percent: null,
     weekly_resets_at: null,
     plan: null,
+    resets_available: null,
   };
 }
 
@@ -111,6 +112,17 @@ export function parseGptPayload(data: Record<string, unknown>): Record<string, u
   if (planS === "") planS = null;
   if (!planS) planS = null;
 
+  // rate_limit_reset_credits.available_count (top-level, Codex CLI struct)
+  let resetsAvailable: number | null = null;
+  const rlc = data.rate_limit_reset_credits;
+  if (rlc !== null && rlc !== undefined && typeof rlc === "object" && !Array.isArray(rlc)) {
+    const ac = (rlc as Record<string, unknown>).available_count;
+    if (ac !== null && ac !== undefined) {
+      const n = Number(ac);
+      if (Number.isFinite(n) && n >= 0) resetsAvailable = Math.trunc(n);
+    }
+  }
+
   const ok = sessionPct !== null || weeklyPct !== null;
   return {
     ok,
@@ -120,6 +132,7 @@ export function parseGptPayload(data: Record<string, unknown>): Record<string, u
     weekly_percent: weeklyPct,
     weekly_resets_at: weeklyReset,
     plan: planS,
+    resets_available: resetsAvailable,
   };
 }
 
