@@ -1,4 +1,4 @@
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragOverEvent, type DragStartEvent } from "@dnd-kit/core";
+import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragOverEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -87,6 +87,48 @@ function GridIOButtons({ boards, cols, onImport, t }: { boards: BoardsMap; cols:
   );
 }
 
+function InnerTileDrag({
+  innerP,
+  innerSize,
+  pal,
+  t,
+  nowMs,
+  bg,
+  onOpen,
+}: {
+  innerP: ProviderMeta;
+  innerSize: CardSize;
+  pal: Pal;
+  t: T;
+  nowMs: number;
+  bg: string | null;
+  onOpen: (id: string) => void;
+}) {
+  const dragId = `inner:${innerP.id}`;
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: dragId });
+  const { setNodeRef: setDropRef } = useDroppable({ id: dragId });
+  return (
+    <div
+      ref={(node) => { setDragRef(node); setDropRef(node); }}
+      className="size-full"
+    >
+      <ProviderCard
+        p={innerP}
+        pal={pal}
+        size={innerSize}
+        t={t}
+        nowMs={nowMs}
+        readonly
+        dragging={isDragging}
+        bg={bg}
+        onOpen={() => onOpen(innerP.id)}
+        onSetSize={() => {}}
+        grip={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
 export function Overview({
   providers,
   updatedAt,
@@ -147,6 +189,8 @@ export function Overview({
     onRename: (title: string) => void;
     onRemove: (id: string) => void;
     onMoveIntoBoard: (id: string) => void;
+    onMoveOutOfBoard: (id: string, target: Cell) => void;
+    onInnerReorder: (id: string, target: Cell) => void;
     onInnerGrid: (g: { cols: number; rows: number }) => void;
     onInnerSetSize: (id: string, size: CardSize) => void;
     onInnerSetBg: (id: string, next: string | null) => void;
@@ -177,9 +221,15 @@ export function Overview({
 
   const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
-  const active = activeId ? byId.get(activeId) : null;
-  const activeSize: CardSize = activeId ? normalizeSize(layout.size[activeId]) : "md";
-  const activeRect = activeId ? cardRect(layout, activeId, cols) : rectFor(activeSize, cols);
+  const innerById = new Map((boardInner?.items ?? []).map((p) => [p.id, p]));
+  const activeInnerId = activeId?.startsWith("inner:") ? activeId.slice(6) : null;
+  const active = activeId ? (byId.get(activeId) ?? (activeInnerId ? innerById.get(activeInnerId) ?? null : null)) : null;
+  const activeSize: CardSize = activeInnerId
+    ? normalizeSize(boardInner?.layout?.size[activeInnerId] ?? "md")
+    : activeId ? normalizeSize(layout.size[activeId]) : "md";
+  const activeRect = activeInnerId
+    ? rectFor(activeSize, cols)
+    : activeId ? cardRect(layout, activeId, cols) : rectFor(activeSize, cols);
   const holeKeys = new Set(holes.map((h) => `${h.r}:${h.c}`));
   const previewCells = dropPreview && activeId ? rectCells(dropPreview, activeRect) : [];
   const previewKeys = new Set(previewCells.map((c) => `${c.r}:${c.c}`));
@@ -306,8 +356,11 @@ export function Overview({
       setDropPreview(null);
       return;
     }
+    const innerId = from.startsWith("inner:") ? from.slice(6) : null;
+    const r = innerId
+      ? rectFor(normalizeSize(boardInner?.layout?.size[innerId] ?? "md"), cols)
+      : cardRect(layout, from, cols);
     {
-      const r = cardRect(layout, from, cols);
       const clamped = { r: dest.r, c: Math.max(0, Math.min(dest.c, Math.max(0, cols - r.w))) };
       setDropPreview(clamped);
     }
@@ -321,6 +374,24 @@ export function Overview({
     setLiftSize(null);
     setDropPreview(null);
     if (!over || over === from) return;
+    if (from.startsWith("inner:")) {
+      const realId = from.slice(6);
+      if (over === BOARD_INNER_DROP_ID) return;
+      if (over.startsWith("inner:")) {
+        const targetId = over.slice(6);
+        if (realId === targetId) return;
+        const innerBoard = boardInner?.layout;
+        if (!innerBoard) return;
+        const targetPos = innerBoard.pos[targetId];
+        if (!targetPos) return;
+        boardInner?.onInnerReorder?.(realId, targetPos);
+        return;
+      }
+      const dest = dropTarget(over, layout);
+      if (!dest) return;
+      boardInner?.onMoveOutOfBoard?.(realId, dest);
+      return;
+    }
     if (over === BOARD_INNER_DROP_ID) {
       const fromP = byId.get(from);
       if (fromP && fromP.provider !== "board") boardInner?.onMoveIntoBoard(from);
@@ -429,7 +500,7 @@ export function Overview({
     : null;
 
   const renderInnerTile = (innerP: ProviderMeta, innerSize: CardSize) =>
-    <ProviderCard p={innerP} pal={pal} size={innerSize} t={t} nowMs={now} readonly bg={cardBg(boardInner?.layout, innerP.id)} onOpen={() => onOpen(innerP.id)} onSetSize={() => { }} />;
+    <InnerTileDrag innerP={innerP} innerSize={innerSize} pal={pal} t={t} nowMs={now} bg={cardBg(boardInner?.layout, innerP.id)} onOpen={onOpen} />;
 
   function injectBoardExtras(p: ProviderMeta): ProviderMeta {
     if (readonly || !boardExtras || !!boardInner === false || p.provider !== "board") return p;

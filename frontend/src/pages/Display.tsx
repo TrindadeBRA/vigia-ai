@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchConfig, fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, ProviderCardPublic, UsagePayload } from "../api/types";
-import { cardRect, colsForWidth, displayBoard, emptyBoard, firstFreeCell, fitInnerBoard, innerGridFor, placeCard, pruneBoard, sameBoard, setCardBg, setCardSize, SLOT_MIN, type CardSize } from "../board";
+import { cardRect, colsForWidth, displayBoard, emptyBoard, firstFreeCell, fitInnerBoard, innerGridFor, placeCard, pruneBoard, sameBoard, setCardBg, setCardSize, SLOT_MIN, type CardSize, type Cell } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
 import { GamepadLegend } from "../components/GamepadLegend";
@@ -384,6 +384,40 @@ export default function Display() {
       const nextBoard = placeCard(Object.keys(curRendered.pos).concat(id), { ...curRendered, size }, id, firstFreeCell(Object.keys(curRendered.pos).concat(id), { ...curRendered, size }, id, currentCols), currentCols);
       const next = { ...b, [currentCols]: sameBoard(cur, nextBoard, ids) ? cur : nextBoard };
       return next === b ? b : next;
+    });
+  };
+
+  const handleMoveOutOfBoard = (id: string, target: Cell) => {
+    const items = (prefs.board?.items ?? []).filter((x) => x !== id);
+    setPrefs((p) => {
+      const inner = pruneBoard(p.board?.inner, items);
+      return { ...p, board: { ...p.board, items, inner } };
+    });
+    const outer = boardForCols(boards, currentCols);
+    const outerIds = Object.keys(outer.pos);
+    const outerRendered = displayBoard(outerIds, outer, currentCols);
+    const size = { ...outerRendered.size, [id]: prefs.board?.inner?.size[id] ?? "md" };
+    const idsPlus = outerIds.filter((x) => x !== id).concat(id);
+    const nextBoard = placeCard(idsPlus, { ...outerRendered, size }, id, target, currentCols);
+    setBoards((b) => {
+      const cur = boardForCols(b, currentCols);
+      const next = sameBoard(cur, nextBoard, ids) ? cur : nextBoard;
+      return { ...b, [currentCols]: next };
+    });
+  };
+
+  const handleInnerReorder = (id: string, target: Cell) => {
+    setPrefs((p) => {
+      const items = p.board?.items ?? [];
+      if (!items.includes(id)) return p;
+      const outer = boardForCols(boards, currentCols);
+      const outerRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
+      if (!outerRendered.pos["widget:board"]) return p;
+      const g = innerGridFor(cardRect(outerRendered, "widget:board", currentCols), SLOT_MIN);
+      const base = p.board?.inner ?? emptyBoard();
+      const placed = placeCard(items, base, id, target, g.cols);
+      if (sameBoard(base, placed, items)) return p;
+      return { ...p, board: { ...p.board, inner: placed } };
     });
   };
 
@@ -1023,6 +1057,8 @@ export default function Display() {
                     onRename: handleBoardRename,
                     onRemove: handleBoardInnerRemove,
                     onMoveIntoBoard: handleMoveIntoBoard,
+                    onMoveOutOfBoard: handleMoveOutOfBoard,
+                    onInnerReorder: handleInnerReorder,
                     onInnerGrid: handleInnerGrid,
                     onInnerSetSize: handleInnerSetSize,
                     onInnerSetBg: handleInnerSetBg,
