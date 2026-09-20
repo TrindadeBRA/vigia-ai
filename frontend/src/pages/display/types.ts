@@ -1,4 +1,5 @@
 import type { AndroidDevice, CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubProfile, GithubRepo, RetroAchievementsAccount, RssPayload, ApodPayload, WeatherConfig, WeatherPayload } from "../../api/types";
+import type { ClockConfig } from "../../components/cards/ClockCard";
 import type { PALETTES, ResolvedThemeName } from "../../theme";
 
 export type Pal = (typeof PALETTES)[ResolvedThemeName];
@@ -35,4 +36,5 @@ export type ProviderMeta = {
   camera?: CameraItem | null;
   android?: AndroidDevice | null;
   emulator?: { platform: string; core: string; romPath: string; biosPath: string | null; label: string } | null;
+  clock?: ClockConfig | null;
 };

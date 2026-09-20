@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { fetchConfig, fetchHealth, fetchUsage, openUsageEvents } from "../api/client";
 import type { AdsenseAccount, BitcoinAccount, ClaudeAccount, CreditsAccount, CursorAccount, GptAccount, OpenCodeAccount, ProviderCardPublic, UsagePayload } from "../api/types";
-import { cardRect, colsForWidth, displayBoard, emptyBoard, firstFreeCell, fitInnerBoard, innerGridFor, placeCard, pruneBoard, sameBoard, setCardBg, setCardSize, SLOT_MIN, type CardSize, type Cell } from "../board";
+import { baseIdFromClone, cardRect, colsForWidth, displayBoard, emptyBoard, firstFreeCell, fitInnerBoard, innerGridFor, nextCloneId, placeCard, pruneBoard, sameBoard, setCardBg, setCardSize, SLOT_MIN, type CardSize, type Cell } from "../board";
 import { cn } from "../cn";
 import { AddWidgetModal, type WidgetKind } from "../components/AddWidgetModal";
+import { DEFAULT_CLOCK_CONFIG, type ClockConfig } from "../components/cards/ClockCard";
+import { ClockWidgetModal } from "../components/ClockWidgetModal";
 import { GamepadLegend } from "../components/GamepadLegend";
 import { GridWallpaperModal } from "../components/GridWallpaperModal";
 import { MenuIcon, SettingsIcon } from "../components/icons";
@@ -27,13 +29,13 @@ import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
 import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
-import { buildAndroidProviders, buildCameraProviders, buildEmulatorProviders, buildImageProviders, buildMusicProviders, buildNoteProviders, buildProviders, buildWidgetProviders, MUSIC_CONFIG_UPDATED_EVENT } from "./display/buildProviders";
+import { buildAndroidProviders, buildBoardProviders, buildCameraProviders, buildClockProviders, buildEmulatorProviders, buildImageProviders, buildMusicProviders, buildNoteProviders, buildProviders, buildWidgetProviders, MUSIC_CONFIG_UPDATED_EVENT } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
 import { SettingsDrawer } from "./display/SettingsDrawer";
 import { Sidebar } from "./display/Sidebar";
 import type { ProviderMeta } from "./display/types";
-import { usePrefs } from "./display/usePrefs";
+import { usePrefs, type BoardInstance } from "./display/usePrefs";
 import NowPage from "./NowPage";
 
 export default function Display() {
@@ -79,6 +81,9 @@ export default function Display() {
   const [addWidgetOpen, setAddWidgetOpen] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  const [clockModalOpen, setClockModalOpen] = useState(false);
+  const [editingClockId, setEditingClockId] = useState<string | null>(null);
+  const [pendingClockId, setPendingClockId] = useState<string | null>(null);
   const [pixModalOpen, setPixModalOpen] = useState(false);
   const { gridId: gridWallpaperId, wallpapers: gridWallpapers, setGridWallpaper: setGridWallpaperId } = useGridWallpaper();
   const imageWidgets = useImageWidgets();
@@ -319,9 +324,9 @@ export default function Display() {
   const bpBoard = boardForCols(boards, currentCols);
   const musicCardProviders = buildMusicProviders(musicProviders, t);
   const boardProviders = data
-    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...musicCardProviders, ...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...emulatorProviders]
-    : [...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...buildWidgetProviders(prefs.widgets, t), ...musicCardProviders, ...emulatorProviders];
-  const displayProviders = expandProvidersWithClones(boardProviders, bpBoard);
+    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...buildClockProviders(prefs.clockConfig, t), ...buildBoardProviders(prefs.boards, t), ...musicCardProviders, ...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...emulatorProviders]
+    : [...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...buildWidgetProviders(prefs.widgets, t), ...buildClockProviders(prefs.clockConfig, t), ...buildBoardProviders(prefs.boards, t), ...musicCardProviders, ...emulatorProviders];
+  const displayProviders = expandProvidersWithClones(boardProviders, bpBoard).map((p) => (p.provider === "clock" ? Object.assign(p, { clock: prefs.clockConfig?.[p.id] ?? null }) : p));
   const toggleWidget = (kind: WidgetKind) =>
     setPrefs((p) => {
       const cur = p.widgets ?? [];
@@ -329,53 +334,55 @@ export default function Display() {
       return { ...p, widgets: next };
     });
 
-  const boardItemIds = new Set((prefs.board?.items ?? []).filter((id) => displayProviders.some((p) => p.id === id)));
-  const boardInnerProviders = boardItemIds.size ? displayProviders.filter((p) => boardItemIds.has(p.id) && p.id !== "widget:board") : [];
-  const gridProviders = displayProviders.filter((p) => !boardItemIds.has(p.id) || p.id === "widget:board");
+  const boardItemIds = new Set(Object.values(prefs.boards ?? {}).flatMap((b) => (b.items ?? []).filter((id) => displayProviders.some((p) => p.id === id))));
+  const gridProviders = displayProviders.filter((p) => (p.provider !== "board" ? !boardItemIds.has(p.id) : true));
 
-  const handleInnerGrid = (g: { cols: number; rows: number }) => {
+  const handleInnerGrid = (bid: string, g: { cols: number; rows: number }) => {
     setPrefs((p) => {
-      const inner = fitInnerBoard(p.board?.items ?? [], p.board?.inner ?? emptyBoard(), g.cols, g.rows);
-      if (inner === p.board?.inner) return p;
-      return { ...p, board: { ...p.board, inner } };
+      const b = p.boards?.[bid];
+      const inner = fitInnerBoard(b?.items ?? [], b?.inner ?? emptyBoard(), g.cols, g.rows);
+      if (inner === b?.inner) return p;
+      return { ...p, boards: { ...(p.boards ?? {}), [bid]: { ...b, inner } } };
     });
   };
 
-  const handleInnerSetSize = (id: string, size: CardSize) => {
+  const handleInnerSetSize = (bid: string, id: string, size: CardSize) => {
     setPrefs((p) => {
-      const items = p.board?.items ?? [];
+      const b = p.boards?.[bid];
+      const items = b?.items ?? [];
       if (!items.includes(id)) return p;
       const outer = boardForCols(boards, currentCols);
       const outerRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
-      if (!outerRendered.pos["widget:board"]) return p;
-      const g = innerGridFor(cardRect(outerRendered, "widget:board", currentCols), SLOT_MIN);
-      const base = p.board?.inner ?? emptyBoard();
+      if (!outerRendered.pos[bid]) return p;
+      const g = innerGridFor(cardRect(outerRendered, bid, currentCols), SLOT_MIN);
+      const base = b?.inner ?? emptyBoard();
       const fitted = fitInnerBoard(items, setCardSize(items, base, id, size, g.cols), g.cols, g.rows);
       if (sameBoard(base, fitted, items)) return p;
-      return { ...p, board: { ...p.board, inner: fitted } };
+      return { ...p, boards: { ...(p.boards ?? {}), [bid]: { ...b, inner: fitted } } };
     });
   };
 
-  const handleInnerSetBg = (id: string, next: string | null) => {
+  const handleInnerSetBg = (bid: string, id: string, next: string | null) => {
     setPrefs((p) => {
-      const items = p.board?.items ?? [];
+      const b = p.boards?.[bid];
+      const items = b?.items ?? [];
       if (!items.includes(id)) return p;
-      const base = p.board?.inner ?? emptyBoard();
+      const base = b?.inner ?? emptyBoard();
       const updated = setCardBg(items, base, id, next);
       if (updated === base) return p;
-      return { ...p, board: { ...p.board, inner: updated } };
+      return { ...p, boards: { ...(p.boards ?? {}), [bid]: { ...b, inner: updated } } };
     });
   };
 
-  const handleBoardRename = (title: string) => {
-    setPrefs((p) => ({ ...p, board: { ...p.board, title: title.trim() || undefined } }));
+  const handleBoardRename = (bid: string, title: string) => {
+    setPrefs((p) => ({ ...p, boards: { ...(p.boards ?? {}), [bid]: { ...(p.boards?.[bid] ?? {}), title: title.trim() || undefined } } }));
   };
 
-  const handleBoardInnerRemove = (id: string) => {
-    const items = (prefs.board?.items ?? []).filter((x) => x !== id);
+  const handleBoardInnerRemove = (bid: string, id: string) => {
+    const items = (prefs.boards?.[bid]?.items ?? []).filter((x) => x !== id);
     setPrefs((p) => {
-      const inner = pruneBoard(p.board?.inner, items);
-      return { ...p, board: { ...p.board, items, inner } };
+      const inner = pruneBoard(p.boards?.[bid]?.inner, items);
+      return { ...p, boards: { ...(p.boards ?? {}), [bid]: { ...(p.boards?.[bid] ?? {}), items, inner } } };
     });
     setBoards((b) => {
       const cur = boardForCols(b, currentCols);
@@ -387,16 +394,16 @@ export default function Display() {
     });
   };
 
-  const handleMoveOutOfBoard = (id: string, target: Cell) => {
-    const items = (prefs.board?.items ?? []).filter((x) => x !== id);
+  const handleMoveOutOfBoard = (bid: string, id: string, target: Cell) => {
+    const items = (prefs.boards?.[bid]?.items ?? []).filter((x) => x !== id);
     setPrefs((p) => {
-      const inner = pruneBoard(p.board?.inner, items);
-      return { ...p, board: { ...p.board, items, inner } };
+      const inner = pruneBoard(p.boards?.[bid]?.inner, items);
+      return { ...p, boards: { ...(p.boards ?? {}), [bid]: { ...(p.boards?.[bid] ?? {}), items, inner } } };
     });
     const outer = boardForCols(boards, currentCols);
     const outerIds = Object.keys(outer.pos);
     const outerRendered = displayBoard(outerIds, outer, currentCols);
-    const size = { ...outerRendered.size, [id]: prefs.board?.inner?.size[id] ?? "md" };
+    const size = { ...outerRendered.size, [id]: prefs.boards?.[bid]?.inner?.size[id] ?? "md" };
     const idsPlus = outerIds.filter((x) => x !== id).concat(id);
     const nextBoard = placeCard(idsPlus, { ...outerRendered, size }, id, target, currentCols);
     setBoards((b) => {
@@ -406,30 +413,32 @@ export default function Display() {
     });
   };
 
-  const handleInnerReorder = (id: string, target: Cell) => {
+  const handleInnerReorder = (bid: string, id: string, target: Cell) => {
     setPrefs((p) => {
-      const items = p.board?.items ?? [];
+      const b = p.boards?.[bid];
+      const items = b?.items ?? [];
       if (!items.includes(id)) return p;
       const outer = boardForCols(boards, currentCols);
       const outerRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
-      if (!outerRendered.pos["widget:board"]) return p;
-      const g = innerGridFor(cardRect(outerRendered, "widget:board", currentCols), SLOT_MIN);
-      const base = p.board?.inner ?? emptyBoard();
+      if (!outerRendered.pos[bid]) return p;
+      const g = innerGridFor(cardRect(outerRendered, bid, currentCols), SLOT_MIN);
+      const base = b?.inner ?? emptyBoard();
       const placed = placeCard(items, base, id, target, g.cols);
       if (sameBoard(base, placed, items)) return p;
-      return { ...p, board: { ...p.board, inner: placed } };
+      return { ...p, boards: { ...(p.boards ?? {}), [bid]: { ...b, inner: placed } } };
     });
   };
 
-  const handleMoveIntoBoard = (id: string) => {
-    const items = prefs.board?.items ?? [];
+  const handleMoveIntoBoard = (bid: string, id: string) => {
+    const b = prefs.boards?.[bid];
+    const items = b?.items ?? [];
     if (items.includes(id)) return;
     const outer = boardForCols(boards, currentCols);
     const outerRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
-    if (!outerRendered.pos["widget:board"] || !outerRendered.pos[id]) return;
-    const rect = cardRect(outerRendered, "widget:board", currentCols);
+    if (!outerRendered.pos[bid] || !outerRendered.pos[id]) return;
+    const rect = cardRect(outerRendered, bid, currentCols);
     const g = innerGridFor(rect, SLOT_MIN);
-    const innerBase = prefs.board?.inner ?? emptyBoard();
+    const innerBase = b?.inner ?? emptyBoard();
     const innerLayout = {
       ...innerBase,
       layoutCols: innerBase.layoutCols ?? g.cols,
@@ -437,30 +446,145 @@ export default function Display() {
     };
     const cell = firstFreeCell(items.concat(id), innerLayout, id, g.cols);
     const placed = placeCard(items.concat(id), innerLayout, id, cell, g.cols);
-    setPrefs((p) => ({ ...p, board: { ...p.board, items: items.concat(id), inner: placed } }));
+    setPrefs((p) => ({ ...p, boards: { ...(p.boards ?? {}), [bid]: { ...(p.boards?.[bid] ?? {}), items: items.concat(id), inner: placed } } }));
     setBoards((b) => {
       const next = { ...b, [currentCols]: { ...b[currentCols], pos: Object.fromEntries(Object.entries(b[currentCols]?.pos ?? {}).filter(([k]) => k !== id)) } };
       return next === b ? b : next;
     });
   };
 
+  const handleAddBoard = () => {
+    const outer = boardForCols(boards, currentCols);
+    const curRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
+    const newId = curRendered.pos["widget:board"] ? nextCloneId("widget:board", curRendered) : "widget:board";
+    const size: Record<string, CardSize> = { ...curRendered.size, [newId]: "md" };
+    const withNew = { ...curRendered, size };
+    const cell = firstFreeCell(Object.keys(curRendered.pos).concat(newId), withNew, newId, currentCols);
+    setBoards((b) => {
+      const cur = boardForCols(b, currentCols);
+      const next = placeCard(Object.keys(curRendered.pos).concat(newId), withNew, newId, cell, currentCols);
+      return { ...b, [currentCols]: sameBoard(cur, next, ids) ? cur : next };
+    });
+    setPrefs((p) => ({ ...p, boards: { ...(p.boards ?? {}), [newId]: { inner: emptyBoard() } } }));
+  };
+
+  const handleAddClock = () => {
+    const outer = boardForCols(boards, currentCols);
+    const curRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
+    const newId = curRendered.pos["widget:clock"] ? nextCloneId("widget:clock", curRendered) : "widget:clock";
+    const size: Record<string, CardSize> = { ...curRendered.size, [newId]: "sm" };
+    const withNew = { ...curRendered, size };
+    const cell = firstFreeCell(Object.keys(curRendered.pos).concat(newId), withNew, newId, currentCols);
+    setBoards((b) => {
+      const cur = boardForCols(b, currentCols);
+      const next = placeCard(Object.keys(curRendered.pos).concat(newId), withNew, newId, cell, currentCols);
+      return { ...b, [currentCols]: sameBoard(cur, next, ids) ? cur : next };
+    });
+    setPrefs((p) => ({ ...p, clockConfig: { ...(p.clockConfig ?? {}), [newId]: DEFAULT_CLOCK_CONFIG } }));
+    setPendingClockId(newId);
+    setEditingClockId(null);
+    setClockModalOpen(true);
+  };
+
+  const handleSaveClock = (config: ClockConfig) => {
+    const target = pendingClockId ?? editingClockId;
+    if (!target) return;
+    setPrefs((p) => ({ ...p, clockConfig: { ...(p.clockConfig ?? {}), [target]: config } }));
+  };
+
+  const handleRemoveClock = (id: string) => {
+    setPrefs((p) => {
+      if (!p.clockConfig?.[id]) return p;
+      const rest = { ...p.clockConfig };
+      delete rest[id];
+      return { ...p, clockConfig: rest };
+    });
+  };
+
+  const handleDuplicateClock = (id: string) => {
+    const outer = boardForCols(boards, currentCols);
+    const curRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
+    const newId = nextCloneId(baseIdFromClone(id), curRendered);
+    const withNew = { ...curRendered, size: { ...curRendered.size, [newId]: curRendered.size[id] ?? "sm" } };
+    const cell = firstFreeCell(Object.keys(curRendered.pos).concat(newId), withNew, newId, currentCols);
+    setBoards((b) => {
+      const cur = boardForCols(b, currentCols);
+      const next = placeCard(Object.keys(curRendered.pos).concat(newId), withNew, newId, cell, currentCols);
+      return { ...b, [currentCols]: sameBoard(cur, next, ids) ? cur : next };
+    });
+    setPrefs((p) => ({ ...p, clockConfig: { ...(p.clockConfig ?? {}), [newId]: p.clockConfig?.[id] ?? DEFAULT_CLOCK_CONFIG } }));
+  };
+
+  const handleRemoveBoard = (id: string) => {
+    setPrefs((p) => {
+      if (!p.boards?.[id]) return p;
+      const rest = { ...p.boards };
+      delete rest[id];
+      return { ...p, boards: rest };
+    });
+  };
+
+  const handleDuplicateBoard = (id: string) => {
+    const outer = boardForCols(boards, currentCols);
+    const curRendered = displayBoard(Object.keys(outer.pos), outer, currentCols);
+    const newId = nextCloneId(baseIdFromClone(id), curRendered);
+    const size: Record<string, CardSize> = { ...curRendered.size, [newId]: "md" };
+    const withNew = { ...curRendered, size };
+    const cell = firstFreeCell(Object.keys(curRendered.pos).concat(newId), withNew, newId, currentCols);
+    setBoards((b) => {
+      const cur = boardForCols(b, currentCols);
+      const next = placeCard(Object.keys(curRendered.pos).concat(newId), withNew, newId, cell, currentCols);
+      return { ...b, [currentCols]: sameBoard(cur, next, ids) ? cur : next };
+    });
+    setPrefs((p) => {
+      const src = p.boards?.[id];
+      if (!src) return p;
+      return { ...p, boards: { ...(p.boards ?? {}), [newId]: { ...src, inner: src.inner ? { ...src.inner } : undefined } } };
+    });
+  };
+
+  const boardInners = Object.fromEntries(
+    Object.entries(prefs.boards ?? {}).map(([bid, bi]) => [
+      bid,
+      {
+        items: displayProviders.filter((p) => (bi.items ?? []).includes(p.id)),
+        layout: bi.inner,
+        title: bi.title ?? null,
+        onRename: (title: string) => handleBoardRename(bid, title),
+        onRemove: (id: string) => handleBoardInnerRemove(bid, id),
+        onMoveIntoBoard: (id: string) => handleMoveIntoBoard(bid, id),
+        onMoveOutOfBoard: (id: string, target: Cell) => handleMoveOutOfBoard(bid, id, target),
+        onInnerReorder: (id: string, target: Cell) => handleInnerReorder(bid, id, target),
+        onInnerGrid: (g: { cols: number; rows: number }) => handleInnerGrid(bid, g),
+        onInnerSetSize: (id: string, size: CardSize) => handleInnerSetSize(bid, id, size),
+        onInnerSetBg: (id: string, next: string | null) => handleInnerSetBg(bid, id, next),
+      },
+    ]),
+  );
+
   const ids = displayProviders.map((x) => x.id);
 
   // Varre só widgets ligados/desligados por toggle; providers async (câmera,
   // android, imagens, notas) ficam de fora — podem não ter carregado ainda.
-  const SWEEPABLE_WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "system", "board"];
+  const SWEEPABLE_WIDGET_KINDS: WidgetKind[] = ["eye", "system"];
   useEffect(() => {
     const enabled = prefs.widgets ?? [];
-    const removed = (prefs.board?.items ?? []).filter(
-      (id) => SWEEPABLE_WIDGET_KINDS.some((k) => id === `widget:${k}`) && !enabled.includes(id as WidgetKind),
-    );
-    if (!removed.length) return;
-    const items = (prefs.board?.items ?? []).filter((id) => !removed.includes(id));
+    const removed = new Set<string>();
+    for (const b of Object.values(prefs.boards ?? {})) {
+      for (const id of b.items ?? []) {
+        if (SWEEPABLE_WIDGET_KINDS.some((k) => id === `widget:${k}`) && !enabled.includes(id as WidgetKind)) removed.add(id);
+      }
+    }
+    if (!removed.size) return;
     setPrefs((p) => {
-      const inner = pruneBoard(p.board?.inner, items);
-      return { ...p, board: { ...p.board, items, inner } };
+      const boards: Record<string, BoardInstance> = {};
+      for (const [bid, b] of Object.entries(p.boards ?? {})) {
+        const items = (b.items ?? []).filter((id) => !removed.has(id));
+        boards[bid] = { ...b, items, inner: pruneBoard(b.inner, items) };
+      }
+      return { ...p, boards };
     });
-  }, [prefs.widgets, prefs.board?.items, setPrefs]);
+  }, [prefs.widgets, prefs.boards, setPrefs]);
 
   let meta: ProviderMeta | null = null;
   let rawAccount: ClaudeAccount | GptAccount | CursorAccount | CreditsAccount | OpenCodeAccount | BitcoinAccount | AdsenseAccount | null = null;
@@ -1050,25 +1174,19 @@ export default function Display() {
                     })
                   }
                   boards={boards}
-                  boardInner={{
-                    items: boardInnerProviders,
-                    layout: prefs.board?.inner,
-                    title: prefs.board?.title ?? null,
-                    onRename: handleBoardRename,
-                    onRemove: handleBoardInnerRemove,
-                    onMoveIntoBoard: handleMoveIntoBoard,
-                    onMoveOutOfBoard: handleMoveOutOfBoard,
-                    onInnerReorder: handleInnerReorder,
-                    onInnerGrid: handleInnerGrid,
-                    onInnerSetSize: handleInnerSetSize,
-                    onInnerSetBg: handleInnerSetBg,
-                  }}
+                  boardInners={boardInners}
                   onImportBoards={(imported) => setBoards((b) => ({ ...b, ...imported }))}
                   onColsChange={setCurrentCols}
                   onOpen={(id) => {
                     if (id.startsWith("img:")) {
                       setEditingImageId(id);
                       setImageModalOpen(true);
+                      return;
+                    }
+                    if (id.startsWith("widget:clock")) {
+                      setPendingClockId(null);
+                      setEditingClockId(id);
+                      setClockModalOpen(true);
                       return;
                     }
                     setSection("account");
@@ -1092,6 +1210,10 @@ export default function Display() {
                   onUpdateNote={(id, patch) => void serverNotes.update(id.replace(/^note:/, ""), patch as never)}
                   onRemoveCamera={(id) => void cameras.remove(id.replace(/^widget:camera:/, ""))}
                   onRemoveAndroid={(id) => void androidDevices.remove(id.replace(/^widget:android:/, ""))}
+                  onRemoveClock={handleRemoveClock}
+                  onDuplicateClock={handleDuplicateClock}
+                  onRemoveBoard={handleRemoveBoard}
+                  onDuplicateBoard={handleDuplicateBoard}
                 />
               ) : null}
               {section === "account" && meta && !hideChrome ? (
@@ -1112,7 +1234,7 @@ export default function Display() {
         autoRotate={Boolean(prefs.wallpaperAutoRotate)}
         onToggleAutoRotate={(v) => setPrefs((p) => ({ ...p, wallpaperAutoRotate: v }))}
       />
-      <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} onAddImage={() => { setEditingImageId(null); setImageModalOpen(true); }} onAddNote={() => void serverNotes.add("", "yellow")} />
+      <AddWidgetModal open={addWidgetOpen} onClose={() => setAddWidgetOpen(false)} enabled={prefs.widgets ?? []} onToggle={toggleWidget} t={t} onAddImage={() => { setEditingImageId(null); setImageModalOpen(true); }} onAddNote={() => void serverNotes.add("", "yellow")} onAddClock={handleAddClock} onAddBoard={handleAddBoard} />
       <ImageWidgetModal
         open={imageModalOpen}
         onClose={() => { setImageModalOpen(false); setEditingImageId(null); }}
@@ -1125,6 +1247,14 @@ export default function Display() {
         editCountdownLabel={editingImageId ? imageWidgets.items.find((x) => x.id === editingImageId)?.countdownLabel ?? null : null}
         onAdd={(src, fit, label, countdownAt, countdownLabel) => { void imageWidgets.add(src, fit, label, countdownAt, countdownLabel); }}
         onSaveEdit={(src, fit, label, countdownAt, countdownLabel) => { if (editingImageId) void imageWidgets.update(editingImageId, { src, fit, label, countdownAt, countdownLabel }); }}
+      />
+      <ClockWidgetModal
+        open={clockModalOpen}
+        onClose={() => { setClockModalOpen(false); setPendingClockId(null); setEditingClockId(null); }}
+        t={t}
+        mode={editingClockId ? "edit" : "add"}
+        initial={editingClockId ? (prefs.clockConfig?.[editingClockId] ?? DEFAULT_CLOCK_CONFIG) : DEFAULT_CLOCK_CONFIG}
+        onSave={handleSaveClock}
       />
       <PixDonateModal open={pixModalOpen} onClose={() => setPixModalOpen(false)} />
       <GamepadLegend key={gamepadTick} section={section} isNested={isNested} insideCard={gamepadInsideRef.current} />

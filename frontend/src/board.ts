@@ -601,8 +601,21 @@ export function removeCloneBoard(board: BoardLayout, id: string): BoardLayout {
 
 // ── Quadro interno (widget "board"): grade aninhada 1:1 ──────────────────
 
-/** Id do droppable da área de conteúdo do quadro — usado para migrar cards para dentro. */
+/** Prefixo dos ids de quadro (board) — {@link isBoardId} verifica, {@link boardInnerDropId} gera o droppable interno. */
+export const BOARD_ID_PREFIX = "board:";
+
+/** Id do droppable da área de conteúdo do quadro legado (singleton). Mantido para backward-compat leitura. */
 export const BOARD_INNER_DROP_ID = "board-inner";
+
+/** Retorna true se o id pertence a um quadro (provider "board" multi-instância). Aceita tanto o id legado `widget:board` quanto o novo prefixo `board:`. */
+export function isBoardId(id: string): boolean {
+  return id === "widget:board" || id.startsWith(BOARD_ID_PREFIX);
+}
+
+/** Id do droppable interno de um quadro específico — cada instância tem o seu. */
+export function boardInnerDropId(boardId: string): string {
+  return `board-inner:${boardId}`;
+}
 
 /** Padding horizontal do conteúdo interno do quadro (px). */
 export const INNER_PAD = 10;

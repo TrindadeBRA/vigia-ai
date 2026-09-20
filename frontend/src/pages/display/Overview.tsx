@@ -2,7 +2,6 @@ import { DndContext, DragOverlay, PointerSensor, useDraggable, useDroppable, use
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import {
-  BOARD_INNER_DROP_ID,
   cardBg,
   cardRect,
   CELL_GAP,
@@ -154,7 +153,11 @@ export function Overview({
   onUpdateNote,
   onRemoveCamera,
   onRemoveAndroid,
-  boardInner,
+  onRemoveClock,
+  onDuplicateClock,
+  onRemoveBoard,
+  onDuplicateBoard,
+  boardInners,
   wallpaperParallax = true,
 }: {
   providers: ProviderMeta[];
@@ -181,8 +184,11 @@ export function Overview({
   onUpdateNote?: (id: string, patch: { text?: string; color?: string }) => void;
   onRemoveCamera?: (id: string) => void;
   onRemoveAndroid?: (id: string) => void;
-  /** Conteúdo do widget "board" (título, cards internos na grade 1:1) + callbacks de edição — injetados nos extras `_on*` do provider. */
-  boardInner?: {
+  onRemoveClock?: (id: string) => void;
+  onDuplicateClock?: (id: string) => void;
+  onRemoveBoard?: (id: string) => void;
+  onDuplicateBoard?: (id: string) => void;
+  boardInners?: Record<string, {
     items: ProviderMeta[];
     layout?: BoardLayout;
     title?: string | null;
@@ -194,8 +200,7 @@ export function Overview({
     onInnerGrid: (g: { cols: number; rows: number }) => void;
     onInnerSetSize: (id: string, size: CardSize) => void;
     onInnerSetBg: (id: string, next: string | null) => void;
-  } | null;
-  /** Wallpaper fixo (parallax): ancorado na área visível do `<main>`, não estica com o conteúdo e não rola com o grid. Default true. */
+  }>;
   wallpaperParallax?: boolean;
 }) {
   const failing = providers.filter((p) => !p.ok).length;
@@ -221,11 +226,19 @@ export function Overview({
 
   const layout = displayBoard(ids, board, cols);
   const holes = emptyCells(ids, layout, cols, pad);
-  const innerById = new Map((boardInner?.items ?? []).map((p) => [p.id, p]));
+  function findBoardForInner(innerId: string): string | null {
+    for (const [bid, bi] of Object.entries(boardInners ?? {})) {
+      if (bi.items.some((p) => p.id === innerId)) return bid;
+    }
+    return null;
+  }
+
   const activeInnerId = activeId?.startsWith("inner:") ? activeId.slice(6) : null;
-  const active = activeId ? (byId.get(activeId) ?? (activeInnerId ? innerById.get(activeInnerId) ?? null : null)) : null;
-  const activeSize: CardSize = activeInnerId
-    ? normalizeSize(boardInner?.layout?.size[activeInnerId] ?? "md")
+  const activeBoardId = activeInnerId ? findBoardForInner(activeInnerId) : null;
+  const activeBi = activeBoardId ? boardInners?.[activeBoardId] : null;
+  const active = activeId ? (byId.get(activeId) ?? (activeInnerId && activeBi ? activeBi.items.find((p) => p.id === activeInnerId) ?? null : null)) : null;
+  const activeSize: CardSize = activeInnerId && activeBi
+    ? normalizeSize(activeBi.layout?.size[activeInnerId] ?? "md")
     : activeId ? normalizeSize(layout.size[activeId]) : "md";
   const activeRect = activeInnerId
     ? rectFor(activeSize, cols)
@@ -347,7 +360,7 @@ export function Overview({
       setDropPreview(null);
       return;
     }
-    if (over === BOARD_INNER_DROP_ID) {
+    if (over.startsWith("board-inner:")) {
       setDropPreview(null);
       return;
     }
@@ -357,8 +370,10 @@ export function Overview({
       return;
     }
     const innerId = from.startsWith("inner:") ? from.slice(6) : null;
-    const r = innerId
-      ? rectFor(normalizeSize(boardInner?.layout?.size[innerId] ?? "md"), cols)
+    const innerBoardId = innerId ? findBoardForInner(innerId) : null;
+    const innerBi = innerBoardId ? boardInners?.[innerBoardId] : null;
+    const r = innerId && innerBi
+      ? rectFor(normalizeSize(innerBi.layout?.size[innerId] ?? "md"), cols)
       : cardRect(layout, from, cols);
     {
       const clamped = { r: dest.r, c: Math.max(0, Math.min(dest.c, Math.max(0, cols - r.w))) };
@@ -376,25 +391,30 @@ export function Overview({
     if (!over || over === from) return;
     if (from.startsWith("inner:")) {
       const realId = from.slice(6);
-      if (over === BOARD_INNER_DROP_ID) return;
+      const srcBoardId = findBoardForInner(realId);
+      const srcBi = srcBoardId ? boardInners?.[srcBoardId] : null;
+      // soltou de volta sobre o próprio quadro (ou outro quadro) — no-op,
+      // igual ao singleton; mover item entre quadros não é suportado
+      if (over.startsWith("board-inner:")) return;
       if (over.startsWith("inner:")) {
         const targetId = over.slice(6);
         if (realId === targetId) return;
-        const innerBoard = boardInner?.layout;
+        const innerBoard = srcBi?.layout;
         if (!innerBoard) return;
         const targetPos = innerBoard.pos[targetId];
         if (!targetPos) return;
-        boardInner?.onInnerReorder?.(realId, targetPos);
+        srcBi?.onInnerReorder?.(realId, targetPos);
         return;
       }
       const dest = dropTarget(over, layout);
       if (!dest) return;
-      boardInner?.onMoveOutOfBoard?.(realId, dest);
+      srcBi?.onMoveOutOfBoard?.(realId, dest);
       return;
     }
-    if (over === BOARD_INNER_DROP_ID) {
+    if (over.startsWith("board-inner:")) {
+      const destBoardId = over.slice("board-inner:".length);
       const fromP = byId.get(from);
-      if (fromP && fromP.provider !== "board") boardInner?.onMoveIntoBoard(from);
+      if (fromP && fromP.provider !== "board") boardInners?.[destBoardId]?.onMoveIntoBoard(from);
       return;
     }
     const dest = dropTarget(over, layout);
@@ -472,6 +492,32 @@ export function Overview({
       });
       return;
     }
+    if (id.startsWith("widget:clock")) {
+      onRemoveClock?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
+      return;
+    }
+    if (id.startsWith("widget:board")) {
+      onRemoveBoard?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
+      return;
+    }
     onBoard((b) => removeCloneBoard(b, id));
   }
 
@@ -491,29 +537,41 @@ export function Overview({
     handleDuplicate(id);
   }
 
-  const boardExtras = boardInner
-    ? {
-      _innerProviders: boardInner.items,
-      _innerBoard: boardInner.layout ?? emptyBoard(),
-      _boardTitle: boardInner.title ?? null,
+  function handleDuplicateClock(id: string) {
+    if (id.startsWith("widget:clock")) {
+      onDuplicateClock?.(id);
+      return;
     }
-    : null;
+    handleDuplicate(id);
+  }
 
-  const renderInnerTile = (innerP: ProviderMeta, innerSize: CardSize) =>
-    <InnerTileDrag innerP={innerP} innerSize={innerSize} pal={pal} t={t} nowMs={now} bg={cardBg(boardInner?.layout, innerP.id)} onOpen={onOpen} />;
+  function handleDuplicateBoard(id: string) {
+    if (id.startsWith("widget:board")) {
+      onDuplicateBoard?.(id);
+      return;
+    }
+    handleDuplicate(id);
+  }
+
+  const renderInnerTile = (bid: string) => (innerP: ProviderMeta, innerSize: CardSize) =>
+    <InnerTileDrag innerP={innerP} innerSize={innerSize} pal={pal} t={t} nowMs={now} bg={cardBg(boardInners?.[bid]?.layout, innerP.id)} onOpen={onOpen} />;
 
   function injectBoardExtras(p: ProviderMeta): ProviderMeta {
-    if (readonly || !boardExtras || !!boardInner === false || p.provider !== "board") return p;
+    if (readonly || p.provider !== "board") return p;
+    const bi = boardInners?.[p.id];
+    if (!bi) return p;
     const src = p as unknown as Record<string, unknown>;
     const e: Record<string, unknown> = {
-      ...boardExtras,
-      _renderInner: renderInnerTile,
+      _innerProviders: bi.items,
+      _innerBoard: bi.layout ?? emptyBoard(),
+      _boardTitle: bi.title ?? null,
+      _renderInner: renderInnerTile(p.id),
       _boardEditable: true,
-      _onRenameTitle: boardInner?.onRename,
-      _onInnerRemove: boardInner?.onRemove,
-      _onInnerSetSize: boardInner?.onInnerSetSize,
-      _onInnerSetBg: boardInner?.onInnerSetBg,
-      _onInnerGrid: boardInner?.onInnerGrid,
+      _onRenameTitle: bi.onRename,
+      _onInnerRemove: bi.onRemove,
+      _onInnerSetSize: bi.onInnerSetSize,
+      _onInnerSetBg: bi.onInnerSetBg,
+      _onInnerGrid: bi.onInnerGrid,
       _boardRect: cardRect(layout, p.id, cols),
     };
     let changed = false;
@@ -717,6 +775,8 @@ export function Overview({
                 const bg = cardBg(layout, id);
                 const isImage = id.startsWith("img:");
                 const isNote = id.startsWith("note:");
+                const isClock = id.startsWith("widget:clock");
+                const isBoard = id.startsWith("widget:board");
                 // injeta handler de update para notas
                 if (isNote && onUpdateNote) {
                   (p as unknown as Record<string, unknown>)._onNoteUpdate = onUpdateNote;
@@ -739,7 +799,7 @@ export function Overview({
                       onBoard((b) => setCardSize(ids, displayBoard(ids, b, cols), id, next, cols));
                     }}
                     onFree={(fid) => setFreeTarget(fid)}
-                    onDuplicate={isImage ? handleDuplicateImage : isNote ? handleDuplicateNote : handleDuplicate}
+                    onDuplicate={isImage ? handleDuplicateImage : isNote ? handleDuplicateNote : isClock ? handleDuplicateClock : isBoard ? handleDuplicateBoard : handleDuplicate}
                     onRemove={handleRemove}
                     onSetBg={(cid, next) => onBoard((b) => setCardBg(ids, displayBoard(ids, b, cols), cid, next))}
                   />

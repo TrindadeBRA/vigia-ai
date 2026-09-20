@@ -9,7 +9,7 @@ import { BoardBoardCard, boardAllowedSizes, boardSizeLabel } from "../../compone
 import { CalendarBoardCard, calendarAllowedSizes, calendarSizeLabel } from "../../components/cards/CalendarCard";
 import { CameraBoardCard, cameraAllowedSizes, cameraSizeLabel } from "../../components/cards/CameraCard";
 import { ClaudeBoardCard, claudeAllowedSizes, claudeSizeLabel } from "../../components/cards/ClaudeCard";
-import { ClockBoardCard, clockAllowedSizes, clockSizeLabel } from "../../components/cards/ClockCard";
+import { ClockBoardCard, clockAllowedSizes, clockSizeLabel, DEFAULT_CLOCK_CONFIG } from "../../components/cards/ClockCard";
 import { CreditsBoardCard, creditsAllowedSizes, creditsSizeLabel } from "../../components/cards/CreditsCard";
 import { CurrenciesBoardCard, currenciesAllowedSizes, currenciesSizeLabel } from "../../components/cards/CurrenciesCard";
 import { CursorBoardCard, cursorAllowedSizes, cursorSizeLabel } from "../../components/cards/CursorCard";
@@ -115,16 +115,24 @@ export function CurrenciesTileCard({ p, size, dragging, lifted, t, grip, bg, rea
   );
 }
 
-export function ClockTileCard({ p, size, dragging, lifted, t, nowMs, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs: number; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+export function ClockTileCard({ p, size, dragging, lifted, t, nowMs, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onEdit, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; nowMs: number; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onEdit?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
   const allowed = clockAllowedSizes();
   const isClone = isCloneId(p.id);
   const style = useTileStyle(bg);
+  const config = p.clock ?? DEFAULT_CLOCK_CONFIG;
   return (
     <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
       {!lifted && !readonly ? (
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => clockSizeLabel(s, t)} isClone={isClone} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
-      <ClockBoardCard nowMs={nowMs} size={size} />
+      {!lifted && !readonly && onEdit ? (
+        <div data-gamepad-chrome="true" className="absolute left-9 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip opacity-0 transition-opacity duration-150 group-hover/tile:pointer-events-auto group-hover/tile:opacity-100 group-focus-within/tile:pointer-events-auto group-focus-within/tile:opacity-100 [.is-revealed_&]:pointer-events-auto [.is-revealed_&]:opacity-100">
+          <button type="button" className="flex size-7 shrink-0 items-center justify-center rounded-lg text-ink3 hover:bg-chip hover:text-ink" title={t.clockConfigure ?? "Configurar relógio"} aria-label={t.clockConfigure ?? "Configurar relógio"} onClick={(e) => { e.stopPropagation(); onEdit(p.id); }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+          </button>
+        </div>
+      ) : null}
+      <ClockBoardCard config={config} nowMs={nowMs} size={size} t={t} onConfigure={() => onEdit?.(p.id)} />
     </div>
   );
 }

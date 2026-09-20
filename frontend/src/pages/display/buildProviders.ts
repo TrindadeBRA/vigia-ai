@@ -7,6 +7,7 @@ import { getRetroMetrics } from "../../components/cards/RetroAchievementsCard";
 import { fmtBrl, fmtBtc, fmtCountdown, fmtCurrencyAmount, fmtRemain, fmtUsd } from "../../format";
 import type { T } from "../../i18n";
 import type { Metric, ProviderMeta } from "./types";
+import type { ClockPrefs } from "./usePrefs";
 
 function bitcoinMetrics(b: BitcoinAccount, t: T): Metric[] {
   return [
@@ -450,22 +451,47 @@ export function buildProviders(data: UsagePayload, t: T, nowMs = Date.now()): Pr
   return list;
 }
 
-/** Widgets extras (relógio, olho/logo, board) — não vêm do backend, só do que o usuário habilitou. */
+/** Widgets extras (olho/logo, sistema) — não vêm do backend, só do que o usuário
+ * habilitou. Relógios e quadros (boards) são multi-instância e são gerados
+ * separadamente por {@link buildClockProviders} e {@link buildBoardProviders}. */
 export function buildWidgetProviders(enabled: WidgetKind[] | undefined, t: T): ProviderMeta[] {
   const list: ProviderMeta[] = [];
-  if (enabled?.includes("clock")) {
-    list.push({ id: "widget:clock", provider: "clock", ok: true, error: null, title: t.widgetClock, label: "", metrics: [] });
-  }
   if (enabled?.includes("eye")) {
     list.push({ id: "widget:eye", provider: "eye", ok: true, error: null, title: t.widgetEye, label: "", metrics: [] });
   }
   if (enabled?.includes("system")) {
     list.push({ id: "widget:system", provider: "system", ok: true, error: null, title: t.widgetSystem, label: "", metrics: [] });
   }
-  if (enabled?.includes("board")) {
-    list.push({ id: "widget:board", provider: "board", ok: true, error: null, title: t.widgetBoard, label: "", metrics: [] });
-  }
   return list;
+}
+
+/** Um card de relógio por instância em `prefs.clockConfig` — base "widget:clock"
+ * ou clones "widget:clock::clone:N". A config de cada card é anexada depois em
+ * Display.tsx (campo `clock` da ProviderMeta). */
+export function buildClockProviders(clockConfig: ClockPrefs | undefined, t: T): ProviderMeta[] {
+  if (!clockConfig) return [];
+  return Object.keys(clockConfig).map((id) => ({
+    id,
+    provider: "clock",
+    ok: true,
+    error: null,
+    title: t.widgetClock,
+    label: "",
+    metrics: [],
+  }));
+}
+
+export function buildBoardProviders(boards: Record<string, { title?: string; items?: string[] }> | undefined, t: T): ProviderMeta[] {
+  if (!boards) return [];
+  return Object.entries(boards).map(([id, instance]) => ({
+    id,
+    provider: "board",
+    ok: true,
+    error: null,
+    title: instance.title || t.widgetBoard,
+    label: "",
+    metrics: [],
+  }));
 }
 
 /** Disparado pelos ConfigCard de Spotify/YouTube Music (conectar, desconectar,

@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BoardLayout } from "../../board";
 import type { WidgetKind } from "../../components/AddWidgetModal";
+import type { ClockConfig } from "../../components/cards/ClockCard";
 import type { Lang } from "../../i18n";
 import type { ThemeName } from "../../theme";
 
-/** Conteúdo do widget "board": título custom, ids dos widgets/cards dentro e layout interno (grade 1:1). */
-export type BoardPrefs = { title?: string; items?: string[]; inner?: BoardLayout };
+/** Conteúdo de UMA instância de quadro: título custom, ids dos widgets/cards dentro e layout interno (grade 1:1). */
+export type BoardInstance = { title?: string; items?: string[]; inner?: BoardLayout };
 
-export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; wallpaperParallax?: boolean; wallpaperAutoRotate?: boolean; board?: BoardPrefs };
+/** Config por card de relógio (base "widget:clock" + clones "widget:clock::clone:N"). */
+export type ClockPrefs = Record<string, ClockConfig>;
+
+export type Prefs = { theme: ThemeName; accent: number; accentCustom?: string | null; lang: Lang; focus?: boolean; widgets?: WidgetKind[]; wallpaperParallax?: boolean; wallpaperAutoRotate?: boolean; boards?: Record<string, BoardInstance>; clockConfig?: ClockPrefs };
+
+/** Migra `prefs.board` (singleton legado) para `prefs.boards` (multi-instância). */
+function migrateBoardSingleton(p: Prefs): Prefs {
+  if (p.boards && Object.keys(p.boards).length) return p;
+  const legacy = (p as unknown as { board?: BoardInstance }).board;
+  if (!legacy) return p;
+  return { ...p, boards: { "widget:board": legacy } } as Prefs;
+}
 
 const DEFAULT_PREFS: Prefs = { theme: "dark", accent: 0, lang: "pt" };
 const LEGACY_LS_KEY = "vigia_display_prefs";
@@ -54,7 +66,10 @@ export function usePrefs(): [Prefs, (fn: (p: Prefs) => Prefs) => void, boolean] 
         const j = r.ok ? ((await r.json()) as Partial<Prefs>) : {};
         if (cancelled) return;
         if (j && typeof j === "object" && Object.keys(j).length) {
-          setPrefsState({ ...DEFAULT_PREFS, ...j });
+          const raw = { ...DEFAULT_PREFS, ...j };
+          const migrated = migrateBoardSingleton(raw);
+          setPrefsState(migrated);
+          if (migrated !== raw) persist(migrated);
         } else {
           const legacy = readLegacyPrefs();
           if (legacy) {

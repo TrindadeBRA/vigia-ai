@@ -1,7 +1,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  BOARD_INNER_DROP_ID,
+  boardInnerDropId,
   INNER_GAP,
   INNER_MAX_COLS,
   INNER_MAX_ROWS,
@@ -79,7 +79,7 @@ export function BoardBoardCard({ p, size, t }: { p: ProviderMeta; size: CardSize
   const boxRef = useRef<HTMLDivElement | null>(null);
   const lastGridKey = useRef("");
 
-  const { setNodeRef, isOver } = useDroppable({ id: BOARD_INNER_DROP_ID, data: { inner: true } });
+  const { setNodeRef, isOver } = useDroppable({ id: boardInnerDropId(p.id), data: { inner: true } });
 
   useLayoutEffect(() => {
     const el = boxRef.current;

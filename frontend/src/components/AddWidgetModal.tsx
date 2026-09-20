@@ -8,7 +8,9 @@ import { EyeMark } from "./Logo";
 // pages/display/buildProviders.ts), igual GitHub/AdSense/etc.
 export type WidgetKind = "clock" | "eye" | "system" | "board";
 
-export const WIDGET_KINDS: WidgetKind[] = ["clock", "eye", "system", "board"];
+// Só os singletons ficam no toggle; relógio/quadro são multi-instância
+// (linhas próprias "Adicionar" abaixo, cada clique cria um card novo).
+export const WIDGET_KINDS: WidgetKind[] = ["eye", "system"];
 
 function ClockIcon() {
   return (
@@ -72,6 +74,8 @@ export function AddWidgetModal({
   t,
   onAddImage,
   onAddNote,
+  onAddClock,
+  onAddBoard,
 }: {
   open: boolean;
   onClose: () => void;
@@ -80,6 +84,8 @@ export function AddWidgetModal({
   t: T;
   onAddImage?: () => void;
   onAddNote?: () => void;
+  onAddClock?: () => void;
+  onAddBoard?: () => void;
 }) {
   if (!open) return null;
   return (
@@ -113,6 +119,23 @@ export function AddWidgetModal({
             </div>
           );
         })}
+        {/* Relógio: multi-instância — cada clique cria um novo card */}
+        <div className="flex items-center gap-3 rounded-[12px] border border-edge bg-canvas px-3 py-2.5">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-chip text-ink2 shadow-[inset_0_0_0_1px_var(--card-border)]">
+            {widgetIcon("clock")}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-[650]">{t.widgetClock}</div>
+            <div className="truncate text-[11.5px] text-ink3">{t.widgetClockDesc ?? "Relógio, cronômetro e pomodoro"}</div>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 cursor-pointer rounded-lg border-0 bg-accent px-2.5 py-1.5 text-[12.5px] font-bold text-accent-ink hover:enabled:-translate-y-px"
+            onClick={() => onAddClock?.()}
+          >
+            {t.widgetAdd}
+          </button>
+        </div>
         {/* Imagem: multi-instância — sempre mostra "Adicionar" */}
         <div className="flex items-center gap-3 rounded-[12px] border border-edge bg-canvas px-3 py-2.5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-chip text-ink2 shadow-[inset_0_0_0_1px_var(--card-border)]">
@@ -143,6 +166,23 @@ export function AddWidgetModal({
             type="button"
             className="shrink-0 cursor-pointer rounded-lg border-0 bg-accent px-2.5 py-1.5 text-[12.5px] font-bold text-accent-ink hover:enabled:-translate-y-px"
             onClick={() => onAddNote?.()}
+          >
+            {t.widgetAdd}
+          </button>
+        </div>
+        {/* Quadro: multi-instância — cada clique cria um novo quadro */}
+        <div className="flex items-center gap-3 rounded-[12px] border border-edge bg-canvas px-3 py-2.5">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-chip text-ink2 shadow-[inset_0_0_0_1px_var(--card-border)]">
+            {widgetIcon("board")}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-[650]">{t.widgetBoard}</div>
+            <div className="truncate text-[11.5px] text-ink3">{t.widgetBoardDesc ?? "Grade de widgets interna"}</div>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 cursor-pointer rounded-lg border-0 bg-accent px-2.5 py-1.5 text-[12.5px] font-bold text-accent-ink hover:enabled:-translate-y-px"
+            onClick={() => onAddBoard?.()}
           >
             {t.widgetAdd}
           </button>

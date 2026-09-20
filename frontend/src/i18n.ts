@@ -151,6 +151,36 @@ type Strings = {
   addWidgetHint: string;
   widgetClock: string;
   widgetEye: string;
+  // Relógio
+  clockInvalidTimezone: string;
+  clockConfigure: string;
+  clockCountdownEmpty: string;
+  clockCountdownEmptyHint: string;
+  clockPause: string;
+  clockStart: string;
+  clockReset: string;
+  clockPomodoroFocus: string;
+  clockPomodoroShort: string;
+  clockPomodoroLong: string;
+  clockPomodoroSkip: string;
+  clockStopwatch: string;
+  clockPomodoro: string;
+  widgetClockDesc: string;
+  clockEditTitle: string;
+  clockAddTitle: string;
+  clockTabClock: string;
+  clockTabCountdown: string;
+  clockTabStopwatch: string;
+  clockTabPomodoro: string;
+  clockLabel: string;
+  clockLabelPh: string;
+  clockTimezone: string;
+  clockTimezoneLocal: string;
+  clockShowSeconds: string;
+  clockPomodoroFocusMin: string;
+  clockPomodoroShortMin: string;
+  clockPomodoroLongMin: string;
+  clockPomodoroCycles: string;
   widgetCamera: string;
   widgetSpotify: string;
   spotifyNothingPlaying: string;
@@ -187,6 +217,7 @@ type Strings = {
   ytmusicPrevious: string;
   widgetSystem: string;
   widgetBoard: string;
+  widgetBoardDesc: string;
   boardRename: string;
   boardItemRemove: string;
   boardDropHint: string;
@@ -493,6 +524,35 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Widgets extras não usam dados de conta — são só visuais.",
     widgetClock: "Relógio",
     widgetEye: "Olho",
+    clockInvalidTimezone: "Fuso inválido — mostrando horário local",
+    clockConfigure: "Configurar relógio",
+    clockCountdownEmpty: "Sem data alvo",
+    clockCountdownEmptyHint: "Clique para configurar",
+    clockPause: "Pausar",
+    clockStart: "Iniciar",
+    clockReset: "Zerar",
+    clockPomodoroFocus: "Foco",
+    clockPomodoroShort: "Pausa curta",
+    clockPomodoroLong: "Pausa longa",
+    clockPomodoroSkip: "Pular fase",
+    clockStopwatch: "Cronômetro",
+    clockPomodoro: "Pomodoro",
+    widgetClockDesc: "Relógio, contagem regressiva e pomodoro",
+    clockEditTitle: "Configurar relógio",
+    clockAddTitle: "Novo relógio",
+    clockTabClock: "Relógio",
+    clockTabCountdown: "Contagem",
+    clockTabStopwatch: "Cronômetro",
+    clockTabPomodoro: "Pomodoro",
+    clockLabel: "Rótulo",
+    clockLabelPh: "Ex.: Tóquio, Sala…",
+    clockTimezone: "Fuso horário",
+    clockTimezoneLocal: "Horário local",
+    clockShowSeconds: "Mostrar segundos",
+    clockPomodoroFocusMin: "Foco (min)",
+    clockPomodoroShortMin: "Pausa curta (min)",
+    clockPomodoroLongMin: "Pausa longa (min)",
+    clockPomodoroCycles: "Ciclos antes da pausa longa",
     widgetCamera: "Câmera",
     widgetSpotify: "Spotify",
     spotifyNothingPlaying: "Nada tocando",
@@ -529,6 +589,7 @@ export const STR: Record<Lang, Strings> = {
     ytmusicPrevious: "Faixa anterior",
     widgetSystem: "Sistema",
     widgetBoard: "Quadro",
+  widgetBoardDesc: "Grade de widgets interna — adicione quantos quiser.",
     boardRename: "Renomear quadro",
     boardItemRemove: "Tirar do quadro",
     boardDropHint: "Arraste widgets para dentro do quadro",
@@ -828,6 +889,35 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Extra widgets don't use account data — they're just visual.",
     widgetClock: "Clock",
     widgetEye: "Eye",
+    clockInvalidTimezone: "Invalid timezone — showing local time",
+    clockConfigure: "Configure clock",
+    clockCountdownEmpty: "No target date",
+    clockCountdownEmptyHint: "Click to configure",
+    clockPause: "Pause",
+    clockStart: "Start",
+    clockReset: "Reset",
+    clockPomodoroFocus: "Focus",
+    clockPomodoroShort: "Short break",
+    clockPomodoroLong: "Long break",
+    clockPomodoroSkip: "Skip phase",
+    clockStopwatch: "Stopwatch",
+    clockPomodoro: "Pomodoro",
+    widgetClockDesc: "Clock, countdown and pomodoro",
+    clockEditTitle: "Configure clock",
+    clockAddTitle: "New clock",
+    clockTabClock: "Clock",
+    clockTabCountdown: "Countdown",
+    clockTabStopwatch: "Stopwatch",
+    clockTabPomodoro: "Pomodoro",
+    clockLabel: "Label",
+    clockLabelPh: "e.g. Tokyo, Room…",
+    clockTimezone: "Timezone",
+    clockTimezoneLocal: "Local time",
+    clockShowSeconds: "Show seconds",
+    clockPomodoroFocusMin: "Focus (min)",
+    clockPomodoroShortMin: "Short break (min)",
+    clockPomodoroLongMin: "Long break (min)",
+    clockPomodoroCycles: "Cycles before long break",
     widgetCamera: "Camera",
     widgetSpotify: "Spotify",
     spotifyNothingPlaying: "Nothing playing",
@@ -864,6 +954,7 @@ export const STR: Record<Lang, Strings> = {
     ytmusicPrevious: "Previous track",
     widgetSystem: "System",
     widgetBoard: "Board",
+  widgetBoardDesc: "Internal widget grid — add as many as you like.",
     boardRename: "Rename board",
     boardItemRemove: "Move out of board",
     boardDropHint: "Drag widgets into the board",
@@ -1163,6 +1254,35 @@ export const STR: Record<Lang, Strings> = {
     addWidgetHint: "Los widgets extra no usan datos de cuenta — son solo visuales.",
     widgetClock: "Reloj",
     widgetEye: "Ojo",
+    clockInvalidTimezone: "Zona horaria inválida — mostrando hora local",
+    clockConfigure: "Configurar reloj",
+    clockCountdownEmpty: "Sin fecha objetivo",
+    clockCountdownEmptyHint: "Haz clic para configurar",
+    clockPause: "Pausar",
+    clockStart: "Iniciar",
+    clockReset: "Reiniciar",
+    clockPomodoroFocus: "Enfoque",
+    clockPomodoroShort: "Descanso corto",
+    clockPomodoroLong: "Descanso largo",
+    clockPomodoroSkip: "Saltar fase",
+    clockStopwatch: "Cronómetro",
+    clockPomodoro: "Pomodoro",
+    widgetClockDesc: "Reloj, cuenta regresiva y pomodoro",
+    clockEditTitle: "Configurar reloj",
+    clockAddTitle: "Nuevo reloj",
+    clockTabClock: "Reloj",
+    clockTabCountdown: "Cuenta regresiva",
+    clockTabStopwatch: "Cronómetro",
+    clockTabPomodoro: "Pomodoro",
+    clockLabel: "Etiqueta",
+    clockLabelPh: "p. ej. Tokio, Sala…",
+    clockTimezone: "Zona horaria",
+    clockTimezoneLocal: "Hora local",
+    clockShowSeconds: "Mostrar segundos",
+    clockPomodoroFocusMin: "Enfoque (min)",
+    clockPomodoroShortMin: "Descanso corto (min)",
+    clockPomodoroLongMin: "Descanso largo (min)",
+    clockPomodoroCycles: "Ciclos antes del descanso largo",
     widgetCamera: "Cámara",
     widgetSpotify: "Spotify",
     spotifyNothingPlaying: "Nada sonando",
@@ -1199,6 +1319,7 @@ export const STR: Record<Lang, Strings> = {
     ytmusicPrevious: "Pista anterior",
     widgetSystem: "Sistema",
     widgetBoard: "Tablero",
+  widgetBoardDesc: "Cuadrícula de widgets interna — añade cuantos quieras.",
     boardRename: "Renombrar tablero",
     boardItemRemove: "Sacar del tablero",
     boardDropHint: "Arrastra widgets al tablero",
