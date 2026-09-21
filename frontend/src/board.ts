@@ -467,6 +467,7 @@ export function placeCard(ids: string[], board: BoardLayout, id: string, target:
   if (!ids.includes(id)) return board;
   const rect = cardRect(board, id, cols);
   const dest = clampCell(target, rect, cols);
+  const hadPos = board.pos[id] !== undefined;
   const from = board.pos[id] || dest;
   const others = ids.filter((x) => x !== id);
   const occ = occupancy(others, board, cols);
@@ -475,7 +476,8 @@ export function placeCard(ids: string[], board: BoardLayout, id: string, target:
     const owner = occ.get(`${r}:${c}`);
     if (owner) hit.add(owner);
   });
-  if (from.r === dest.r && from.c === dest.c && hit.size === 0) return board;
+  // no-op apenas para card já posicionado em dest sem colisão; card novo sempre é colocado
+  if (hadPos && from.r === dest.r && from.c === dest.c && hit.size === 0) return board;
 
   const pos: Record<string, Cell> = { ...board.pos, [id]: dest };
   for (const other of hit) {

@@ -32,7 +32,7 @@ import {
 
 import { cn } from "../../cn";
 import { ConfirmModal } from "../../components/ConfirmModal";
-import { DownloadIcon, MaximizeIcon, MinimizeIcon, UploadIcon } from "../../components/icons";
+import { DownloadIcon, GripIcon, MaximizeIcon, MinimizeIcon, UploadIcon } from "../../components/icons";
 import { payloadAgeMs } from "../../format";
 import type { BoardsMap } from "../../hooks/useGridBoards";
 import { gridWallpaperUrl } from "../../hooks/useGridWallpaper";
@@ -41,6 +41,7 @@ import { accentLink, emptyNote, num, overviewBoard } from "../../tw";
 import { boardCollision, downloadBoardJson, parseBoardsJson } from "./boardHelpers";
 import { BoardTile, EmptySlot, ProviderCard } from "./BoardTile";
 import { FreeSizeModal } from "./FreeSizeModal";
+import { TILE_CHROME_CHIP } from "./SizeMenu";
 import type { Pal, ProviderMeta } from "./types";
 
 /** Largura da sidebar (Sidebar `w-[264px]`) — usada para compensar o cálculo de colunas do grid quando ela some no modo foco. */
@@ -106,10 +107,13 @@ function InnerTileDrag({
   const dragId = `inner:${innerP.id}`;
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({ id: dragId });
   const { setNodeRef: setDropRef } = useDroppable({ id: dragId });
+  // O card interno é readonly: o TileChrome (que anexa os listeners de drag ao
+  // grip no modo editável) nunca é renderizado. Aqui o grip vive no próprio
+  // wrapper, senão o tile interno não é arrastável nem mostra a alça.
   return (
     <div
       ref={(node) => { setDragRef(node); setDropRef(node); }}
-      className="size-full"
+      className="group/tile relative size-full"
     >
       <ProviderCard
         p={innerP}
@@ -122,8 +126,10 @@ function InnerTileDrag({
         bg={bg}
         onOpen={() => onOpen(innerP.id)}
         onSetSize={() => {}}
-        grip={{ ...attributes, ...listeners }}
       />
+      <div data-gamepad-chrome="true" className={cn("absolute left-1 top-1 z-[3] flex items-center rounded-lg border border-edge bg-chip", TILE_CHROME_CHIP)}>
+        <button type="button" className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-ink3 touch-none hover:bg-chip hover:text-ink active:cursor-grabbing" aria-label={t.dragCard} title={t.dragCard} {...attributes} {...listeners}><GripIcon size={14} /></button>
+      </div>
     </div>
   );
 }

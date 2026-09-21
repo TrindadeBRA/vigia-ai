@@ -572,7 +572,8 @@ export default function Display() {
     const removed = new Set<string>();
     for (const b of Object.values(prefs.boards ?? {})) {
       for (const id of b.items ?? []) {
-        if (SWEEPABLE_WIDGET_KINDS.some((k) => id === `widget:${k}`) && !enabled.includes(id as WidgetKind)) removed.add(id);
+        // prefs.widgets guarda o kind sem prefixo ("eye"); o item do board é "widget:eye".
+        if (SWEEPABLE_WIDGET_KINDS.some((k) => id === `widget:${k}` && !enabled.includes(k))) removed.add(id);
       }
     }
     if (!removed.size) return;
