@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#111318"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:paddingTop="28dp"
+        android:paddingBottom="32dp">
+
+        <!-- Cabeçalho: título + subtítulo alinhados à esquerda -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/title_config"
+            android:textColor="#E8EAED"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="IP e porta do coletor na mesma Wi-Fi"
+            android:textColor="#9AA0A6"
+            android:textSize="14sp" />
+
+        <!-- Seção: conexão -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="CONEXÃO"
+            android:textColor="#9AA0A6"
+            android:textSize="12sp"
+            android:letterSpacing="0.08" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Endereço do coletor"
+                android:textColor="#BDC1C6"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/hostInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_field"
+                android:hint="@string/hint_host"
+                android:inputType="textUri"
+                android:padding="14dp"
+                android:singleLine="true"
+                android:textColor="#E8EAED"
+                android:textColorHint="#6B7280"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="Porta"
+                android:textColor="#BDC1C6"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/portInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_field"
+                android:hint="@string/hint_port"
+                android:inputType="number"
+                android:padding="14dp"
+                android:singleLine="true"
+                android:textColor="#E8EAED"
+                android:textColorHint="#6B7280"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:minHeight="52dp"
+                android:text="@string/action_save"
+                android:textAllCaps="false"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/btnTest"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="52dp"
+                android:text="@string/action_test"
+                android:textAllCaps="false"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <!-- Seção: atalhos -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="ATALHOS"
+            android:textColor="#9AA0A6"
+            android:textSize="12sp"
+            android:letterSpacing="0.08" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <Button
+                android:id="@+id/btnScan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:text="@string/action_scan_qr"
+                android:textAllCaps="false"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/btnDream"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="52dp"
+                android:text="@string/action_open_dream"
+                android:textAllCaps="false"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <!-- Status / feedback -->
+        <TextView
+            android:id="@+id/resultText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_status"
+            android:minHeight="52dp"
+            android:gravity="center_vertical"
+            android:padding="14dp"
+            android:text=""
+            android:textColor="#BDC1C6"
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>

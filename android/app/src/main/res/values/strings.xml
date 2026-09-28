@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vigia Monitor</string>
+    <string name="title_config">Configurar coletor</string>
+    <string name="hint_host">IP do PC (ex.: 192.168.1.10)</string>
+    <string name="hint_port">Porta (ex.: 8787)</string>
+    <string name="action_save">Salvar</string>
+    <string name="action_test">Testar conexão</string>
+    <string name="action_scan_qr">Escanear QR do painel</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="title_scan">Aponte para o QR de /display/theme</string>
+    <string name="action_open_dream">Abrir descanso de tela</string>
+    <string name="action_refresh">Atualizar</string>
+    <string name="msg_saved">Configuração salva</string>
+    <string name="msg_invalid">IP ou porta inválidos</string>
+    <string name="msg_testing">Testando…</string>
+    <string name="msg_qr_applied">Coletor configurado via QR — teste a conexão</string>
+    <string name="msg_qr_cancelled">Leitura cancelada</string>
+    <string name="msg_no_camera">Câmera indisponível</string>
+    <string name="msg_camera_denied">Permissão da câmera negada</string>
+</resources>

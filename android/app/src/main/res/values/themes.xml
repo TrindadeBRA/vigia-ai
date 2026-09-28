@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.VigiaMonitor" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#111318</item>
+        <item name="android:textColor">#E8EAED</item>
+    </style>
+</resources>
