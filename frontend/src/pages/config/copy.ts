@@ -483,6 +483,42 @@ export type ConfigCopy = {
   apodPreviewOk: string;
   apodPreviewFail: string;
   apodPoweredBy: string;
+  sptransTitle: string;
+  sptransLead: string;
+  sptransTokenLabel: string;
+  sptransTokenPh: string;
+  sptransTokenHint: string;
+  sptransTokenConfigured: string;
+  sptransTokenMissing: string;
+  sptransSaveToken: string;
+  sptransTokenSaved: string;
+  sptransSearchLabel: string;
+  sptransSearchPh: string;
+  sptransSearch: string;
+  sptransSearching: string;
+  sptransNoResults: string;
+  sptransNeedToken: string;
+  sptransAddStop: string;
+  sptransStopAdded: string;
+  sptransLinesLabel: string;
+  sptransLinesHint: string;
+  sptransLinesSaved: string;
+  sptransStopsLabel: string;
+  sptransEmpty: string;
+  sptransNicknameLabel: string;
+  sptransNicknamePh: string;
+  sptransUseLocation: string;
+  sptransLocating: string;
+  sptransLocationFail: string;
+  sptransNearbyLabel: string;
+  sptransAtDistance: (m: number) => string;
+  sptransNearLabel: (label: string) => string;
+  sptransCacheRefresh: string;
+  sptransCacheRefreshing: string;
+  sptransCacheReady: (count: number) => string;
+  sptransCacheEmpty: string;
+  sptransSearchHint: string;
+  sptransLocationApprox: string;
 };
 
 export const CONFIG_STR: Record<Lang, ConfigCopy> = {
@@ -959,6 +995,42 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     apodPreviewOk: "APOD carregado.",
     apodPreviewFail: "Não foi possível buscar o APOD.",
     apodPoweredBy: "Dados via NASA Open APIs",
+    sptransTitle: "Ônibus SP (SPTrans)",
+    sptransLead: "Cada ponto vira um card no painel com o tempo estimado das linhas que você escolher. Precisa do token gratuito do Olho Vivo (sptrans.com.br/desenvolvedores).",
+    sptransTokenLabel: "Token do Olho Vivo",
+    sptransTokenPh: "Cole o token gerado em Meus Aplicativos",
+    sptransTokenHint: "Gere grátis em sptrans.com.br/desenvolvedores → Meus Aplicativos. O token fica só neste computador.",
+    sptransTokenConfigured: "Token configurado",
+    sptransTokenMissing: "Token não configurado",
+    sptransSaveToken: "Salvar token",
+    sptransTokenSaved: "Token validado e salvo.",
+    sptransSearchLabel: "Buscar ponto",
+    sptransSearchPh: "ex.: Paulista, Pinheiros, 1234",
+    sptransSearch: "Buscar",
+    sptransSearching: "Buscando…",
+    sptransNoResults: "Nenhum ponto encontrado.",
+    sptransNeedToken: "Salve o token do Olho Vivo para buscar pontos.",
+    sptransAddStop: "Monitorar ponto",
+    sptransStopAdded: "Ponto adicionado — virou um card no painel.",
+    sptransLinesLabel: "Linhas monitoradas",
+    sptransLinesHint: "Marque as linhas que aparecem no card, com o tempo estimado até o ponto.",
+    sptransLinesSaved: "Linhas atualizadas.",
+    sptransStopsLabel: "Pontos monitorados",
+    sptransEmpty: "Nenhum ponto ainda. Busque acima e adicione.",
+    sptransNicknameLabel: "Apelido (opcional)",
+    sptransNicknamePh: "ex.: Casa, Trabalho",
+    sptransUseLocation: "Usar minha localização",
+    sptransLocating: "Localizando…",
+    sptransLocationFail: "Não foi possível obter a localização.",
+    sptransNearbyLabel: "Pontos próximos",
+    sptransAtDistance: (m) => (m < 1000 ? `a ${m} m` : `a ${(m / 1000).toFixed(1).replace(".", ",")} km`),
+    sptransNearLabel: (label) => `Perto de ${label}`,
+    sptransCacheRefresh: "Montar banco de paradas",
+    sptransCacheRefreshing: "Montando… (pode levar ~1 min)",
+    sptransCacheReady: (count) => `${count} pontos no banco`,
+    sptransCacheEmpty: "Banco de paradas ainda não montado — necessário pra buscar por endereço e arredores.",
+    sptransSearchHint: "Vale nome do ponto, endereço ou referência — ex.: Av. Paulista 1000.",
+    sptransLocationApprox: "Localização aproximada (por IP)",
   },
   en: {
     title: "Settings",
@@ -1433,6 +1505,42 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     apodPreviewOk: "APOD loaded.",
     apodPreviewFail: "Could not fetch APOD.",
     apodPoweredBy: "Data via NASA Open APIs",
+    sptransTitle: "São Paulo buses (SPTrans)",
+    sptransLead: "Each stop becomes a board card with the ETA of the lines you pick. Needs the free Olho Vivo token (sptrans.com.br/desenvolvedores).",
+    sptransTokenLabel: "Olho Vivo token",
+    sptransTokenPh: "Paste the token from My Apps",
+    sptransTokenHint: "Get it free at sptrans.com.br/desenvolvedores → My Apps. The token stays on this computer.",
+    sptransTokenConfigured: "Token configured",
+    sptransTokenMissing: "Token not configured",
+    sptransSaveToken: "Save token",
+    sptransTokenSaved: "Token validated and saved.",
+    sptransSearchLabel: "Find a stop",
+    sptransSearchPh: "e.g. Paulista, Pinheiros, 1234",
+    sptransSearch: "Search",
+    sptransSearching: "Searching…",
+    sptransNoResults: "No stop found.",
+    sptransNeedToken: "Save the Olho Vivo token to search stops.",
+    sptransAddStop: "Watch stop",
+    sptransStopAdded: "Stop added — it's now a board card.",
+    sptransLinesLabel: "Watched lines",
+    sptransLinesHint: "Check the lines shown on the card, with the ETA to the stop.",
+    sptransLinesSaved: "Lines updated.",
+    sptransStopsLabel: "Watched stops",
+    sptransEmpty: "No stop yet. Search above and add one.",
+    sptransNicknameLabel: "Nickname (optional)",
+    sptransNicknamePh: "e.g. Home, Work",
+    sptransUseLocation: "Use my location",
+    sptransLocating: "Locating…",
+    sptransLocationFail: "Could not get your location.",
+    sptransNearbyLabel: "Nearby stops",
+    sptransAtDistance: (m) => (m < 1000 ? `${m} m away` : `${(m / 1000).toFixed(1)} km away`),
+    sptransNearLabel: (label) => `Near ${label}`,
+    sptransCacheRefresh: "Build stop database",
+    sptransCacheRefreshing: "Building… (may take ~1 min)",
+    sptransCacheReady: (count) => `${count} stops in database`,
+    sptransCacheEmpty: "Stop database not built yet — needed for address and nearby search.",
+    sptransSearchHint: "Stop name, address or landmark works — e.g. Av. Paulista 1000.",
+    sptransLocationApprox: "Approximate location (by IP)",
   },
   es: {
     title: "Configuración",
@@ -1907,6 +2015,42 @@ export const CONFIG_STR: Record<Lang, ConfigCopy> = {
     apodPreviewOk: "APOD cargado.",
     apodPreviewFail: "No se pudo obtener el APOD.",
     apodPoweredBy: "Datos vía NASA Open APIs",
+    sptransTitle: "Autobuses SP (SPTrans)",
+    sptransLead: "Cada parada se vuelve una tarjeta con el tiempo estimado de las líneas que elijas. Necesita el token gratuito de Olho Vivo (sptrans.com.br/desenvolvedores).",
+    sptransTokenLabel: "Token de Olho Vivo",
+    sptransTokenPh: "Pega el token de Mis Aplicaciones",
+    sptransTokenHint: "Obténlo gratis en sptrans.com.br/desenvolvedores → Mis Aplicaciones. El token queda solo en este computador.",
+    sptransTokenConfigured: "Token configurado",
+    sptransTokenMissing: "Token no configurado",
+    sptransSaveToken: "Guardar token",
+    sptransTokenSaved: "Token validado y guardado.",
+    sptransSearchLabel: "Buscar parada",
+    sptransSearchPh: "ej.: Paulista, Pinheiros, 1234",
+    sptransSearch: "Buscar",
+    sptransSearching: "Buscando…",
+    sptransNoResults: "Ninguna parada encontrada.",
+    sptransNeedToken: "Guarda el token de Olho Vivo para buscar paradas.",
+    sptransAddStop: "Vigilar parada",
+    sptransStopAdded: "Parada añadida — ya es una tarjeta del panel.",
+    sptransLinesLabel: "Líneas vigiladas",
+    sptransLinesHint: "Marca las líneas que aparecen en la tarjeta, con el tiempo estimado hasta la parada.",
+    sptransLinesSaved: "Líneas actualizadas.",
+    sptransStopsLabel: "Paradas vigiladas",
+    sptransEmpty: "Ninguna parada aún. Busca arriba y añade una.",
+    sptransNicknameLabel: "Apodo (opcional)",
+    sptransNicknamePh: "ej.: Casa, Trabajo",
+    sptransUseLocation: "Usar mi ubicación",
+    sptransLocating: "Localizando…",
+    sptransLocationFail: "No se pudo obtener la ubicación.",
+    sptransNearbyLabel: "Paradas cercanas",
+    sptransAtDistance: (m) => (m < 1000 ? `a ${m} m` : `a ${(m / 1000).toFixed(1).replace(".", ",")} km`),
+    sptransNearLabel: (label) => `Cerca de ${label}`,
+    sptransCacheRefresh: "Cargar base de paradas",
+    sptransCacheRefreshing: "Cargando… (puede tardar ~1 min)",
+    sptransCacheReady: (count) => `${count} paradas en la base`,
+    sptransCacheEmpty: "Base de paradas aún no cargada — necesaria para buscar por dirección y cercanías.",
+    sptransSearchHint: "Vale nombre de parada, dirección o referencia — ej.: Av. Paulista 1000.",
+    sptransLocationApprox: "Ubicación aproximada (por IP)",
   },
 };
 

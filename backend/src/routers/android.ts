@@ -1,10 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { execFile, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { createReadStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { dataDir } from "../config.js";
+import { lanIPv4 } from "../netutil.js";
 import {
     AndroidCreateSchema,
     AndroidDeviceSchema,
@@ -15,6 +17,37 @@ import {
 } from "../schemas/android.js";
 
 const execFileAsync = promisify(execFile);
+
+const GITHUB_RELEASES_LATEST = "https://github.com/TrindadeBRA/vigia-ai/releases/latest";
+
+// Raiz do repo a partir deste módulo (vale tanto via tsx em src quanto
+// compilado em dist: routers/ -> src|dist -> backend -> repo).
+function repoRoot(): string {
+    return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+}
+
+// APK local do app Vigia Monitor (build de debug/release). Override via
+// VIGIA_APK_PATH; sem build local o /api/android/apk redireciona pro GitHub.
+function findLocalApk(): string | null {
+    const override = (process.env.VIGIA_APK_PATH || "").trim();
+    const candidates = [
+        override,
+        join(repoRoot(), "android", "app", "build", "outputs", "apk", "release", "app-release.apk"),
+        join(repoRoot(), "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
+    ];
+    for (const c of candidates) {
+        if (c && existsSync(c)) return c;
+    }
+    return null;
+}
+
+function escHtml(s: string): string {
+    return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
 
 function androidPath(): string {
     return join(dataDir(), "android.json");
@@ -518,5 +551,64 @@ export async function createAndroidRoutes(app: FastifyInstance): Promise<void> {
             return { ...d, size };
         }));
         return { devices: enriched };
+    });
+
+    // Página de setup do app Vigia Monitor — alvo do QR Code exibido em
+    // /display/theme (`?host=&port=` embutem o coletor). No browser do
+    // celular oferece o download do APK; escaneada dentro do app, o
+    // QrScanActivity extrai host/porta da URL e salva no ConfigStore.
+    app.get("/api/android/setup", { schema: { tags: ["Android"] } }, async (request, reply) => {
+        const q = (request.query as Record<string, string | undefined>) ?? {};
+        const ips = lanIPv4();
+        const rawHost = String(q.host ?? ips[0] ?? "").trim();
+        const rawPort = Number.parseInt(String(q.port ?? "8787"), 10);
+        const host = rawHost || "IP-DO-COLETOR";
+        const port = Number.isInteger(rawPort) && rawPort >= 1 && rawPort <= 65535 ? rawPort : 8787;
+        const hasLocalApk = findLocalApk() !== null;
+        const apkNote = hasLocalApk
+            ? "APK servido por este coletor (build local)."
+            : "Sem build local neste coletor — o botão leva aos releases do GitHub.";
+        const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigia Monitor — instalar</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#111318;color:#e8eaed;margin:0;padding:24px}
+.card{max-width:480px;margin:0 auto;background:#1a1d24;border:1px solid #333842;border-radius:16px;padding:24px}
+h1{font-size:20px;margin:0 0 8px}
+p{font-size:14px;line-height:1.6;color:#bdc1c6}
+code{color:#fff;background:#00000055;padding:2px 6px;border-radius:6px}
+a.btn{display:block;text-align:center;background:#32bcad;color:#06251f;font-weight:700;font-size:16px;padding:14px;border-radius:12px;text-decoration:none;margin:16px 0}
+ol{font-size:14px;line-height:1.7;color:#bdc1c6;padding-left:20px}
+.note{font-size:12px;color:#9aa0a6}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>Vigia Monitor</h1>
+<p>Coletor em <code>${escHtml(host)}:${escHtml(String(port))}</code></p>
+<a class="btn" href="/api/android/apk">Baixar APK</a>
+<p class="note">${escHtml(apkNote)}</p>
+<ol>
+<li>Instale o APK (autorize "instalar apps desconhecidos" se o Android pedir).</li>
+<li>Abra o <b>Vigia Monitor</b>, toque em <b>Configurar</b> e use <b>Escanear QR do painel</b> apontando para o QR de /display/theme — IP e porta entram sozinhos.</li>
+<li>Ou digite à mão: IP <code>${escHtml(host)}</code>, porta <code>${escHtml(String(port))}</code>, <b>Salvar</b> e <b>Testar conexão</b>.</li>
+</ol>
+</div>
+</body>
+</html>`;
+        return reply.type("text/html; charset=utf-8").send(html);
+    });
+
+    // Binário do APK (build local) ou redirect pros releases do GitHub.
+    app.get("/api/android/apk", { schema: { tags: ["Android"] } }, async (_request, reply) => {
+        const apk = findLocalApk();
+        if (!apk) return reply.redirect(GITHUB_RELEASES_LATEST);
+        const size = statSync(apk).size;
+        reply.header("Content-Length", String(size));
+        reply.header("Content-Disposition", 'attachment; filename="vigia-monitor.apk"');
+        return reply.type("application/vnd.android.package-archive").send(createReadStream(apk));
     });
 }

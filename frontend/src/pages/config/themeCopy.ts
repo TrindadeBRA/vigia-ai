@@ -9,8 +9,21 @@ export type ThemeCopy = {
   canvasTitle: string;
   canvasHint: string;
   canvasNoDevice: string;
+  canvasTarget: string;
+  targetBoard: string;
+  savedOkMonitor: string;
+  orientationPortrait: string;
+  orientationLandscape: string;
   background: string;
   backgroundColor: string;
+  overlayOpacity: string;
+  overlayHint: string;
+  wallpaperZoom: string;
+  wallpaperZoomHint: string;
+  wallpaperReframe: string;
+  rotateWallpapers: string;
+  rotateInterval: string;
+  rotateHint: string;
   clock: string;
   clockEnabled: string;
   clockFormat24h: string;
@@ -132,6 +145,15 @@ export type ThemeCopy = {
   importing: string;
   imported: string;
   importError: string;
+  androidQrButton: string;
+  androidQrTitle: string;
+  androidQrLead: string;
+  androidQrCopy: string;
+  androidQrCopied: string;
+  androidQrDownloadApk: string;
+  androidQrStepCamera: string;
+  androidQrStepApp: string;
+  androidQrNoLan: string;
 };
 
 export const THEME_STR: Record<Lang, ThemeCopy> = {
@@ -143,10 +165,23 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     offline: "Coletor offline — confira se o ./dev up está rodando.",
     retry: "Tentar de novo",
     canvasTitle: "Canvas (proporção da tela da placa)",
+  canvasTarget: "Canvas",
+  targetBoard: "Placa (firmware, 480×320)",
+  savedOkMonitor: "Salvo — abra o Canvas no app do aparelho",
+  orientationPortrait: "vertical",
+  orientationLandscape: "horizontal",
     canvasHint: "Arraste pra posicionar, ou use as setas do teclado com o elemento selecionado (Shift anda 10 px). Clique num elemento (ou na lista ao lado) pra escolher a métrica, a cor e o tamanho.",
     canvasNoDevice: "Sem contato com a placa ainda — editando na proporção padrão (480×320). Acerta sozinho assim que ela falar com o coletor.",
     background: "Fundo",
     backgroundColor: "Cor de fundo",
+    overlayOpacity: "Opacidade do overlay",
+    overlayHint: "A cor acima vira overlay sobre o papel de parede — sem papel, ela é o fundo. Com 0% o papel aparece puro.",
+    wallpaperZoom: "Zoom do papel de parede",
+    wallpaperZoomHint: "Arraste o papel no canvas pra enquadrar, ou use Shift+scroll com o papel focado. Clique no papel pra focá-lo.",
+    wallpaperReframe: "Mostrar papel inteiro",
+    rotateWallpapers: "Trocar papéis automaticamente",
+    rotateInterval: "Intervalo da troca",
+    rotateHint: "Alterna os papéis da biblioteca na ordem da lista — no app, no canvas web e na placa (via recarregar automático).",
     clock: "Relógio",
     clockEnabled: "Mostrar relógio",
     clockFormat24h: "Formato 24h",
@@ -269,6 +304,15 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importing: "Importando…",
     imported: "Importado com sucesso",
     importError: "Falha ao importar",
+    androidQrButton: "App Android (QR)",
+    androidQrTitle: "Instalar o app no celular",
+    androidQrLead: "O mesmo QR serve pros dois passos: baixar o APK e configurar o app.",
+    androidQrCopy: "Copiar link",
+    androidQrCopied: "Link copiado",
+    androidQrDownloadApk: "Baixar APK direto",
+    androidQrStepCamera: "Câmera do celular → abre a página e baixa o APK.",
+    androidQrStepApp: "No app Vigia Monitor → Configurar → Escanear QR → IP e porta entram sozinhos.",
+    androidQrNoLan: "Sem IP de rede local — conecte o coletor no Wi-Fi para gerar o QR.",
   },
   en: {
     title: "Board theme",
@@ -278,10 +322,23 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     offline: "Collector offline — check that ./dev up is running.",
     retry: "Retry",
     canvasTitle: "Canvas (board screen proportions)",
+  canvasTarget: "Canvas",
+  targetBoard: "Board (firmware, 480×320)",
+  savedOkMonitor: "Saved — open Canvas in the device app",
+  orientationPortrait: "portrait",
+  orientationLandscape: "landscape",
     canvasHint: "Drag to position, or use the arrow keys on the selected element (Shift moves 10 px). Click an element (or the list beside the canvas) to pick its metric, color and size.",
     canvasNoDevice: "No contact with the board yet — editing at the default 480×320 proportions. Fixes itself once it talks to the collector.",
     background: "Background",
     backgroundColor: "Background color",
+    overlayOpacity: "Overlay opacity",
+    overlayHint: "The color above becomes an overlay over the wallpaper — without wallpaper, it is the background. At 0% the wallpaper shows purely.",
+    wallpaperZoom: "Wallpaper zoom",
+    wallpaperZoomHint: "Drag the wallpaper on the canvas to reframe, or use Shift+scroll with the wallpaper focused. Click the wallpaper to focus it.",
+    wallpaperReframe: "Show whole wallpaper",
+    rotateWallpapers: "Rotate wallpapers automatically",
+    rotateInterval: "Rotation interval",
+    rotateHint: "Cycles through the library wallpapers in list order — in the app, the web canvas and on the board (via auto-reload).",
     clock: "Clock",
     clockEnabled: "Show clock",
     clockFormat24h: "24h format",
@@ -404,6 +461,15 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importing: "Importing…",
     imported: "Imported successfully",
     importError: "Failed to import",
+    androidQrButton: "Android app (QR)",
+    androidQrTitle: "Install the app on your phone",
+    androidQrLead: "The same QR covers both steps: downloading the APK and configuring the app.",
+    androidQrCopy: "Copy link",
+    androidQrCopied: "Link copied",
+    androidQrDownloadApk: "Download APK directly",
+    androidQrStepCamera: "Phone camera → opens the page and downloads the APK.",
+    androidQrStepApp: "In the Vigia Monitor app → Configure → Scan QR → IP and port fill in automatically.",
+    androidQrNoLan: "No local network IP — connect the collector to Wi-Fi to generate the QR.",
   },
   es: {
     title: "Tema de la placa",
@@ -413,10 +479,23 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     offline: "Colector fuera de línea — verificá que ./dev up esté corriendo.",
     retry: "Reintentar",
     canvasTitle: "Lienzo (proporción de la pantalla de la placa)",
+  canvasTarget: "Lienzo",
+  targetBoard: "Placa (firmware, 480×320)",
+  savedOkMonitor: "Guardado — abrí el Canvas en la app del aparato",
+  orientationPortrait: "vertical",
+  orientationLandscape: "horizontal",
     canvasHint: "Arrastrá para ubicar, o usá las flechas del teclado con el elemento seleccionado (Shift mueve 10 px). Hacé clic en un elemento (o en la lista al lado) para elegir métrica, color y tamaño.",
     canvasNoDevice: "Todavía sin contacto con la placa — editando con la proporción por defecto (480×320). Se ajusta solo en cuanto hable con el colector.",
     background: "Fondo",
     backgroundColor: "Color de fondo",
+    overlayOpacity: "Opacidad del overlay",
+    overlayHint: "El color de arriba se vuelve overlay sobre el papel — sin papel, es el color de fondo. Con 0% el papel se muestra puro.",
+    wallpaperZoom: "Zoom del fondo",
+    wallpaperZoomHint: "Arrastrá el fondo en el lienzo para encuadrar, o usá Shift+scroll con el fondo enfocado. Hacé clic en el fondo para enfocarlo.",
+    wallpaperReframe: "Mostrar fondo completo",
+    rotateWallpapers: "Rotar fondos automáticamente",
+    rotateInterval: "Intervalo de rotación",
+    rotateHint: "Alterna los fondos de la biblioteca en el orden de la lista — en la app, el lienzo web y la placa (vía recarga automática).",
     clock: "Reloj",
     clockEnabled: "Mostrar reloj",
     clockFormat24h: "Formato 24h",
@@ -539,5 +618,14 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     importing: "Importando…",
     imported: "Importado con éxito",
     importError: "Error al importar",
+    androidQrButton: "App Android (QR)",
+    androidQrTitle: "Instalá la app en el celular",
+    androidQrLead: "El mismo QR sirve para los dos pasos: descargar el APK y configurar la app.",
+    androidQrCopy: "Copiar enlace",
+    androidQrCopied: "Enlace copiado",
+    androidQrDownloadApk: "Descargar APK directo",
+    androidQrStepCamera: "Cámara del celular → abre la página y descarga el APK.",
+    androidQrStepApp: "En la app Vigia Monitor → Configurar → Escanear QR → IP y puerto se completan solos.",
+    androidQrNoLan: "Sin IP de red local — conectá el colector al Wi-Fi para generar el QR.",
   },
 };

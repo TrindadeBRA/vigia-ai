@@ -15,6 +15,7 @@ import {
   normalizeSize,
   packBoard,
   padRowsForHeight,
+  parseInnerSlot,
   placeCard,
   rectCells,
   rectFor,
@@ -159,6 +160,7 @@ export function Overview({
   onUpdateNote,
   onRemoveCamera,
   onRemoveAndroid,
+  onRemoveSpTrans,
   onRemoveClock,
   onDuplicateClock,
   onRemoveBoard,
@@ -190,6 +192,7 @@ export function Overview({
   onUpdateNote?: (id: string, patch: { text?: string; color?: string }) => void;
   onRemoveCamera?: (id: string) => void;
   onRemoveAndroid?: (id: string) => void;
+  onRemoveSpTrans?: (id: string) => void;
   onRemoveClock?: (id: string) => void;
   onDuplicateClock?: (id: string) => void;
   onRemoveBoard?: (id: string) => void;
@@ -200,7 +203,7 @@ export function Overview({
     title?: string | null;
     onRename: (title: string) => void;
     onRemove: (id: string) => void;
-    onMoveIntoBoard: (id: string) => void;
+    onMoveIntoBoard: (id: string, target?: Cell) => void;
     onMoveOutOfBoard: (id: string, target: Cell) => void;
     onInnerReorder: (id: string, target: Cell) => void;
     onInnerGrid: (g: { cols: number; rows: number }) => void;
@@ -223,6 +226,7 @@ export function Overview({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [liftSize, setLiftSize] = useState<{ w: number; h: number } | null>(null);
   const [dropPreview, setDropPreview] = useState<Cell | null>(null);
+  const [innerDropPreview, setInnerDropPreview] = useState<{ bid: string; cell: Cell } | null>(null);
   const [freeTarget, setFreeTarget] = useState<string | null>(null);
   const [cardToRemove, setCardToRemove] = useState<string | null>(null);
   const [bgRect, setBgRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -354,6 +358,7 @@ export function Overview({
     if (readonly) return;
     setActiveId(String(e.active.id));
     setDropPreview(null);
+    setInnerDropPreview(null);
     const box = e.active.rect.current.initial;
     setLiftSize(box ? { w: box.width, h: box.height } : null);
   }
@@ -364,12 +369,26 @@ export function Overview({
     const over = e.over ? String(e.over.id) : null;
     if (!over || over === from) {
       setDropPreview(null);
+      setInnerDropPreview(null);
+      return;
+    }
+    const innerSlot = parseInnerSlot(over);
+    if (innerSlot) {
+      setDropPreview(null);
+      const fromInnerId = from.startsWith("inner:") ? from.slice(6) : null;
+      if (fromInnerId && findBoardForInner(fromInnerId) !== innerSlot.bid) {
+        setInnerDropPreview(null);
+        return;
+      }
+      setInnerDropPreview({ bid: innerSlot.bid, cell: innerSlot.cell });
       return;
     }
     if (over.startsWith("board-inner:")) {
       setDropPreview(null);
+      setInnerDropPreview(null);
       return;
     }
+    setInnerDropPreview(null);
     const dest = dropTarget(over, layout);
     if (!dest) {
       setDropPreview(null);
@@ -394,11 +413,18 @@ export function Overview({
     setActiveId(null);
     setLiftSize(null);
     setDropPreview(null);
+    setInnerDropPreview(null);
     if (!over || over === from) return;
     if (from.startsWith("inner:")) {
       const realId = from.slice(6);
       const srcBoardId = findBoardForInner(realId);
       const srcBi = srcBoardId ? boardInners?.[srcBoardId] : null;
+      const slot = parseInnerSlot(over);
+      if (slot) {
+        // célula vazia do quadro: drop livre só dentro do próprio quadro
+        if (srcBoardId === slot.bid) srcBi?.onInnerReorder?.(realId, slot.cell);
+        return;
+      }
       // soltou de volta sobre o próprio quadro (ou outro quadro) — no-op,
       // igual ao singleton; mover item entre quadros não é suportado
       if (over.startsWith("board-inner:")) return;
@@ -415,6 +441,13 @@ export function Overview({
       const dest = dropTarget(over, layout);
       if (!dest) return;
       srcBi?.onMoveOutOfBoard?.(realId, dest);
+      return;
+    }
+    const slot = parseInnerSlot(over);
+    if (slot) {
+      const destBoardId = slot.bid;
+      const fromP = byId.get(from);
+      if (fromP && fromP.provider !== "board") boardInners?.[destBoardId]?.onMoveIntoBoard(from, slot.cell);
       return;
     }
     if (over.startsWith("board-inner:")) {
@@ -487,6 +520,19 @@ export function Overview({
     }
     if (id.startsWith("widget:android:")) {
       onRemoveAndroid?.(id);
+      onBoard((b) => {
+        const size = { ...b.size };
+        const pos = { ...b.pos };
+        const bg = { ...(b.bg || {}) };
+        delete size[id];
+        delete pos[id];
+        delete bg[id];
+        return { ...b, size, pos, bg };
+      });
+      return;
+    }
+    if (id.startsWith("widget:sptrans:")) {
+      onRemoveSpTrans?.(id);
       onBoard((b) => {
         const size = { ...b.size };
         const pos = { ...b.pos };
@@ -578,6 +624,8 @@ export function Overview({
       _onInnerSetSize: bi.onInnerSetSize,
       _onInnerSetBg: bi.onInnerSetBg,
       _onInnerGrid: bi.onInnerGrid,
+      _innerDropPreview: innerDropPreview?.bid === p.id ? innerDropPreview.cell : null,
+      _innerDragId: activeInnerId,
       _boardRect: cardRect(layout, p.id, cols),
     };
     let changed = false;
@@ -748,7 +796,7 @@ export function Overview({
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDragEnd={onDragEnd}
-            onDragCancel={() => { setActiveId(null); setLiftSize(null); setDropPreview(null); }}
+            onDragCancel={() => { setActiveId(null); setLiftSize(null); setDropPreview(null); setInnerDropPreview(null); }}
           >
             <div
               ref={gridRef}

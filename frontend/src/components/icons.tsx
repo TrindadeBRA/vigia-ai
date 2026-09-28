@@ -227,6 +227,17 @@ export function TextIcon(props: { size?: number; className?: string }) {
   return <Svg {...props} d="M5 6h14M12 6v13" />;
 }
 
+export function QrIcon(props: { size?: number; className?: string }) {
+  return (
+    <Svg {...props}>
+      <rect x={4} y={4} width={6} height={6} rx={1} stroke="currentColor" strokeWidth={2} />
+      <rect x={14} y={4} width={6} height={6} rx={1} stroke="currentColor" strokeWidth={2} />
+      <rect x={4} y={14} width={6} height={6} rx={1} stroke="currentColor" strokeWidth={2} />
+      <path d="M14 14h3v3h-3zM20 14v.5M14 20h.5M17.5 17.5H20V20h-2.5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export function ImageIcon(props: { size?: number; className?: string }) {
   return (
     <Svg {...props}>

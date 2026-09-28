@@ -6,10 +6,11 @@ import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import type { Lang } from "../../i18n";
 import { IconCard } from "./themeCanvas/IconCard";
 import { IconChip } from "./themeCanvas/IconChip";
-import { formatThemeClock, providerSupportsCard, type ThemeState } from "./themeCanvas/state";
+import { formatThemeClock, providerSupportsCard, wallpaperImgStyle, type ThemeState } from "./themeCanvas/state";
 import { ThemeLayer } from "./themeCanvas/ThemeLayer";
+import { readableTextOn } from "./themeEditor/themeState";
 
-export { providerSupportsCard, DEFAULT_THEME, formatThemeClock, migrateTheme, loadThemeDraft, parseSavedThemeJson, type ThemeIconStyle, type ThemeIcon, type ThemeText, type ThemeClock, type ThemeState } from "./themeCanvas/state";
+export { providerSupportsCard, DEFAULT_THEME, formatThemeClock, migrateTheme, loadThemeDraft, parseSavedThemeJson, wallpaperImgStyle, type ThemeIconStyle, type ThemeIcon, type ThemeText, type ThemeClock, type ThemeCountdown, type ThemeState } from "./themeCanvas/state";
 export { IconCard } from "./themeCanvas/IconCard";
 
 export function ThemeCanvasView({
@@ -80,7 +81,17 @@ export function ThemeCanvasView({
           src={wallpaperMediaSrc({ id: wallpaperId, kind: wallpaperKind, original_url: wallpaperOriginalUrl })}
           alt=""
           draggable={false}
-          className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
+          fetchPriority="high"
+          decoding="async"
+          className="pointer-events-none absolute object-cover"
+          style={wallpaperImgStyle(theme.background.zoom, theme.background.ox, theme.background.oy)}
+        />
+      ) : null}
+      {wallpaperId && theme.background.overlayOpacity > 0 ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 size-full"
+          style={{ background: theme.background.color, opacity: theme.background.overlayOpacity }}
         />
       ) : null}
       {theme.clock.enabled ? (
@@ -91,6 +102,22 @@ export function ThemeCanvasView({
           >
             {formatThemeClock(now, theme.clock.format24h)}
           </span>
+        </ThemeLayer>
+      ) : null}
+      {theme.countdown.enabled ? (
+        <ThemeLayer x={theme.countdown.x} y={theme.countdown.y} containerSize={containerSize}>
+          <div
+            className="flex items-center justify-center rounded-full font-mono font-bold leading-none"
+            style={{
+              width: `${22 * theme.countdown.scale * zoom}px`,
+              height: `${22 * theme.countdown.scale * zoom}px`,
+              fontSize: `${11 * theme.countdown.scale * zoom}px`,
+              background: theme.countdown.color || "#f5c542",
+              color: readableTextOn(theme.countdown.color || "#f5c542"),
+            }}
+          >
+            {Math.max(1, 60 - now.getSeconds())}
+          </div>
         </ThemeLayer>
       ) : null}
       {theme.icons.map((icon) => (

@@ -31,6 +31,7 @@ import {
   ApodTileCard,
   SpotifyTileCard,
   SystemTileCard,
+  SptransTileCard,
   WeatherTileCard,
   YoutubeMusicTileCard,
 } from "./TileCards";
@@ -147,6 +148,9 @@ export function ProviderCard({
   }
   if (p.provider === "youtubemusic") {
     return <YoutubeMusicTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
+  }
+  if (p.provider === "sptrans" || p.kind === "sptrans") {
+    return <SptransTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;
   }
   if (p.provider === "system") {
     return <SystemTileCard p={p} size={size} dragging={dragging} lifted={lifted} t={t} grip={grip} bg={bg} readonly={readonly} onSetSize={onSetSize} onDuplicate={onDuplicate} onRemove={onRemove} onSetBg={onSetBg} onFree={onFree} />;

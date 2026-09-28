@@ -24,11 +24,13 @@ import { createGitRoutes } from "./routers/git.js";
 import { createGithubRoutes } from "./routers/github.js";
 import { createImagesRoutes } from "./routers/images.js";
 import { createMiningRoutes } from "./routers/mining.js";
+import { createMonitorsRoutes } from "./routers/monitors.js";
 import { createNotesRoutes } from "./routers/notes.js";
 import { createRetroachievementsRoutes } from "./routers/retroachievements.js";
 import { createRssRoutes } from "./routers/rss.js";
 import { createApodRoutes } from "./routers/apod.js";
 import { createSpotifyRoutes } from "./routers/spotify.js";
+import { createSpTransRoutes } from "./routers/sptrans.js";
 import { createSystemRoutes } from "./routers/system.js";
 import { createThemeRoutes } from "./routers/theme.js";
 import { createUsageRoutes } from "./routers/usage.js";
@@ -68,6 +70,7 @@ const OPENAPI_TAGS = [
   { name: "Emulador", description: "EmulatorJS — ROMs, BIOS, saves, metadados (IGDB)" },
   { name: "Câmeras", description: "Câmeras ONVIF/RTSP — stream, snapshot, PTZ" },
   { name: "Android", description: "Dispositivos Android via ADB — espelhamento e input" },
+  { name: "SPTrans", description: "Ônibus de São Paulo em tempo real (Olho Vivo) — pontos e previsões" },
   { name: "Firmware", description: "secrets.h da ESP32 e gravação via PlatformIO no host" },
 ];
 
@@ -134,7 +137,7 @@ export async function createApp() {
           "Sistema", "Config", "Board", "Notas", "Imagens", "Tema", "Papéis de parede",
           "Alarmes", "Telegram", "Clima", "Moedas", "Mineração", "Calendário", "RSS", "APOD",
           "Git", "GitHub", "Spotify", "YouTube Music", "AdSense", "RetroAchievements",
-          "Emulador", "Câmeras", "Android", "Firmware",
+          "Emulador", "Câmeras", "Android", "SPTrans", "Firmware",
         ];
         return order.indexOf(a) - order.indexOf(b);
       },
@@ -233,8 +236,10 @@ export async function createApp() {
   await fastify.register(createGithubRoutes, { prefix: "" });
   await fastify.register(createNotesRoutes, { prefix: "" });
   await fastify.register(createMiningRoutes, { prefix: "" });
+  await fastify.register(createMonitorsRoutes, { prefix: "" });
   await fastify.register(createCameraRoutes, { prefix: "" });
   await fastify.register(createAndroidRoutes, { prefix: "" });
+  await fastify.register(createSpTransRoutes, { prefix: "" });
   await fastify.register(createImagesRoutes, { prefix: "" });
   await fastify.register(createClientStateRoutes, { prefix: "" });
   await fastify.register(createSystemRoutes, { prefix: "" });
@@ -274,11 +279,13 @@ export async function createApp() {
       if (!existsSync(p)) return reply.code(404).send({ ok: false, error: "not found" });
       const data = readFileSync(p);
       reply.header("Content-Type", "text/html");
+      reply.header("Cache-Control", "no-store");
       return reply.send(data);
     };
     // servem o SPA do frontend, não são "API" — fora do Swagger (schema.hide)
     const HIDE = { schema: { hide: true } };
     fastify.get("/", HIDE, serveIndex);
+    fastify.get("/canvas", HIDE, serveIndex);
     fastify.get("/setup", HIDE, serveIndex);
     fastify.get("/setup/", HIDE, serveIndex);
     fastify.get("/display", HIDE, serveIndex);
@@ -346,7 +353,7 @@ export async function createApp() {
     });
     fastify.setNotFoundHandler((req, reply) => {
       const path = req.url.split("?")[0];
-      if (dist && (path.startsWith("/display") || ["/", "/setup", "/setup/"].includes(path))) {
+      if (dist && (path.startsWith("/display") || path === "/canvas" || ["/", "/setup", "/setup/"].includes(path))) {
         const p = join(dist, "index.html");
         if (existsSync(p)) {
           reply.header("Content-Type", "text/html");

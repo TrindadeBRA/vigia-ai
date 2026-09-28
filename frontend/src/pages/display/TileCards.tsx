@@ -24,6 +24,7 @@ import { RetroAchievementsBoardCard, retroAllowedSizes, retroSizeLabel } from ".
 import { RssBoardCard, rssAllowedSizes, rssSizeLabel } from "../../components/cards/RssCard";
 import { ApodBoardCard, apodAllowedSizes, apodSizeLabel } from "../../components/cards/ApodCard";
 import { SpotifyBoardCard, spotifyAllowedSizes, spotifySizeLabel } from "../../components/cards/SpotifyCard";
+import { SpTransBoardCard, sptransAllowedSizes, sptransSizeLabel } from "../../components/cards/SpTransCard";
 import { SystemBoardCard, systemAllowedSizes, systemSizeLabel } from "../../components/cards/SystemCard";
 import { WeatherBoardCard, weatherAllowedSizes, weatherSizeLabel } from "../../components/cards/WeatherCard";
 import { YoutubeMusicBoardCard, youtubemusicAllowedSizes, youtubemusicSizeLabel } from "../../components/cards/YoutubeMusicCard";
@@ -206,6 +207,20 @@ export function AndroidTileCard({ p, size, dragging, lifted, t, grip, bg, readon
         <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => androidSizeLabel(s, t)} isClone={true} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
       ) : null}
       <AndroidBoardCard device={p.android ?? null} t={t} size={size} />
+    </div>
+  );
+}
+
+export function SptransTileCard({ p, size, dragging, lifted, t, grip, bg, readonly, onSetSize, onDuplicate, onRemove, onSetBg, onFree }: { p: ProviderMeta; size: CardSize; dragging?: boolean; lifted?: boolean; t: T; grip?: object; bg?: string | null; readonly?: boolean; onSetSize: (next: CardSize) => void; onDuplicate?: (id: string) => void; onRemove?: (id: string) => void; onSetBg?: (id: string, next: string | null) => void; onFree?: (id: string) => void }) {
+  const allowed = sptransAllowedSizes();
+  const style = useTileStyle(bg);
+  if (!p.sptransStop) return null;
+  return (
+    <div className={cn(TILE_BASE, "px-3.5 pb-3 pt-3", TILE_STATE(dragging, lifted), !lifted && viewFade)} style={style}>
+      {!lifted && !readonly ? (
+        <TileChrome id={p.id} t={t} grip={grip} size={size} onSetSize={onSetSize} allowed={allowed} getLabel={(s) => sptransSizeLabel(s, t)} isClone={true} onDuplicate={onDuplicate} onRemove={onRemove} bg={bg} onSetBg={onSetBg} onFree={onFree} />
+      ) : null}
+      <SpTransBoardCard stop={p.sptransStop} t={t} size={size} />
     </div>
   );
 }

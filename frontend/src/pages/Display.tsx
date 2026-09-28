@@ -23,13 +23,14 @@ import { useGridBoards } from "../hooks/useGridBoards";
 import { useGridWallpaper } from "../hooks/useGridWallpaper";
 import { useImageWidgets } from "../hooks/useImageWidgets";
 import { useServerNotes } from "../hooks/useServerNotes";
+import { useSpTransStops } from "../hooks/useSpTransStops";
 import { STR } from "../i18n";
 import { ACCENTS, PALETTES, applyThemeVars, getSystemTheme, resolveTheme } from "../theme";
 import { emptyNote, iconBtn, num, shell } from "../tw";
 import type { DisplayOutlet } from "./config/usePublicConfig";
 import { AccountPage } from "./display/AccountPage";
 import { baseIdForProvider, boardForCols, expandProvidersWithClones } from "./display/boardHelpers";
-import { buildAndroidProviders, buildBoardProviders, buildCameraProviders, buildClockProviders, buildEmulatorProviders, buildImageProviders, buildMusicProviders, buildNoteProviders, buildProviders, buildWidgetProviders, MUSIC_CONFIG_UPDATED_EVENT } from "./display/buildProviders";
+import { buildAndroidProviders, buildBoardProviders, buildCameraProviders, buildClockProviders, buildEmulatorProviders, buildImageProviders, buildMusicProviders, buildNoteProviders, buildProviders, buildSpTransProviders, buildWidgetProviders, MUSIC_CONFIG_UPDATED_EVENT } from "./display/buildProviders";
 import { Badge } from "./display/MetricRow";
 import { Overview } from "./display/Overview";
 import { SettingsDrawer } from "./display/SettingsDrawer";
@@ -90,6 +91,7 @@ export default function Display() {
   const serverNotes = useServerNotes();
   const cameras = useCameras();
   const androidDevices = useAndroidDevices();
+  const spTransStops = useSpTransStops();
   const pollMsRef = useRef(POLL_MS);
   const lastUpdatedAtRef = useRef<string | null>(null);
   pollMsRef.current = pollMs;
@@ -300,6 +302,7 @@ export default function Display() {
   // Android via ADB (scrcpy-like): cada dispositivo salvo vira seu próprio
   // bloco no board, com espelhamento ao vivo e controle por toque.
   const androidProviders = buildAndroidProviders(androidDevices.items, t);
+  const spTransProviders = buildSpTransProviders(spTransStops.items, t);
   const emulatorProviders = buildEmulatorProviders(emulatorConfig, t).map((p) => Object.assign(p, {
     _emulatorConfig: emulatorConfig ? {
       cdnVersion: emulatorConfig.cdnVersion,
@@ -324,8 +327,8 @@ export default function Display() {
   const bpBoard = boardForCols(boards, currentCols);
   const musicCardProviders = buildMusicProviders(musicProviders, t);
   const boardProviders = data
-    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...buildClockProviders(prefs.clockConfig, t), ...buildBoardProviders(prefs.boards, t), ...musicCardProviders, ...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...emulatorProviders]
-    : [...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...buildWidgetProviders(prefs.widgets, t), ...buildClockProviders(prefs.clockConfig, t), ...buildBoardProviders(prefs.boards, t), ...musicCardProviders, ...emulatorProviders];
+    ? [...providers, ...buildWidgetProviders(prefs.widgets, t), ...buildClockProviders(prefs.clockConfig, t), ...buildBoardProviders(prefs.boards, t), ...musicCardProviders, ...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...spTransProviders, ...emulatorProviders]
+    : [...imageProviders, ...noteProviders, ...cameraProviders, ...androidProviders, ...spTransProviders, ...buildWidgetProviders(prefs.widgets, t), ...buildClockProviders(prefs.clockConfig, t), ...buildBoardProviders(prefs.boards, t), ...musicCardProviders, ...emulatorProviders];
   const displayProviders = expandProvidersWithClones(boardProviders, bpBoard).map((p) => (p.provider === "clock" ? Object.assign(p, { clock: prefs.clockConfig?.[p.id] ?? null }) : p));
   const toggleWidget = (kind: WidgetKind) =>
     setPrefs((p) => {
@@ -429,7 +432,7 @@ export default function Display() {
     });
   };
 
-  const handleMoveIntoBoard = (bid: string, id: string) => {
+  const handleMoveIntoBoard = (bid: string, id: string, target?: Cell) => {
     const b = prefs.boards?.[bid];
     const items = b?.items ?? [];
     if (items.includes(id)) return;
@@ -444,7 +447,7 @@ export default function Display() {
       layoutCols: innerBase.layoutCols ?? g.cols,
       size: { ...innerBase.size, [id]: outerRendered.size[id] ?? "sm" },
     };
-    const cell = firstFreeCell(items.concat(id), innerLayout, id, g.cols);
+    const cell = target ?? firstFreeCell(items.concat(id), innerLayout, id, g.cols);
     const placed = placeCard(items.concat(id), innerLayout, id, cell, g.cols);
     setPrefs((p) => ({ ...p, boards: { ...(p.boards ?? {}), [bid]: { ...(p.boards?.[bid] ?? {}), items: items.concat(id), inner: placed } } }));
     setBoards((b) => {
@@ -552,7 +555,7 @@ export default function Display() {
         title: bi.title ?? null,
         onRename: (title: string) => handleBoardRename(bid, title),
         onRemove: (id: string) => handleBoardInnerRemove(bid, id),
-        onMoveIntoBoard: (id: string) => handleMoveIntoBoard(bid, id),
+        onMoveIntoBoard: (id: string, target?: Cell) => handleMoveIntoBoard(bid, id, target),
         onMoveOutOfBoard: (id: string, target: Cell) => handleMoveOutOfBoard(bid, id, target),
         onInnerReorder: (id: string, target: Cell) => handleInnerReorder(bid, id, target),
         onInnerGrid: (g: { cols: number; rows: number }) => handleInnerGrid(bid, g),
@@ -1211,6 +1214,7 @@ export default function Display() {
                   onUpdateNote={(id, patch) => void serverNotes.update(id.replace(/^note:/, ""), patch as never)}
                   onRemoveCamera={(id) => void cameras.remove(id.replace(/^widget:camera:/, ""))}
                   onRemoveAndroid={(id) => void androidDevices.remove(id.replace(/^widget:android:/, ""))}
+                  onRemoveSpTrans={(id) => void spTransStops.remove(id.replace(/^widget:sptrans:/, ""))}
                   onRemoveClock={handleRemoveClock}
                   onDuplicateClock={handleDuplicateClock}
                   onRemoveBoard={handleRemoveBoard}

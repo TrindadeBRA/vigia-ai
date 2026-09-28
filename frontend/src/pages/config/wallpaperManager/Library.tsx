@@ -4,7 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../../cn";
 import { ConfirmModal } from "../../../components/ConfirmModal";
-import { ProviderSearchGrid, wallpaperMediaSrc } from "../../../components/ProviderSearchGrid";
+import { ProviderSearchGrid } from "../../../components/ProviderSearchGrid";
 import { cfgStatus } from "../../../tw";
 import { Button, Card, FieldStatus, SelectField } from "../ui";
 import { useWp } from "./context";
@@ -218,7 +218,7 @@ function SortableThemeWallpaperTile({ w, active, selectedLabel, gifBadge, onSele
             className={cn("group relative cursor-pointer overflow-hidden rounded-[12px] border bg-canvas text-left", active ? "border-accent ring-2 ring-accent/40" : "border-edge hover:border-accent/50", isDragging && "ring-2 ring-accent/30")}
         >
             <div className="aspect-[16/10] overflow-hidden bg-black/10">
-                <img src={wallpaperMediaSrc(w)} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                <img src={`/api/wallpapers/${w.id}/preview`} alt={w.id} className="size-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
             <div className="flex items-center justify-between gap-2 px-2 py-1.5">
                 <span className="truncate text-[11px] font-medium text-ink2">{w.provider ? `${w.provider}:${w.external_id || w.id.slice(0, 6)}` : w.id.slice(0, 8)}</span>

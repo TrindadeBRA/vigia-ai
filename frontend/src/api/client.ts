@@ -238,6 +238,15 @@ export async function fetchAndroidDevices(): Promise<import("./types").AndroidDe
   return data.devices;
 }
 
+// ── Apps Vigia Monitor (canvas por aparelho, sem ADB) ────────────
+
+export async function fetchMonitors(): Promise<import("./types").MonitorDevice[]> {
+  const res = await fetch("/api/monitors", { cache: "no-store" });
+  if (!res.ok) throw new Error(`monitors HTTP ${res.status}`);
+  const data = (await res.json()) as { monitors: import("./types").MonitorDevice[] };
+  return data.monitors || [];
+}
+
 export async function fetchAndroidAdbStatus(): Promise<import("./types").AndroidAdbStatus> {
   const res = await fetch("/api/android/adb/status", { cache: "no-store" });
   if (!res.ok) throw new Error(`adb status HTTP ${res.status}`);
@@ -568,4 +577,90 @@ export async function fetchRetroachievements(): Promise<import("./types").RetroA
   const res = await fetch("/api/retroachievements", { cache: "no-store" });
   if (!res.ok) throw new Error(`retroachievements HTTP ${res.status}`);
   return res.json() as Promise<import("./types").RetroAchievementsAccount>;
+}
+
+// ── SPTrans (Olho Vivo) ──────────────────────────────────────────────
+
+export async function fetchSpTransStatus(): Promise<import("./types").SpTransStatus> {
+  const res = await fetch("/api/sptrans/status", { cache: "no-store" });
+  if (!res.ok) throw new Error(`sptrans status HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").SpTransStatus>;
+}
+
+export async function saveSpTransToken(token: string): Promise<MutateResult & { suffix?: string | null }> {
+  const res = await fetch("/api/sptrans/token", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  return readMutate(res) as Promise<MutateResult & { suffix?: string | null }>;
+}
+
+export async function fetchSpTransStops(): Promise<import("./types").SpTransStop[]> {
+  const res = await fetch("/api/sptrans/stops", { cache: "no-store" });
+  if (!res.ok) throw new Error(`sptrans stops HTTP ${res.status}`);
+  const data = (await res.json()) as { stops: import("./types").SpTransStop[] };
+  return data.stops;
+}
+
+export async function addSpTransStop(body: { cp: number; nickname?: string }): Promise<MutateResult & { stop?: import("./types").SpTransStop }> {
+  const res = await fetch("/api/sptrans/stops", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res) as Promise<MutateResult & { stop?: import("./types").SpTransStop }>;
+}
+
+export async function patchSpTransStop(id: string, body: { nickname?: string; lines?: import("./types").SpTransMonitoredLine[] }): Promise<MutateResult & { stop?: import("./types").SpTransStop | null }> {
+  const res = await fetch(`/api/sptrans/stops/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return readMutate(res) as Promise<MutateResult & { stop?: import("./types").SpTransStop | null }>;
+}
+
+export async function removeSpTransStop(id: string): Promise<MutateResult> {
+  const res = await fetch(`/api/sptrans/stops/${id}`, { method: "DELETE" });
+  return readMutate(res);
+}
+
+export async function searchSpTransStops(q: string): Promise<{ results: import("./types").SpTransStopSearch[]; geo: import("./types").SpTransGeo }> {
+  const res = await fetch(`/api/sptrans/search/stops?q=${encodeURIComponent(q)}`, { cache: "no-store" });
+  const data = (await res.json().catch(() => ({}))) as { results?: import("./types").SpTransStopSearch[]; geo?: import("./types").SpTransGeo; error?: string };
+  if (!res.ok) throw new Error(data.error || `sptrans search HTTP ${res.status}`);
+  return { results: data.results ?? [], geo: data.geo ?? null };
+}
+
+export async function fetchSpTransNearby(lat: number, lng: number, limit = 10): Promise<import("./types").SpTransStopSearch[]> {
+  const res = await fetch(`/api/sptrans/nearby?lat=${lat}&lng=${lng}&limit=${limit}`, { cache: "no-store" });
+  const data = (await res.json().catch(() => ({}))) as { results?: import("./types").SpTransStopSearch[]; error?: string };
+  if (!res.ok) throw new Error(data.error || `sptrans nearby HTTP ${res.status}`);
+  return (data.results ?? []).map((r) => ({ ...r, source: "near" as const }));
+}
+
+export async function fetchSpTransCache(): Promise<import("./types").SpTransCacheStatus> {
+  const res = await fetch("/api/sptrans/cache", { cache: "no-store" });
+  if (!res.ok) throw new Error(`sptrans cache HTTP ${res.status}`);
+  return res.json() as Promise<import("./types").SpTransCacheStatus>;
+}
+
+export async function refreshSpTransCache(): Promise<MutateResult & { count?: number }> {
+  const res = await fetch("/api/sptrans/cache/refresh", { method: "POST" });
+  return readMutate(res) as Promise<MutateResult & { count?: number }>;
+}
+
+export async function fetchSpTransGeolocate(): Promise<{ lat: number; lng: number; city: string | null }> {
+  const res = await fetch("/api/sptrans/geolocate", { cache: "no-store" });
+  const data = (await res.json().catch(() => ({}))) as { lat?: number; lng?: number; city?: string | null; error?: string };
+  if (!res.ok) throw new Error(data.error || `sptrans geolocate HTTP ${res.status}`);
+  return { lat: Number(data.lat), lng: Number(data.lng), city: data.city ?? null };
+}
+
+export async function fetchSpTransPrevisao(cp: number): Promise<import("./types").SpTransPrevisao> {
+  const res = await fetch(`/api/sptrans/previsao/${cp}`, { cache: "no-store" });
+  const data = (await res.json().catch(() => ({}))) as import("./types").SpTransPrevisao & { error?: string };
+  if (!res.ok) throw new Error(data.error || `sptrans previsao HTTP ${res.status}`);
+  return data;
 }

@@ -196,6 +196,12 @@ type Strings = {
   cameraPtzZoomOut: string;
   cameraFullscreen: string;
   widgetAndroid: string;
+  sptransTitle: string;
+  sptransNext: string;
+  sptransArriving: string;
+  sptransMin: string;
+  sptransNoForecast: string;
+  sptransNoLines: string;
   androidNeedsConfigHint: string;
   androidOfflineHint: string;
   androidBack: string;
@@ -568,6 +574,12 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzZoomOut: "Afastar zoom",
     cameraFullscreen: "Ver em tela cheia",
     widgetAndroid: "Android",
+    sptransTitle: "Ônibus SP",
+    sptransNext: "Próximo ônibus",
+    sptransArriving: "Chegando",
+    sptransMin: "min",
+    sptransNoForecast: "Sem previsão",
+    sptransNoLines: "Escolha as linhas na configuração.",
     androidNeedsConfigHint: "Configure um dispositivo Android em Configurações.",
     androidOfflineHint: "Dispositivo offline — verifique cabo USB ou adb connect.",
     androidBack: "Voltar",
@@ -933,6 +945,12 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzZoomOut: "Zoom out",
     cameraFullscreen: "View fullscreen",
     widgetAndroid: "Android",
+    sptransTitle: "São Paulo buses",
+    sptransNext: "Next bus",
+    sptransArriving: "Arriving",
+    sptransMin: "min",
+    sptransNoForecast: "No forecast",
+    sptransNoLines: "Pick the lines in settings.",
     androidNeedsConfigHint: "Set up an Android device in Settings.",
     androidOfflineHint: "Device offline — check USB cable or adb connect.",
     androidBack: "Back",
@@ -1298,6 +1316,12 @@ export const STR: Record<Lang, Strings> = {
     cameraPtzZoomOut: "Alejar zoom",
     cameraFullscreen: "Ver en pantalla completa",
     widgetAndroid: "Android",
+    sptransTitle: "Autobuses SP",
+    sptransNext: "Próximo autobús",
+    sptransArriving: "Llegando",
+    sptransMin: "min",
+    sptransNoForecast: "Sin previsión",
+    sptransNoLines: "Elige las líneas en configuración.",
     androidNeedsConfigHint: "Configura un dispositivo Android en Configuración.",
     androidOfflineHint: "Dispositivo sin conexión — revisa el cable USB o adb connect.",
     androidBack: "Atrás",

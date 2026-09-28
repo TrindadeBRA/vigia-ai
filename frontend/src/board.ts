@@ -169,6 +169,17 @@ export function parseSlot(id: string): Cell | null {
   return { r: Number(m[1]), c: Number(m[2]) };
 }
 
+/** Célula vazia droppable dentro de um quadro — `inner-slot:<bid>:<r>:<c>`. */
+export function innerSlotKey(bid: string, r: number, c: number): string {
+  return `inner-slot:${bid}:${r}:${c}`;
+}
+
+export function parseInnerSlot(id: string): { bid: string; cell: Cell } | null {
+  const m = /^inner-slot:(.+):(\d+):(\d+)$/.exec(id);
+  if (!m) return null;
+  return { bid: m[1], cell: { r: Number(m[2]), c: Number(m[3]) } };
+}
+
 function visitRect(origin: Cell, rect: Rect, fn: (r: number, c: number) => void) {
   for (let r = origin.r; r < origin.r + rect.h; r++) {
     for (let c = origin.c; c < origin.c + rect.w; c++) fn(r, c);

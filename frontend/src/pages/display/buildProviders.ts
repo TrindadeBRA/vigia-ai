@@ -568,6 +568,24 @@ export function buildAndroidProviders(devices: import("../../api/types").Android
   }));
 }
 
+/** Cada parada SPTrans cadastrada em Configurações vira seu próprio bloco no
+ * board — igual às câmeras/notas. A previsão (tempo estimado) o card busca
+ * sozinho via poll em /api/sptrans/previsao/:cp. */
+export function buildSpTransProviders(stops: import("../../api/types").SpTransStop[] | undefined, t: T): ProviderMeta[] {
+  if (!stops?.length) return [];
+  return stops.map((stop) => ({
+    id: `widget:sptrans:${stop.id}`,
+    provider: "sptrans",
+    kind: "sptrans" as const,
+    ok: true,
+    error: null,
+    title: stop.nickname.trim() || stop.name || (t as unknown as Record<string, string>).sptransTitle || "SPTrans",
+    label: stop.name && stop.nickname.trim() ? stop.name : "",
+    metrics: [],
+    sptransStop: stop,
+  }));
+}
+
 export function buildNoteProviders(notes: Array<{ id: string; text: string; color: string }> | undefined, t: T): ProviderMeta[] {
   if (!notes?.length) return [];
   return notes.map((n) => ({

@@ -136,6 +136,19 @@ struct CustomTheme
 {
   ThemeBgKind bgKind = TBG_COLOR;
   uint16_t bgColor = 0;
+  // Overlay translúcido sobre o papel de parede (cor única do fundo +
+  // opacidade 0–1, ver background.color/overlayOpacity no CONTRATO_TEMA.md).
+  // overlayColor separado só existe em temas legados (parse dá precedência).
+  // 0 = desligado (caminho antigo, sem custo).
+  uint16_t overlayColor = 0;
+  float overlayOpacity = 0.0f;
+  // Janela visível do papel (crop/pan/zoom do editor): zoom 1–4 e centro
+  // (ox,oy) em frações 0–1. zoom=1 mostra o papel inteiro (caminho antigo).
+  // background.rotate/rotateIntervalSec são ignorados aqui — a rotação chega
+  // como troca de fundo via recarregar (SSE), igual a trocar o papel à mão.
+  float zoom = 1.0f;
+  float ox = 0.5f;
+  float oy = 0.5f;
   int frameCount = 0;
   int frameDelayMs = 200;
   ThemeClock clock;
@@ -303,6 +316,25 @@ static bool hexColorToRgb565(const String &hex, uint16_t &out)
   return true;
 }
 
+static bool themeOverlayOn(const CustomTheme &t)
+{
+  return t.overlayOpacity > 0.001f;
+}
+
+static uint16_t blendOverlay(uint16_t pixel, uint16_t overlay, float alpha)
+{
+  const int pr = (pixel >> 11) & 0x1F;
+  const int pg = (pixel >> 5) & 0x3F;
+  const int pb = pixel & 0x1F;
+  const int or_ = (overlay >> 11) & 0x1F;
+  const int og = (overlay >> 5) & 0x3F;
+  const int ob = overlay & 0x1F;
+  const int r = pr + (int)roundf((or_ - pr) * alpha);
+  const int g = pg + (int)roundf((og - pg) * alpha);
+  const int b = pb + (int)roundf((ob - pb) * alpha);
+  return (uint16_t)(((r & 0x1F) << 11) | ((g & 0x3F) << 5) | (b & 0x1F));
+}
+
 static bool parseIconKind(const String &s, ThemeIconKind &out)
 {
   static const char *kNames[TICON_COUNT] = {"claude", "gpt", "cursor", "openrouter",
@@ -362,6 +394,18 @@ static bool parseTheme(const String &json, CustomTheme &out)
   }
   uint16_t col;
   t.bgColor = hexColorToRgb565(jsonText(bg["color"]), col) ? col : COL_BG;
+  // Overlay usa a cor única do fundo; overlayColor separado só existe em
+  // temas legados e tem precedência quando presente.
+  t.overlayColor = t.bgColor;
+  t.overlayOpacity = 0.0f;
+  if (hexColorToRgb565(jsonText(bg["overlayColor"]), col))
+  {
+    t.overlayColor = col;
+  }
+  t.overlayOpacity = clampf(bg["overlayOpacity"] | 0.0f, 0.0f, 1.0f);
+  t.zoom = clampf(bg["zoom"] | 1.0f, 1.0f, 4.0f);
+  t.ox = clampf(bg["ox"] | 0.5f, 0.0f, 1.0f);
+  t.oy = clampf(bg["oy"] | 0.5f, 0.0f, 1.0f);
 
   JsonVariantConst clk = doc["clock"];
   if (!clk.isNull())
@@ -940,7 +984,57 @@ static void markGifHoles(int y, int dw)
   }
 }
 
-static bool drawScaledRaw(bool useRam, File &f, int srcW, int srcH, int scale, int frameIdx, bool punchHoles)
+struct BgWindow
+{
+  float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
+  bool zoomed = false;
+};
+
+// Janela da fonte amostrada pro destino cheio: mesma convenção do editor
+// web (wallpaperImgStyle em themeCanvas/state.ts) — o ponto (ox,oy) da
+// fonte fica no centro, com janela de (srcW/zoom)×(srcH/zoom) sempre dentro
+// da fonte. zoom<=1 = fonte inteira (caminho antigo, pixel-idêntico).
+static BgWindow bgWindowFor(int srcW, int srcH, float zoom, float oxC, float oyC)
+{
+  BgWindow win;
+  win.w = (float)srcW;
+  win.h = (float)srcH;
+  if (zoom <= 1.001f || srcW <= 0 || srcH <= 0)
+  {
+    return win;
+  }
+  if (zoom > 4.0f)
+  {
+    zoom = 4.0f;
+  }
+  win.w = (float)srcW / zoom;
+  win.h = (float)srcH / zoom;
+  float cx = oxC * (float)srcW;
+  float cy = oyC * (float)srcH;
+  if (cx < win.w / 2.0f)
+  {
+    cx = win.w / 2.0f;
+  }
+  if (cx > (float)srcW - win.w / 2.0f)
+  {
+    cx = (float)srcW - win.w / 2.0f;
+  }
+  if (cy < win.h / 2.0f)
+  {
+    cy = win.h / 2.0f;
+  }
+  if (cy > (float)srcH - win.h / 2.0f)
+  {
+    cy = (float)srcH - win.h / 2.0f;
+  }
+  win.x = cx - win.w / 2.0f;
+  win.y = cy - win.h / 2.0f;
+  win.zoomed = true;
+  return win;
+}
+
+static bool drawScaledRaw(bool useRam, File &f, int srcW, int srcH, int scale, int frameIdx, bool punchHoles,
+                        uint16_t overlay, float overlayAlpha, float zoom, float oxC, float oyC)
 {
   const int fullW = tft.width();
   const int fullH = tft.height();
@@ -976,70 +1070,114 @@ static bool drawScaledRaw(bool useRam, File &f, int srcW, int srcH, int scale, i
   {
     f.seek(frameOff, fs::SeekSet);
   }
-  for (int sy = 0; sy < srcH; sy++)
+  const BgWindow win = bgWindowFor(srcW, srcH, zoom, oxC, oyC);
+  // Linha da fonte em cache pro caminho sequencial (LittleFS): com zoom, a
+  // sequência de srcY é monótona não-decrescente com repetições — avança o
+  // arquivo pra frente uma vez só, reaproveitando a linha repetida.
+  int fileRow = 0;
+  int cachedRow = -1;
+  for (int dy = 0; dy < dh; dy++)
   {
-    const uint16_t *srcRow;
-    if (srcBase)
+    int srcY;
+    if (!win.zoomed)
     {
-      srcRow = srcBase + (size_t)sy * srcW;
+      srcY = dy / scale;
     }
     else
     {
-      if (f.read((uint8_t *)g_bgHalfRow, rowBytes) != rowBytes)
+      srcY = (int)(win.y + ((float)dy + 0.5f) * win.h / (float)dh);
+      if (srcY < 0)
       {
-        ok = false;
-        break;
+        srcY = 0;
+      }
+      if (srcY >= srcH)
+      {
+        srcY = srcH - 1;
+      }
+    }
+    const uint16_t *srcRow;
+    if (srcBase)
+    {
+      srcRow = srcBase + (size_t)srcY * srcW;
+    }
+    else
+    {
+      if (srcY != cachedRow)
+      {
+        while (fileRow < srcY)
+        {
+          if (f.read((uint8_t *)g_bgHalfRow, rowBytes) != rowBytes)
+          {
+            ok = false;
+            break;
+          }
+          fileRow++;
+        }
+        if (!ok)
+        {
+          break;
+        }
+        if (f.read((uint8_t *)g_bgHalfRow, rowBytes) != rowBytes)
+        {
+          ok = false;
+          break;
+        }
+        fileRow = srcY + 1;
+        cachedRow = srcY;
       }
       srcRow = g_bgHalfRow;
     }
-    for (int x = 0; x < srcW; x++)
+    for (int dx = 0; dx < dw; dx++)
     {
-      uint16_t p = srcRow[x];
-      const int dx = x * scale;
-      for (int k = 0; k < scale; k++)
+      int srcX;
+      if (!win.zoomed)
       {
-        if (dx + k < dw)
+        srcX = dx / scale;
+      }
+      else
+      {
+        srcX = (int)(win.x + ((float)dx + 0.5f) * win.w / (float)dw);
+        if (srcX < 0)
         {
-          g_bgFullRowPair[dx + k] = p;
+          srcX = 0;
+        }
+        if (srcX >= srcW)
+        {
+          srcX = srcW - 1;
         }
       }
+      g_bgFullRowPair[dx] = srcRow[srcX];
     }
-    const int destY0 = oy + sy * scale;
-    int destRows = scale;
-    if (destY0 + destRows > oy + dh)
+    if (overlayAlpha > 0.001f)
     {
-      destRows = oy + dh - destY0;
-    }
-    if (destRows <= 0)
-    {
-      break;
-    }
-    for (int r = 0; r < destRows; r++)
-    {
-      const int destY = destY0 + r;
-      if (!punchHoles)
+      for (int x = 0; x < dw; x++)
       {
-        tft.pushPixels(g_bgFullRowPair, (uint32_t)dw);
-        continue;
+        g_bgFullRowPair[x] = blendOverlay(g_bgFullRowPair[x], overlay, overlayAlpha);
       }
-      markGifHoles(destY, dw);
-      int x = 0;
-      while (x < dw)
+    }
+    const int destY = oy + dy;
+    if (!punchHoles)
+    {
+      tft.pushPixels(g_bgFullRowPair, (uint32_t)dw);
+      continue;
+    }
+    markGifHoles(destY, dw);
+    int x = 0;
+    while (x < dw)
+    {
+      while (x < dw && g_gifRowMask[x] == 0)
       {
-        while (x < dw && g_gifRowMask[x] == 0)
-        {
-          x++;
-        }
-        const int s = x;
-        while (x < dw && g_gifRowMask[x] != 0)
-        {
-          x++;
-        }
-        if (x > s)
-        {
-          tft.setWindow(ox + s, destY, ox + x - 1, destY);
-          tft.pushPixels(g_bgFullRowPair + s, (uint32_t)(x - s));
-        }
+        x++;
+      }
+      const int s = x;
+      while (x < dw && g_gifRowMask[x] != 0)
+      {
+        x++;
+      }
+      if (x > s)
+      {
+        tft.setWindow(ox + s, destY, ox + x - 1, destY);
+        tft.pushPixels(g_bgFullRowPair + s, (uint32_t)(x - s));
       }
     }
   }
@@ -1052,6 +1190,9 @@ static void drawThemeBackground(const CustomTheme &t)
 {
   const int fullW = tft.width();
   const int fullH = tft.height();
+  const uint16_t fill = themeOverlayOn(t) ? blendOverlay(t.bgColor, t.overlayColor, t.overlayOpacity) : t.bgColor;
+  const uint16_t ov = t.overlayColor;
+  const float ovA = themeOverlayOn(t) ? t.overlayOpacity : 0.0f;
   File f;
   bool useFile = false;
   bool useRam = false;
@@ -1061,14 +1202,14 @@ static void drawThemeBackground(const CustomTheme &t)
   {
     if (g_animLetterboxDirty)
     {
-      tft.fillRect(0, 0, fullW, fullH, t.bgColor);
+      tft.fillRect(0, 0, fullW, fullH, fill);
     }
     int idx = g_animFrameIdx;
     if (idx < 0 || idx >= t.frameCount)
     {
       idx = 0;
     }
-    const bool ok = drawScaledRaw(useRam, f, srcW, srcH, scale, idx, !g_animLetterboxDirty);
+    const bool ok = drawScaledRaw(useRam, f, srcW, srcH, scale, idx, !g_animLetterboxDirty, ov, ovA, t.zoom, t.ox, t.oy);
     if (useFile)
     {
       f.close();
@@ -1088,7 +1229,7 @@ static void drawThemeBackground(const CustomTheme &t)
   }
   if ((t.bgKind == TBG_IMAGE || t.bgKind == TBG_GIF) && openBgSource(t, false, f, useFile, useRam, srcW, srcH, scale, expected))
   {
-    const bool ok = drawScaledRaw(useRam, f, srcW, srcH, scale, 0, false);
+    const bool ok = drawScaledRaw(useRam, f, srcW, srcH, scale, 0, false, ov, ovA, t.zoom, t.ox, t.oy);
     if (useFile)
     {
       f.close();
@@ -1102,7 +1243,7 @@ static void drawThemeBackground(const CustomTheme &t)
   {
     f.close();
   }
-  tft.fillRect(0, 0, fullW, fullH, t.bgColor);
+  tft.fillRect(0, 0, fullW, fullH, fill);
 }
 
 // Repinta só um retângulo do fundo (cor ou recorte da imagem, na resolução
@@ -1138,9 +1279,11 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
   {
     return;
   }
+  const uint16_t fill = themeOverlayOn(t) ? blendOverlay(t.bgColor, t.overlayColor, t.overlayOpacity) : t.bgColor;
+  const bool useOv = themeOverlayOn(t);
   if (t.bgKind != TBG_IMAGE && t.bgKind != TBG_GIF)
   {
-    tft.fillRect(x0, y0, w, h, t.bgColor);
+    tft.fillRect(x0, y0, w, h, fill);
     return;
   }
   File f;
@@ -1160,21 +1303,30 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
   }
   else if (!useRam && !useFile)
   {
-    tft.fillRect(x0, y0, w, h, t.bgColor);
+    tft.fillRect(x0, y0, w, h, fill);
     return;
   }
   const int frameIdx = wantAnim ? ((g_animFrameIdx >= 0 && g_animFrameIdx < t.frameCount) ? g_animFrameIdx : 0) : 0;
   int ox = 0, oy = 0, dw = srcW * scale, dh = srcH * scale;
   gifDestRect(srcW, srcH, scale, ox, oy, dw, dh);
+  const BgWindow win = bgWindowFor(srcW, srcH, t.zoom, t.ox, t.oy);
   const size_t frameOff = (size_t)frameIdx * (size_t)srcW * (size_t)srcH * 2;
   for (int y = y0; y < y0 + h; y++)
   {
     if (y < oy || y >= oy + dh)
     {
-      tft.drawFastHLine(x0, y, w, t.bgColor);
+      tft.drawFastHLine(x0, y, w, fill);
       continue;
     }
-    int sy = (y - oy) / scale;
+    int sy;
+    if (!win.zoomed)
+    {
+      sy = (y - oy) / scale;
+    }
+    else
+    {
+      sy = (int)(win.y + ((float)(y - oy) + 0.5f) * win.h / (float)dh);
+    }
     if (sy >= srcH)
     {
       sy = srcH - 1;
@@ -1187,7 +1339,7 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
     int span = w;
     if (xLeft < ox)
     {
-      tft.drawFastHLine(xLeft, y, min(span, ox - xLeft), t.bgColor);
+      tft.drawFastHLine(xLeft, y, min(span, ox - xLeft), fill);
       span -= (ox - xLeft);
       xLeft = ox;
     }
@@ -1198,15 +1350,41 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
     if (xLeft + span > ox + dw)
     {
       int extra = xLeft + span - (ox + dw);
-      tft.drawFastHLine(ox + dw, y, extra, t.bgColor);
+      tft.drawFastHLine(ox + dw, y, extra, fill);
       span -= extra;
     }
     if (span <= 0)
     {
       continue;
     }
-    const int sx0 = (xLeft - ox) / scale;
-    int sw = ((xLeft + span - 1 - ox) / scale) - sx0 + 1;
+    int sx0, sw;
+    if (!win.zoomed)
+    {
+      sx0 = (xLeft - ox) / scale;
+      sw = ((xLeft + span - 1 - ox) / scale) - sx0 + 1;
+    }
+    else
+    {
+      sx0 = (int)(win.x + ((float)(xLeft - ox) + 0.5f) * win.w / (float)dw);
+      int sx1 = (int)(win.x + ((float)(xLeft + span - 1 - ox) + 0.5f) * win.w / (float)dw);
+      if (sx0 < 0)
+      {
+        sx0 = 0;
+      }
+      if (sx0 >= srcW)
+      {
+        sx0 = srcW - 1;
+      }
+      if (sx1 < 0)
+      {
+        sx1 = 0;
+      }
+      if (sx1 >= srcW)
+      {
+        sx1 = srcW - 1;
+      }
+      sw = sx1 - sx0 + 1;
+    }
     if (sx0 + sw > srcW)
     {
       sw = srcW - sx0;
@@ -1231,7 +1409,15 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
     }
     for (int x = 0; x < span; x++)
     {
-      int sx = (xLeft + x - ox) / scale - sx0;
+      int sx;
+      if (!win.zoomed)
+      {
+        sx = (xLeft + x - ox) / scale - sx0;
+      }
+      else
+      {
+        sx = (int)(win.x + ((float)(xLeft + x - ox) + 0.5f) * win.w / (float)dw) - sx0;
+      }
       if (sx < 0)
       {
         sx = 0;
@@ -1240,7 +1426,8 @@ static void restoreBackgroundRect(const CustomTheme &t, int x0, int y0, int w, i
       {
         sx = sw - 1;
       }
-      g_restoreOutRow[x] = srcRow[sx];
+      uint16_t p = srcRow[sx];
+      g_restoreOutRow[x] = useOv ? blendOverlay(p, t.overlayColor, t.overlayOpacity) : p;
     }
     tft.setSwapBytes(true);
     tft.pushImage(xLeft, y, span, 1, g_restoreOutRow);

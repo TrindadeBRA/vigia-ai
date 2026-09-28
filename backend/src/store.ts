@@ -121,6 +121,13 @@ const _RSS_DEFAULT: Record<string, unknown> = {
   feeds: [],
 };
 
+const _SPTRANS_DEFAULT: Record<string, unknown> = {
+  enabled: false,
+  hidden: false,
+  token: "",
+  stops: [],
+};
+
 const _APOD_DEFAULT: Record<string, unknown> = {
   enabled: false,
   hidden: false,
@@ -184,6 +191,7 @@ export function defaultConfig(): Record<string, unknown> {
     git: deepClone(_GIT_DEFAULT),
     calendar: deepClone(_CALENDAR_DEFAULT),
     rss: deepClone(_RSS_DEFAULT),
+    sptrans: deepClone(_SPTRANS_DEFAULT),
     apod: deepClone(_APOD_DEFAULT),
     github: deepClone(_GITHUB_DEFAULT),
     emulator: deepClone(_EMULATOR_DEFAULT),
@@ -652,6 +660,51 @@ export function _normalize(raw: Record<string, unknown>): Record<string, unknown
   apod.hidden = Boolean(rawApod.hidden ?? apod.hidden);
   if ("api_key" in rawApod && rawApod.api_key != null) {
     apod.api_key = String(rawApod.api_key).trim();
+  }
+
+  // sptrans (sem esse bloco o _normalize descartava token + paradas a cada
+  // escrita, e o PUT /api/sptrans/token voltava 200 sem persistir nada)
+  const rawSp = (typeof raw.sptrans === "object" && raw.sptrans !== null ? raw.sptrans : {}) as Record<string, unknown>;
+  const sptrans = cfg.sptrans as Record<string, unknown>;
+  sptrans.enabled = Boolean(rawSp.enabled ?? sptrans.enabled);
+  sptrans.hidden = Boolean(rawSp.hidden ?? sptrans.hidden);
+  if ("token" in rawSp && rawSp.token != null) {
+    sptrans.token = String(rawSp.token).trim();
+  }
+  if (Array.isArray(rawSp.stops)) {
+    const cleaned: Array<Record<string, unknown>> = [];
+    for (const it of rawSp.stops) {
+      if (typeof it !== "object" || it === null) continue;
+      const s = it as Record<string, unknown>;
+      const cp = Number(s.cp);
+      if (!Number.isFinite(cp)) continue;
+      const rawLines = Array.isArray(s.lines) ? s.lines : [];
+      const lines: Array<Record<string, unknown>> = [];
+      for (const l of rawLines) {
+        if (typeof l !== "object" || l === null) continue;
+        const li = l as Record<string, unknown>;
+        const cl = Number(li.cl);
+        if (!Number.isFinite(cl)) continue;
+        lines.push({
+          cl,
+          c: String(li.c ?? ""),
+          lt: String(li.lt ?? ""),
+          tl: Number.isFinite(Number(li.tl)) ? Number(li.tl) : 10,
+          sl: Number.isFinite(Number(li.sl)) ? Number(li.sl) : 1,
+          lt0: String(li.lt0 ?? ""),
+          lt1: String(li.lt1 ?? ""),
+        });
+      }
+      cleaned.push({
+        id: String(s.id ?? `${cp}`),
+        cp,
+        name: String(s.name ?? ""),
+        address: String(s.address ?? ""),
+        nickname: String(s.nickname ?? ""),
+        lines,
+      });
+    }
+    sptrans.stops = cleaned;
   }
 
   // github

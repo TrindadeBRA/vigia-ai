@@ -1,4 +1,4 @@
-import type { AndroidDevice, CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubProfile, GithubRepo, RetroAchievementsAccount, RssPayload, ApodPayload, WeatherConfig, WeatherPayload } from "../../api/types";
+import type { AndroidDevice, CalendarPayload, CameraItem, CurrenciesPayload, GitPayload, GitRepo, GithubPayload, GithubProfile, GithubRepo, RetroAchievementsAccount, RssPayload, ApodPayload, SpTransStop, WeatherConfig, WeatherPayload } from "../../api/types";
 import type { ClockConfig } from "../../components/cards/ClockCard";
 import type { PALETTES, ResolvedThemeName } from "../../theme";
 
@@ -14,7 +14,7 @@ export type ProviderMeta = {
   title: string;
   label: string;
   metrics: Metric[];
-  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "apod" | "github" | "github-profile" | "image" | "note" | "emulator" | "android";
+  kind?: "provider" | "weather" | "currencies" | "git" | "retroachievements" | "calendar" | "rss" | "apod" | "github" | "github-profile" | "image" | "note" | "emulator" | "android" | "sptrans";
   weather?: WeatherPayload | null;
   weatherConfig?: WeatherConfig | null;
   currencies?: CurrenciesPayload | null;
@@ -35,6 +35,7 @@ export type ProviderMeta = {
   note?: { id: string; text: string; color: string } | null;
   camera?: CameraItem | null;
   android?: AndroidDevice | null;
+  sptransStop?: SpTransStop | null;
   emulator?: { platform: string; core: string; romPath: string; biosPath: string | null; label: string } | null;
   clock?: ClockConfig | null;
 };

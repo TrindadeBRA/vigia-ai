@@ -62,6 +62,8 @@ export function ProviderSearchGrid({
 }
 
 export function wallpaperMediaSrc(w: { id: string; kind?: string | null; original_url?: string | null }): string {
-  if (w.kind === "gif") return w.original_url || `/api/wallpapers/${w.id}/original`;
-  return `/api/wallpapers/${w.id}/preview`;
+  // Local-first: o .orig tem os mesmos bytes baixados do provider, mas funciona
+  // offline e sem hotlink-block; o backend faz fallback para o preview se faltar.
+  if (w.original_url?.startsWith("/")) return w.original_url;
+  return `/api/wallpapers/${w.id}/original`;
 }

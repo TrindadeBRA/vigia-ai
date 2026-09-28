@@ -714,6 +714,21 @@ export type AndroidCreate = {
 
 export type AndroidPatch = Partial<AndroidCreate>;
 
+// Apps Vigia Monitor (auto-registro via HTTP, sem ADB) — um canvas por aparelho.
+export type MonitorDevice = {
+  id: string;
+  label: string;
+  model: string;
+  brand: string;
+  screenW: number;
+  screenH: number;
+  portrait: { w: number; h: number };
+  landscape: { w: number; h: number };
+  appVersion: string;
+  lastSeen: string;
+  online: boolean;
+};
+
 export type AndroidInput = {
   action: "tap" | "swipe" | "key" | "text" | "back" | "home" | "menu" | "power" | "wake" | "sleep";
   x?: number;
@@ -840,8 +855,7 @@ export type FirmwarePublic = {
   reason: string | null;
 };
 
-export type ConfigPublic = {
-  ok: boolean;
+export type ConfigPublic = {  ok: boolean;
   in_docker: boolean;
   mock: boolean;
   listen: { host: string; port: number };
@@ -866,4 +880,91 @@ export type ConfigPublic = {
   github: GithubConfig;
   emulator: EmulatorConfig;
   device: DevicePublic;
+  sptrans: SpTransConfig;
+};
+
+export type SpTransMonitoredLine = {
+  cl: number;
+  c: string;
+  lt: string;
+  tl: number;
+  sl: number;
+  lt0: string;
+  lt1: string;
+};
+
+export type SpTransStop = {
+  id: string;
+  cp: number;
+  name: string;
+  address: string;
+  nickname: string;
+  lines: SpTransMonitoredLine[];
+};
+
+export type SpTransConfig = {
+  enabled: boolean;
+  hidden: boolean;
+  stops: SpTransStop[];
+};
+
+export type SpTransStatus = {
+  ok: boolean;
+  configured: boolean;
+  suffix: string | null;
+  stops: number;
+  enabled: boolean;
+  hidden: boolean;
+};
+
+export type SpTransStopSearch = {
+  cp: number;
+  np: string;
+  ed: string;
+  py: number;
+  px: number;
+  source?: "near" | "api";
+  distance_m?: number | null;
+};
+
+export type SpTransGeo = {
+  lat: number;
+  lng: number;
+  label: string;
+} | null;
+
+export type SpTransCacheStatus = {
+  ok: boolean;
+  ready: boolean;
+  count: number;
+  updated_at: string | null;
+  age_days: number | null;
+};
+
+export type SpTransVehicle = {
+  p: string;
+  t: string | null;
+  mins: number | null;
+  a: boolean;
+};
+
+export type SpTransLineForecast = {
+  c: string;
+  cl: number;
+  sl: number;
+  lt0: string;
+  lt1: string;
+  qv: number;
+  next: SpTransVehicle | null;
+  vehicles: SpTransVehicle[];
+};
+
+export type SpTransPrevisao = {
+  ok: boolean;
+  error: string | null;
+  updated_at: string | null;
+  hr: string | null;
+  cp: number;
+  np: string | null;
+  lines: SpTransLineForecast[];
 };

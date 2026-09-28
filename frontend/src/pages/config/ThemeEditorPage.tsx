@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { openUsageEvents } from "../../api/client";
-import type { UsagePayload } from "../../api/types";
+import { fetchMonitors, openUsageEvents } from "../../api/client";
+import type { MonitorDevice, UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
-import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, TextIcon, TimerIcon } from "../../components/icons";
+import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, QrIcon, TextIcon, TimerIcon } from "../../components/icons";
 import { wallpaperMediaSrc } from "../../components/ProviderSearchGrid";
 import { Logo } from "../../components/Logo";
 import { PageBreadcrumb } from "../../components/PageBreadcrumb";
@@ -13,7 +13,8 @@ import { STR } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
-import { IconCard, providerSupportsCard } from "./ThemeCanvasView";
+import { AndroidSetupQrModal } from "./AndroidSetupQrModal";
+import { IconCard, providerSupportsCard, wallpaperImgStyle } from "./ThemeCanvasView";
 import { THEME_STR } from "./themeCopy";
 import { CanvasDot } from "./themeEditor/CanvasDot";
 import { CanvasNudgeTrap, arrowDir, focusCanvasNudgeTrap, isCanvasNudgeTrap } from "./themeEditor/CanvasNudgeTrap";
@@ -22,6 +23,8 @@ import { IconChip } from "./themeEditor/IconChip";
 import { ThemeIOButtons } from "./themeEditor/ThemeIOButtons";
 import {
   clamp,
+  clampPan,
+  clampZoom,
   formatClock,
   isBareLoopback,
   readableTextOn,
@@ -45,6 +48,7 @@ import {
   type ThemeProvider,
 } from "./themeMetrics";
 import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, StatusPill, Switch, TextField, TomSelectField } from "./ui";
+import { parseThemeJson } from "./themeEditor/themeState";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperManager } from "./wallpaperManager/context";
 import { WallpaperLibrary } from "./wallpaperManager/Library";
@@ -55,6 +59,15 @@ function buildScreenshotUrl(ip: string, rbSwap: boolean) {
   return `http://${ip}/theme/screenshot?t=${Date.now()}&rb=${rbSwap ? 1 : 0}`;
 }
 
+// Alvo do canvas: "board" ou "<monitorId>:portrait|landscape".
+function splitTarget(t: string): { id: string; orientation: "portrait" | "landscape" } {
+  const sep = t.lastIndexOf(":");
+  return {
+    id: t.slice(0, sep),
+    orientation: t.slice(sep + 1) === "landscape" ? "landscape" : "portrait",
+  };
+}
+
 export default function ThemeEditorPage() {
   const { cfg, phase, reload, setPhase, lang } = usePublicConfig();
   const c = THEME_STR[lang];
@@ -63,6 +76,10 @@ export default function ThemeEditorPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 480, height: 320 });
   const [canvasKnown, setCanvasKnown] = useState(false);
+  // Alvo do canvas: placa (firmware, default) ou um app Vigia registrado
+  // (auto-registro via HTTP com o tamanho da tela — sem ADB).
+  const [targetId, setTargetId] = useState<string>("board");
+  const [monitors, setMonitors] = useState<MonitorDevice[]>([]);
   const [deviceIp, setDeviceIp] = useState("");
   const [ipTouched, setIpTouched] = useState(false);
   const [canvasRenderedW, setCanvasRenderedW] = useState(0);
@@ -84,14 +101,17 @@ export default function ThemeEditorPage() {
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
   const [wallpaperModalOpen, setWallpaperModalOpen] = useState(false);
+  const [androidQrOpen, setAndroidQrOpen] = useState(false);
   const [debugModalOpen, setDebugModalOpen] = useState(false);
   const handleWallpaperSelected = useCallback((id: string | null) => {
     setCurrentWallpaperId(id);
   }, []);
+  const hasWallpaperPreview = Boolean(localPreviewUrl || currentWallpaperId);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nudgeTrapRef = useRef<HTMLTextAreaElement>(null);
   const lastNudgeAt = useRef(0);
   const addProviderBtnRef = useRef<HTMLButtonElement>(null);
+  const panRef = useRef<{ startX: number; startY: number; startOx: number; startOy: number; moved: boolean } | null>(null);
   const send = useRequest();
   const remove = useRequest();
   const screenshot = useRequest();
@@ -141,17 +161,75 @@ export default function ThemeEditorPage() {
 
   useEffect(() => {
     void fetchWallpapers();
+    // A rotação automática troca o selecionado no coletor — acompanha sem reload.
+    const id = window.setInterval(() => void fetchWallpapers(), 60000);
     const onUpdate = () => void fetchWallpapers();
     window.addEventListener("vigia:wallpapers-updated", onUpdate);
-    return () => window.removeEventListener("vigia:wallpapers-updated", onUpdate);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("vigia:wallpapers-updated", onUpdate);
+    };
   }, [fetchWallpapers]);
 
   useEffect(() => {
+    let cancelled = false;
+    async function loadMonitors() {
+      try {
+        const list = await fetchMonitors();
+        if (!cancelled) setMonitors(list);
+      } catch { }
+    }
+    void loadMonitors();
+    const id = window.setInterval(loadMonitors, 30000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, []);
+
+  useEffect(() => {
+    if (targetId !== "board" && !monitors.some((m) => m.id === splitTarget(targetId).id)) setTargetId("board");
+  }, [monitors, targetId]);
+
+  useEffect(() => {
+    if (targetId !== "board") {
+      const { id, orientation } = splitTarget(targetId);
+      const m = monitors.find((x) => x.id === id);
+      if (m) {
+        const dims = m[orientation] ?? { w: m.screenW, h: m.screenH };
+        setCanvasSize({ width: dims.w, height: dims.h });
+        setCanvasKnown(true);
+      }
+      return;
+    }
     if (cfg?.device.width && cfg.device.height) {
       setCanvasSize({ width: cfg.device.width, height: cfg.device.height });
       setCanvasKnown(true);
+    } else {
+      setCanvasSize({ width: 480, height: 320 });
+      setCanvasKnown(false);
     }
-  }, [cfg?.device.width, cfg?.device.height]);
+  }, [cfg?.device.width, cfg?.device.height, targetId, monitors]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTargetTheme() {
+      try {
+        const url = targetId === "board"
+          ? "/api/theme"
+          : (() => {
+            const { id, orientation } = splitTarget(targetId);
+            return `/api/monitors/${id}/theme?orientation=${orientation}`;
+          })();
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok || cancelled) return;
+        const j = (await r.json()) as { active?: boolean; theme?: string | null };
+        if (j.active && j.theme) {
+          const parsed = parseThemeJson(j.theme);
+          if (parsed && !cancelled) setTheme(() => parsed);
+        }
+      } catch { }
+    }
+    void loadTargetTheme();
+    return () => { cancelled = true; };
+  }, [targetId]);
 
   useEffect(() => {
     const el = canvasRef.current;
@@ -301,6 +379,43 @@ export default function ThemeEditorPage() {
     return () => document.removeEventListener("keydown", onKeyDown, true);
   }, [selected, canvasSize.width, canvasSize.height]);
 
+  // Shift+scroll: com widget focado, escala (0.5–4×); com o papel focado,
+  // zoom do papel (1–4×). Listener nativo com passive:false pra conseguir
+  // preventDefault (o onWheel do React é passivo e deixaria a página rolar).
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      if (!e.shiftKey) return;
+      e.preventDefault();
+      const d = e.deltaY !== 0 ? e.deltaY : e.deltaX;
+      const factor = d < 0 ? 1.12 : 1 / 1.12;
+      if (selected === "background") {
+        if (!hasWallpaperPreview) return;
+        setTheme((t) => {
+          const zoom = Math.round(clampZoom(t.background.zoom * factor) * 100) / 100;
+          return { ...t, background: { ...t.background, zoom, ox: clampPan(t.background.ox, zoom), oy: clampPan(t.background.oy, zoom) } };
+        });
+        return;
+      }
+      if (!selected) return;
+      const scaleIt = (s: number) => clamp(Math.round(clamp(s * factor, 0.5, 4) * 100) / 100, 0.5, 4);
+      if (selected === "clock") {
+        setTheme((t) => ({ ...t, clock: { ...t.clock, scale: scaleIt(t.clock.scale) } }));
+      } else if (selected === "countdown") {
+        setTheme((t) => ({ ...t, countdown: { ...t.countdown, scale: scaleIt(t.countdown.scale) } }));
+      } else if (selected.startsWith("icon:")) {
+        const id = selected.slice(5);
+        setTheme((t) => ({ ...t, icons: t.icons.map((i) => (i.id === id ? { ...i, scale: scaleIt(i.scale) } : i)) }));
+      } else if (selected.startsWith("text:")) {
+        const id = selected.slice(5);
+        setTheme((t) => ({ ...t, texts: t.texts.map((x) => (x.id === id ? { ...x, scale: scaleIt(x.scale) } : x)) }));
+      }
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [selected, hasWallpaperPreview, phase, cfg]);
+
   const currentWallpaper = wallpapers.find((w) => w.id === currentWallpaperId) ?? null;
   const gifMeta =
     currentWallpaper?.kind === "gif"
@@ -309,7 +424,13 @@ export default function ThemeEditorPage() {
 
   async function saveTheme() {
     const hasWallpaper = Boolean(currentWallpaperId);
-    const r2 = await fetch("/api/theme/meta", {
+    const metaUrl = targetId === "board"
+      ? "/api/theme/meta"
+      : (() => {
+        const { id, orientation } = splitTarget(targetId);
+        return `/api/monitors/${id}/theme/meta?orientation=${orientation}`;
+      })();
+    const r2 = await fetch(metaUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(themeToJson(theme, hasWallpaper, gifMeta)),
@@ -320,7 +441,13 @@ export default function ThemeEditorPage() {
   }
 
   async function removeSavedTheme() {
-    const r = await fetch("/api/theme", { method: "DELETE" });
+    const delUrl = targetId === "board"
+      ? "/api/theme"
+      : (() => {
+        const { id, orientation } = splitTarget(targetId);
+        return `/api/monitors/${id}/theme?orientation=${orientation}`;
+      })();
+    const r = await fetch(delUrl, { method: "DELETE" });
     const j = (await r.json().catch(() => ({ ok: false }))) as { ok: boolean; error?: string };
     return j.ok ? { ok: true } : { ok: false, error: j.error || c.removeError };
   }
@@ -363,7 +490,7 @@ export default function ThemeEditorPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ThemeIOButtons theme={theme} hasWallpaper={Boolean(currentWallpaperId)} gif={gifMeta} onImport={(t) => setTheme(() => t)} c={c} />
-          <Button onClick={() => void send.run(saveTheme, { success: c.savedOk, error: c.saveError })} loading={send.busy}>
+          <Button onClick={() => void send.run(saveTheme, { success: targetId === "board" ? c.savedOk : c.savedOkMonitor, error: c.saveError })} loading={send.busy}>
             {send.busy ? c.saving : c.save}
           </Button>
           <Button variant="ghost" onClick={() => void remove.run(removeSavedTheme, { success: c.removedOk, error: c.removeError })} loading={remove.busy}>
@@ -405,11 +532,32 @@ export default function ThemeEditorPage() {
           />
           <ToolbarDivider />
           <ToolButton icon={<ImageIcon size={19} />} label={c.wallpapers} onClick={() => setWallpaperModalOpen(true)} />
+          <ToolButton icon={<QrIcon size={19} />} label={c.androidQrButton} onClick={() => setAndroidQrOpen(true)} />
           <ToolButton icon={<ChipIcon size={19} />} label={c.debugTool} onClick={() => setDebugModalOpen(true)} />
         </div>
 
         {/* Área de trabalho — o canvas fica centralizado, como o palco de um editor de imagem. */}
         <div className="flex min-h-[380px] flex-col gap-3 rounded-2xl border border-edge bg-surface p-4 shadow-[inset_0_1px_2px_rgba(0,0,0,.28)] [.flat_&]:shadow-none sm:p-6">
+          <div className="flex flex-wrap items-end gap-2">
+            <SelectField
+              label={c.canvasTarget}
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+              options={[
+                { value: "board", label: c.targetBoard },
+                ...monitors.flatMap((m) => {
+                  const name = m.label || m.model || m.id;
+                  const p = m.portrait ?? { w: m.screenW, h: m.screenH };
+                  const l = m.landscape ?? { w: m.screenH, h: m.screenW };
+                  return [
+                    { value: `${m.id}:portrait`, label: `${name} ${c.orientationPortrait} (${p.w}×${p.h})` },
+                    { value: `${m.id}:landscape`, label: `${name} ${c.orientationLandscape} (${l.w}×${l.h})` },
+                  ];
+                }),
+              ]}
+              wrapperClassName="min-w-[220px] flex-none"
+            />
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[12px] text-ink3">
             <span>{!canvasKnown ? c.canvasNoDevice : c.canvasHint}</span>
             {currentWallpaperId || localPreviewUrl ? (
@@ -431,20 +579,56 @@ export default function ThemeEditorPage() {
                 aspectRatio: `${canvasSize.width} / ${canvasSize.height}`,
                 background: theme.background.color,
               }}
-              onPointerDown={() => setSelected(null)}
+              onPointerDown={(e) => {
+                // Clique no papel foca o papel (abre o card Fundo); widgets
+                // param a propagação no CanvasDot e mantêm o próprio foco.
+                setSelected("background");
+                if (!hasWallpaperPreview) return;
+                panRef.current = { startX: e.clientX, startY: e.clientY, startOx: theme.background.ox, startOy: theme.background.oy, moved: false };
+                try {
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                } catch {
+                  // Safari pode recusar capture em div
+                }
+              }}
+              onPointerMove={(e) => {
+                const p = panRef.current;
+                if (!p || !canvasRef.current || selected !== "background") return;
+                const rect = canvasRef.current.getBoundingClientRect();
+                const z = clampZoom(theme.background.zoom);
+                if (!rect.width || !rect.height || z <= 1.001) return;
+                if (Math.abs(e.clientX - p.startX) + Math.abs(e.clientY - p.startY) > 2) p.moved = true;
+                if (!p.moved) return;
+                const ox = clampPan(p.startOx - (e.clientX - p.startX) / (rect.width * z), z);
+                const oy = clampPan(p.startOy - (e.clientY - p.startY) / (rect.height * z), z);
+                setTheme((t) => ({ ...t, background: { ...t.background, ox, oy } }));
+              }}
+              onPointerUp={() => {
+                panRef.current = null;
+              }}
+              onPointerCancel={() => {
+                panRef.current = null;
+              }}
             >
               {localPreviewUrl || currentWallpaperId ? (
                 <img
                   key={localPreviewUrl || currentWallpaperId}
-                  src={localPreviewUrl || (currentWallpaper ? wallpaperMediaSrc(currentWallpaper) : `/api/wallpapers/${currentWallpaperId}/preview`)}
+                  src={localPreviewUrl || (currentWallpaper ? wallpaperMediaSrc(currentWallpaper) : `/api/wallpapers/${currentWallpaperId}/original`)}
                   alt=""
                   draggable={false}
-                  className="pointer-events-none absolute inset-0 z-0 size-full object-cover"
-                  style={{ imageRendering: "auto" }}
+                  className="pointer-events-none absolute object-cover"
+                  style={{ ...wallpaperImgStyle(theme.background.zoom, theme.background.ox, theme.background.oy), imageRendering: "auto" }}
                   onError={(e) => {
                     if (localPreviewUrl) return;
                     (e.target as HTMLImageElement).style.display = "none";
                   }}
+                />
+              ) : null}
+              {(localPreviewUrl || currentWallpaperId) && theme.background.overlayOpacity > 0 ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 size-full"
+                  style={{ background: theme.background.color, opacity: theme.background.overlayOpacity }}
                 />
               ) : null}
               {theme.clock.enabled ? (
@@ -822,10 +1006,10 @@ export default function ThemeEditorPage() {
             </Card>
           ) : selected === "clock" ? (
             <Card title={c.clock}>
-              <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: e.target.checked } }))} />
-              <Checkbox label={c.clockFormat24h} checked={theme.clock.format24h} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, format24h: e.target.checked } }))} />
-              <Checkbox label={c.clockShowBackground} checked={theme.clock.showBackground} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, showBackground: e.target.checked } }))} />
-              <Checkbox label={c.clockAutoColor} checked={theme.clock.autoColor} onChange={(e) => setTheme((t) => ({ ...t, clock: { ...t.clock, autoColor: e.target.checked } }))} />
+              <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: checked } })); }} />
+              <Checkbox label={c.clockFormat24h} checked={theme.clock.format24h} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, format24h: checked } })); }} />
+              <Checkbox label={c.clockShowBackground} checked={theme.clock.showBackground} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, showBackground: checked } })); }} />
+              <Checkbox label={c.clockAutoColor} checked={theme.clock.autoColor} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, autoColor: checked } })); }} />
               {theme.clock.autoColor ? <p className={`${cfgStatus} text-accent`}>{c.clockAutoColorActive}</p> : null}
               <ScaleField label={c.size} value={theme.clock.scale} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, scale: v } }))} />
               <div className={theme.clock.autoColor ? "pointer-events-none opacity-50" : ""}>
@@ -834,7 +1018,7 @@ export default function ThemeEditorPage() {
             </Card>
           ) : selected === "countdown" ? (
             <Card title={c.countdown}>
-              <Checkbox label={c.countdownEnabled} checked={theme.countdown.enabled} onChange={(e) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: e.target.checked } }))} />
+              <Checkbox label={c.countdownEnabled} checked={theme.countdown.enabled} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: checked } })); }} />
               <ScaleField label={c.size} value={theme.countdown.scale} onChange={(v) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, scale: v } }))} />
               <ColorField label={c.color} value={theme.countdown.color} onChange={(v) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, color: v } }))} noneLabel={c.colorNone} lang={lang} />
               <p className={cfgStatus}>{c.countdownHint}</p>
@@ -859,6 +1043,69 @@ export default function ThemeEditorPage() {
                   <span className="font-mono text-[13px] text-ink">{theme.background.color.toUpperCase()}</span>
                 </div>
                 <NameToColorPicker value={theme.background.color} onChange={(v) => v && setTheme((t) => ({ ...t, background: { ...t.background, color: v } }))} lang={lang} allowClear={false} />
+                <label className="flex flex-col gap-1.5">
+                  <span className={cfgFieldLabel}>
+                    {c.overlayOpacity} ({Math.round(theme.background.overlayOpacity * 100)}%)
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round(theme.background.overlayOpacity * 100)}
+                    onChange={(e) => { const opacity = Number(e.target.value) / 100; setTheme((t) => ({ ...t, background: { ...t.background, overlayOpacity: opacity } })); }}
+                    className="accent-accent"
+                  />
+                </label>
+                <p className="text-xs leading-relaxed text-ink3">{c.overlayHint}</p>
+                <div className="flex flex-col gap-1.5">
+                  <span className={cfgFieldLabel}>
+                    {c.wallpaperZoom} ({Math.round(theme.background.zoom * 100)}%)
+                  </span>
+                  <input
+                    type="range"
+                    min={100}
+                    max={400}
+                    step={5}
+                    value={Math.round(theme.background.zoom * 100)}
+                    onChange={(e) => {
+                      const zoom = clampZoom(Number(e.target.value) / 100);
+                      setTheme((t) => ({ ...t, background: { ...t.background, zoom, ox: clampPan(t.background.ox, zoom), oy: clampPan(t.background.oy, zoom) } }));
+                    }}
+                    className="accent-accent"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setTheme((t) => ({ ...t, background: { ...t.background, zoom: 1, ox: 0.5, oy: 0.5 } }))}
+                  >
+                    {c.wallpaperReframe}
+                  </Button>
+                </div>
+                <p className="text-xs leading-relaxed text-ink3">{c.wallpaperZoomHint}</p>
+                <div className="flex items-center justify-between gap-3">
+                  <span className={cfgFieldLabel}>{c.rotateWallpapers}</span>
+                  <Switch
+                    compact
+                    label={c.rotateWallpapers}
+                    checked={theme.background.rotate}
+                    onChange={(e) => { const checked = e.currentTarget.checked; setTheme((t) => ({ ...t, background: { ...t.background, rotate: checked } })); }}
+                  />
+                </div>
+                {theme.background.rotate ? (
+                  <SelectField
+                    label={c.rotateInterval}
+                    value={String(theme.background.rotateIntervalSec)}
+                    onChange={(e) => { const intervalSec = Number(e.target.value); setTheme((t) => ({ ...t, background: { ...t.background, rotateIntervalSec: intervalSec } })); }}
+                    options={[
+                      { value: "60", label: "1 min" },
+                      { value: "300", label: "5 min" },
+                      { value: "900", label: "15 min" },
+                    ]}
+                  />
+                ) : null}
+                <p className="text-xs leading-relaxed text-ink3">{c.rotateHint}</p>
                 {gifMeta ? <p className="text-xs leading-relaxed text-ink3">{c.gifBoardHint}</p> : null}
               </div>
             </Card>
@@ -912,6 +1159,17 @@ export default function ThemeEditorPage() {
           </Modal>
         ) : null}
       </WallpaperManager>
+
+      {androidQrOpen ? (
+        <AndroidSetupQrModal
+          open={androidQrOpen}
+          onClose={() => setAndroidQrOpen(false)}
+          lanIp={cfg?.lan_ips?.[0] ?? null}
+          port={cfg?.listen?.port ?? 8787}
+          lang={lang}
+          c={c}
+        />
+      ) : null}
 
       {debugModalOpen ? (
         <Modal title={c.debugTool} onClose={() => setDebugModalOpen(false)} closeLabel={closeLabel} wide>

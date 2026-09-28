@@ -244,6 +244,16 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
   const apodRaw = (cfg.apod ?? { enabled: false, hidden: false, api_key: "" }) as Record<string, unknown>;
   const githubRaw = (cfg.github ?? { enabled: false, hidden: false, reposEnabled: false, profilesEnabled: false, repos: [], profiles: [] }) as Record<string, unknown>;
   const emulatorRaw = (cfg.emulator ?? { enabled: false, hidden: false, cdnVersion: "stable", platforms: [] }) as Record<string, unknown>;
+  const sptransRawFull = (cfg.sptrans ?? { enabled: false, hidden: false, stops: [] }) as Record<string, unknown>;
+  // Token nunca volta no GET — só status (sufixo) + paradas.
+  const { token: _sptransToken, ...sptransRest } = sptransRawFull;
+  void _sptransToken;
+  const sptransTokenStr = typeof sptransRawFull.token === "string" ? sptransRawFull.token : "";
+  const sptransRaw = {
+    ...sptransRest,
+    has_token: Boolean(sptransTokenStr.trim()),
+    suffix: sptransTokenStr.trim() ? `••••${sptransTokenStr.trim().slice(-4)}` : null,
+  };
   return {
     in_docker: inDocker(),
     mock: Boolean(cfg.mock),
@@ -281,6 +291,7 @@ function configPublic(listenHost: string, listenPort: number, hub: unknown = nul
     apod: apodRaw,
     github: githubRaw,
     emulator: emulatorRaw,
+    sptrans: sptransRaw,
     device: devicePublic(hub),
   };
 }

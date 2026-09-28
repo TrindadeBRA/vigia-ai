@@ -10,8 +10,11 @@ import {
   cardRect,
   displayBoard,
   emptyBoard,
+  innerSlotKey,
   normalizeSize,
   occupancy,
+  occupiedRows,
+  rectCells,
   rectFor,
   type BoardLayout,
   type CardSize,
@@ -54,6 +57,10 @@ type BoardExtras = {
   _onInnerSetBg?: (id: string, next: string | null) => void;
   _renderInner?: (innerP: ProviderMeta, innerSize: CardSize) => ReactNode;
   _onInnerGrid?: (g: { cols: number; rows: number }) => void;
+  /** Célula alvo do preview de drop livre dentro do quadro (slot vazio destacado). */
+  _innerDropPreview?: Cell | null;
+  /** Id real do tile interno sendo arrastado (para desenhar o retângulo do preview). */
+  _innerDragId?: string | null;
 };
 
 /** Não rende enquanto a caixa não foi medida uma vez (1 frame). Grade interna = retângulo do quadro no grid pai (cols×rows), 1:1. */
@@ -62,6 +69,21 @@ function gridFromBox(cols: number, rows: number, w: number) {
   const r = Math.max(1, Math.min(INNER_MAX_ROWS, Math.floor(rows)));
   const slotPx = Math.max(12, Math.floor((w - INNER_GAP * (c - 1)) / c));
   return { cols: c, slotPx, rows: r };
+}
+
+/** Célula vazia do grid interno — droppable no modo editável, decorativa no kiosk. */
+function InnerSlot({ id, active, preview, droppable }: { id: string; active: boolean; preview?: boolean; droppable?: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id, disabled: !droppable, data: { inner: true } });
+  return (
+    <div
+      ref={setNodeRef}
+      aria-hidden
+      className={cn(
+        "min-h-0 min-w-0 rounded-lg border border-dashed transition-colors duration-150",
+        preview || isOver ? "border-accent bg-chip" : active ? "border-edge/70 bg-chip/20" : "border-edge/40 bg-chip/10",
+      )}
+    />
+  );
 }
 
 export function BoardBoardCard({ p, size, t }: { p: ProviderMeta; size: CardSize; t: T }) {
@@ -95,10 +117,19 @@ export function BoardBoardCard({ p, size, t }: { p: ProviderMeta; size: CardSize
   }, []);
 
   const boardRect = e._boardRect ?? rectFor(size, 8);
-  const grid = box && box.w > 4 ? gridFromBox(boardRect.w, boardRect.h, box.w) : null;
+  const baseGrid = box && box.w > 4 ? gridFromBox(boardRect.w, boardRect.h, box.w) : null;
 
   const innerIds = useMemo(() => innerProviders.map((x) => x.id), [innerIdsKey]);
-  const innerLayout = useMemo(() => displayBoard(innerIds, e._innerBoard ?? emptyBoard(), grid?.cols ?? INNER_MIN_COLS), [innerIdsKey, e._innerBoard, grid?.cols]);
+  const innerLayout = useMemo(() => displayBoard(innerIds, e._innerBoard ?? emptyBoard(), baseGrid?.cols ?? INNER_MIN_COLS), [innerIdsKey, e._innerBoard, baseGrid?.cols]);
+
+  // Rows = altura real do conteúdo + 1 (respiro) — conteúdo maior que o grid
+  // derivado do rect não renderiza slot vazio e o drop livre vira firstFreeCell.
+  const grid = useMemo(() => {
+    if (!baseGrid) return null;
+    const contentRows = occupiedRows(innerIds, innerLayout, baseGrid.cols) + 1;
+    const rows = Math.min(INNER_MAX_ROWS, Math.max(baseGrid.rows, contentRows));
+    return rows === baseGrid.rows ? baseGrid : { ...baseGrid, rows };
+  }, [baseGrid, innerLayout, innerIdsKey]);
 
   const emptySlots: Cell[] = useMemo(() => {
     if (!grid) return [];
@@ -129,6 +160,14 @@ export function BoardBoardCard({ p, size, t }: { p: ProviderMeta; size: CardSize
     lastGridKey.current = key;
     e._onInnerGrid({ cols: grid.cols, rows: grid.rows });
   }, [grid?.cols, grid?.rows, e._onInnerGrid]);
+
+  const dropPreview = e._innerDropPreview ?? null;
+  const dragId = e._innerDragId && innerIds.includes(e._innerDragId) ? e._innerDragId : null;
+  const previewCells = dropPreview && dragId && grid
+    ? rectCells(dropPreview, cardRect(innerLayout, dragId, grid.cols))
+    : [];
+  const previewKeys = new Set(previewCells.map((c) => `${c.r}:${c.c}`));
+  const dragActive = Boolean(e._innerDragId);
 
   const startRename = () => {
     setDraft(displayTitle);
@@ -181,10 +220,16 @@ export function BoardBoardCard({ p, size, t }: { p: ProviderMeta; size: CardSize
         {emptySlots.map((cell) => (
           <div
             key={`${cell.r}:${cell.c}`}
-            aria-hidden
-            className="min-h-0 min-w-0 rounded-lg border border-dashed border-edge/70 bg-chip/20"
+            className="min-h-0 min-w-0"
             style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
-          />
+          >
+            <InnerSlot
+              id={innerSlotKey(p.id, cell.r, cell.c)}
+              active={dragActive}
+              preview={previewKeys.has(`${cell.r}:${cell.c}`)}
+              droppable={editable}
+            />
+          </div>
         ))}
         {innerProviders.map((innerP) => {
           const pos = innerLayout.pos[innerP.id];
@@ -226,6 +271,14 @@ export function BoardBoardCard({ p, size, t }: { p: ProviderMeta; size: CardSize
             </div>
           );
         })}
+        {previewCells.map((cell) => (
+          <div
+            key={`inner-preview-${cell.r}:${cell.c}`}
+            aria-hidden
+            className="pointer-events-none z-[3] min-h-0 min-w-0 rounded-lg border border-dashed border-accent bg-chip/70"
+            style={{ gridColumn: cell.c + 1, gridRow: cell.r + 1 }}
+          />
+        ))}
         {innerProviders.length === 0 && editable ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-[11px] leading-snug text-ink3">{t.boardDropHint}</div>
         ) : null}

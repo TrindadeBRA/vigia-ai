@@ -18,6 +18,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/display/config" replace />} />
         <Route path="/setup" element={<Navigate to="/display/setup" replace />} />
+        <Route path="/canvas" element={<CanvasPage />} />
         <Route path="/display" element={<Display />}>
           <Route path="now" />
           <Route path="canvas" element={<CanvasPage />} />

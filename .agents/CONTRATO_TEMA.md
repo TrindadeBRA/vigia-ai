@@ -6,7 +6,10 @@ continuam funcionando exatamente como antes, e isso não tem relação com
 `/display/tema` redireciona).
 
 Mudar este contrato = atualizar este doc, `firmware/src/ui/customtheme.cpp`,
-`backend/src/routers/theme.ts` **e** `frontend/src/pages/config/ThemeEditorPage.tsx`.
+`backend/src/routers/theme.ts`, `backend/src/routers/wallpapers/router.ts`
+(rotação), `frontend/src/pages/config/ThemeEditorPage.tsx`,
+`frontend/src/pages/config/ThemeCanvasView.tsx` e
+`frontend/src/pages/config/themeCanvas/state.ts`.
 
 ## Como o tema chega na placa (fluxo principal)
 
@@ -68,7 +71,7 @@ sempre converte fração → pixel na hora de desenhar, contra
 ```json
 {
   "version": 1,
-  "background": { "type": "color", "color": "#10151A" },
+  "background": { "type": "color", "color": "#10151A", "overlayOpacity": 0.5, "zoom": 1.5, "ox": 0.5, "oy": 0.4, "rotate": true, "rotateIntervalSec": 60 },
   "clock": { "enabled": true, "x": 0.5, "y": 0.16, "scale": 2, "format24h": true, "color": "#F7F7F7", "showBackground": true, "autoColor": false },
   "icons": [
     { "provider": "claude", "x": 0.25, "y": 0.55, "scale": 1.5, "color": "#E1C6A0", "metric": "session_percent", "showBackground": true, "bgColor": "#2A1533" },
@@ -93,7 +96,35 @@ sempre converte fração → pixel na hora de desenhar, contra
   reimportar o GIF).
 - `background.color`, `clock.color`, `icons[].color`, `icons[].bgColor`,
   `texts[].color`: hex `#RRGGBB` opcional (omitido ou inválido = cor padrão
-  do tema/tela).
+  do tema/tela). `background.color` é a **cor única**: fundo sem papel,
+  overlay sobre o papel (ver `overlayOpacity`), com NameToColor no editor.
+- `background.overlayColor`: LEGADO (não serializado mais). Quando presente
+  com `overlayOpacity > 0`, tem precedência sobre `color` como cor do overlay
+  — tanto no editor (migração) quanto na placa (parse). Temas novos usam só
+  `color`.
+- `background.overlayOpacity`: número **0.0–1.0** opcional (omitido = `0` =
+  sem overlay; valores fora da faixa são clamped). Aplica a **cor única**
+  (`background.color`) como camada translúcida sobre o papel: sem papel, a
+  cor é o fundo; com papel, a cor é o overlay (letterbox incluso). `0` = papel
+  puro (caminho antigo, sem custo); `1` = fundo sólido na cor. O editor só
+  serializa quando a opacidade é > 0. Firmware antigo ignora o campo e mostra
+  o wallpaper puro — sem crash.
+- `background.zoom`/`ox`/`oy`: crop/pan/zoom do papel (opcionais). `zoom`
+  **1.0–4.0** (omitido = `1` = papel inteiro); `ox`/`oy` **0.0–1.0**
+  (omitido = `0.5`) = ponto da imagem que fica no centro do canvas, sempre
+  clamped pra janela não sair do papel. O editor só serializa quando
+  `zoom > 1`. A placa amostra a sub-janela no RAW (estático e cada frame do
+  GIF, inclusive `restoreBackgroundRect`); o `/canvas` web usa a mesma janela
+  (`wallpaperImgStyle`). Firmware antigo ignora e mostra o papel inteiro.
+- `background.rotate`/`rotateIntervalSec`: rotação automática de papéis
+  (opcionais, mesmo sistema do `/display`). `rotate: true` + `interval`
+  **15–3600 s** (omitido = `60`) faz o **coletor** avançar o selecionado na
+  ordem da biblioteca (`wallpapers/router.ts`, a cada 15 s checa) e avisar
+  via SSE `event: theme` — a placa recarrega sozinha com a `VIEW_THEME`
+  aberta; `/canvas` e o app Android seguem o selecionado no próximo poll
+  (60 s). Troca manual no painel reinicia a contagem. Ignorados pela placa
+  (chegam como troca de fundo normal); sem efeito com `type: "color"` ou
+  menos de 2 papéis.
 - `clock.showBackground`: `boolean` (default `true`) — quando `false`, o relógio é desenhado sem o retângulo de fundo (transparente).
 - `clock.autoColor`: `boolean` (default `false`) — quando `true`, a cor do texto do relógio é calculada automaticamente via `generateReadableColor` sobre `background.color` (WCAG AA 4.5:1), ignorando `clock.color`.
 - `icons[].showBackground`: `boolean` (default `true`) — quando `false`, o
@@ -241,6 +272,10 @@ placa ao aplicar, e o painel ao montar).
 - O id ativo fica em `config.json` → `wallpapers.selected_id`.
 - `GET /api/theme/background` devolve o RAW estático dessa imagem (resolução via `X-Vigia-Screen` ou `?w=&h=`). Se `kind` for `"gif"`, `GET /api/theme/background/anim` devolve a sequência (`?w=`/`?h=` na resolução de animação: 120×80 ou 80×60).
 - A placa baixa o fundo **só** no recarregar do tema (`themeClientReload()`), sem polling — e a variante anim quando `background.type == "gif"`.
+- Com `background.rotate: true`, o coletor gira o selecionado sozinho
+  (scheduler em `wallpapers/router.ts` + SSE `event: theme`, que a placa
+  com `VIEW_THEME` aberta recarrega na hora) — é assim que a placa "gira
+  junto" sem polling próprio.
 - Wallpapers são armazenados em `data/wallpapers/` como RAW RGB565 em duas resoluções (240×160 hardware + 160×120 wokwi) + JPEG preview + original. GIFs animados ganham também `<id>_anim.raw` (12×120×80) e `<id>_anim_wokwi.raw` (12×80×60).
 
 ### Provedores externos
@@ -309,3 +344,44 @@ disparam preflight).
 - Corpo do `POST /theme/meta` direto na placa é bufferizado inteiro em RAM
   pelo `WebServer` (`arg("plain")`) antes de chegar no handler — por isso o
   limite de 8 KB.
+
+## Canvas por aparelho (apps Vigia Monitor, sem ADB)
+
+O canvas default continua sendo o da placa (`theme.json`, 480×320). Cada
+app Vigia registra a tela no coletor e ganha um canvas próprio no tamanho
+do celular — o mesmo `theme.json`, só que editado contra outra resolução
+(as coordenadas continuam frações 0–1, então um tema serve em qualquer
+tela; o editor só muda a proporção do palco).
+
+- **Registro (app → coletor)**: `POST /api/monitors/register`
+  `{key, model, brand, screenW, screenH, densityDpi?, appVersion?, label?}` →
+  `{ok, id, isNew}`. Upsert pela `key` estável do aparelho (`ANDROID_ID`).
+  O app registra no boot e o coletor marca `online` por `lastSeen` < 10 min.
+  Arquivo: `backend/data/monitors.json` (gitignored). Sem relação com
+  `/api/android/*` (ADB/espelhamento — fluxo independente).
+- **Lista**: `GET /api/monitors` → `{monitors: [{id, label, model, screenW,
+  screenH, appVersion, lastSeen, online}]}`. `PATCH /api/monitors/:id`
+  `{label}` renomeia; `DELETE /api/monitors/:id` remove o aparelho e o tema.
+- **Tema do aparelho**: `GET /api/monitors/:id/theme` →
+  `{active, theme, has_background, background_id, screenW, screenH}`;
+  `POST /api/monitors/:id/theme/meta` (JSON cru, máx. 8 KB, validado);
+  `DELETE /api/monitors/:id/theme`. Arquivo: `theme_monitor_<id>.json`.
+  Sem tema próprio, o app usa o tema global da placa (fallback).
+- **Duas orientações**: cada aparelho tem canvas vertical e horizontal —
+  `?orientation=portrait|landscape` (default `portrait`) no GET/POST/DELETE
+  do tema. Retrato usa `theme_monitor_<id>.json`; paisagem usa
+  `theme_monitor_<id>_landscape.json`. O GET devolve `orientation` +
+  `screenW/screenH` daquela orientação (derivados min×max do registro), e
+  `GET /api/monitors` expõe `portrait{w,h}` + `landscape{w,h}`. O app busca
+  a orientação atual (`h>=w` = retrato) e recria a tela ao girar.
+- **Fundo do aparelho**: `GET /api/monitors/:id/theme/background?w=&h=`
+  converte o papel selecionado na hora (`imageToRaw`, metade da resolução
+  pedida, clamp 80–2160×80–3840) e devolve RAW RGB565 com os tamanhos reais
+  em `X-Vigia-Raw-W/H`. Animação (`gif`) por aparelho: fora do escopo v1
+  (só o fundo estático; o app cai na cor).
+- **Editor** (`/display/theme`): seletor de canvas (placa + aparelhos com
+  `label (WxH)`); trocar de alvo ajusta a proporção e carrega o tema salvo
+  naquele canvas; salvar/apagar vão para o endpoint do alvo.
+- Mudar este bloco = atualizar este doc, `backend/src/routers/monitors.ts`,
+  `backend/src/schemas/monitors.ts`, `frontend/src/pages/config/ThemeEditorPage.tsx`
+  e `android/app/.../MonitorRegister.kt` + `CanvasActivity.kt`.

@@ -66,3 +66,7 @@ desktop/resources/
 
 # --- Oh My OpenCode ---
 .omo/
+
+# --- Playwright MCP (artefatos locais de inspeção) ---
+.playwright-mcp/
+detail-check.yml

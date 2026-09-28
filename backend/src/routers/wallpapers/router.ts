@@ -169,6 +169,59 @@ function patchThemeBackgroundType(kind: string, extra?: { frame_count?: number; 
   } catch { }
 }
 
+const ROTATE_TICK_MS = 15_000;
+
+// Rotação automática dos papéis do tema (mesmo sistema do /display, ver
+// Display.tsx): com background.rotate no theme.json, o coletor avança o
+// selecionado na ordem da biblioteca a cada rotateIntervalSec e avisa via
+// SSE — a placa recarrega sozinha com a VIEW_THEME aberta (themeClientTick),
+// e o /canvas e o app Android seguem o selecionado no próximo poll.
+type RotateState = { lastId: string | null; lastAdvance: number };
+const rotateState: RotateState = { lastId: null, lastAdvance: 0 };
+
+function themeRotateCfg(): { enabled: boolean; intervalSec: number } {
+  const off = { enabled: false, intervalSec: 60 };
+  try {
+    const p = join(dataDir(), "theme.json");
+    if (!existsSync(p)) return off;
+    const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return off;
+    const bg = (raw.background ?? {}) as Record<string, unknown>;
+    const type = String(bg.type ?? "color");
+    if (type !== "image" && type !== "gif") return off;
+    if (bg.rotate !== true) return off;
+    const iv = Math.round(Number(bg.rotateIntervalSec ?? 60));
+    return { enabled: true, intervalSec: Number.isFinite(iv) ? Math.min(3600, Math.max(15, iv)) : 60 };
+  } catch {
+    return off;
+  }
+}
+
+function rotateTick(hub: { notifyThemeChanged?: () => void } | undefined): void {
+  const cfg = themeRotateCfg();
+  if (!cfg.enabled) return;
+  const ids = listWallpapers("theme").map((w) => String(w.id));
+  if (ids.length < 2) return;
+  const cur = getSelectedId();
+  const now = Date.now();
+  // Troca manual no painel reinicia a contagem a partir do papel escolhido.
+  if (cur !== rotateState.lastId) {
+    rotateState.lastId = cur;
+    rotateState.lastAdvance = now;
+    return;
+  }
+  if (now - rotateState.lastAdvance < cfg.intervalSec * 1000) return;
+  const idx = cur ? ids.indexOf(cur) : -1;
+  const next = ids[(idx + 1) % ids.length] ?? ids[0];
+  if (!next || next === cur) return;
+  setSelectedId(next);
+  rotateState.lastId = next;
+  rotateState.lastAdvance = now;
+  try {
+    hub?.notifyThemeChanged?.();
+  } catch { /* SSE é best-effort */ }
+}
+
 async function writeAnimVariants(wid: string, imageBytes: Buffer): Promise<{ kind: "gif"; frame_count: number; frame_delay_ms: number } | { kind: "static" }> {
   if (!isGifSignature(imageBytes)) return { kind: "static" };
   const hw = await extractGifFrames(imageBytes, MAX_ANIM_FRAMES, ANIM_HW.w, ANIM_HW.h);
@@ -180,6 +233,17 @@ async function writeAnimVariants(wid: string, imageBytes: Buffer): Promise<{ kin
 }
 
 export async function createWallpapersRoutes(app: FastifyInstance): Promise<void> {
+  const hub = (app as unknown as { hub?: { notifyThemeChanged?: () => void } }).hub;
+  const rotateTimer = setInterval(() => {
+    try {
+      rotateTick(hub);
+    } catch { /* tick nunca derruba o coletor */ }
+  }, ROTATE_TICK_MS);
+  rotateTimer.unref?.();
+  app.addHook("onClose", async () => {
+    clearInterval(rotateTimer);
+  });
+
   app.get("/api/wallpapers", { schema: { tags: ["Papéis de parede"] } }, async (request) => {
     const query = (request.query ?? {}) as Record<string, string>;
     let scope: string | null = query.scope ?? null;
