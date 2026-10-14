@@ -71,6 +71,10 @@ void customThemeTickCountdown();
 // (eraseStaleRect em drawThemeCard), então o custo por segundo é só o(s)
 // card(s) de provedor, não o canvas todo.
 void customThemeTickResetCountdown();
+// Tick de 1s dos widgets clocks[]/systems[] (relógio com segundos,
+// contagem, cronômetro, pomodoro; sistema por minuto) — só redesenha o
+// widget cujo texto exibido mudou (ver customThemeTickSecond).
+void customThemeTickSecond();
 // Avança o frame do fundo GIF (rate-limited por frame_delay_ms). Chamado
 // no loop via uiTickClock() quando VIEW_THEME está ativa.
 void customThemeTickAnimation();

@@ -2,6 +2,7 @@
 
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <WiFi.h>
 
 #include <cstring>
 
@@ -9,6 +10,7 @@ using fs::File;
 
 #include <math.h>
 
+#include "../version.h"
 #include "net/parse.h"
 #include "net/spotify_client.h"
 #include "net/weather_icon_client.h"
@@ -16,15 +18,23 @@ using fs::File;
 #include "ui/internal.h"
 #include "assets/icons/icon_adsense.h"
 #include "assets/icons/icon_bitcoin.h"
+#include "assets/icons/icon_calendar.h"
 #include "assets/icons/icon_claude.h"
+#include "assets/icons/icon_currencies.h"
 #include "assets/icons/icon_cursor.h"
 #include "assets/icons/icon_deepseek.h"
 #include "assets/icons/icon_fal.h"
+#include "assets/icons/icon_git.h"
+#include "assets/icons/icon_github.h"
 #include "assets/icons/icon_gpt.h"
+#include "assets/icons/icon_nasa.h"
 #include "assets/icons/icon_opencode.h"
 #include "assets/icons/icon_openrouter.h"
+#include "assets/icons/icon_retro.h"
+#include "assets/icons/icon_rss.h"
 #include "assets/icons/icon_spotify.h"
 #include "assets/icons/icon_weather.h"
+#include "assets/icons/icon_ytmusic.h"
 
 static const char *kMetaPath = "/theme.json";
 static const char *kBgPath = "/theme_bg.raw";
@@ -47,6 +57,15 @@ enum ThemeIconKind : uint8_t
   TICON_ADSENSE,
   TICON_SPOTIFY,
   TICON_BRAND,
+  TICON_RSS,
+  TICON_CALENDAR,
+  TICON_GITHUB,
+  TICON_GITHUB_PROFILE,
+  TICON_GIT,
+  TICON_CURRENCIES,
+  TICON_RETRO,
+  TICON_APOD,
+  TICON_YTMUSIC,
   TICON_COUNT
 };
 
@@ -119,6 +138,62 @@ struct ThemeCountdown
   uint16_t color = 0;
 };
 
+// Widget de relógio do canvas — mesmos modos do card de relógio do dashboard
+// web (ClockCard.tsx), um por widget: relógio/fuso, contagem regressiva,
+// cronômetro e pomodoro. No device são só-display (qualquer toque sai da
+// VIEW_THEME, exceto os controles do Spotify): cronômetro/pomodoro contam
+// sozinhos a partir da aplicação do tema (g_themeAppliedMs); no canvas web
+// eles têm botões de verdade.
+enum ClockWidgetMode : uint8_t
+{
+  CWM_CLOCK = 0,
+  CWM_COUNTDOWN,
+  CWM_STOPWATCH,
+  CWM_POMODORO
+};
+
+struct ThemeClockWidget
+{
+  ClockWidgetMode mode = CWM_CLOCK;
+  float x = 0.5f;
+  float y = 0.5f;
+  float scale = 1.0f;
+  char label[24] = {0};
+  // IANA (ex. "America/Sao_Paulo"): o device mostra a cidade (após a última
+  // '/') + o horário local da placa — sem banco de TZ/DST no ESP32, a
+  // conversão exata de fuso é só web/Android (ver CONTRATO_TEMA.md).
+  char timezone[32] = {0};
+  bool format24h = true;
+  bool showSeconds = true;
+  bool showDate = true;
+  char countdownAt[32] = {0};
+  char countdownLabel[24] = {0};
+  uint8_t pomoFocus = 25;
+  uint8_t pomoShort = 5;
+  uint8_t pomoLong = 15;
+  uint8_t pomoCycles = 4;
+  bool hasColor = false;
+  uint16_t color = 0;
+  bool showBackground = true;
+};
+
+// Widget de sistema do canvas — dados do próprio device (uptime, heap,
+// Wi-Fi, último fetch, flash): o análogo do SystemCard web, que mostra o
+// coletor. detail: 0 = minimal (uptime), 1 = compact (+mem/cpu-rede),
+// 2 = full (+ciclo/armazenamento).
+struct ThemeSystemWidget
+{
+  float x = 0.5f;
+  float y = 0.5f;
+  float scale = 1.0f;
+  uint8_t detail = 1;
+  bool hasColor = false;
+  uint16_t color = 0;
+  bool showBackground = true;
+  bool hasBgColor = false;
+  uint16_t bgColor = 0;
+};
+
 enum ThemeBgKind : uint8_t
 {
   TBG_COLOR = 0,
@@ -131,6 +206,8 @@ enum ThemeBgKind : uint8_t
 // adicionados, eram sempre os primeiros a cair.
 constexpr int kMaxIcons = 12;
 constexpr int kMaxTexts = 4;
+constexpr int kMaxClocks = 4;
+constexpr int kMaxSystems = 2;
 
 struct CustomTheme
 {
@@ -157,6 +234,10 @@ struct CustomTheme
   int iconCount = 0;
   ThemeText texts[kMaxTexts];
   int textCount = 0;
+  ThemeClockWidget clocks[kMaxClocks];
+  int clockWidgetCount = 0;
+  ThemeSystemWidget systems[kMaxSystems];
+  int systemCount = 0;
 };
 
 static CustomTheme g_theme;
@@ -210,6 +291,15 @@ static ThemeCardSubSlot g_cardSub2[kMaxIcons];
 static ThemeWidgetRect g_clockRect;
 static ThemeWidgetRect g_countdownRect;
 static ThemeWidgetRect g_textRects[kMaxTexts];
+static ThemeWidgetRect g_clockWidgetRects[kMaxClocks];
+static ThemeWidgetRect g_systemRects[kMaxSystems];
+// millis() da aplicação do tema atual — base do cronômetro/pomodoro
+// (display-only no device) e do uptime do widget de sistema.
+static uint32_t g_themeAppliedMs = 0;
+// Chaves de troca de texto do tick de 1s (só redesenha o widget cujo texto
+// exibido de fato mudou — ver customThemeTickSecond).
+static long g_cwTickKeys[kMaxClocks];
+static long g_sysTickKey = -1;
 static uint8_t g_gifRowMask[480];
 
 struct SpotifyHitRect
@@ -256,6 +346,16 @@ void customThemeInvalidateBackground()
   {
     g_textRects[i].valid = false;
   }
+  for (int i = 0; i < kMaxClocks; i++)
+  {
+    g_clockWidgetRects[i].valid = false;
+    g_cwTickKeys[i] = -1;
+  }
+  for (int i = 0; i < kMaxSystems; i++)
+  {
+    g_systemRects[i].valid = false;
+  }
+  g_sysTickKey = -1;
 }
 
 static float clampf(float v, float lo, float hi)
@@ -338,8 +438,10 @@ static uint16_t blendOverlay(uint16_t pixel, uint16_t overlay, float alpha)
 static bool parseIconKind(const String &s, ThemeIconKind &out)
 {
   static const char *kNames[TICON_COUNT] = {"claude", "gpt", "cursor", "openrouter",
-                                            "deepseek", "opencode", "fal", "weather", "bitcoin",
-                                            "adsense", "spotify", "brand"};
+                                             "deepseek", "opencode", "fal", "weather", "bitcoin",
+                                             "adsense", "spotify", "brand", "rss", "calendar",
+                                             "github", "github-profile", "git", "currencies",
+                                             "retroachievements", "apod", "youtubemusic"};
   for (int i = 0; i < TICON_COUNT; i++)
   {
     if (s == kNames[i])
@@ -514,6 +616,103 @@ static bool parseTheme(const String &json, CustomTheme &out)
     t.texts[t.textCount++] = txt;
   }
 
+  for (JsonVariantConst it : doc["clocks"].as<JsonArrayConst>())
+  {
+    if (t.clockWidgetCount >= kMaxClocks)
+    {
+      break;
+    }
+    ThemeClockWidget w;
+    String m = jsonText(it["mode"]);
+    w.mode = (m == "countdown") ? CWM_COUNTDOWN : (m == "stopwatch") ? CWM_STOPWATCH : (m == "pomodoro") ? CWM_POMODORO : CWM_CLOCK;
+    w.x = clampf(it["x"] | 0.5f, 0.0f, 1.0f);
+    w.y = clampf(it["y"] | 0.5f, 0.0f, 1.0f);
+    w.scale = clampf(it["scale"] | 1.0f, 0.5f, 4.0f);
+    String s = jsonText(it["label"]);
+    if (s.length())
+    {
+      s.toCharArray(w.label, sizeof(w.label));
+    }
+    s = jsonText(it["timezone"]);
+    if (s.length())
+    {
+      s.toCharArray(w.timezone, sizeof(w.timezone));
+    }
+    if (it["showSeconds"].is<bool>())
+    {
+      w.showSeconds = it["showSeconds"] | true;
+    }
+    if (it["format24h"].is<bool>())
+    {
+      w.format24h = it["format24h"] | true;
+    }
+    if (it["showDate"].is<bool>())
+    {
+      w.showDate = it["showDate"] | true;
+    }
+    s = jsonText(it["countdownAt"]);
+    if (s.length())
+    {
+      s.toCharArray(w.countdownAt, sizeof(w.countdownAt));
+    }
+    s = jsonText(it["countdownLabel"]);
+    if (s.length())
+    {
+      s.toCharArray(w.countdownLabel, sizeof(w.countdownLabel));
+    }
+    w.pomoFocus = (uint8_t)constrain(it["pomodoroFocusMin"] | 25, 1, 180);
+    w.pomoShort = (uint8_t)constrain(it["pomodoroShortMin"] | 5, 1, 60);
+    w.pomoLong = (uint8_t)constrain(it["pomodoroLongMin"] | 15, 1, 90);
+    w.pomoCycles = (uint8_t)constrain(it["pomodoroCycles"] | 4, 2, 8);
+    if (hexColorToRgb565(jsonText(it["color"]), col))
+    {
+      w.hasColor = true;
+      w.color = col;
+    }
+    if (it["showBackground"].is<bool>())
+    {
+      w.showBackground = it["showBackground"] | true;
+    }
+    else
+    {
+      w.showBackground = true;
+    }
+    t.clocks[t.clockWidgetCount++] = w;
+  }
+
+  for (JsonVariantConst it : doc["systems"].as<JsonArrayConst>())
+  {
+    if (t.systemCount >= kMaxSystems)
+    {
+      break;
+    }
+    ThemeSystemWidget w;
+    w.x = clampf(it["x"] | 0.5f, 0.0f, 1.0f);
+    w.y = clampf(it["y"] | 0.5f, 0.0f, 1.0f);
+    w.scale = clampf(it["scale"] | 1.0f, 0.5f, 4.0f);
+    String d = jsonText(it["detail"]);
+    w.detail = (d == "minimal") ? 0 : (d == "full") ? 2 : 1;
+    if (hexColorToRgb565(jsonText(it["color"]), col))
+    {
+      w.hasColor = true;
+      w.color = col;
+    }
+    if (it["showBackground"].is<bool>())
+    {
+      w.showBackground = it["showBackground"] | true;
+    }
+    else
+    {
+      w.showBackground = true;
+    }
+    if (hexColorToRgb565(jsonText(it["bgColor"]), col))
+    {
+      w.hasBgColor = true;
+      w.bgColor = col;
+    }
+    t.systems[t.systemCount++] = w;
+  }
+
   out = t;
   return true;
 }
@@ -545,6 +744,8 @@ void customThemeInit()
     g_theme = t;
     g_rawJson = json;
     g_active = true;
+    g_themeAppliedMs = millis();
+    customThemeInvalidateBackground();
     Serial.println("tema: custom carregado do LittleFS");
   }
   else
@@ -632,6 +833,8 @@ bool customThemeApplyMeta(const String &json)
   g_theme = t;
   g_rawJson = json;
   g_active = true;
+  g_themeAppliedMs = millis();
+  customThemeInvalidateBackground();
   g_animFrameIdx = 0;
   g_animLastMs = 0;
   g_animLetterboxDirty = true;
@@ -850,6 +1053,23 @@ static IconRef iconRefFor(ThemeIconKind k)
     return {ICON_ADSENSE, ICON_ADSENSE_W, ICON_ADSENSE_H};
   case TICON_SPOTIFY:
     return {ICON_SPOTIFY, ICON_SPOTIFY_W, ICON_SPOTIFY_H};
+  case TICON_RSS:
+    return {ICON_RSS, ICON_RSS_W, ICON_RSS_H};
+  case TICON_CALENDAR:
+    return {ICON_CALENDAR, ICON_CALENDAR_W, ICON_CALENDAR_H};
+  case TICON_GITHUB:
+  case TICON_GITHUB_PROFILE:
+    return {ICON_GITHUB, ICON_GITHUB_W, ICON_GITHUB_H};
+  case TICON_GIT:
+    return {ICON_GIT, ICON_GIT_W, ICON_GIT_H};
+  case TICON_CURRENCIES:
+    return {ICON_CURRENCIES, ICON_CURRENCIES_W, ICON_CURRENCIES_H};
+  case TICON_RETRO:
+    return {ICON_RETRO, ICON_RETRO_W, ICON_RETRO_H};
+  case TICON_APOD:
+    return {ICON_NASA, ICON_NASA_W, ICON_NASA_H};
+  case TICON_YTMUSIC:
+    return {ICON_YTMUSIC, ICON_YTMUSIC_W, ICON_YTMUSIC_H};
   default:
     return {nullptr, 0, 0};
   }
@@ -1494,6 +1714,8 @@ static const char *defaultMetricFor(ThemeIconKind k)
     return "value_usd_cents";
   case TICON_ADSENSE:
     return "unpaid_cents";
+  case TICON_CURRENCIES:
+    return "first_quote";
   default:
     return "";
   }
@@ -1612,6 +1834,14 @@ static String themeIconValue(const ThemeIcon &icon)
     if (strcmp(m, "today_cents") == 0)
       return adsenseTodayText(a);
     return adsenseWalletText(a);
+  }
+  case TICON_CURRENCIES:
+  {
+    if (g_snap.currencies.itemCount <= 0)
+      return "--";
+    if (strcmp(m, "quotes_count") == 0)
+      return String(g_snap.currencies.itemCount);
+    return currencyQuoteValue(g_snap.currencies.items[0], g_snap.currencies.base);
   }
   default:
     return "";
@@ -1941,9 +2171,62 @@ static ThemeCardContent themeCardContentFor(ThemeIconKind kind)
     c.s2 = adsenseWalletText(a);
     return c;
   }
+  case TICON_CURRENCIES:
+  {
+    c.title = g_snap.currencies.base.length() ? g_snap.currencies.base : "Moedas";
+    if (g_snap.currencies.itemCount <= 0)
+    {
+      c.ok = false;
+      c.error = t.noData;
+      return c;
+    }
+    c.ok = g_snap.currencies.ok;
+    c.error = g_snap.currencies.error;
+    static char curL1[16];
+    static char curL2[16];
+    currencyQuoteLabel(g_snap.currencies.items[0]).toCharArray(curL1, sizeof(curL1));
+    c.l1 = curL1;
+    c.p1 = -1;
+    c.s1 = currencyQuoteValue(g_snap.currencies.items[0], g_snap.currencies.base);
+    if (g_snap.currencies.itemCount > 1)
+    {
+      currencyQuoteLabel(g_snap.currencies.items[1]).toCharArray(curL2, sizeof(curL2));
+      c.l2 = curL2;
+      c.p2 = -1;
+      c.s2 = currencyQuoteValue(g_snap.currencies.items[1], g_snap.currencies.base);
+    }
+    return c;
+  }
+  case TICON_RSS:
+    c.title = "RSS";
+    break;
+  case TICON_CALENDAR:
+    c.title = "Eventos";
+    break;
+  case TICON_GITHUB:
+    c.title = "GitHub";
+    break;
+  case TICON_GITHUB_PROFILE:
+    c.title = "GitHub";
+    break;
+  case TICON_GIT:
+    c.title = "Git";
+    break;
+  case TICON_RETRO:
+    c.title = "RetroAchievements";
+    break;
+  case TICON_APOD:
+    c.title = "APOD";
+    break;
+  case TICON_YTMUSIC:
+    c.title = "YouTube Music";
+    break;
   default:
     return c;
   }
+  c.ok = false;
+  c.error = t.noData;
+  return c;
 }
 
 // Linha "rótulo apagado + valor" com barra opcional (pct<0 = sem barra,
@@ -2576,6 +2859,371 @@ static uint16_t readableOnBg(uint16_t bg565)
   return out;
 }
 
+// --- Widgets de relógio/sistema do canvas (clocks[]/systems[]) ---
+
+// "America/Sao_Paulo" -> "Sao Paulo" (rótulo do modo clock com fuso).
+static void themeCityFromTimezone(const char *tz, char *out, size_t outLen)
+{
+  if (outLen == 0)
+  {
+    return;
+  }
+  const char *last = tz;
+  for (const char *q = tz; *q; q++)
+  {
+    if (*q == '/')
+    {
+      last = q + 1;
+    }
+  }
+  size_t n = 0;
+  for (const char *q = last; *q && n + 1 < outLen; q++)
+  {
+    out[n++] = (*q == '_') ? ' ' : *q;
+  }
+  out[n] = 0;
+}
+
+// Uptime do device em ASCII ("2d 3h" / "4h 12min" / "7min" / "42s").
+static void fmtUptimeDevice(char *out, size_t outLen, uint32_t secs)
+{
+  if (outLen == 0)
+  {
+    return;
+  }
+  uint32_t d = secs / 86400UL;
+  uint32_t h = (secs % 86400UL) / 3600UL;
+  uint32_t m = (secs % 3600UL) / 60UL;
+  if (d > 0)
+  {
+    snprintf(out, outLen, "%lud %luh", (unsigned long)d, (unsigned long)h);
+  }
+  else if (h > 0)
+  {
+    snprintf(out, outLen, "%luh %lumin", (unsigned long)h, (unsigned long)m);
+  }
+  else if (m > 0)
+  {
+    snprintf(out, outLen, "%lumin", (unsigned long)m);
+  }
+  else
+  {
+    snprintf(out, outLen, "%lus", (unsigned long)secs);
+  }
+}
+
+// Fase do pomodoro a partir do tempo decorrido desde a aplicação do tema:
+// sequência foco,pausa × (ciclos-1), foco,pausa longa. phase recebe
+// "FOCO"/"PAUSA"/"LONGA"; retorna os segundos restantes da fase.
+static long pomoRemainingFor(const ThemeClockWidget &w, uint32_t elapsed, char *phase, size_t phaseLen)
+{
+  uint32_t fS = (uint32_t)w.pomoFocus * 60UL;
+  uint32_t sS = (uint32_t)w.pomoShort * 60UL;
+  uint32_t lS = (uint32_t)w.pomoLong * 60UL;
+  uint32_t cyc = w.pomoCycles < 2 ? 2 : w.pomoCycles;
+  uint32_t setLen = fS * cyc + sS * (cyc - 1) + lS;
+  if (setLen == 0)
+  {
+    setLen = 1;
+  }
+  uint32_t t = elapsed % setLen;
+  for (uint8_t i = 0; i < cyc; i++)
+  {
+    if (t < fS)
+    {
+      strncpy(phase, "FOCO", phaseLen);
+      phase[phaseLen - 1] = 0;
+      return (long)(fS - t);
+    }
+    t -= fS;
+    uint32_t brk = (i + 1 < cyc) ? sS : lS;
+    const char *name = (i + 1 < cyc) ? "PAUSA" : "LONGA";
+    if (t < brk)
+    {
+      strncpy(phase, name, phaseLen);
+      phase[phaseLen - 1] = 0;
+      return (long)(brk - t);
+    }
+    t -= brk;
+  }
+  strncpy(phase, "FOCO", phaseLen);
+  phase[phaseLen - 1] = 0;
+  return (long)fS;
+}
+
+// Apaga o retângulo anterior e desenha uma caixa de widget genérica
+// (2 linhas: rótulo fonte 1 + valor fonte principal), com ou sem fundo.
+static void drawThemeWidgetBox(ThemeWidgetRect &slot, int cx, int cy, const char *label, const char *value,
+                               uint8_t fontMain, uint16_t fg, bool box, uint16_t bgCol, bool border, uint16_t borderCol,
+                               const char *sub = nullptr)
+{
+  const uint8_t fontSub = 1;
+  tft.setTextDatum(TL_DATUM);
+  int labelW = label[0] ? tft.textWidth(label, fontSub) : 0;
+  int labelH = label[0] ? tft.fontHeight(fontSub) + 1 : 0;
+  int valW = tft.textWidth(value, fontMain);
+  int valH = tft.fontHeight(fontMain);
+  int subW = (sub && sub[0]) ? tft.textWidth(sub, fontSub) : 0;
+  int subH = (sub && sub[0]) ? tft.fontHeight(fontSub) + 1 : 0;
+  int boxW = max(labelW, max(valW, subW)) + 12;
+  int boxH = labelH + valH + subH + 8;
+  clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
+  int x0 = cx - boxW / 2;
+  int y0 = cy - boxH / 2;
+  eraseStaleRect(g_theme, slot, x0, y0, boxW, boxH);
+  if (box)
+  {
+    if (border)
+    {
+      tft.drawRoundRect(x0, y0, boxW, boxH, 6, borderCol);
+      tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+    }
+    else
+    {
+      tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    }
+  }
+  int y = y0 + 4;
+  if (label[0])
+  {
+    box ? tft.setTextColor(0xAD75, bgCol) : tft.setTextColor(0xAD75);
+    tft.drawString(label, x0 + 6, y, fontSub);
+    y += labelH;
+  }
+  box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
+  tft.drawString(value, x0 + 6, y, fontMain);
+  y += valH;
+  if (sub && sub[0])
+  {
+    box ? tft.setTextColor(0xAD75, bgCol) : tft.setTextColor(0xAD75);
+    tft.drawString(sub, x0 + 6, y, fontSub);
+  }
+}
+
+static void drawThemeClockWidget(const ThemeClockWidget &w, int idx)
+{
+  int year, mo, dd, hh, mi, ss;
+  const bool hasTime = wallClockNow(year, mo, dd, hh, mi, ss);
+  if (!hasTime && w.mode == CWM_CLOCK)
+  {
+    return;
+  }
+  const uint8_t fontMain = w.scale >= 3.0f ? 8 : (w.scale >= 1.5f ? 6 : 4);
+  uint16_t fg = w.hasColor ? w.color : COL_TEXT;
+  const bool box = w.showBackground;
+  const uint16_t bgCol = 0x1082;
+  int cx = (int)(w.x * tft.width());
+  int cy = (int)(w.y * tft.height());
+  char label[24] = {0};
+  char value[32] = {0};
+  bool border = w.hasColor;
+
+  if (w.mode == CWM_COUNTDOWN)
+  {
+    if (w.countdownLabel[0])
+    {
+      strncpy(label, w.countdownLabel, sizeof(label) - 1);
+    }
+    else if (w.label[0])
+    {
+      strncpy(label, w.label, sizeof(label) - 1);
+    }
+    long secs = w.countdownAt[0] ? secondsUntilWhen(String(w.countdownAt)) : RESET_COUNTDOWN_UNKNOWN;
+    if (secs == RESET_COUNTDOWN_UNKNOWN)
+    {
+      snprintf(value, sizeof(value), "--");
+    }
+    else if (secs < 0)
+    {
+      snprintf(value, sizeof(value), "FIM");
+    }
+    else
+    {
+      String d = fmtCountdownDuration(secs);
+      strncpy(value, d.c_str(), sizeof(value) - 1);
+    }
+  }
+  else if (w.mode == CWM_STOPWATCH)
+  {
+    if (w.label[0])
+    {
+      strncpy(label, w.label, sizeof(label) - 1);
+    }
+    else
+    {
+      strncpy(label, "TIMER", sizeof(label) - 1);
+    }
+    uint32_t el = (millis() - g_themeAppliedMs) / 1000UL;
+    snprintf(value, sizeof(value), "%02lu:%02lu:%02lu", (unsigned long)(el / 3600UL), (unsigned long)((el % 3600UL) / 60UL), (unsigned long)(el % 60UL));
+  }
+  else if (w.mode == CWM_POMODORO)
+  {
+    char phase[8] = {0};
+    uint32_t el = (millis() - g_themeAppliedMs) / 1000UL;
+    long rem = pomoRemainingFor(w, el, phase, sizeof(phase));
+    if (w.label[0])
+    {
+      strncpy(label, w.label, sizeof(label) - 1);
+    }
+    else
+    {
+      strncpy(label, phase, sizeof(label) - 1);
+    }
+    if (rem < 0)
+    {
+      rem = 0;
+    }
+    snprintf(value, sizeof(value), "%02ld:%02ld", rem / 60L, rem % 60L);
+  }
+  else
+  {
+    if (w.label[0])
+    {
+      strncpy(label, w.label, sizeof(label) - 1);
+    }
+    else if (w.timezone[0])
+    {
+      themeCityFromTimezone(w.timezone, label, sizeof(label));
+    }
+    int hhDisp = hh;
+    if (!w.format24h)
+    {
+      hhDisp = hh % 12;
+      if (hhDisp == 0)
+      {
+        hhDisp = 12;
+      }
+    }
+    if (w.showSeconds && w.scale >= 1.5f)
+    {
+      snprintf(value, sizeof(value), "%02d:%02d:%02d", hhDisp, mi, ss);
+    }
+    else
+    {
+      snprintf(value, sizeof(value), "%02d:%02d", hhDisp, mi);
+    }
+  }
+  label[sizeof(label) - 1] = 0;
+  value[sizeof(value) - 1] = 0;
+  if (w.mode == CWM_CLOCK && w.showDate)
+  {
+    char date[12] = {0};
+    snprintf(date, sizeof(date), "%02d/%02d", dd, mo);
+    drawThemeWidgetBox(g_clockWidgetRects[idx], cx, cy, label, value, fontMain, fg, box, bgCol, border, fg, date);
+  }
+  else
+  {
+    drawThemeWidgetBox(g_clockWidgetRects[idx], cx, cy, label, value, fontMain, fg, box, bgCol, border, fg);
+  }
+}
+
+static void drawThemeSystem(const ThemeSystemWidget &w, int idx)
+{
+  uint16_t fg = w.hasColor ? w.color : COL_TEXT;
+  const bool box = w.showBackground;
+  uint16_t bgCol = w.hasBgColor ? w.bgColor : 0x1082;
+  int cx = (int)(w.x * tft.width());
+  int cy = (int)(w.y * tft.height());
+  const uint8_t fontMain = w.scale >= 2.5f ? 4 : 2;
+  const uint8_t fontSub = 1;
+
+  char up[16] = {0};
+  fmtUptimeDevice(up, sizeof(up), millis() / 1000UL);
+  char ver[16] = {0};
+  snprintf(ver, sizeof(ver), "v%s", FIRMWARE_VERSION);
+
+  char heap[24] = {0};
+  snprintf(heap, sizeof(heap), "HEAP %luk", (unsigned long)(ESP.getFreeHeap() / 1024UL));
+  char net[28] = {0};
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    String ip = WiFi.localIP().toString();
+    int rssi = WiFi.RSSI();
+    snprintf(net, sizeof(net), "%ddBm %s", rssi, ip.c_str());
+  }
+  else
+  {
+    snprintf(net, sizeof(net), "sem wifi");
+  }
+  char sync[24] = {0};
+  if (g_lastFetchMs != 0)
+  {
+    uint32_t age = (millis() - g_lastFetchMs) / 1000UL;
+    char a[12] = {0};
+    fmtUptimeDevice(a, sizeof(a), age);
+    snprintf(sync, sizeof(sync), "SYNC %s", a);
+  }
+  else
+  {
+    snprintf(sync, sizeof(sync), "SYNC --");
+  }
+  char flash[24] = {0};
+  if (g_fsOk)
+  {
+    uint32_t total = LittleFS.totalBytes();
+    uint32_t used = LittleFS.usedBytes();
+    int pct = total ? (int)((used * 100UL) / total) : 0;
+    snprintf(flash, sizeof(flash), "FLASH %d%%", pct);
+  }
+  else
+  {
+    snprintf(flash, sizeof(flash), "FLASH --");
+  }
+
+  // Linhas por nível: minimal = uptime + versão; compact = + heap + rede;
+  // full = + sync + flash. Mede a caixa antes, na mesma ordem do desenho.
+  const char *l1 = up;
+  const char *l1sub = ver;
+  const char *lines[4] = {heap, net, sync, flash};
+  int nExtra = (w.detail >= 2) ? 4 : (w.detail >= 1 ? 2 : 0);
+
+  tft.setTextDatum(TL_DATUM);
+  int mainW = tft.textWidth(l1, fontMain);
+  int mainH = tft.fontHeight(fontMain);
+  int subW = tft.textWidth(l1sub, fontSub);
+  int topW = max(mainW, subW);
+  int extraW = 0;
+  for (int i = 0; i < nExtra; i++)
+  {
+    int lw = tft.textWidth(lines[i], fontSub);
+    if (lw > extraW)
+    {
+      extraW = lw;
+    }
+  }
+  int boxW = max(topW, extraW) + 12;
+  int boxH = mainH + tft.fontHeight(fontSub) + 2 + nExtra * (tft.fontHeight(fontSub) + 1) + 8;
+  clampBoxCenter(cx, cy, boxW, boxH, tft.width(), tft.height());
+  int x0 = cx - boxW / 2;
+  int y0 = cy - boxH / 2;
+  eraseStaleRect(g_theme, g_systemRects[idx], x0, y0, boxW, boxH);
+  if (box)
+  {
+    if (w.hasColor)
+    {
+      tft.drawRoundRect(x0, y0, boxW, boxH, 6, w.color);
+      tft.fillRoundRect(x0 + 1, y0 + 1, boxW - 2, boxH - 2, 5, bgCol);
+    }
+    else
+    {
+      tft.fillRoundRect(x0, y0, boxW, boxH, 6, bgCol);
+    }
+  }
+  int y = y0 + 4;
+  box ? tft.setTextColor(fg, bgCol) : tft.setTextColor(fg);
+  tft.drawString(l1, x0 + 6, y, fontMain);
+  y += mainH + 1;
+  box ? tft.setTextColor(0xAD75, bgCol) : tft.setTextColor(0xAD75);
+  tft.drawString(l1sub, x0 + 6, y, fontSub);
+  y += tft.fontHeight(fontSub) + 1;
+  for (int i = 0; i < nExtra; i++)
+  {
+    box ? tft.setTextColor(COL_TEXT, bgCol) : tft.setTextColor(COL_TEXT);
+    tft.drawString(lines[i], x0 + 6, y, fontSub);
+    y += tft.fontHeight(fontSub) + 1;
+  }
+}
+
 static void drawThemeClock(const ThemeClock &c)
 {
   int year, mo, dd, hh, mi, ss;
@@ -2698,11 +3346,23 @@ void paintCustomHome()
   {
     drawThemeText(g_theme.texts[i], i);
   }
+  for (int i = 0; i < g_theme.clockWidgetCount; i++)
+  {
+    drawThemeClockWidget(g_theme.clocks[i], i);
+  }
+  for (int i = 0; i < g_theme.systemCount; i++)
+  {
+    drawThemeSystem(g_theme.systems[i], i);
+  }
 }
 
 void customThemeTickClock()
 {
-  if (!customThemeClockEnabled())
+  if (!g_active)
+  {
+    return;
+  }
+  if (!g_theme.clock.enabled && g_theme.clockWidgetCount <= 0 && g_theme.systemCount <= 0)
   {
     return;
   }
@@ -2803,6 +3463,73 @@ void customThemeTickResetCountdown()
     }
     redrawCardSub(g_cardSub1[i], c.s1);
     redrawCardSub(g_cardSub2[i], c.s2);
+  }
+}
+
+// Tick de 1s dos widgets clocks[]/systems[] — chamado a cada volta do loop
+// via uiTickClock() com VIEW_THEME ativa. Redesenha só o widget cujo texto
+// exibido de fato mudou (chave por widget), sem repintar o canvas: o relógio
+// simples (HH:MM) fica de fora, que o customThemeTickClock() já cobre por
+// minuto. Cada redesenho custa no máximo 1 restauro de fundo do próprio
+// widget (eraseStaleRect), nunca a tela cheia nem leituras por segundo de
+// widgets inalterados.
+void customThemeTickSecond()
+{
+  if (!g_active || g_view != VIEW_THEME)
+  {
+    return;
+  }
+  if (g_theme.clockWidgetCount <= 0 && g_theme.systemCount <= 0)
+  {
+    return;
+  }
+  int year, mo, dd, hh, mi, ss;
+  const bool hasTime = wallClockNow(year, mo, dd, hh, mi, ss);
+  const uint32_t elapsed = (millis() - g_themeAppliedMs) / 1000UL;
+  for (int i = 0; i < g_theme.clockWidgetCount; i++)
+  {
+    const ThemeClockWidget &w = g_theme.clocks[i];
+    long key = -2;
+    if (w.mode == CWM_COUNTDOWN)
+    {
+      long secs = w.countdownAt[0] ? secondsUntilWhen(String(w.countdownAt)) : RESET_COUNTDOWN_UNKNOWN;
+      key = (secs == RESET_COUNTDOWN_UNKNOWN) ? -1 : (secs / 60L);
+    }
+    else if (w.mode == CWM_STOPWATCH)
+    {
+      key = (long)elapsed;
+    }
+    else if (w.mode == CWM_POMODORO)
+    {
+      char phase[8] = {0};
+      key = pomoRemainingFor(w, elapsed, phase, sizeof(phase));
+    }
+    else if (w.mode == CWM_CLOCK && hasTime)
+    {
+      if (w.showSeconds && w.scale >= 1.5f)
+      {
+        key = (long)(hh * 3600L + mi * 60L + ss);
+      }
+      else
+      {
+        key = (long)(((mo * 32L + dd) * 24L + hh) * 60L + mi);
+      }
+    }
+    if (key < -1 || key == g_cwTickKeys[i])
+    {
+      continue;
+    }
+    g_cwTickKeys[i] = key;
+    drawThemeClockWidget(w, i);
+  }
+  long sysKey = (long)(millis() / 60000UL);
+  if (sysKey != g_sysTickKey)
+  {
+    g_sysTickKey = sysKey;
+    for (int i = 0; i < g_theme.systemCount; i++)
+    {
+      drawThemeSystem(g_theme.systems[i], i);
+    }
   }
 }
 
