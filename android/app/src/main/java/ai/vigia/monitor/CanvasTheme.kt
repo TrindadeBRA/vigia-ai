@@ -38,6 +38,39 @@ object CanvasTheme {
         val scale: Double = 1.0,
         val color: String? = null,
     )
+    // Widget de relógio do canvas — mesmos modos do card de relógio do
+    // dashboard web (clock/countdown/stopwatch/pomodoro), um por widget.
+    data class ClockWidget(
+        val id: String,
+        val mode: String = "clock", // clock | countdown | stopwatch | pomodoro
+        val x: Double = 0.5,
+        val y: Double = 0.5,
+        val scale: Double = 1.0,
+        val label: String? = null,
+        val timezone: String? = null, // IANA; null = horário local
+        val format24h: Boolean = true,
+        val showSeconds: Boolean = true,
+        val showDate: Boolean = true,
+        val countdownAt: String? = null, // ISO (modo countdown)
+        val countdownLabel: String? = null,
+        val pomodoroFocusMin: Int = 25,
+        val pomodoroShortMin: Int = 5,
+        val pomodoroLongMin: Int = 15,
+        val pomodoroCycles: Int = 4,
+        val color: String? = null,
+        val showBackground: Boolean = true,
+    )
+    // Widget de sistema — detail: minimal (uptime) | compact (+mem/cpu) | full (+ciclo/armazenamento).
+    data class SystemWidget(
+        val id: String,
+        val x: Double = 0.5,
+        val y: Double = 0.5,
+        val scale: Double = 1.0,
+        val detail: String = "compact",
+        val color: String? = null,
+        val showBackground: Boolean = true,
+        val bgColor: String? = null,
+    )
     data class Icon(
         val id: String,
         val provider: String,
@@ -64,10 +97,15 @@ object CanvasTheme {
         val countdown: Countdown = Countdown(),
         val icons: List<Icon> = emptyList(),
         val texts: List<Txt> = emptyList(),
+        val clocks: List<ClockWidget> = emptyList(),
+        val systems: List<SystemWidget> = emptyList(),
         val wallpaperId: String? = null,
         val canvasW: Int = 480,
         val canvasH: Int = 320,
     )
+
+    const val MAX_CLOCKS = 4
+    const val MAX_SYSTEMS = 2
 
     private fun isHex(v: String?): Boolean =
         v != null && Regex("^#[0-9a-fA-F]{6}$").matches(v)
@@ -88,6 +126,20 @@ object CanvasTheme {
         if (half >= 0.5) return 0.5
         return clamp(c, half, 1.0 - half)
     }
+
+    private fun clampScale(v: Double?): Double {
+        val n = v ?: return 1.0
+        if (!n.isFinite()) return 1.0
+        return clamp(n, 0.5, 4.0)
+    }
+
+    private fun clampPomo(v: Int, min: Int, max: Int): Int = v.coerceIn(min, max)
+
+    private fun clockMode(v: String?): String =
+        if (v == "countdown" || v == "stopwatch" || v == "pomodoro") v else "clock"
+
+    private fun systemDetail(v: String?): String =
+        if (v == "minimal" || v == "full") v else "compact"
 
     fun defaultMetric(provider: String): String = when (provider) {
         "claude" -> "session_percent"
@@ -173,7 +225,51 @@ object CanvasTheme {
                     )
                 }
             }
-            Theme(background = bg, clock = clock, countdown = countdown, icons = icons, texts = texts)
+            val clocks = mutableListOf<ClockWidget>()
+            val jclocks = j.optJSONArray("clocks")
+            if (jclocks != null) {
+                for (i in 0 until minOf(jclocks.length(), MAX_CLOCKS)) {
+                    val o = jclocks.optJSONObject(i) ?: continue
+                    clocks += ClockWidget(
+                        id = o.optString("id", "c$i").ifEmpty { "c$i" },
+                        mode = clockMode(o.optString("mode", "clock").ifEmpty { "clock" }),
+                        x = o.optDouble("x", 0.5),
+                        y = o.optDouble("y", 0.5),
+                        scale = clampScale(if (o.isNull("scale")) null else o.optDouble("scale")),
+                        label = o.optString("label", null)?.takeIf { it.isNotEmpty() },
+                        timezone = o.optString("timezone", null)?.takeIf { it.isNotEmpty() },
+                        format24h = o.optBoolean("format24h", true),
+                        showSeconds = o.optBoolean("showSeconds", true),
+                        showDate = o.optBoolean("showDate", true),
+                        countdownAt = o.optString("countdownAt", null)?.takeIf { it.isNotEmpty() },
+                        countdownLabel = o.optString("countdownLabel", null)?.takeIf { it.isNotEmpty() },
+                        pomodoroFocusMin = clampPomo(o.optInt("pomodoroFocusMin", 25), 1, 180),
+                        pomodoroShortMin = clampPomo(o.optInt("pomodoroShortMin", 5), 1, 60),
+                        pomodoroLongMin = clampPomo(o.optInt("pomodoroLongMin", 15), 1, 90),
+                        pomodoroCycles = clampPomo(o.optInt("pomodoroCycles", 4), 2, 8),
+                        color = o.optString("color", null)?.takeIf { it.isNotEmpty() && isHex(it) },
+                        showBackground = o.optBoolean("showBackground", true),
+                    )
+                }
+            }
+            val systems = mutableListOf<SystemWidget>()
+            val js = j.optJSONArray("systems")
+            if (js != null) {
+                for (i in 0 until minOf(js.length(), MAX_SYSTEMS)) {
+                    val o = js.optJSONObject(i) ?: continue
+                    systems += SystemWidget(
+                        id = o.optString("id", "s$i").ifEmpty { "s$i" },
+                        x = o.optDouble("x", 0.5),
+                        y = o.optDouble("y", 0.5),
+                        scale = clampScale(if (o.isNull("scale")) null else o.optDouble("scale")),
+                        detail = systemDetail(o.optString("detail", "compact").ifEmpty { "compact" }),
+                        color = o.optString("color", null)?.takeIf { it.isNotEmpty() && isHex(it) },
+                        showBackground = o.optBoolean("showBackground", true),
+                        bgColor = o.optString("bgColor", null)?.takeIf { it.isNotEmpty() && isHex(it) },
+                    )
+                }
+            }
+            Theme(background = bg, clock = clock, countdown = countdown, icons = icons, texts = texts, clocks = clocks, systems = systems)
         } catch (_: Exception) {
             null
         }
