@@ -119,7 +119,7 @@ type BatteryInfo = {
   status?: string | null;
 };
 
-type SystemStatus = {
+export type SystemStatus = {
   ok: boolean;
   version: string;
   node_version: string;
@@ -139,7 +139,7 @@ type SystemStatus = {
 
 const POLL_MS = 10000;
 
-function useSystemStatus(): SystemStatus | null | "offline" {
+export function useSystemStatus(): SystemStatus | null | "offline" {
   const [state, setState] = useState<SystemStatus | null | "offline">(null);
 
   useEffect(() => {
@@ -176,7 +176,8 @@ function useSystemStatus(): SystemStatus | null | "offline" {
 
 // ── formatters ───────────────────────────────────────────────────────
 
-function fmtUptime(totalS: number): string {
+// Formatters exportados pro widget de sistema do canvas reutilizar.
+export function fmtUptime(totalS: number): string {
   const d = Math.floor(totalS / 86400);
   const h = Math.floor((totalS % 86400) / 3600);
   const m = Math.floor((totalS % 3600) / 60);
@@ -196,17 +197,17 @@ function fmtUptimeShort(totalS: number): string {
   return "<1m";
 }
 
-function fmtMb(n: number): string {
+export function fmtMb(n: number): string {
   if (!Number.isFinite(n)) return "--";
   return `${Math.round(n)} MB`;
 }
 
-function fmtLoad(v: number): string {
+export function fmtLoad(v: number): string {
   if (!Number.isFinite(v)) return "--";
   return v.toFixed(2);
 }
 
-function fmtGb(n: number): string {
+export function fmtGb(n: number): string {
   if (!Number.isFinite(n)) return "--";
   if (n >= 1024) return `${(n / 1024).toFixed(1)} TB`;
   return `${n.toFixed(1)} GB`;

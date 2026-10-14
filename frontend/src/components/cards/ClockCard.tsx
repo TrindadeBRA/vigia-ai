@@ -95,7 +95,15 @@ function pad2(n: number): string {
   return n.toString().padStart(2, "0");
 }
 
-function timePartsInTimezone(nowMs: number, tz: string | null | undefined): { h: string; m: string; s: string; date: string } {
+/** Partes hora/min/seg + data num fuso (exportado pro widget do canvas reutilizar). */
+export function timePartsInTimezone(nowMs: number, tz: string | null | undefined, format24h = true): { h: string; m: string; s: string; date: string } {
+  const to12h = (h: string): string => {
+    if (format24h) return h;
+    const n = parseInt(h, 10);
+    if (!Number.isFinite(n)) return h;
+    const h12 = n % 12 === 0 ? 12 : n % 12;
+    return String(h12).padStart(2, "0");
+  };
   if (tz) {
     try {
       const parts = new Intl.DateTimeFormat("en-GB", {
@@ -112,27 +120,27 @@ function timePartsInTimezone(nowMs: number, tz: string | null | undefined): { h:
         day: "2-digit",
         month: "short",
       }).format(new Date(nowMs));
-      return { h: get("hour"), m: get("minute"), s: get("second"), date };
+      return { h: to12h(get("hour")), m: get("minute"), s: get("second"), date };
     } catch {
       // timezone inválido — cai no horário local abaixo
     }
   }
   const d = new Date(nowMs);
   return {
-    h: pad2(d.getHours()),
+    h: to12h(pad2(d.getHours())),
     m: pad2(d.getMinutes()),
     s: pad2(d.getSeconds()),
     date: d.toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "short" }),
   };
 }
 
-function cityForTimezone(tz: string | null | undefined): string | null {
+export function cityForTimezone(tz: string | null | undefined): string | null {
   if (!tz) return null;
   return CLOCK_TIMEZONES.find((c) => c.tz === tz)?.city ?? tz;
 }
 
-/** Bipe curto de fim de fase (pomodoro) — WebAudio, sem assets. */
-function beep(times = 2) {
+/** Bipe curto de fim de fase (pomodoro) — WebAudio, sem assets. Exportado pro canvas. */
+export function beep(times = 2) {
   try {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;
@@ -248,7 +256,7 @@ function CountdownView({ config, nowMs, size, t, onConfigure }: { config: ClockC
 
 // ── Modo: cronômetro ────────────────────────────────────────────────────
 
-function fmtStopwatch(elapsedMs: number): string {
+export function fmtStopwatch(elapsedMs: number): string {
   const cs = Math.floor(elapsedMs / 100);
   const s = Math.floor(cs / 10);
   const m = Math.floor(s / 60);

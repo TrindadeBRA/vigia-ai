@@ -18,6 +18,47 @@ export type ThemeIcon = {
 };
 
 export type ThemeText = { id: string; x: number; y: number; scale: number; color: string | null; text: string };
+// Widget de relógio do canvas — mesmos modos do card de relógio do dashboard
+// (ClockCard.tsx: ClockMode/ClockConfig), um por widget em vez de um por card.
+export type CanvasClockMode = "clock" | "countdown" | "stopwatch" | "pomodoro";
+export type ThemeClockWidget = {
+  id: string;
+  mode: CanvasClockMode;
+  x: number;
+  y: number;
+  scale: number;
+  label: string | null;
+  timezone: string | null;
+  format24h: boolean;
+  showSeconds: boolean;
+  showDate: boolean;
+  countdownAt: string | null;
+  countdownLabel: string | null;
+  pomodoroFocusMin: number;
+  pomodoroShortMin: number;
+  pomodoroLongMin: number;
+  pomodoroCycles: number;
+  color: string | null;
+  showBackground: boolean;
+};
+// Widget de sistema do canvas — espelha os heróis do SystemCard.tsx com o
+// nível de detalhe escolhido (minimal = uptime, compact = +mem/cpu,
+// full = +último ciclo/armazenamento).
+export type SystemDetail = "minimal" | "compact" | "full";
+export type ThemeSystemWidget = {
+  id: string;
+  x: number;
+  y: number;
+  scale: number;
+  detail: SystemDetail;
+  color: string | null;
+  showBackground: boolean;
+  bgColor: string | null;
+};
+// Limites do canvas (ver CONTRATO_TEMA.md): cabem no POST de 8 KB junto com
+// os 12 ícones + 4 textos sem estourar.
+export const THEME_MAX_CLOCKS = 4;
+export const THEME_MAX_SYSTEMS = 2;
 export type ThemeClock = {
   enabled: boolean;
   x: number;
@@ -44,13 +85,44 @@ export type ThemeState = {
   countdown: ThemeCountdown;
   icons: ThemeIcon[];
   texts: ThemeText[];
+  clocks: ThemeClockWidget[];
+  systems: ThemeSystemWidget[];
+  layerOrder: string[];
 };
+
+export function layerKey(kind: "clock" | "system" | "icon" | "text", id: string): string {
+  return `${kind}:${id}`;
+}
+
+export function defaultLayerOrder(t: Pick<ThemeState, "clocks" | "systems" | "icons" | "texts">): string[] {
+  return [
+    ...(t.clocks || []).map((w) => layerKey("clock", w.id)),
+    ...(t.systems || []).map((w) => layerKey("system", w.id)),
+    ...t.icons.map((i) => layerKey("icon", i.id)),
+    ...t.texts.map((x) => layerKey("text", x.id)),
+  ];
+}
+
+export function normalizeLayerOrder(
+  t: Pick<ThemeState, "clocks" | "systems" | "icons" | "texts">,
+  raw: unknown,
+): string[] {
+  const fallback = defaultLayerOrder(t);
+  if (!Array.isArray(raw) || raw.length === 0) return fallback;
+  const valid = new Set(fallback);
+  const seen = new Set<string>();
+  const ordered = (raw as unknown[]).filter(
+    (k): k is string => typeof k === "string" && valid.has(k) && !seen.has(k) && (seen.add(k), true),
+  );
+  for (const k of fallback) if (!seen.has(k)) ordered.push(k);
+  return ordered;
+}
 
 // Providers sem conta/cota real (ícone da marca, clima, spotify) não têm o mini-cartão
 // da Início/Agora — mesma exclusão do firmware (ver customtheme.cpp:
 // drawThemeIcon retorna antes de checar icon.style pra esses).
 export function providerSupportsCard(provider: ThemeProvider): boolean {
-  return provider !== "weather" && provider !== "brand" && provider !== "spotify";
+  return provider !== "weather" && provider !== "brand" && provider !== "spotify" && provider !== "youtubemusic";
 }
 
 // Espelha o clampBoxCenter do firmware (ui/customtheme.cpp) e o do editor
@@ -65,10 +137,13 @@ export function clampBoxCenter(rawCenter: number, boxSize: number, containerSize
 
 export const DEFAULT_THEME: ThemeState = {
   background: { color: "#0f0f0f", overlayOpacity: 0, zoom: 1, ox: 0.5, oy: 0.5, rotate: false, rotateIntervalSec: 60 },
-  clock: { enabled: true, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
+  clock: { enabled: false, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
   countdown: { enabled: false, x: 0.9, y: 0.88, scale: 1, color: null },
   icons: [],
   texts: [],
+  clocks: [],
+  systems: [],
+  layerOrder: [],
 };
 
 const LEGACY_STORAGE_KEY = "vigia_theme_draft_v2";
@@ -114,6 +189,26 @@ export function clampRotateIntervalSec(v: unknown): number {
   return Math.min(3600, Math.max(15, Math.round(n)));
 }
 
+export function clampScale(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return 1;
+  return clamp(n, 0.5, 4);
+}
+
+function clampInt(v: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+function migrateClockMode(v: unknown): CanvasClockMode {
+  return v === "countdown" || v === "stopwatch" || v === "pomodoro" ? v : "clock";
+}
+
+function migrateDetail(v: unknown): SystemDetail {
+  return v === "minimal" || v === "full" ? v : "compact";
+}
+
 // Posição/tamanho do <img> do papel pra mostrar a janela visível (zoom em
 // torno do centro ox,oy): o ponto (ox,oy) da imagem fica no centro do canvas.
 // Em % do container — mesma janela que a firmware amostra no RAW.
@@ -131,7 +226,7 @@ export function wallpaperImgStyle(zoom: number, ox: number, oy: number): CSSProp
   };
 }
 
-export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<ThemeIcon> & { provider?: string }> }): ThemeState {
+export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<ThemeIcon> & { provider?: string }>; clocks?: Array<Partial<ThemeClockWidget>>; systems?: Array<Partial<ThemeSystemWidget>> }): ThemeState {
   const merged = { ...DEFAULT_THEME, ...raw } as ThemeState;
   const rawBg = (raw as Partial<ThemeState>)?.background as (Partial<ThemeBg> & { overlayColor?: unknown }) | undefined;
   const zoom = clampZoom(rawBg?.zoom);
@@ -147,7 +242,7 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
     rotateIntervalSec: clampRotateIntervalSec(rawBg?.rotateIntervalSec),
   };
   merged.countdown = {
-    enabled: merged.countdown?.enabled ?? DEFAULT_THEME.countdown.enabled,
+    enabled: false,
     x: merged.countdown?.x ?? DEFAULT_THEME.countdown.x,
     y: merged.countdown?.y ?? DEFAULT_THEME.countdown.y,
     scale: merged.countdown?.scale ?? DEFAULT_THEME.countdown.scale,
@@ -156,6 +251,7 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
   if (merged.clock) {
     if (typeof merged.clock.showBackground !== "boolean") merged.clock.showBackground = DEFAULT_THEME.clock.showBackground;
     if (typeof merged.clock.autoColor !== "boolean") merged.clock.autoColor = DEFAULT_THEME.clock.autoColor;
+    merged.clock.enabled = false;
   }
   merged.icons = (merged.icons || []).map((icon, idx) => ({
     id: icon.id || `i${idx}`,
@@ -177,6 +273,37 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
     scale: txt.scale ?? 1,
     color: txt.color ?? null,
   }));
+  merged.clocks = (merged.clocks || []).slice(0, THEME_MAX_CLOCKS).map((w, idx) => ({
+    id: w.id || `c${idx}`,
+    mode: migrateClockMode(w.mode),
+    x: w.x ?? 0.5,
+    y: w.y ?? 0.5,
+    scale: clampScale(w.scale),
+    label: typeof w.label === "string" && w.label.trim() ? w.label.slice(0, 40) : null,
+    timezone: typeof w.timezone === "string" && w.timezone.trim() ? w.timezone.slice(0, 40) : null,
+    showBackground: typeof w.showBackground === "boolean" ? w.showBackground : true,
+    format24h: typeof w.format24h === "boolean" ? w.format24h : true,
+    showSeconds: w.showSeconds !== false,
+    showDate: w.showDate !== false,
+    countdownAt: typeof w.countdownAt === "string" && w.countdownAt.trim() ? w.countdownAt : null,
+    countdownLabel: typeof w.countdownLabel === "string" && w.countdownLabel.trim() ? w.countdownLabel.slice(0, 40) : null,
+    pomodoroFocusMin: clampInt(w.pomodoroFocusMin, 1, 180, 25),
+    pomodoroShortMin: clampInt(w.pomodoroShortMin, 1, 60, 5),
+    pomodoroLongMin: clampInt(w.pomodoroLongMin, 1, 90, 15),
+    pomodoroCycles: clampInt(w.pomodoroCycles, 2, 8, 4),
+    color: w.color ?? null,
+  }));
+  merged.systems = (merged.systems || []).slice(0, THEME_MAX_SYSTEMS).map((w, idx) => ({
+    id: w.id || `s${idx}`,
+    x: w.x ?? 0.5,
+    y: w.y ?? 0.5,
+    scale: clampScale(w.scale),
+    detail: migrateDetail(w.detail),
+    color: w.color ?? null,
+    showBackground: typeof w.showBackground === "boolean" ? w.showBackground : true,
+    bgColor: w.bgColor ?? null,
+  }));
+  merged.layerOrder = normalizeLayerOrder(merged, (raw as Partial<ThemeState>)?.layerOrder);
   return merged;
 }
 
@@ -225,6 +352,8 @@ export function parseSavedThemeJson(json: string): ThemeState | null {
       countdown?: Partial<ThemeCountdown>;
       icons?: Array<{ provider: ThemeProvider; style?: string; x: number; y: number; scale: number; color?: string; showBackground?: boolean; bgColor?: string; metric?: string }>;
       texts?: Array<{ text: string; x: number; y: number; scale: number; color?: string }>;
+      clocks?: Array<Partial<ThemeClockWidget>>;
+      systems?: Array<Partial<ThemeSystemWidget>>;
     };
     return migrateTheme({
       background: {
@@ -259,6 +388,9 @@ export function parseSavedThemeJson(json: string): ThemeState | null {
         scale: txt.scale,
         color: txt.color ?? null,
       })),
+      // Arrays crus do JSON salvo — o migrateTheme normaliza/clampa cada item.
+      clocks: (raw.clocks || []) as unknown as ThemeClockWidget[],
+      systems: (raw.systems || []) as unknown as ThemeSystemWidget[],
     });
   } catch {
     return null;

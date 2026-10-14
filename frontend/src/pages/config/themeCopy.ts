@@ -34,6 +34,33 @@ export type ThemeCopy = {
   countdown: string;
   countdownEnabled: string;
   countdownHint: string;
+  clocks: string;
+  addClockWidget: string;
+  clockLimit: (max: number) => string;
+  removeClockWidget: string;
+  clockMode: string;
+  clockModeLabel: (mode: string) => string;
+  widgetLabel: string;
+  widgetLabelPh: string;
+  timezone: string;
+  timezoneLocal: string;
+  showSeconds: string;
+  showDate: string;
+  countdownAt: string;
+  countdownLabel: string;
+  pomoFocus: string;
+  pomoShort: string;
+  pomoLong: string;
+  pomoCycles: string;
+  systems: string;
+  addSystemWidget: string;
+  systemLimit: (max: number) => string;
+  removeSystemWidget: string;
+  detail: string;
+  detailMinimal: string;
+  detailCompact: string;
+  detailFull: string;
+  systemDetailLabel: (detail: string) => string;
   icons: string;
   addIcon: string;
   addProvider: string;
@@ -192,6 +219,33 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     countdown: "Contador",
     countdownEnabled: "Mostrar contador",
     countdownHint: "Selo com a contagem regressiva até a próxima atualização de dados — o mesmo selo do cabeçalho do dispositivo, agora arrastável.",
+    clocks: "Relógios",
+    addClockWidget: "Adicionar relógio (relógio, contagem, cronômetro, pomodoro)",
+    clockLimit: (max) => `Limite de ${max} relógios no canvas atingido — remova um pra adicionar outro.`,
+    removeClockWidget: "Remover relógio",
+    clockMode: "Modo",
+    clockModeLabel: (mode) => (mode === "countdown" ? "Contagem regressiva" : mode === "stopwatch" ? "Cronômetro" : mode === "pomodoro" ? "Pomodoro" : "Relógio"),
+    widgetLabel: "Rótulo",
+    widgetLabelPh: "Ex.: São Paulo, Foco, Lançamento…",
+    timezone: "Fuso horário",
+    timezoneLocal: "Horário local",
+    showSeconds: "Mostrar segundos",
+    showDate: "Mostrar data (calendário)",
+    countdownAt: "Data alvo",
+    countdownLabel: "Rótulo da contagem",
+    pomoFocus: "Foco (min)",
+    pomoShort: "Pausa (min)",
+    pomoLong: "Pausa longa (min)",
+    pomoCycles: "Ciclos",
+    systems: "Sistema",
+    addSystemWidget: "Adicionar sistema (uptime, memória, CPU)",
+    systemLimit: (max) => `Limite de ${max} widgets de sistema no canvas atingido — remova um pra adicionar outro.`,
+    removeSystemWidget: "Remover sistema",
+    detail: "Detalhes",
+    detailMinimal: "Resumido (só uptime)",
+    detailCompact: "Compacto (uptime + memória + CPU)",
+    detailFull: "Completo (+ ciclo e armazenamento)",
+    systemDetailLabel: (detail) => (detail === "minimal" ? "Resumido" : detail === "full" ? "Completo" : "Compacto"),
     icons: "Ícones",
     addIcon: "Adicionar ícone",
     addProvider: "Adicionar no canvas",
@@ -349,6 +403,33 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     countdown: "Countdown",
     countdownEnabled: "Show countdown",
     countdownHint: "Badge showing the countdown to the next data refresh — the same badge from the device header, now draggable.",
+    clocks: "Clocks",
+    addClockWidget: "Add clock (clock, countdown, stopwatch, pomodoro)",
+    clockLimit: (max) => `Canvas limit of ${max} clocks reached — remove one to add another.`,
+    removeClockWidget: "Remove clock",
+    clockMode: "Mode",
+    clockModeLabel: (mode) => (mode === "countdown" ? "Countdown" : mode === "stopwatch" ? "Stopwatch" : mode === "pomodoro" ? "Pomodoro" : "Clock"),
+    widgetLabel: "Label",
+    widgetLabelPh: "E.g. New York, Focus, Launch…",
+    timezone: "Timezone",
+    timezoneLocal: "Local time",
+    showSeconds: "Show seconds",
+    showDate: "Show date (calendar)",
+    countdownAt: "Target date",
+    countdownLabel: "Countdown label",
+    pomoFocus: "Focus (min)",
+    pomoShort: "Break (min)",
+    pomoLong: "Long break (min)",
+    pomoCycles: "Cycles",
+    systems: "System",
+    addSystemWidget: "Add system (uptime, memory, CPU)",
+    systemLimit: (max) => `Canvas limit of ${max} system widgets reached — remove one to add another.`,
+    removeSystemWidget: "Remove system",
+    detail: "Detail level",
+    detailMinimal: "Minimal (uptime only)",
+    detailCompact: "Compact (uptime + memory + CPU)",
+    detailFull: "Full (+ cycle and storage)",
+    systemDetailLabel: (detail) => (detail === "minimal" ? "Minimal" : detail === "full" ? "Full" : "Compact"),
     icons: "Icons",
     addIcon: "Add icon",
     addProvider: "Add to canvas",
@@ -506,6 +587,33 @@ export const THEME_STR: Record<Lang, ThemeCopy> = {
     countdown: "Contador regresivo",
     countdownEnabled: "Mostrar contador",
     countdownHint: "Insignia con la cuenta regresiva hasta la próxima actualización de datos — la misma insignia del encabezado del dispositivo, ahora arrastrable.",
+    clocks: "Relojes",
+    addClockWidget: "Agregar reloj (reloj, cuenta, cronómetro, pomodoro)",
+    clockLimit: (max) => `Límite de ${max} relojes en el lienzo alcanzado — quita uno para agregar otro.`,
+    removeClockWidget: "Quitar reloj",
+    clockMode: "Modo",
+    clockModeLabel: (mode) => (mode === "countdown" ? "Cuenta regresiva" : mode === "stopwatch" ? "Cronómetro" : mode === "pomodoro" ? "Pomodoro" : "Reloj"),
+    widgetLabel: "Etiqueta",
+    widgetLabelPh: "Ej.: San Pablo, Foco, Lanzamiento…",
+    timezone: "Zona horaria",
+    timezoneLocal: "Hora local",
+    showSeconds: "Mostrar segundos",
+    showDate: "Mostrar fecha (calendario)",
+    countdownAt: "Fecha objetivo",
+    countdownLabel: "Etiqueta de la cuenta",
+    pomoFocus: "Foco (min)",
+    pomoShort: "Pausa (min)",
+    pomoLong: "Pausa larga (min)",
+    pomoCycles: "Ciclos",
+    systems: "Sistema",
+    addSystemWidget: "Agregar sistema (uptime, memoria, CPU)",
+    systemLimit: (max) => `Límite de ${max} widgets de sistema en el lienzo alcanzado — quita uno para agregar otro.`,
+    removeSystemWidget: "Quitar sistema",
+    detail: "Nivel de detalle",
+    detailMinimal: "Resumido (solo uptime)",
+    detailCompact: "Compacto (uptime + memoria + CPU)",
+    detailFull: "Completo (+ ciclo y almacenamiento)",
+    systemDetailLabel: (detail) => (detail === "minimal" ? "Resumido" : detail === "full" ? "Completo" : "Compacto"),
     icons: "Íconos",
     addIcon: "Agregar ícono",
     addProvider: "Agregar al lienzo",

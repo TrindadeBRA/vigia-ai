@@ -2,15 +2,15 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
 import { wallpaperMediaSrc } from "../../components/ProviderSearchGrid";
-import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import type { Lang } from "../../i18n";
 import { IconCard } from "./themeCanvas/IconCard";
 import { IconChip } from "./themeCanvas/IconChip";
-import { formatThemeClock, providerSupportsCard, wallpaperImgStyle, type ThemeState } from "./themeCanvas/state";
+import { CanvasClockWidget } from "./themeCanvas/ClockWidgets";
+import { CanvasSystemWidget } from "./themeCanvas/SystemWidget";
+import { layerKey, normalizeLayerOrder, providerSupportsCard, wallpaperImgStyle, type ThemeState } from "./themeCanvas/state";
 import { ThemeLayer } from "./themeCanvas/ThemeLayer";
-import { readableTextOn } from "./themeEditor/themeState";
 
-export { providerSupportsCard, DEFAULT_THEME, formatThemeClock, migrateTheme, loadThemeDraft, parseSavedThemeJson, wallpaperImgStyle, type ThemeIconStyle, type ThemeIcon, type ThemeText, type ThemeClock, type ThemeCountdown, type ThemeState } from "./themeCanvas/state";
+export { providerSupportsCard, DEFAULT_THEME, THEME_MAX_CLOCKS, THEME_MAX_SYSTEMS, formatThemeClock, layerKey, normalizeLayerOrder, defaultLayerOrder, migrateTheme, loadThemeDraft, parseSavedThemeJson, wallpaperImgStyle, type ThemeIconStyle, type ThemeIcon, type ThemeText, type ThemeClock, type ThemeCountdown, type ThemeClockWidget, type ThemeSystemWidget, type CanvasClockMode, type SystemDetail, type ThemeState } from "./themeCanvas/state";
 export { IconCard } from "./themeCanvas/IconCard";
 
 export function ThemeCanvasView({
@@ -56,10 +56,12 @@ export function ThemeCanvasView({
   const zoom = canvasSize.width > 0 && renderedW > 0 ? renderedW / canvasSize.width : 1;
   const renderedH = canvasSize.width > 0 ? renderedW / ar : 0;
   const containerSize = { width: renderedW, height: renderedH };
-  const autoPair = theme.clock.autoColor ? ntcGenerateReadableColor(theme.background.color) : null;
-  const autoTextColor = autoPair ? autoPair[0] : null;
-  const clockColor = theme.clock.autoColor ? autoTextColor || theme.clock.color : theme.clock.color;
-  const clockBg = theme.clock.showBackground ? "bg-black/35" : "bg-transparent";
+
+  const order = normalizeLayerOrder(theme, theme.layerOrder);
+  const clockById = new Map((theme.clocks || []).map((w) => [layerKey("clock", w.id), w]));
+  const systemById = new Map((theme.systems || []).map((w) => [layerKey("system", w.id), w]));
+  const iconById = new Map(theme.icons.map((i) => [layerKey("icon", i.id), i]));
+  const textById = new Map(theme.texts.map((x) => [layerKey("text", x.id), x]));
 
   const canvasStyle: CSSProperties = fullscreen
     ? {
@@ -94,70 +96,69 @@ export function ThemeCanvasView({
           style={{ background: theme.background.color, opacity: theme.background.overlayOpacity }}
         />
       ) : null}
-      {theme.clock.enabled ? (
-        <ThemeLayer x={theme.clock.x} y={theme.clock.y} containerSize={containerSize}>
-          <span
-            className={`whitespace-nowrap rounded-md px-2 py-1 font-mono font-bold text-white ${clockBg}`}
-            style={{ color: clockColor || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
-          >
-            {formatThemeClock(now, theme.clock.format24h)}
-          </span>
-        </ThemeLayer>
-      ) : null}
-      {theme.countdown.enabled ? (
-        <ThemeLayer x={theme.countdown.x} y={theme.countdown.y} containerSize={containerSize}>
-          <div
-            className="flex items-center justify-center rounded-full font-mono font-bold leading-none"
-            style={{
-              width: `${22 * theme.countdown.scale * zoom}px`,
-              height: `${22 * theme.countdown.scale * zoom}px`,
-              fontSize: `${11 * theme.countdown.scale * zoom}px`,
-              background: theme.countdown.color || "#f5c542",
-              color: readableTextOn(theme.countdown.color || "#f5c542"),
-            }}
-          >
-            {Math.max(1, 60 - now.getSeconds())}
-          </div>
-        </ThemeLayer>
-      ) : null}
-      {theme.icons.map((icon) => (
-        <ThemeLayer key={icon.id} x={icon.x} y={icon.y} containerSize={containerSize}>
-          {icon.style === "card" && providerSupportsCard(icon.provider) ? (
-            <IconCard
-              provider={icon.provider}
-              color={icon.color}
-              showBackground={icon.showBackground}
-              bgColor={icon.bgColor}
-              scale={icon.scale}
-              zoom={zoom}
-              usage={usage}
-              lang={lang}
-            />
-          ) : (
-            <IconChip
-              provider={icon.provider}
-              metric={icon.metric}
-              color={icon.color}
-              showBackground={icon.showBackground}
-              bgColor={icon.bgColor}
-              scale={icon.scale}
-              zoom={zoom}
-              usage={usage}
-              tftWidth={canvasSize.width}
-            />
-          )}
-        </ThemeLayer>
-      ))}
-      {theme.texts.map((txt) => (
-        <ThemeLayer key={txt.id} x={txt.x} y={txt.y} containerSize={containerSize}>
-          <span
-            className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white"
-            style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}
-          >
-            {txt.text || "…"}
-          </span>
-        </ThemeLayer>
-      ))}
+      {order.map((key) => {
+        const clock = clockById.get(key);
+        if (clock) {
+          return (
+            <ThemeLayer key={key} x={clock.x} y={clock.y} containerSize={containerSize}>
+              <CanvasClockWidget widget={clock} now={now} zoom={zoom} />
+            </ThemeLayer>
+          );
+        }
+        const system = systemById.get(key);
+        if (system) {
+          return (
+            <ThemeLayer key={key} x={system.x} y={system.y} containerSize={containerSize}>
+              <CanvasSystemWidget widget={system} zoom={zoom} />
+            </ThemeLayer>
+          );
+        }
+        const icon = iconById.get(key);
+        if (icon) {
+          return (
+            <ThemeLayer key={icon.id} x={icon.x} y={icon.y} containerSize={containerSize}>
+              {icon.style === "card" && providerSupportsCard(icon.provider) ? (
+                <IconCard
+                  provider={icon.provider}
+                  color={icon.color}
+                  showBackground={icon.showBackground}
+                  bgColor={icon.bgColor}
+                  scale={icon.scale}
+                  zoom={zoom}
+                  usage={usage}
+                  lang={lang}
+                />
+              ) : (
+                <IconChip
+                  provider={icon.provider}
+                  metric={icon.metric}
+                  color={icon.color}
+                  showBackground={icon.showBackground}
+                  bgColor={icon.bgColor}
+                  scale={icon.scale}
+                  zoom={zoom}
+                  usage={usage}
+                  tftWidth={canvasSize.width}
+                />
+              )}
+            </ThemeLayer>
+          );
+        }
+        const txt = textById.get(key);
+        if (txt) {
+          return (
+            <ThemeLayer key={key} x={txt.x} y={txt.y} containerSize={containerSize}>
+              <span
+                className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white"
+                style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}
+              >
+                {txt.text || "…"}
+              </span>
+            </ThemeLayer>
+          );
+        }
+        return null;
+      })}
     </div>
   );
 

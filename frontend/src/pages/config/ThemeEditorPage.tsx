@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { fetchMonitors, openUsageEvents } from "../../api/client";
 import type { MonitorDevice, UsagePayload } from "../../api/types";
 import { cn } from "../../cn";
-import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, QrIcon, TextIcon, TimerIcon } from "../../components/icons";
+import { ChipIcon, ClockIcon, ImageIcon, MaximizeIcon, PlusCircleIcon, QrIcon, TextIcon } from "../../components/icons";
 import { wallpaperMediaSrc } from "../../components/ProviderSearchGrid";
 import { Logo } from "../../components/Logo";
 import { PageBreadcrumb } from "../../components/PageBreadcrumb";
 import { Skeleton } from "../../components/Skeleton";
-import { ntcGenerateReadableColor } from "../../hooks/useNameToColor";
 import { useRequest } from "../../hooks/useRequest";
 import { STR } from "../../i18n";
 import { PROVIDER_ICON } from "../../theme";
 import { cfgFieldLabel, cfgStatus, pageCol, viewFade } from "../../tw";
 import { NameToColorPicker } from "./NameToColorPicker";
 import { AndroidSetupQrModal } from "./AndroidSetupQrModal";
+import { CanvasClockWidget, clockWidgetTitle } from "./themeCanvas/ClockWidgets";
+import { CanvasSystemWidget, systemWidgetTitle } from "./themeCanvas/SystemWidget";
 import { IconCard, providerSupportsCard, wallpaperImgStyle } from "./ThemeCanvasView";
 import { THEME_STR } from "./themeCopy";
 import { CanvasDot } from "./themeEditor/CanvasDot";
@@ -25,13 +29,18 @@ import {
   clamp,
   clampPan,
   clampZoom,
-  formatClock,
   isBareLoopback,
-  readableTextOn,
+  layerKey,
+  normalizeLayerOrder,
   themeToJson,
   uid,
   useThemeDraft,
+  THEME_MAX_CLOCKS,
+  THEME_MAX_SYSTEMS,
+  type CanvasClockMode,
+  type ThemeClockWidget,
   type ThemeIcon,
+  type ThemeSystemWidget,
   type ThemeText,
   type WallpaperItem,
 } from "./themeEditor/themeState";
@@ -48,6 +57,7 @@ import {
   type ThemeProvider,
 } from "./themeMetrics";
 import { Button, Card, Checkbox, FieldStatus, Modal, SelectField, StatusPill, Switch, TextField, TomSelectField } from "./ui";
+import { CLOCK_TIMEZONES } from "../../components/cards/ClockCard";
 import { parseThemeJson } from "./themeEditor/themeState";
 import { usePublicConfig } from "./usePublicConfig";
 import { WallpaperManager } from "./wallpaperManager/context";
@@ -57,6 +67,28 @@ const RB_SWAP_STORAGE_KEY = "vigia:theme-debug:rb-swap";
 
 function buildScreenshotUrl(ip: string, rbSwap: boolean) {
   return `http://${ip}/theme/screenshot?t=${Date.now()}&rb=${rbSwap ? 1 : 0}`;
+}
+
+function toDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromDatetimeLocal(value: string): string | null {
+  const v = value.trim();
+  if (!v) return null;
+  const ms = Date.parse(v);
+  if (Number.isNaN(ms)) return null;
+  return new Date(ms).toISOString();
+}
+
+function clampPomo(v: string, min: number, max: number, fallback: number): number {
+  const n = parseInt(v, 10);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 }
 
 // Alvo do canvas: "board" ou "<monitorId>:portrait|landscape".
@@ -185,7 +217,11 @@ export default function ThemeEditorPage() {
   }, []);
 
   useEffect(() => {
-    if (targetId !== "board" && !monitors.some((m) => m.id === splitTarget(targetId).id)) setTargetId("board");
+    if (targetId !== "board") {
+      const { id } = splitTarget(targetId);
+      const m = monitors.find((x) => x.id === id);
+      if (!m || !m.online) setTargetId("board");
+    }
   }, [monitors, targetId]);
 
   useEffect(() => {
@@ -265,30 +301,100 @@ export default function ThemeEditorPage() {
   function updateIcon(id: string, patch: Partial<ThemeIcon>) {
     setTheme((t) => ({ ...t, icons: t.icons.map((i) => (i.id === id ? { ...i, ...patch } : i)) }));
   }
+  function updateClockWidget(id: string, patch: Partial<ThemeClockWidget>) {
+    setTheme((t) => ({ ...t, clocks: (t.clocks || []).map((w) => (w.id === id ? { ...w, ...patch } : w)) }));
+  }
+  function updateSystemWidget(id: string, patch: Partial<ThemeSystemWidget>) {
+    setTheme((t) => ({ ...t, systems: (t.systems || []).map((w) => (w.id === id ? { ...w, ...patch } : w)) }));
+  }
   function updateText(id: string, patch: Partial<ThemeText>) {
     setTheme((t) => ({ ...t, texts: t.texts.map((x) => (x.id === id ? { ...x, ...patch } : x)) }));
   }
   const iconsFull = theme.icons.length >= THEME_MAX_ICONS;
+  const clocksFull = (theme.clocks || []).length >= THEME_MAX_CLOCKS;
+  const systemsFull = (theme.systems || []).length >= THEME_MAX_SYSTEMS;
   function addIcon(provider: ThemeProvider = "claude") {
     if (iconsFull) return;
     const id = uid();
     const n = theme.icons.length;
     const x = 0.22 + (n % 4) * 0.2;
     const y = 0.48 + Math.floor(n / 4) * 0.22;
-    setTheme((t) => ({ ...t, icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, showBackground: true, bgColor: null, metric: defaultMetric(provider) }] }));
+    setTheme((t) => ({
+      ...t,
+      icons: [...t.icons, { id, provider, style: "chip", x, y, scale: 1, color: null, showBackground: true, bgColor: null, metric: defaultMetric(provider) }],
+      layerOrder: [...normalizeLayerOrder(t, t.layerOrder), layerKey("icon", id)],
+    }));
     selectItem(`icon:${id}`);
   }
   function removeIcon(id: string) {
-    setTheme((t) => ({ ...t, icons: t.icons.filter((i) => i.id !== id) }));
+    setTheme((t) => ({ ...t, icons: t.icons.filter((i) => i.id !== id), layerOrder: (t.layerOrder || []).filter((k) => k !== layerKey("icon", id)) }));
     setSelected(null);
   }
   function addText() {
     const id = uid();
-    setTheme((t) => ({ ...t, texts: [...t.texts, { id, text: "VIGIA AI", x: 0.5, y: 0.82, scale: 1, color: null }] }));
+    setTheme((t) => ({
+      ...t,
+      texts: [...t.texts, { id, text: "VIGIA AI", x: 0.5, y: 0.82, scale: 1, color: null }],
+      layerOrder: [...normalizeLayerOrder(t, t.layerOrder), layerKey("text", id)],
+    }));
     selectItem(`text:${id}`);
   }
+  function addClockWidget(mode: CanvasClockMode = "clock") {
+    if (clocksFull) return;
+    const id = uid();
+    const n = (theme.clocks || []).length;
+    const x = 0.2 + (n % 3) * 0.3;
+    const y = 0.3 + Math.floor(n / 3) * 0.3;
+    setTheme((t) => ({
+      ...t,
+      clocks: [
+        ...(t.clocks || []),
+        {
+          id,
+          mode,
+          x,
+          y,
+          scale: 1,
+          label: null,
+          timezone: null,
+          format24h: true,
+          showSeconds: true,
+          showDate: true,
+          countdownAt: null,
+          countdownLabel: null,
+          pomodoroFocusMin: 25,
+          pomodoroShortMin: 5,
+          pomodoroLongMin: 15,
+          pomodoroCycles: 4,
+          color: null,
+          showBackground: true,
+        },
+      ],
+      layerOrder: [...normalizeLayerOrder(t, t.layerOrder), layerKey("clock", id)],
+    }));
+    selectItem(`clock:${id}`);
+  }
+  function removeClockWidget(id: string) {
+    setTheme((t) => ({ ...t, clocks: (t.clocks || []).filter((w) => w.id !== id), layerOrder: (t.layerOrder || []).filter((k) => k !== layerKey("clock", id)) }));
+    setSelected(null);
+  }
+  function addSystemWidget() {
+    if (systemsFull) return;
+    const id = uid();
+    const n = (theme.systems || []).length;
+    setTheme((t) => ({
+      ...t,
+      systems: [...(t.systems || []), { id, x: 0.5, y: 0.3 + n * 0.3, scale: 1, detail: "compact", color: null, showBackground: true, bgColor: null }],
+      layerOrder: [...normalizeLayerOrder(t, t.layerOrder), layerKey("system", id)],
+    }));
+    selectItem(`system:${id}`);
+  }
+  function removeSystemWidget(id: string) {
+    setTheme((t) => ({ ...t, systems: (t.systems || []).filter((w) => w.id !== id), layerOrder: (t.layerOrder || []).filter((k) => k !== layerKey("system", id)) }));
+    setSelected(null);
+  }
   function removeText(id: string) {
-    setTheme((t) => ({ ...t, texts: t.texts.filter((x) => x.id !== id) }));
+    setTheme((t) => ({ ...t, texts: t.texts.filter((x) => x.id !== id), layerOrder: (t.layerOrder || []).filter((k) => k !== layerKey("text", id)) }));
     setSelected(null);
   }
 
@@ -306,22 +412,27 @@ export default function ThemeEditorPage() {
     const h = canvasSize.height || 320;
     const nx = dxPx / w;
     const ny = dyPx / h;
-    if (selected === "clock") {
-      setTheme((t) => ({ ...t, clock: { ...t.clock, x: clamp(t.clock.x + nx, 0, 1), y: clamp(t.clock.y + ny, 0, 1) } }));
-      return;
-    }
-    if (selected === "countdown") {
-      setTheme((t) => ({
-        ...t,
-        countdown: { ...t.countdown, x: clamp(t.countdown.x + nx, 0, 1), y: clamp(t.countdown.y + ny, 0, 1) },
-      }));
-      return;
-    }
     if (selected.startsWith("icon:")) {
       const id = selected.slice(5);
       setTheme((t) => ({
         ...t,
         icons: t.icons.map((i) => (i.id === id ? { ...i, x: clamp(i.x + nx, 0, 1), y: clamp(i.y + ny, 0, 1) } : i)),
+      }));
+      return;
+    }
+    if (selected.startsWith("clock:")) {
+      const id = selected.slice(6);
+      setTheme((t) => ({
+        ...t,
+        clocks: (t.clocks || []).map((w) => (w.id === id ? { ...w, x: clamp(w.x + nx, 0, 1), y: clamp(w.y + ny, 0, 1) } : w)),
+      }));
+      return;
+    }
+    if (selected.startsWith("system:")) {
+      const id = selected.slice(7);
+      setTheme((t) => ({
+        ...t,
+        systems: (t.systems || []).map((w) => (w.id === id ? { ...w, x: clamp(w.x + nx, 0, 1), y: clamp(w.y + ny, 0, 1) } : w)),
       }));
       return;
     }
@@ -360,6 +471,12 @@ export default function ThemeEditorPage() {
         if (selected?.startsWith("icon:")) {
           e.preventDefault();
           removeIcon(selected.slice(5));
+        } else if (selected?.startsWith("clock:")) {
+          e.preventDefault();
+          removeClockWidget(selected.slice(6));
+        } else if (selected?.startsWith("system:")) {
+          e.preventDefault();
+          removeSystemWidget(selected.slice(7));
         } else if (selected?.startsWith("text:")) {
           e.preventDefault();
           removeText(selected.slice(5));
@@ -400,10 +517,12 @@ export default function ThemeEditorPage() {
       }
       if (!selected) return;
       const scaleIt = (s: number) => clamp(Math.round(clamp(s * factor, 0.5, 4) * 100) / 100, 0.5, 4);
-      if (selected === "clock") {
-        setTheme((t) => ({ ...t, clock: { ...t.clock, scale: scaleIt(t.clock.scale) } }));
-      } else if (selected === "countdown") {
-        setTheme((t) => ({ ...t, countdown: { ...t.countdown, scale: scaleIt(t.countdown.scale) } }));
+      if (selected.startsWith("clock:")) {
+        const id = selected.slice(6);
+        setTheme((t) => ({ ...t, clocks: (t.clocks || []).map((w) => (w.id === id ? { ...w, scale: scaleIt(w.scale) } : w)) }));
+      } else if (selected.startsWith("system:")) {
+        const id = selected.slice(7);
+        setTheme((t) => ({ ...t, systems: (t.systems || []).map((w) => (w.id === id ? { ...w, scale: scaleIt(w.scale) } : w)) }));
       } else if (selected.startsWith("icon:")) {
         const id = selected.slice(5);
         setTheme((t) => ({ ...t, icons: t.icons.map((i) => (i.id === id ? { ...i, scale: scaleIt(i.scale) } : i)) }));
@@ -453,8 +572,22 @@ export default function ThemeEditorPage() {
   }
 
   const selectedIcon = selected?.startsWith("icon:") ? theme.icons.find((i) => i.id === selected.slice(5)) : undefined;
+  const selectedClockWidget = selected?.startsWith("clock:") ? (theme.clocks || []).find((w) => w.id === selected.slice(6)) : undefined;
+  const selectedSystemWidget = selected?.startsWith("system:") ? (theme.systems || []).find((w) => w.id === selected.slice(7)) : undefined;
   const selectedText = selected?.startsWith("text:") ? theme.texts.find((x) => x.id === selected.slice(5)) : undefined;
   const providerLabel = (p: ThemeProvider) => ICON_PROVIDERS.find((x) => x.id === p)?.label || p;
+  const layerOrder = normalizeLayerOrder(theme, theme.layerOrder);
+
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  function handleLayerDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = layerOrder.findIndex((k) => k === String(active.id));
+    const newIndex = layerOrder.findIndex((k) => k === String(over.id));
+    if (oldIndex === -1 || newIndex === -1) return;
+    const next = arrayMove(layerOrder, oldIndex, newIndex);
+    setTheme((t) => ({ ...t, layerOrder: next }));
+  }
 
   if (phase === "loading" && !cfg) {
     return <Skeleton page="theme" />;
@@ -507,21 +640,17 @@ export default function ThemeEditorPage() {
           <ToolButton icon={<TextIcon size={19} />} label={c.addText} onClick={addText} />
           <ToolButton
             icon={<ClockIcon size={19} />}
-            label={c.clock}
-            active={selected === "clock"}
-            onClick={() => {
-              if (!theme.clock.enabled) setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: true } }));
-              selectItem("clock");
-            }}
+            label={c.addClockWidget}
+            active={selected?.startsWith("clock:") ?? false}
+            disabled={clocksFull}
+            onClick={() => addClockWidget("clock")}
           />
           <ToolButton
-            icon={<TimerIcon size={19} />}
-            label={c.countdown}
-            active={selected === "countdown"}
-            onClick={() => {
-              if (!theme.countdown.enabled) setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: true } }));
-              selectItem("countdown");
-            }}
+            icon={<ChipIcon size={19} />}
+            label={c.addSystemWidget}
+            active={selected?.startsWith("system:") ?? false}
+            disabled={systemsFull}
+            onClick={() => addSystemWidget()}
           />
           <ToolButton
             ref={addProviderBtnRef}
@@ -545,7 +674,7 @@ export default function ThemeEditorPage() {
               onChange={(e) => setTargetId(e.target.value)}
               options={[
                 { value: "board", label: c.targetBoard },
-                ...monitors.flatMap((m) => {
+                ...monitors.filter((m) => m.online).flatMap((m) => {
                   const name = m.label || m.model || m.id;
                   const p = m.portrait ?? { w: m.screenW, h: m.screenH };
                   const l = m.landscape ?? { w: m.screenH, h: m.screenW };
@@ -631,64 +760,61 @@ export default function ThemeEditorPage() {
                   style={{ background: theme.background.color, opacity: theme.background.overlayOpacity }}
                 />
               ) : null}
-              {theme.clock.enabled ? (
-                <CanvasDot
-                  x={theme.clock.x}
-                  y={theme.clock.y}
+              {layerOrder.map((key) => {
+                const sep = key.indexOf(":");
+                const kind = key.slice(0, sep);
+                const id = key.slice(sep + 1);
+                if (kind === "clock") {
+                  const w = (theme.clocks || []).find((x) => x.id === id);
+                  if (!w) return null;
+                  return (
+                    <CanvasDot
+                      key={key}
+                      x={w.x}
+                  y={w.y}
                   canvasRef={canvasRef}
                   containerSize={containerSize}
-                  selected={selected === "clock"}
-                  title={c.clock}
-                  onSelect={() => selectItem("clock")}
+                  selected={selected === `clock:${w.id}`}
+                  title={clockWidgetTitle(w)}
+                  onSelect={() => selectItem(`clock:${w.id}`)}
                   onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
-                  onDrag={(x, y) => setTheme((t) => ({ ...t, clock: { ...t.clock, x, y } }))}
+                  onDrag={(x, y) => updateClockWidget(w.id, { x, y })}
+                  onRemove={() => removeClockWidget(w.id)}
+                  removeLabel={c.removeClockWidget}
                 >
-                  {(() => {
-                    const autoPair = theme.clock.autoColor ? ntcGenerateReadableColor(theme.background.color) : null;
-                    const autoTextColor = autoPair ? autoPair[0] : null;
-                    const effectiveColor = theme.clock.autoColor ? autoTextColor || theme.clock.color : theme.clock.color;
-                    const bgClass = theme.clock.showBackground ? "bg-black/35" : "bg-transparent";
-                    return (
-                      <span
-                        className={`whitespace-nowrap rounded-md px-2 py-1 font-mono font-bold text-white ${bgClass}`}
-                        style={{ color: effectiveColor || undefined, fontSize: `${13 * theme.clock.scale * zoom}px` }}
-                      >
-                        {formatClock(now, theme.clock.format24h)}
-                      </span>
-                    );
-                  })()}
-                </CanvasDot>
-              ) : null}
-              {theme.countdown.enabled ? (
-                <CanvasDot
-                  x={theme.countdown.x}
-                  y={theme.countdown.y}
+                  <CanvasClockWidget widget={w} now={now} zoom={zoom} />
+                    </CanvasDot>
+                  );
+                }
+                if (kind === "system") {
+                  const w = (theme.systems || []).find((x) => x.id === id);
+                  if (!w) return null;
+                  return (
+                    <CanvasDot
+                      key={key}
+                      x={w.x}
+                  y={w.y}
                   canvasRef={canvasRef}
                   containerSize={containerSize}
-                  selected={selected === "countdown"}
-                  title={c.countdown}
-                  onSelect={() => selectItem("countdown")}
+                  selected={selected === `system:${w.id}`}
+                  title={systemWidgetTitle(w)}
+                  onSelect={() => selectItem(`system:${w.id}`)}
                   onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
-                  onDrag={(x, y) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, x, y } }))}
+                  onDrag={(x, y) => updateSystemWidget(w.id, { x, y })}
+                  onRemove={() => removeSystemWidget(w.id)}
+                  removeLabel={c.removeSystemWidget}
                 >
-                  <div
-                    className="flex items-center justify-center rounded-full font-mono font-bold leading-none"
-                    style={{
-                      width: `${22 * theme.countdown.scale * zoom}px`,
-                      height: `${22 * theme.countdown.scale * zoom}px`,
-                      fontSize: `${11 * theme.countdown.scale * zoom}px`,
-                      background: theme.countdown.color || "#f5c542",
-                      color: readableTextOn(theme.countdown.color || "#f5c542"),
-                    }}
-                  >
-                    {Math.max(1, 60 - now.getSeconds())}
-                  </div>
-                </CanvasDot>
-              ) : null}
-              {theme.icons.map((icon) => (
-                <CanvasDot
-                  key={icon.id}
-                  x={icon.x}
+                  <CanvasSystemWidget widget={w} zoom={zoom} />
+                    </CanvasDot>
+                  );
+                }
+                if (kind === "icon") {
+                  const icon = theme.icons.find((x) => x.id === id);
+                  if (!icon) return null;
+                  return (
+                    <CanvasDot
+                      key={key}
+                      x={icon.x}
                   y={icon.y}
                   canvasRef={canvasRef}
                   containerSize={containerSize}
@@ -722,30 +848,34 @@ export default function ThemeEditorPage() {
                       zoom={zoom}
                       usage={usage}
                       tftWidth={canvasSize.width}
-                    />
-                  )}
-                </CanvasDot>
-              ))}
-              {theme.texts.map((txt) => (
-                <CanvasDot
-                  key={txt.id}
-                  x={txt.x}
-                  y={txt.y}
-                  canvasRef={canvasRef}
-                  containerSize={containerSize}
-                  selected={selected === `text:${txt.id}`}
-                  title={txt.text}
-                  onSelect={() => selectItem(`text:${txt.id}`)}
-                  onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
-                  onDrag={(x, y) => updateText(txt.id, { x, y })}
-                  onRemove={() => removeText(txt.id)}
-                  removeLabel={c.removeText}
-                >
-                  <span className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white" style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}>
-                    {txt.text || "…"}
-                  </span>
-                </CanvasDot>
-              ))}
+                      />
+                    )}
+                    </CanvasDot>
+                  );
+                }
+                const txt = theme.texts.find((x) => x.id === id);
+                if (!txt) return null;
+                return (
+                  <CanvasDot
+                    key={key}
+                    x={txt.x}
+                    y={txt.y}
+                    canvasRef={canvasRef}
+                    containerSize={containerSize}
+                    selected={selected === `text:${txt.id}`}
+                    title={txt.text}
+                    onSelect={() => selectItem(`text:${txt.id}`)}
+                    onActivate={() => focusCanvasNudgeTrap(nudgeTrapRef)}
+                    onDrag={(x, y) => updateText(txt.id, { x, y })}
+                    onRemove={() => removeText(txt.id)}
+                    removeLabel={c.removeText}
+                  >
+                    <span className="whitespace-nowrap rounded-md bg-black/35 px-2 py-1 font-semibold text-white" style={{ color: txt.color || undefined, fontSize: `${12 * txt.scale * zoom}px` }}>
+                      {txt.text || "…"}
+                    </span>
+                  </CanvasDot>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -754,146 +884,139 @@ export default function ThemeEditorPage() {
         <div className="flex flex-col gap-[14px]">
           <Card title={c.elements}>
             <div className="flex flex-col gap-1.5">
-              {theme.clock.enabled ? (
-                <button
-                  type="button"
-                  onClick={() => selectItem("clock")}
-                  className={cn(
-                    "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
-                    selected === "clock"
-                      ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
-                      : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-md border",
-                      selected === "clock" ? "border-accent/30 bg-accent/10 text-accent" : "border-edge bg-panel text-ink2 group-hover:border-ink3/20",
-                    )}
-                  >
-                    <ClockIcon size={14} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold leading-none">{c.clock}</span>
-                    <span className="block truncate text-[10.5px] leading-none text-ink3">
-                      {theme.clock.format24h ? "24h" : "12h"} · {theme.clock.showBackground ? (lang === "pt" ? "com fundo" : lang === "es" ? "con fondo" : "with bg") : lang === "pt" ? "sem fundo" : lang === "es" ? "sin fondo" : "no bg"}
-                    </span>
-                  </span>
-                  <span className="shrink-0 rounded-full border border-edge bg-panel px-2 py-0.5 font-mono text-[11px] font-bold leading-none text-ink">
-                    {formatClock(now, theme.clock.format24h)}
-                  </span>
-                </button>
-              ) : null}
-              {theme.countdown.enabled ? (
-                <button
-                  type="button"
-                  onClick={() => selectItem("countdown")}
-                  className={cn(
-                    "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
-                    selected === "countdown"
-                      ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
-                      : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-md border",
-                      selected === "countdown" ? "border-accent/30 bg-accent/10 text-accent" : "border-edge bg-panel text-ink2 group-hover:border-ink3/20",
-                    )}
-                  >
-                    <TimerIcon size={14} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-bold leading-none">{c.countdown}</span>
-                  </span>
-                </button>
-              ) : null}
-              {theme.icons.map((icon) => {
-                const value = formatThemeMetric(usage, icon.provider, icon.metric);
-                const label = providerLabel(icon.provider);
-                const subtitle = icon.metric === "none" ? c.metricNone : metricLabel(icon.metric, lang);
-                const displayValue = value || (icon.metric === "none" ? "—" : "—");
-                const isSelected = selected === `icon:${icon.id}`;
-                return (
-                  <button
-                    type="button"
-                    key={icon.id}
-                    onClick={() => selectItem(`icon:${icon.id}`)}
-                    className={cn(
-                      "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
-                      isSelected
-                        ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
-                        : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-md border",
-                        isSelected ? "border-accent/30 bg-accent/10" : "border-edge bg-panel group-hover:border-ink3/20",
-                      )}
-                    >
-                      {icon.provider === "brand" ? (
-                        <Logo size={16} showText={false} />
-                      ) : icon.provider === "weather" ? (
-                        <span className="text-[15px] leading-none">{weatherEmoji(usage)}</span>
-                      ) : (
-                        <img src={PROVIDER_ICON[icon.provider]} alt="" className="size-5 object-contain" draggable={false} />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-bold leading-none">{label}</span>
-                      <span className="block truncate text-[10.5px] leading-none text-ink3">{subtitle}</span>
-                    </span>
-                    <span
-                      className={cn(
-                        "max-w-[88px] shrink-0 truncate rounded-full border px-2 py-0.5 text-right font-mono text-[11px] font-bold leading-none",
-                        isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink",
-                      )}
-                      title={displayValue}
-                    >
-                      {displayValue}
-                    </span>
-                  </button>
-                );
+              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleLayerDragEnd}>
+                <SortableContext items={layerOrder} strategy={verticalListSortingStrategy}>
+              {layerOrder.map((key) => {
+                const sep = key.indexOf(":");
+                const kind = key.slice(0, sep);
+                const lid = key.slice(sep + 1);
+                const gripLabel = lang === "pt" ? "Arrastar para reordenar" : lang === "es" ? "Arrastrar para reordenar" : "Drag to reorder";
+                if (kind === "clock") {
+                  const w = (theme.clocks || []).find((x) => x.id === lid);
+                  if (!w) return null;
+                  const isSelected = selected === `clock:${w.id}`;
+                  return (
+                    <SortableLayerRow
+                      key={key}
+                      id={key}
+                      selected={isSelected}
+                      onSelect={() => selectItem(`clock:${w.id}`)}
+                      gripLabel={gripLabel}
+                      icon={<ClockIcon size={14} />}
+                      title={clockWidgetTitle(w)}
+                      subtitle={c.clockModeLabel(w.mode)}
+                      badge={
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10.5px] font-bold leading-none",
+                            isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink3",
+                          )}
+                        >
+                          {w.scale.toFixed(1)}×
+                        </span>
+                      }
+                    />
+                  );
+                }
+                if (kind === "system") {
+                  const w = (theme.systems || []).find((x) => x.id === lid);
+                  if (!w) return null;
+                  const isSelected = selected === `system:${w.id}`;
+                  return (
+                    <SortableLayerRow
+                      key={key}
+                      id={key}
+                      selected={isSelected}
+                      onSelect={() => selectItem(`system:${w.id}`)}
+                      gripLabel={gripLabel}
+                      icon={<ChipIcon size={14} />}
+                      title={systemWidgetTitle(w)}
+                      subtitle={c.systemDetailLabel(w.detail)}
+                      badge={
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10.5px] font-bold leading-none",
+                            isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink3",
+                          )}
+                        >
+                          {w.scale.toFixed(1)}×
+                        </span>
+                      }
+                    />
+                  );
+                }
+                if (kind === "icon") {
+                  const icon = theme.icons.find((x) => x.id === lid);
+                  if (!icon) return null;
+                  const value = formatThemeMetric(usage, icon.provider, icon.metric);
+                  const label = providerLabel(icon.provider);
+                  const subtitle = icon.metric === "none" ? c.metricNone : metricLabel(icon.metric, lang);
+                  const displayValue = value || "—";
+                  const isSelected = selected === `icon:${icon.id}`;
+                  return (
+                    <SortableLayerRow
+                      key={key}
+                      id={key}
+                      selected={isSelected}
+                      onSelect={() => selectItem(`icon:${icon.id}`)}
+                      gripLabel={gripLabel}
+                      plainIcon
+                      icon={
+                        icon.provider === "brand" ? (
+                          <Logo size={16} showText={false} />
+                        ) : icon.provider === "weather" ? (
+                          <span className="text-[15px] leading-none">{weatherEmoji(usage)}</span>
+                        ) : (
+                          <img src={PROVIDER_ICON[icon.provider]} alt="" className="size-5 object-contain" draggable={false} />
+                        )
+                      }
+                      title={label}
+                      subtitle={subtitle}
+                      badge={
+                        <span
+                          className={cn(
+                            "max-w-[88px] shrink-0 truncate rounded-full border px-2 py-0.5 text-right font-mono text-[11px] font-bold leading-none",
+                            isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink",
+                          )}
+                          title={displayValue}
+                        >
+                          {displayValue}
+                        </span>
+                      }
+                    />
+                  );
+                }
+                {
+                  const txt = theme.texts.find((x) => x.id === lid);
+                  if (!txt) return null;
+                  const isSelected = selected === `text:${txt.id}`;
+                  return (
+                    <SortableLayerRow
+                      key={key}
+                      id={key}
+                      selected={isSelected}
+                      onSelect={() => selectItem(`text:${txt.id}`)}
+                      gripLabel={gripLabel}
+                      icon={<TextIcon size={13} />}
+                      title={txt.text || "…"}
+                      subtitle={c.texts}
+                      badge={
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10.5px] font-bold leading-none",
+                            isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink3",
+                          )}
+                        >
+                          {txt.scale.toFixed(1)}×
+                        </span>
+                      }
+                    />
+                  );
+                }
               })}
-              {theme.texts.map((txt) => {
-                const isSelected = selected === `text:${txt.id}`;
-                return (
-                  <button
-                    type="button"
-                    key={txt.id}
-                    onClick={() => selectItem(`text:${txt.id}`)}
-                    className={cn(
-                      "group flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
-                      isSelected
-                        ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
-                        : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-md border",
-                        isSelected ? "border-accent/30 bg-accent/10 text-accent" : "border-edge bg-panel text-ink2 group-hover:border-ink3/20",
-                      )}
-                    >
-                      <TextIcon size={13} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-bold leading-none">{txt.text || "…"}</span>
-                      <span className="block truncate text-[10.5px] leading-none text-ink3">{c.texts}</span>
-                    </span>
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10.5px] font-bold leading-none",
-                        isSelected ? "border-accent/20 bg-accent/10 text-accent" : "border-edge bg-panel text-ink3",
-                      )}
-                    >
-                      {txt.scale.toFixed(1)}×
-                    </span>
-                  </button>
-                );
-              })}
-              {!theme.clock.enabled && !theme.countdown.enabled && theme.icons.length === 0 && theme.texts.length === 0 ? (
+                </SortableContext>
+              </DndContext>
+              {layerOrder.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-edge bg-canvas/60 px-2.5 py-3 text-center text-[12px] leading-relaxed text-ink3">{c.noIcons}</div>
               ) : null}
               <div className="my-1 h-px bg-edge" aria-hidden />
@@ -1004,24 +1127,151 @@ export default function ThemeEditorPage() {
                 <span className="text-xs text-ink3">{c.deleteHint}</span>
               </div>
             </Card>
-          ) : selected === "clock" ? (
-            <Card title={c.clock}>
-              <Checkbox label={c.clockEnabled} checked={theme.clock.enabled} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, enabled: checked } })); }} />
-              <Checkbox label={c.clockFormat24h} checked={theme.clock.format24h} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, format24h: checked } })); }} />
-              <Checkbox label={c.clockShowBackground} checked={theme.clock.showBackground} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, showBackground: checked } })); }} />
-              <Checkbox label={c.clockAutoColor} checked={theme.clock.autoColor} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, clock: { ...t.clock, autoColor: checked } })); }} />
-              {theme.clock.autoColor ? <p className={`${cfgStatus} text-accent`}>{c.clockAutoColorActive}</p> : null}
-              <ScaleField label={c.size} value={theme.clock.scale} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, scale: v } }))} />
-              <div className={theme.clock.autoColor ? "pointer-events-none opacity-50" : ""}>
-                <ColorField label={c.color} value={theme.clock.color} onChange={(v) => setTheme((t) => ({ ...t, clock: { ...t.clock, color: v } }))} noneLabel={c.colorNone} lang={lang} />
+          ) : selectedClockWidget ? (
+            <Card title={clockWidgetTitle(selectedClockWidget)}>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <span className={cfgFieldLabel}>{c.clockMode}</span>
+                  <div className="mt-1.5 grid grid-cols-2 gap-2">
+                    {(["clock", "countdown", "stopwatch", "pomodoro"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => updateClockWidget(selectedClockWidget.id, { mode: m })}
+                        className={cn(
+                          "rounded-[10px] border px-3 py-2 text-sm font-[650]",
+                          selectedClockWidget.mode === m ? "border-accent bg-chip" : "border-edge bg-canvas hover:bg-chip",
+                        )}
+                      >
+                        {c.clockModeLabel(m)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <TextField
+                  label={c.widgetLabel}
+                  value={selectedClockWidget.label || ""}
+                  maxLength={40}
+                  placeholder={c.widgetLabelPh}
+                  onChange={(e) => updateClockWidget(selectedClockWidget.id, { label: e.target.value.trim() ? e.target.value : null })}
+                />
+                {selectedClockWidget.mode === "clock" ? (
+                  <>
+                    <TomSelectField
+                      label={c.timezone}
+                      value={selectedClockWidget.timezone || ""}
+                      onChange={(e) => updateClockWidget(selectedClockWidget.id, { timezone: e.target.value || null })}
+                      options={[{ value: "", label: c.timezoneLocal }, ...CLOCK_TIMEZONES.map((z) => ({ value: z.tz, label: `${z.city} (${z.tz})` }))]}
+                      placeholder={c.timezoneLocal}
+                    />
+                    <Checkbox
+                      label={c.clockFormat24h}
+                      checked={selectedClockWidget.format24h !== false}
+                      onChange={(e) => updateClockWidget(selectedClockWidget.id, { format24h: e.target.checked })}
+                    />
+                    <Checkbox
+                      label={c.showSeconds}
+                      checked={selectedClockWidget.showSeconds !== false}
+                      onChange={(e) => updateClockWidget(selectedClockWidget.id, { showSeconds: e.target.checked })}
+                    />
+                    <Checkbox
+                      label={c.showDate}
+                      checked={selectedClockWidget.showDate !== false}
+                      onChange={(e) => updateClockWidget(selectedClockWidget.id, { showDate: e.target.checked })}
+                    />
+                  </>
+                ) : null}
+                {selectedClockWidget.mode === "countdown" ? (
+                  <>
+                    <label className="flex flex-col gap-1.5">
+                      <span className={cfgFieldLabel}>{c.countdownAt}</span>
+                      <input
+                        type="datetime-local"
+                        value={toDatetimeLocal(selectedClockWidget.countdownAt)}
+                        onChange={(e) => updateClockWidget(selectedClockWidget.id, { countdownAt: fromDatetimeLocal(e.target.value) })}
+                        className="w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink"
+                      />
+                    </label>
+                    <TextField
+                      label={c.countdownLabel}
+                      value={selectedClockWidget.countdownLabel || ""}
+                      maxLength={40}
+                      placeholder={c.widgetLabelPh}
+                      onChange={(e) => updateClockWidget(selectedClockWidget.id, { countdownLabel: e.target.value.trim() ? e.target.value : null })}
+                    />
+                  </>
+                ) : null}
+                {selectedClockWidget.mode === "pomodoro" ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(
+                      [
+                        { key: "pomodoroFocusMin", label: c.pomoFocus, min: 1, max: 180 },
+                        { key: "pomodoroShortMin", label: c.pomoShort, min: 1, max: 60 },
+                        { key: "pomodoroLongMin", label: c.pomoLong, min: 1, max: 90 },
+                        { key: "pomodoroCycles", label: c.pomoCycles, min: 2, max: 8 },
+                      ] as const
+                    ).map((f) => (
+                      <label key={f.key} className="flex flex-col gap-1.5">
+                        <span className={cfgFieldLabel}>{f.label}</span>
+                        <input
+                          type="number"
+                          min={f.min}
+                          max={f.max}
+                          value={selectedClockWidget[f.key] ?? ""}
+                          onChange={(e) => updateClockWidget(selectedClockWidget.id, { [f.key]: clampPomo(e.target.value, f.min, f.max, f.min) })}
+                          className="w-full rounded-lg border border-edge bg-canvas px-3 py-2 text-sm text-ink"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+                <ScaleField label={c.size} value={selectedClockWidget.scale} onChange={(v) => updateClockWidget(selectedClockWidget.id, { scale: v })} />
+                <ColorField label={c.color} value={selectedClockWidget.color} onChange={(v) => updateClockWidget(selectedClockWidget.id, { color: v })} noneLabel={c.colorNone} lang={lang} />
+                <Checkbox
+                  label={c.iconShowBackground}
+                  checked={selectedClockWidget.showBackground !== false}
+                  onChange={(e) => updateClockWidget(selectedClockWidget.id, { showBackground: e.target.checked })}
+                />
+                <Button variant="ghost" onClick={() => removeClockWidget(selectedClockWidget.id)}>
+                  {c.removeClockWidget}
+                </Button>
+                <span className="text-xs text-ink3">{c.deleteHint}</span>
               </div>
             </Card>
-          ) : selected === "countdown" ? (
-            <Card title={c.countdown}>
-              <Checkbox label={c.countdownEnabled} checked={theme.countdown.enabled} onChange={(e) => { const checked = e.target.checked; setTheme((t) => ({ ...t, countdown: { ...t.countdown, enabled: checked } })); }} />
-              <ScaleField label={c.size} value={theme.countdown.scale} onChange={(v) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, scale: v } }))} />
-              <ColorField label={c.color} value={theme.countdown.color} onChange={(v) => setTheme((t) => ({ ...t, countdown: { ...t.countdown, color: v } }))} noneLabel={c.colorNone} lang={lang} />
-              <p className={cfgStatus}>{c.countdownHint}</p>
+          ) : selectedSystemWidget ? (
+            <Card title={systemWidgetTitle(selectedSystemWidget)}>
+              <div className="flex flex-col gap-3">
+                <SelectField
+                  label={c.detail}
+                  value={selectedSystemWidget.detail}
+                  onChange={(e) => updateSystemWidget(selectedSystemWidget.id, { detail: e.target.value as ThemeSystemWidget["detail"] })}
+                  options={[
+                    { value: "minimal", label: c.detailMinimal },
+                    { value: "compact", label: c.detailCompact },
+                    { value: "full", label: c.detailFull },
+                  ]}
+                />
+                <ScaleField label={c.size} value={selectedSystemWidget.scale} onChange={(v) => updateSystemWidget(selectedSystemWidget.id, { scale: v })} />
+                <ColorField label={c.color} value={selectedSystemWidget.color} onChange={(v) => updateSystemWidget(selectedSystemWidget.id, { color: v })} noneLabel={c.colorNone} lang={lang} />
+                <Checkbox
+                  label={c.iconShowBackground}
+                  checked={selectedSystemWidget.showBackground !== false}
+                  onChange={(e) => updateSystemWidget(selectedSystemWidget.id, { showBackground: e.target.checked })}
+                />
+                <div className={selectedSystemWidget.showBackground ? "" : "pointer-events-none opacity-50"}>
+                  <ColorField
+                    label={c.iconBgColor}
+                    value={selectedSystemWidget.bgColor}
+                    onChange={(v) => updateSystemWidget(selectedSystemWidget.id, { bgColor: v })}
+                    noneLabel={c.colorNone}
+                    lang={lang}
+                  />
+                </div>
+                <Button variant="ghost" onClick={() => removeSystemWidget(selectedSystemWidget.id)}>
+                  {c.removeSystemWidget}
+                </Button>
+                <span className="text-xs text-ink3">{c.deleteHint}</span>
+              </div>
             </Card>
           ) : selectedText ? (
             <Card title={c.texts}>
@@ -1286,6 +1536,78 @@ export default function ThemeEditorPage() {
           <img src={screenshotUrl} alt={c.screenshotButton} className="max-h-full max-w-full rounded-[10px] object-contain" />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function SortableLayerRow({
+  id,
+  selected,
+  onSelect,
+  gripLabel,
+  icon,
+  title,
+  subtitle,
+  badge,
+  plainIcon = false,
+}: {
+  id: string;
+  selected: boolean;
+  onSelect: () => void;
+  gripLabel: string;
+  icon: React.ReactNode;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  badge?: React.ReactNode;
+  plainIcon?: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.55 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1">
+      <span
+        {...attributes}
+        {...listeners}
+        title={gripLabel}
+        aria-label={gripLabel}
+        className="flex shrink-0 cursor-grab touch-none items-center rounded-md border border-edge bg-panel px-1 py-2 text-[10px] leading-none text-ink3 hover:text-ink active:cursor-grabbing"
+      >
+        ⋮⋮
+      </span>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          "group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+          selected
+            ? "border-accent bg-chip shadow-sm ring-1 ring-accent/20"
+            : "border-edge bg-canvas hover:border-ink3/30 hover:bg-chip hover:shadow-sm",
+        )}
+      >
+        <span
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-md border",
+            plainIcon
+              ? selected
+                ? "border-accent/30 bg-accent/10"
+                : "border-edge bg-panel group-hover:border-ink3/20"
+              : selected
+                ? "border-accent/30 bg-accent/10 text-accent"
+                : "border-edge bg-panel text-ink2 group-hover:border-ink3/20",
+          )}
+        >
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[12.5px] font-bold leading-none">{title}</span>
+          {subtitle ? <span className="block truncate text-[10.5px] leading-none text-ink3">{subtitle}</span> : null}
+        </span>
+        {badge}
+      </button>
     </div>
   );
 }

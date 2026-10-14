@@ -16,6 +16,40 @@ export type ThemeIcon = {
   metric: string;
 };
 export type ThemeText = { id: string; x: number; y: number; scale: number; color: string | null; text: string };
+export type CanvasClockMode = "clock" | "countdown" | "stopwatch" | "pomodoro";
+export type ThemeClockWidget = {
+  id: string;
+  mode: CanvasClockMode;
+  x: number;
+  y: number;
+  scale: number;
+  label: string | null;
+  timezone: string | null;
+  format24h: boolean;
+  showSeconds: boolean;
+  showDate: boolean;
+  countdownAt: string | null;
+  countdownLabel: string | null;
+  pomodoroFocusMin: number;
+  pomodoroShortMin: number;
+  pomodoroLongMin: number;
+  pomodoroCycles: number;
+  color: string | null;
+  showBackground: boolean;
+};
+export type SystemDetail = "minimal" | "compact" | "full";
+export type ThemeSystemWidget = {
+  id: string;
+  x: number;
+  y: number;
+  scale: number;
+  detail: SystemDetail;
+  color: string | null;
+  showBackground: boolean;
+  bgColor: string | null;
+};
+export const THEME_MAX_CLOCKS = 4;
+export const THEME_MAX_SYSTEMS = 2;
 export type ThemeClock = { enabled: boolean; x: number; y: number; scale: number; color: string | null; format24h: boolean; showBackground: boolean; autoColor: boolean };
 // Selo de contagem regressiva até o próximo refresh — mesmas cores fixas
 // (amarelo/verde) do selo do header do firmware (ver drawCountdownBadgeAt em
@@ -36,7 +70,9 @@ export type ThemeBg = {
   rotate: boolean;
   rotateIntervalSec: number;
 };
-export type ThemeState = { background: ThemeBg; clock: ThemeClock; countdown: ThemeCountdown; icons: ThemeIcon[]; texts: ThemeText[] };
+export type ThemeState = { background: ThemeBg; clock: ThemeClock; countdown: ThemeCountdown; icons: ThemeIcon[]; texts: ThemeText[]; clocks: ThemeClockWidget[]; systems: ThemeSystemWidget[]; layerOrder: string[] };
+
+export type LayerKey = string;
 
 export type WallpaperItem = {
   id: string;
@@ -52,12 +88,43 @@ export type WallpaperItem = {
   frame_delay_ms?: number;
 };
 
+export function layerKey(kind: "clock" | "system" | "icon" | "text", id: string): string {
+  return `${kind}:${id}`;
+}
+
+export function defaultLayerOrder(t: Pick<ThemeState, "clocks" | "systems" | "icons" | "texts">): string[] {
+  return [
+    ...(t.clocks || []).map((w) => layerKey("clock", w.id)),
+    ...(t.systems || []).map((w) => layerKey("system", w.id)),
+    ...t.icons.map((i) => layerKey("icon", i.id)),
+    ...t.texts.map((x) => layerKey("text", x.id)),
+  ];
+}
+
+export function normalizeLayerOrder(
+  t: Pick<ThemeState, "clocks" | "systems" | "icons" | "texts">,
+  raw: unknown,
+): string[] {
+  const fallback = defaultLayerOrder(t);
+  if (!Array.isArray(raw) || raw.length === 0) return fallback;
+  const valid = new Set(fallback);
+  const seen = new Set<string>();
+  const ordered = (raw as unknown[]).filter(
+    (k): k is string => typeof k === "string" && valid.has(k) && !seen.has(k) && (seen.add(k), true),
+  );
+  for (const k of fallback) if (!seen.has(k)) ordered.push(k);
+  return ordered;
+}
+
 export const DEFAULT_THEME: ThemeState = {
   background: { color: "#0f0f0f", overlayOpacity: 0, zoom: 1, ox: 0.5, oy: 0.5, rotate: false, rotateIntervalSec: 60 },
-  clock: { enabled: true, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
+  clock: { enabled: false, x: 0.5, y: 0.16, scale: 2, color: null, format24h: true, showBackground: true, autoColor: false },
   countdown: { enabled: false, x: 0.9, y: 0.88, scale: 1, color: null },
   icons: [],
   texts: [],
+  clocks: [],
+  systems: [],
+  layerOrder: [],
 };
 
 const LEGACY_STORAGE_KEY = "vigia_theme_draft_v2";
@@ -66,6 +133,18 @@ const SAVE_DEBOUNCE_MS = 500;
 
 export function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
+}
+
+function clampScale(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return 1;
+  return clamp(n, 0.5, 4);
+}
+
+function clampInt(v: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(n)));
 }
 
 // Contraste simples (mesmo peso de luma da placa, ver drawCountdownBadgeAt
@@ -152,8 +231,11 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
     if (typeof merged.clock.showBackground !== "boolean") merged.clock.showBackground = DEFAULT_THEME.clock.showBackground;
     if (typeof merged.clock.autoColor !== "boolean") merged.clock.autoColor = DEFAULT_THEME.clock.autoColor;
   }
+  const legacyClockOn = merged.clock?.enabled === true;
+  const legacyCountdownOn = merged.countdown?.enabled === true;
+  merged.clock = { ...(merged.clock as ThemeClock), enabled: false };
   merged.countdown = {
-    enabled: merged.countdown?.enabled ?? DEFAULT_THEME.countdown.enabled,
+    enabled: false,
     x: merged.countdown?.x ?? DEFAULT_THEME.countdown.x,
     y: merged.countdown?.y ?? DEFAULT_THEME.countdown.y,
     scale: merged.countdown?.scale ?? DEFAULT_THEME.countdown.scale,
@@ -179,6 +261,64 @@ export function migrateTheme(raw: Partial<ThemeState> & { icons?: Array<Partial<
     scale: txt.scale ?? 1,
     color: txt.color ?? null,
   }));
+  const clockMode = (v: unknown): CanvasClockMode => (v === "countdown" || v === "stopwatch" || v === "pomodoro" ? v : "clock");
+  const detail = (v: unknown): SystemDetail => (v === "minimal" || v === "full" ? v : "compact");
+  merged.clocks = (merged.clocks || []).slice(0, THEME_MAX_CLOCKS).map((w, idx) => ({
+    id: w.id || `c${idx}`,
+    mode: clockMode(w.mode),
+    x: w.x ?? 0.5,
+    y: w.y ?? 0.5,
+    scale: clampScale(w.scale),
+    label: typeof w.label === "string" && w.label.trim() ? w.label.slice(0, 40) : null,
+    timezone: typeof w.timezone === "string" && w.timezone.trim() ? w.timezone.slice(0, 40) : null,
+    showBackground: typeof w.showBackground === "boolean" ? w.showBackground : true,
+    format24h: typeof w.format24h === "boolean" ? w.format24h : true,
+    showSeconds: w.showSeconds !== false,
+    showDate: w.showDate !== false,
+    countdownAt: typeof w.countdownAt === "string" && w.countdownAt.trim() ? w.countdownAt : null,
+    countdownLabel: typeof w.countdownLabel === "string" && w.countdownLabel.trim() ? w.countdownLabel.slice(0, 40) : null,
+    pomodoroFocusMin: clampInt(w.pomodoroFocusMin, 1, 180, 25),
+    pomodoroShortMin: clampInt(w.pomodoroShortMin, 1, 60, 5),
+    pomodoroLongMin: clampInt(w.pomodoroLongMin, 1, 90, 15),
+    pomodoroCycles: clampInt(w.pomodoroCycles, 2, 8, 4),
+    color: w.color ?? null,
+  }));
+  merged.systems = (merged.systems || []).slice(0, THEME_MAX_SYSTEMS).map((w, idx) => ({
+    id: w.id || `s${idx}`,
+    x: w.x ?? 0.5,
+    y: w.y ?? 0.5,
+    scale: clampScale(w.scale),
+    detail: detail(w.detail),
+    color: w.color ?? null,
+    showBackground: typeof w.showBackground === "boolean" ? w.showBackground : true,
+    bgColor: w.bgColor ?? null,
+  }));
+  if ((legacyClockOn || legacyCountdownOn) && merged.clocks.length === 0) {
+    const src = legacyClockOn ? merged.clock : null;
+    merged.clocks = [
+      {
+        id: "c-migrated",
+        mode: "clock",
+        x: src?.x ?? 0.5,
+        y: src?.y ?? 0.16,
+        scale: clampScale(src?.scale ?? 2) > 2 ? 2 : clampScale(src?.scale ?? 1),
+        label: null,
+        timezone: null,
+        showBackground: src?.showBackground ?? true,
+        format24h: true,
+        showSeconds: true,
+        showDate: true,
+        countdownAt: null,
+        countdownLabel: null,
+        pomodoroFocusMin: 25,
+        pomodoroShortMin: 5,
+        pomodoroLongMin: 15,
+        pomodoroCycles: 4,
+        color: src?.color ?? null,
+      },
+    ];
+  }
+  merged.layerOrder = normalizeLayerOrder(merged, (raw as Partial<ThemeState>)?.layerOrder);
   return merged;
 }
 
@@ -276,7 +416,7 @@ export function themeToJson(t: ThemeState, hasWallpaper: boolean, gif?: { frame_
     version: 1,
     background,
     clock: {
-      enabled: t.clock.enabled,
+      enabled: false,
       x: t.clock.x,
       y: t.clock.y,
       scale: t.clock.scale,
@@ -286,7 +426,7 @@ export function themeToJson(t: ThemeState, hasWallpaper: boolean, gif?: { frame_
       ...(t.clock.color ? { color: t.clock.color } : {}),
     },
     countdown: {
-      enabled: t.countdown.enabled,
+      enabled: false,
       x: t.countdown.x,
       y: t.countdown.y,
       scale: t.countdown.scale,
@@ -304,6 +444,39 @@ export function themeToJson(t: ThemeState, hasWallpaper: boolean, gif?: { frame_
       ...(i.bgColor ? { bgColor: i.bgColor } : {}),
     })),
     texts: t.texts.map((x) => ({ text: x.text, x: x.x, y: x.y, scale: x.scale, ...(x.color ? { color: x.color } : {}) })),
+    clocks: t.clocks.map((w) => ({
+      mode: w.mode,
+      x: Math.round(w.x * 1000) / 1000,
+      y: Math.round(w.y * 1000) / 1000,
+      scale: Math.round(clampScale(w.scale) * 100) / 100,
+      ...(w.label ? { label: w.label } : {}),
+      ...(w.timezone ? { timezone: w.timezone } : {}),
+      ...(w.format24h === false ? { format24h: false } : {}),
+      ...(w.showSeconds === false ? { showSeconds: false } : {}),
+      ...(w.showDate === false ? { showDate: false } : {}),
+      ...(w.mode === "countdown" && w.countdownAt ? { countdownAt: w.countdownAt } : {}),
+      ...(w.mode === "countdown" && w.countdownLabel ? { countdownLabel: w.countdownLabel } : {}),
+      ...(w.mode === "pomodoro"
+        ? {
+            pomodoroFocusMin: clampInt(w.pomodoroFocusMin, 1, 180, 25),
+            pomodoroShortMin: clampInt(w.pomodoroShortMin, 1, 60, 5),
+            pomodoroLongMin: clampInt(w.pomodoroLongMin, 1, 90, 15),
+            pomodoroCycles: clampInt(w.pomodoroCycles, 2, 8, 4),
+          }
+        : {}),
+      ...(w.color ? { color: w.color } : {}),
+      ...(w.showBackground === false ? { showBackground: false } : {}),
+    })),
+    systems: t.systems.map((w) => ({
+      x: Math.round(w.x * 1000) / 1000,
+      y: Math.round(w.y * 1000) / 1000,
+      scale: Math.round(clampScale(w.scale) * 100) / 100,
+      detail: w.detail,
+      ...(w.color ? { color: w.color } : {}),
+      ...(w.showBackground === false ? { showBackground: false } : {}),
+      ...(w.bgColor ? { bgColor: w.bgColor } : {}),
+    })),
+    layerOrder: normalizeLayerOrder(t, t.layerOrder),
   };
 }
 
