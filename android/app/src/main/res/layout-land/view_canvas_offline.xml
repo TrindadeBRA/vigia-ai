@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tela "Canvas indisponivel" (paisagem).
+     Mesmo contrato de IDs da variante retrato, mas em duas colunas centradas para
+     caber na altura curta sem apertar: a esquerda guarda o heroi (olho + relogio),
+     a direita o estado, o chip e as acoes. Papel de parede atras + scrim. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_offline_scrim">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingLeft="32dp"
+        android:paddingRight="32dp">
+
+        <!-- Coluna esquerda: o heroi -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/canvasErrorEye"
+                android:layout_width="76dp"
+                android:layout_height="76dp"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_vigia_eye" />
+
+            <TextView
+                android:id="@+id/canvasErrorClock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="sans-serif-light"
+                android:includeFontPadding="false"
+                android:letterSpacing="-0.02"
+                android:text="12:34"
+                android:textColor="#FFFFFF"
+                android:textSize="68sp" />
+
+            <TextView
+                android:id="@+id/canvasErrorDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif"
+                android:letterSpacing="0.14"
+                android:text="SÁB, 12 DE ABRIL"
+                android:textAllCaps="true"
+                android:textColor="#BDC1C6"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Fio divisorio vertical, sutil -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="150dp"
+            android:layout_marginLeft="34dp"
+            android:layout_marginRight="34dp"
+            android:background="#332A2F3A" />
+
+        <!-- Coluna direita: estado + acoes -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/canvasErrorTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.06"
+                android:text="@string/offline_title"
+                android:textColor="#E8EAED"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/canvasErrorDetail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:fontFamily="sans-serif"
+                android:gravity="center"
+                android:text="@string/offline_detail"
+                android:textColor="#8A919C"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_offline_chip"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="14dp"
+                android:paddingTop="9dp"
+                android:paddingRight="14dp"
+                android:paddingBottom="9dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:text="@string/offline_url_label"
+                    android:textColor="#8A919C"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/canvasErrorUrl"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    android:ellipsize="end"
+                    android:fontFamily="monospace"
+                    android:singleLine="true"
+                    android:text="http://…"
+                    android:textColor="#E8EAED"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- Acoes: so o Tentar novamente (a engrenagem vive na activity,
+                 por cima deste scrim, no canto inferior direito). -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnRetry"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_btn_primary"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:minHeight="48dp"
+                    android:paddingLeft="24dp"
+                    android:paddingRight="24dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/offline_retry"
+                    android:textAllCaps="false"
+                    android:textColor="#E8EAED"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:fontFamily="sans-serif"
+                android:gravity="center"
+                android:maxWidth="300dp"
+                android:text="@string/offline_hint"
+                android:textColor="#8A919C"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tela "Canvas indisponivel" (retrato).
+     Nao pinta fundo opaco: o papel de parede do sistema fica ATRAS e o scrim
+     (bg_offline_scrim) garante a legibilidade. A raiz recebe o id @+id/canvasError
+     pela tag <include> em activity_canvas.xml. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_offline_scrim">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingLeft="28dp"
+        android:paddingRight="28dp">
+
+        <!-- O olho do Vigia flutuando sobre o papel de parede -->
+        <ImageView
+            android:id="@+id/canvasErrorEye"
+            android:layout_width="108dp"
+            android:layout_height="108dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_vigia_eye" />
+
+        <!-- RELOGIO: heroi da tela -->
+        <TextView
+            android:id="@+id/canvasErrorClock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="sans-serif-light"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.02"
+            android:text="12:34"
+            android:textColor="#FFFFFF"
+            android:textSize="96sp" />
+
+        <TextView
+            android:id="@+id/canvasErrorDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif"
+            android:letterSpacing="0.14"
+            android:text="SÁB, 12 DE ABRIL"
+            android:textAllCaps="true"
+            android:textColor="#BDC1C6"
+            android:textSize="13sp" />
+
+        <!-- Bloco de estado: discreto, secundario ao relogio -->
+        <TextView
+            android:id="@+id/canvasErrorTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.06"
+            android:text="@string/offline_title"
+            android:textColor="#E8EAED"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/canvasErrorDetail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="sans-serif"
+            android:gravity="center"
+            android:text="@string/offline_detail"
+            android:textColor="#8A919C"
+            android:textSize="14sp" />
+
+        <!-- Chip com o endereco do coletor -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_offline_chip"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingLeft="16dp"
+            android:paddingTop="11dp"
+            android:paddingRight="16dp"
+            android:paddingBottom="11dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif"
+                android:text="@string/offline_url_label"
+                android:textColor="#8A919C"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/canvasErrorUrl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:ellipsize="end"
+                android:fontFamily="monospace"
+                android:singleLine="true"
+                android:text="http://…"
+                android:textColor="#E8EAED"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Acoes: so o Tentar novamente. Quem configura o coletor agora e a
+             engrenagem no canto inferior direito da activity, visivel por
+             cima deste scrim. -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnRetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_btn_primary"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"
+                android:minHeight="52dp"
+                android:paddingLeft="26dp"
+                android:paddingRight="26dp"
+                android:stateListAnimator="@null"
+                android:text="@string/offline_retry"
+                android:textAllCaps="false"
+                android:textColor="#E8EAED"
+                android:textSize="15sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:fontFamily="sans-serif"
+            android:gravity="center"
+            android:maxWidth="300dp"
+            android:text="@string/offline_hint"
+            android:textColor="#8A919C"
+            android:textSize="12sp" />
+    </LinearLayout>
+</FrameLayout>

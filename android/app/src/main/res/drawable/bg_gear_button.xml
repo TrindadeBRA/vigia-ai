@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fundo da engrenagem flutuante de configuracao. Circulo vidroso na MESMA
+     familia do chip offline: piso #8C14171C deixa o wallpaper/WebView respirar
+     por tras, hairline #40FFFFFF (o traco fantasma ja usado no app) segura a
+     forma sobre fundos claros. Ripple circular da resposta de toque. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#22FFFFFF">
+
+    <item android:id="@android:id/mask">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+        </shape>
+    </item>
+
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#8C14171C" />
+            <stroke
+                android:width="1dp"
+                android:color="#40FFFFFF" />
+        </shape>
+    </item>
+</ripple>

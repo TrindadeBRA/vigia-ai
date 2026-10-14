@@ -18,4 +18,11 @@
     <string name="msg_qr_cancelled">Leitura cancelada</string>
     <string name="msg_no_camera">Câmera indisponível</string>
     <string name="msg_camera_denied">Permissão da câmera negada</string>
+
+    <!-- Tela "Canvas indisponível" (idle / daydream) -->
+    <string name="offline_title">Canvas indisponível</string>
+    <string name="offline_detail">Não foi possível carregar o canvas.</string>
+    <string name="offline_url_label">Tentando alcançar:</string>
+    <string name="offline_retry">Tentar novamente</string>
+    <string name="offline_hint">Verifique se o coletor está rodando e se o IP e a porta estão corretos.</string>
 </resources>

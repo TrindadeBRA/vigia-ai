@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Raiz transparente de proposito: no launcher o WebView cobre tudo (opaco);
+     quando o coletor nao responde, a tela "Canvas indisponivel" (include abaixo)
+     deixa o PAPEL DE PAREDE do sistema aparecer atras (FLAG_SHOW_WALLPAPER). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#10151A">
+    android:layout_height="match_parent">
 
     <WebView
         android:id="@+id/webView"
@@ -18,19 +20,32 @@
         android:textColor="#BDC1C6"
         android:textSize="15sp" />
 
-    <LinearLayout
-        android:id="@+id/overlayRow"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="16dp"
-        android:orientation="horizontal"
-        android:alpha="0.85">
+    <!-- Tela bonita de offline/idle sobre o papel de parede. Reutilizavel. -->
+    <include
+        android:id="@+id/canvasError"
+        layout="@layout/view_canvas_offline"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 
-        <Button
-            android:id="@+id/btnCanvasConfig"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/title_config" />
-    </LinearLayout>
+    <!-- Engrenagem "Configurar coletor": ultimo filho de proposito, desenha e
+         recebe toque ACIMA do WebView e da tela offline (que perdeu o botao de
+         configuracao proprio). Some quando o app roda como daydream (o host
+         esconde; visibility e controlada la). 48dp = alvo de toque minimo.
+         Contrato: o id deste botao e unico no res/ e o Kotlin o trata como View. -->
+    <ImageButton
+        android:id="@+id/btnCanvasConfig"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginRight="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:alpha="0.85"
+        android:background="@drawable/bg_gear_button"
+        android:contentDescription="@string/title_config"
+        android:padding="13dp"
+        android:scaleType="centerInside"
+        android:stateListAnimator="@null"
+        android:src="@drawable/ic_gear" />
 </FrameLayout>

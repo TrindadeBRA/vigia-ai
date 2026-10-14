@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scrim do "Canvas indisponivel".
+     O papel de parede do sistema fica ATRAS (FLAG_SHOW_WALLPAPER), entao nada aqui
+     pode ser opaco. Estrategia em TRES camadas para garantir legibilidade sobre
+     qualquer papel (branco, preto, foto movimentada):
+       1) Um tinte plano ~30% que ergue o piso de contraste em TODA a tela.
+       2) Um gradiente vertical que engrossa a escuridao na faixa CENTRAL, onde
+          mora todo o texto (relogio + infos + botoes), e dissipa no topo e no
+          rodape para o papel de parede continuar respirando ali.
+       3) Um gradiente ancorado no TOPO (apagando aos 50% da altura) que reforca
+          so a regiao superior: o papel mais claro e saturado (a fita laranja do
+          Samsung) fica no terco de cima e competia com o olho/relogio. Ele morre
+          antes da faixa central, entao o centro permanece o ponto mais escuro e
+          o rodape continua leve -> o papel de parede ainda brilha em volta.
+     Escurecimento total por regiao (composicao das alfas):
+       topo       30% -> ~58%   (antes: 30%, fraco demais sobre a fita laranja)
+       centro     ~75%          (inalterado)
+       rodape     ~30%          (inalterado, mantem o "brilho" nas bordas)
+     O resultado central passa de ~75% de escurecimento -> texto branco e cinza
+     legiveis mesmo sobre papel branco; sobre papel preto nao muda nada. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Camada 1: tinte plano de base -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#4D000000" />
+        </shape>
+    </item>
+
+    <!-- Camada 2: gradiente vertical, mais denso no centro (onde fica o conteudo) -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:centerColor="#A6000000"
+                android:endColor="#00000000"
+                android:startColor="#00000000" />
+        </shape>
+    </item>
+
+    <!-- Camada 3: reforco no topo (o terco superior e onde o papel de parede
+         grita mais alto). 40% na borda superior caindo a 0 na metade da tela. -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:centerColor="#00000000"
+                android:endColor="#00000000"
+                android:startColor="#66000000" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chip translucido para a URL do coletor: levemente vidroso para o papel de
+     parede respirar por tras, mas com piso suficiente para o texto #E8EAED ler bem. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#8C14171C" />
+    <corners android:radius="14dp" />
+    <stroke
+        android:width="1dp"
+        android:color="#2A2F3A" />
+</shape>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Engrenagem de configuracao do coletor. Viewport 24dp, mesmo idioma visual
+     do ic_vigia_eye (pathData puro, fillColor chapado). 8 dentes com flancos
+     levemente afilados (ponta 18deg, base 26deg) para continuar legivel a
+     ~20dp; furo central feito com fillType="evenOdd" na mesma path, entao o
+     botao translucido (bg_gear_button) aparece de verdade por dentro dele. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillColor="#E8EAED"
+        android:fillType="evenOdd"
+        android:pathData="M10.16,4.01L10.28,1.14A11,11 0 0 1 13.72,1.14L13.84,4.01A8.2,8.2 0 0 1 16.35,5.05L18.47,3.10A11,11 0 0 1 20.90,5.53L18.95,7.65A8.2,8.2 0 0 1 19.99,10.16L22.86,10.28A11,11 0 0 1 22.86,13.72L19.99,13.84A8.2,8.2 0 0 1 18.95,16.35L20.90,18.47A11,11 0 0 1 18.47,20.90L16.35,18.95A8.2,8.2 0 0 1 13.84,19.99L13.72,22.86A11,11 0 0 1 10.28,22.86L10.16,19.99A8.2,8.2 0 0 1 7.65,18.95L5.53,20.90A11,11 0 0 1 3.10,18.47L5.05,16.35A8.2,8.2 0 0 1 4.01,13.84L1.14,13.72A11,11 0 0 1 1.14,10.28L4.01,10.16A8.2,8.2 0 0 1 5.05,7.65L3.10,5.53A11,11 0 0 1 5.53,3.10L7.65,5.05A8.2,8.2 0 0 1 10.16,4.01ZM8.60,12a3.4,3.4 0 1 0 6.80,0a3.4,3.4 0 1 0 -6.80,0Z" />
+</vector>
