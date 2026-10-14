@@ -13,7 +13,11 @@ import {
 } from "../schemas/monitors.js";
 
 const MAX_META_BYTES = 8192;
-const ONLINE_MS = 10 * 60 * 1000;
+// Presença: o app envia heartbeat a cada 45s + o canvas faz poll de /theme
+// a cada 60s. Janela de 3 min tolera Doze/jitter e ainda esconde rápido
+// quem desconectou.
+const ONLINE_MS = 3 * 60 * 1000;
+const TOUCH_MIN_MS = 30 * 1000;
 const ID_RE = /^[0-9a-f]{8}$/;
 
 function monitorsPath(): string {
@@ -81,6 +85,19 @@ function badId(reply: unknown, id: string): boolean {
     if (ID_RE.test(id)) return false;
     (reply as { code: (n: number) => { send: (b: unknown) => void } }).code(400).send({ ok: false, error: "id inválido" });
     return true;
+}
+
+function touchLastSeen(id: string): void {
+    try {
+        const file = load();
+        const dev = file.devices.find((d) => d.id === id);
+        if (!dev) return;
+        if (Date.now() - Date.parse(dev.lastSeen) < TOUCH_MIN_MS) return;
+        dev.lastSeen = new Date().toISOString();
+        save(file);
+    } catch {
+        // presença é best-effort: nunca quebra o GET do tema
+    }
 }
 
 async function selectedWallpaperOrig(): Promise<{ wid: string; buf: Buffer } | null> {
@@ -161,6 +178,7 @@ export async function createMonitorsRoutes(app: FastifyInstance): Promise<void> 
         if (badId(reply, id)) return;
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Aparelho não encontrado" });
+        touchLastSeen(id);
         const orientation = parseOrientation(request);
         const p = themePath(id, orientation);
         let theme: string | null = null;
@@ -229,6 +247,7 @@ export async function createMonitorsRoutes(app: FastifyInstance): Promise<void> 
         if (badId(reply, id)) return;
         const dev = load().devices.find((d) => d.id === id);
         if (!dev) return reply.code(404).send({ ok: false, error: "Aparelho não encontrado" });
+        touchLastSeen(id);
         const q = (request.query as Record<string, string | undefined>) ?? {};
         const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
         const fullW = clamp(parseInt(q.w ?? "", 10) || dev.screenW, 80, 2160);
@@ -249,5 +268,16 @@ export async function createMonitorsRoutes(app: FastifyInstance): Promise<void> 
         } catch (e) {
             return reply.code(500).send({ ok: false, error: String(e) });
         }
+    });
+
+    app.post("/api/monitors/:id/heartbeat", { schema: { tags: ["Monitores"] } }, async (request, reply) => {
+        const { id } = request.params as { id: string };
+        if (badId(reply, id)) return;
+        const file = load();
+        const dev = file.devices.find((d) => d.id === id);
+        if (!dev) return reply.code(404).send({ ok: false, error: "Aparelho não encontrado" });
+        dev.lastSeen = new Date().toISOString();
+        save(file);
+        return { ok: true, online: true, lastSeen: dev.lastSeen };
     });
 }
