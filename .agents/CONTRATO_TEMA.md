@@ -8,8 +8,12 @@ continuam funcionando exatamente como antes, e isso não tem relação com
 Mudar este contrato = atualizar este doc, `firmware/src/ui/customtheme.cpp`,
 `backend/src/routers/theme.ts`, `backend/src/routers/wallpapers/router.ts`
 (rotação), `frontend/src/pages/config/ThemeEditorPage.tsx`,
-`frontend/src/pages/config/ThemeCanvasView.tsx` e
-`frontend/src/pages/config/themeCanvas/state.ts`.
+`frontend/src/pages/config/ThemeCanvasView.tsx`,
+`frontend/src/pages/config/themeCanvas/state.ts`,
+`frontend/src/pages/config/themeCanvas/ClockWidgets.tsx`,
+`frontend/src/pages/config/themeCanvas/SystemWidget.tsx`,
+`frontend/src/pages/config/themeEditor/themeState.ts` e
+`android/app/src/main/java/ai/vigia/monitor/CanvasTheme.kt`.
 
 ## Como o tema chega na placa (fluxo principal)
 
@@ -77,6 +81,13 @@ sempre converte fração → pixel na hora de desenhar, contra
     { "provider": "claude", "x": 0.25, "y": 0.55, "scale": 1.5, "color": "#E1C6A0", "metric": "session_percent", "showBackground": true, "bgColor": "#2A1533" },
     { "provider": "brand", "x": 0.75, "y": 0.55, "scale": 1.0, "showBackground": false }
   ],
+  "clocks": [
+    { "mode": "clock", "x": 0.5, "y": 0.3, "scale": 1.5, "label": "São Paulo", "timezone": "America/Sao_Paulo", "format24h": true, "showSeconds": true, "showDate": true },
+    { "mode": "pomodoro", "x": 0.2, "y": 0.7, "scale": 1.0, "pomodoroFocusMin": 25, "pomodoroShortMin": 5, "pomodoroLongMin": 15, "pomodoroCycles": 4 }
+  ],
+  "systems": [
+    { "x": 0.8, "y": 0.7, "scale": 1.0, "detail": "compact" }
+  ],
   "texts": [
     { "text": "VIGIA AI", "x": 0.5, "y": 0.85, "scale": 1, "color": "#AD76FF" }
   ]
@@ -137,7 +148,9 @@ sempre converte fração → pixel na hora de desenhar, contra
   quando `showBackground` é `false`.
 - `scale`: multiplicador de tamanho, clamp **0.5–4.0**.
 - `icons[].provider`: `claude` | `gpt` | `cursor` | `openrouter` | `deepseek`
-  | `opencode` | `fal` | `bitcoin` | `adsense` | `weather` | `spotify` | `brand` (o olho da marca).
+  | `opencode` | `fal` | `bitcoin` | `adsense` | `weather` | `spotify` | `brand` (o olho da marca)
+  | `rss` | `calendar` | `github` | `github-profile` | `git` | `currencies`
+  | `retroachievements` | `apod` | `youtubemusic`.
   Item com provider desconhecido é ignorado, o resto do tema continua válido.
 - `icons[].metric`: chave da cota do `/usage` desenhada **junto** com o ícone
   (é o ponto do tema — ver limites das IAs de relance). Omitido = métrica
@@ -157,14 +170,40 @@ sempre converte fração → pixel na hora de desenhar, contra
   | `weather`    | (sempre temperatura; ignora `metric`) | — |
   | `spotify`    | (faixa atual + capa + controles; ignora `metric`) | — |
   | `brand`      | (sem métrica)       | — |
+  | `rss`        | `latest_title`      | `items_count` |
+  | `calendar`   | `next_event`        | `events_count` |
+  | `github`     | `stars`             | `open_issues` |
+  | `github-profile` | `followers`     | `public_repos` |
+  | `git`        | `latest_subject`    | `commits_count` |
+  | `currencies` | `first_quote`       | `quotes_count` |
+  | `retroachievements` | `total_points` | `rank` |
+  | `apod`       | `title`             | — |
+  | `youtubemusic` | (faixa atual; ignora `metric`, como o `spotify`) | — |
+
+  Na placa, os providers novos sem dado no snapshot (`rss`, `calendar`,
+  `github`, `github-profile`, `git`, `retroachievements`, `apod`,
+  `youtubemusic`) desenham só o ícone; `currencies` usa a primeira cotação do
+  `/usage`. No editor web todos mostram valor ao vivo.
 
   Com várias contas do mesmo provedor, a placa usa a que mais precisa de
   atenção (mesmo critério da Início: `*WorstIdx()`). `weather` continua
   sendo um chip próprio (condição + temperatura).
 - Limites: até **12** ícones (`kMaxIcons` no firmware = `THEME_MAX_ICONS` no
   editor, que bloqueia adicionar além disso), até **4** textos
-  (`texts[].text` até 23 chars) — o excesso de um JSON importado é descartado
+  (`texts[].text` até 23 chars), até **4** relógios (`clocks[]`,
+  `kMaxClocks`/`THEME_MAX_CLOCKS`) e até **2** sistemas (`systems[]`,
+  `kMaxSystems`/`THEME_MAX_SYSTEMS`) — o excesso de um JSON importado é descartado
   silenciosamente pela placa, sempre os últimos da lista.
+- `layerOrder`: array de chaves `"clock:<id>"` | `"system:<id>"` | `"icon:<id>"`
+  | `"text:<id>"` com a ordem de pintura (z-order) das camadas — o último da
+  lista fica por cima. O editor gera e reordena via drag-and-drop na lista
+  "No canvas"; ausente ou incompleto = ordem padrão (relógios, sistemas,
+  ícones, textos; novos itens vão pro fim). A placa ignora chaves
+  desconhecidas.
+- `clock`/`countdown` raiz (relógio e contador antigos): **legado** — o editor
+  não mostra nem edita mais (só os widgets `clocks[]`), sempre salva com
+  `enabled: false` e migra um relógio antigo ativo para um widget `clocks[]`
+  de modo `clock`. A placa continua respeitando o campo para temas antigos.
 - Widget `spotify`: quando há faixa, a placa desenha a **capa** (RAW RGB565
   48×48 via `GET /api/spotify/cover`, convertido no coletor — a ESP32 não
   baixa JPEG da CDN) no lugar do logo, e três botões **anterior / pausar-tocar /
@@ -183,6 +222,45 @@ sempre converte fração → pixel na hora de desenhar, contra
   círculo pra não pintar quadrado em cima do wallpaper). Sem caixa, sem texto;
   `style`/`showBackground`/`color` são ignorados.
 - JSON inválido → erro, tema anterior **não** é alterado.
+
+## Widgets de relógio (`clocks[]`) e de sistema (`systems[]`)
+
+Os mesmos modos do card de relógio do dashboard web (`ClockCard.tsx`), um por
+widget do canvas — e o sistema com nível de detalhe escolhido:
+
+| `clocks[].mode` | O que mostra |
+| --- | --- |
+| `clock` (padrão) | hora + data, com `label` (ex.: cidade) e `timezone` IANA (ex.: `"America/Sao_Paulo"`); `format24h` (padrão `true`, `false` = 12h), `showSeconds` (padrão `true`), `showDate` (padrão `true`, `false` oculta o calendário) |
+| `countdown` | contagem até `countdownAt` (ISO) com `countdownLabel`; alvo passado = `Lançado!` (web) / `FIM` (placa) |
+| `stopwatch` | cronômetro com iniciar/pausar/zerar |
+| `pomodoro` | foco/pausa/pausa longa com `pomodoroFocusMin` (1–180, padrão 25), `pomodoroShortMin` (1–60, padrão 5), `pomodoroLongMin` (1–90, padrão 15), `pomodoroCycles` (2–8, padrão 4) |
+
+| `systems[].detail` | O que mostra |
+| --- | --- |
+| `minimal` | uptime (+ versão) |
+| `compact` (padrão) | + memória e CPU (barras) |
+| `full` | + último ciclo e armazenamento |
+
+Campos comuns: `x`/`y` (fração 0–1), `scale` (0.5–4), `color` (hex opcional),
+`showBackground` (padrão `true`), `bgColor` (só sistema, com fundo).
+Campos omitidos caem no padrão; `mode`/`detail` desconhecidos caem em
+`clock`/`compact`.
+
+Diferenças por plataforma (mesmo `theme.json`):
+
+- **Web** (`/display/theme` + `/display/canvas` + app Android via WebView):
+  tudo interativo (botões do cronômetro/pomodoro) e fuso convertido de verdade
+  (`Intl`, `ZoneId`); sistema = **coletor** (`GET /api/system`, poll 10 s,
+  pausa com a aba oculta).
+- **Placa** (`VIEW_THEME`): só-display — qualquer toque sai da tela (exceto
+  controles do Spotify), então cronômetro/pomodoro contam sozinhos desde a
+  aplicação do tema; fuso mostra a cidade + o horário local da placa (sem
+  banco TZ/DST no ESP32); sistema = **o próprio device** (uptime, heap, Wi-Fi,
+  idade do último fetch, flash). Tick de 1 s (`customThemeTickSecond()`)
+  redesenha só o widget cujo texto mudou, sem repintar o canvas.
+- **Android nativo** (`CanvasTheme.kt`): parse espelhado (`MAX_CLOCKS = 4`,
+  `MAX_SYSTEMS = 2`); o canvas do app é o `/display/canvas` web via WebView,
+  então os widgets aparecem sem código nativo extra.
 
 ## Imagem de fundo
 
